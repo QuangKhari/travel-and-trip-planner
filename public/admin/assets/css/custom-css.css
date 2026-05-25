@@ -1,0 +1,64 @@
+.hide {
+    display: none;
+}
+/********************************************
+* TOURS MANAGEMENT                          *
+********************************************/
+/* hide button previous  */
+
+#wizard .actionBar .buttonPrevious {
+    display: none;
+}
+
+#wizard .stepContainer {
+    height: 80% !important;
+}
+
+/********************************************
+* ADD TOURS                                 *
+********************************************/
+.timeline-entry {
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+/********************************************
+*  TOURS MANAGEMENT                       *
+********************************************/
+.btn-action-listTours {
+    border: none;
+    background: none;
+}
+
+#edit-tour-modal .modal-dialog {
+    min-width: 60%;
+}
+/********************************************
+*  BOOKING MANAGEMENT                       *
+********************************************/
+
+.icon_payment{
+    width: 55px;
+    height: 55px;
+}
+.invoice_payment-method{
+    width: 100px;
+}
+
+
+/********************************************
+* CONTACT MANAGEMENT                       *
+********************************************/
+.text-contact-truncate{
+    display: -webkit-box; /* Sử dụng flexbox để giới hạn hiển thị */
+    -webkit-line-clamp: 3; /* Giới hạn số dòng hiển thị là 3 */
+    -webkit-box-orient: vertical;
+    overflow: hidden; /* Ẩn nội dung vượt quá */
+    text-overflow: ellipsis; /* Thêm dấu '...' cho nội dung bị cắt */
+    word-break: break-word; /* Đảm bảo từ không bị tràn dòng */
+}
+.mail_view{
+    display: none;
+}
