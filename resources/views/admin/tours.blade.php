@@ -200,7 +200,7 @@
                                     </div>
                                 </form>
                             </div>
-                            <form action="#" id="timeline-form" method="POST">
+                            <form action="{{ route('admin.edit-tour') }}" id="timeline-form" method="POST">
                                 @csrf
                                 <input type="hidden" name="tourId" class="hiddenTourId">
                                 <div id="step-3">

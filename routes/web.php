@@ -18,10 +18,12 @@ use App\Http\Controllers\clients\TourBookedController;
 use App\Http\Controllers\clients\MyTourController;
 use App\Http\Controllers\admin\LoginAdminController;
 use App\Http\Controllers\admin\ToursManagementController;
+use App\Http\Controllers\admin\UserManagementController;
+use App\Http\Controllers\admin\DashboardController;
 
-// Route::get('/', function () {
-//     return view('home');
-// });
+
+
+
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/about', [AboutController::class, 'index'])->name('about');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
@@ -32,9 +34,6 @@ Route::get('/blogs', [BlogController::class, 'index'])->name('blogs');
 Route::get('/blog-detail', [BlogDetailController::class, 'index'])->name('blog-detail');
 Route::get('/search', [SearchController::class, 'index'])->name('search');
 Route::get('/search-voice-text', [SearchController::class, 'searchTours'])->name('search-voice-text');
-
-
-
 
 //Đăng nhập, đăng ký, đăng xuất
 Route::get('/login', [LoginController::class, 'index'])->name('login');
@@ -77,10 +76,24 @@ Route::get('/my-tours', [MyTourController::class, 'index'])->name('my-tours');
 Route::prefix('admin')->group(function () {
     Route::get('/login', [LoginAdminController::class, 'index'])->name('admin.login');
     Route::post('/login-account', [LoginAdminController::class, 'loginAdmin'])->name('admin.login-account');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/tours', [ToursManagementController::class, 'index'])->name('admin.tours');
+
     Route::get('/tour-edit', [ToursManagementController::class, 'getTourEdit'])->name('admin.tour-edit');
     Route::post('/edit-tour', [ToursManagementController::class, 'updateTour'])->name('admin.edit-tour');
+
     Route::post('/delete-tour', [ToursManagementController::class, 'deleteTour'])->name('admin.delete-tour');
+    Route::post('/add-temp-images', [ToursManagementController::class, 'uploadTempImagesTours'])->name('admin.add-temp-images');
+
+    Route::post('/add-images-tours', [ToursManagementController::class, 'addImagesTours'])->name('admin.add-images-tours');
+    Route::post('/add-timeline', [ToursManagementController::class, 'addTimeline'])->name('admin.add-timeline');
+    Route::get('/page-add-tours', [ToursManagementController::class, 'pageAddTours'])->name('admin.page-add-tours');
+    Route::post('/add-tours', [ToursManagementController::class, 'addTours'])->name('admin.add-tours');
+
+
+    Route::get('/users', [UserManagementController::class, 'index'])->name('admin.users');
+    Route::post('/active-user', [UserManagementController::class, 'activeUser'])->name('admin.active-user');
+    Route::post('/status-user', [UserManagementController::class, 'changeStatus'])->name('admin.status-user');
 
 
 });

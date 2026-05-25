@@ -44,7 +44,7 @@ class ToursManagementController extends Controller
         $description = $request->input('description');
 
 
-        $days = Carbon::createFromFormat('Y-m-d', $startDate)->diffInDays(Carbon::createFromFormat('Y-m-d', $endDate));
+        $days = Carbon::createFromFormat('Y-m-d', $start_date)->diffInDays(Carbon::createFromFormat('Y-m-d', $end_date));
 
         // Tính số đêm: số ngày - 1
         $nights = $days - 1;
@@ -63,8 +63,8 @@ class ToursManagementController extends Controller
             'destination' => $destination,
             'domain' => $domain,
             'availability' => 0,
-            'startDate' => $startDate,
-            'endDate' => $endDate
+            'startDate' => $start_date,
+            'endDate' => $end_date
         ];
         // dd($dataTours);
 
