@@ -4,7 +4,7 @@
             <div class="image">
                 <span class="badge bgc-pink">Featured</span>
                 <a href="#" class="heart"><i class="fas fa-heart"></i></a>
-                <img src="{{ asset('clients/assets/images/gallery-tours/'.$tour->images[0].'') }}" alt="Tour List">
+                <img src="{{ asset('clients/assets/images/gallery-tours/' . ($tour->images[0] ?? 'default.jpg')) }}" alt="Tour List">
             </div>
             <div class="content">
                 <div class="destination-header">

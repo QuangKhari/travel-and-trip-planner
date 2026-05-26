@@ -44,9 +44,11 @@ class ToursManagementController extends Controller
         $description = $request->input('description');
 
 
-        $days = Carbon::createFromFormat('Y-m-d', $start_date)->diffInDays(Carbon::createFromFormat('Y-m-d', $end_date));
+       $startDate = Carbon::createFromFormat('d/m/Y', $start_date)->format('Y-m-d');
+        $endDate = Carbon::createFromFormat('d/m/Y', $end_date)->format('Y-m-d');
 
-        // Tính số đêm: số ngày - 1
+        // Tính số ngày giữa start_date và end_date
+        $days = Carbon::createFromFormat('Y-m-d', $startDate)->diffInDays(Carbon::createFromFormat('Y-m-d', $endDate));
         $nights = $days - 1;
 
         // Định dạng thời gian theo kiểu "X ngày Y đêm"
@@ -63,10 +65,10 @@ class ToursManagementController extends Controller
             'destination' => $destination,
             'domain' => $domain,
             'availability' => 0,
-            'startDate' => $start_date,
-            'endDate' => $end_date
+            'startDate' => $startDate,
+            'endDate' => $endDate
         ];
-        // dd($dataTours);
+        //dd($dataTours);
 
         $createTour = $this->tours->createTours($dataTours);
 
@@ -170,4 +172,19 @@ class ToursManagementController extends Controller
         toastr()->success('Thêm tour thành công!');
         return redirect()->route('admin.page-add-tours');
     }
+    public function getTourEdit(Request $request)
+{
+    $tourId = $request->tourId;
+
+    $tour = $this->tours->getTour($tourId);
+    $images = $this->tours->getImages($tourId);
+    $timeline = $this->tours->getTimeLine($tourId);
+
+    return response()->json([
+        'success' => true,
+        'tour' => $tour,
+        'images' => $images,
+        'timeline' => $timeline
+    ]);
+}
 }

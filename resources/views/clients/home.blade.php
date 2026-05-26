@@ -19,7 +19,7 @@
                                 <div class="image">
                                     <div class="ratting"><i class="fas fa-star"></i> 4.8</div>
                                     <a href="#" class="heart"><i class="fas fa-heart"></i></a>
-                                    <img src="{{ asset('clients/assets/images/gallery-tours/'.$tour->images[0].'') }}" alt="Destination">
+                                    <img src="{{ asset('admin/assets/images/gallery-tours/' . $tour->images[0] . '') }}" alt="Destination">
                                 </div>
                                 <div class="content">
                                     <span class="location"><i class="fal fa-map-marker-alt"></i> {{ $tour->destination }}</span>

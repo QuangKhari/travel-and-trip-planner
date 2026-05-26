@@ -1,7 +1,7 @@
 <div class="col-md-3 left_col">
     <div class="left_col scroll-view">
         <div class="navbar nav_title" style="border: 0;">
-            <a href="#" class="site_title"><i class="fa fa-paw"></i> <span>Admin</span></a>
+            <a href="{{ route('admin.dashboard') }}" class="site_title"><i class="fa fa-paw"></i> <span>Admin</span></a>
         </div>
 
         <div class="clearfix"></div>
@@ -26,17 +26,17 @@
             <div class="menu_section">
                 <h3>Tổng quan</h3>
                 <ul class="nav side-menu">
-                    <li><a href="#"><i class="fa fa-dashboard"></i> Dashboard</a> </li>
-                    <li><a href="#"><i class="fa fa-table"></i> Quản lý Admin</a> </li>
-                    <li><a href="#"><i class="fa fa-table"></i> Quản lý người dùng</a> </li>
+                    <li><a href="{{ route('admin.dashboard') }}"><i class="fa fa-dashboard"></i> Dashboard</a> </li>
+                    <li><a href="#}"><i class="fa fa-table"></i> Quản lý Admin</a> </li>
+                    <li><a href="{{ route('admin.users') }}"><i class="fa fa-table"></i> Quản lý người dùng</a> </li>
                     <li><a><i class="fa fa-table"></i> Quản lý Tours<span class="fa fa-chevron-down"></span></a>
                         <ul class="nav child_menu">
-                            <li><a href="#">Thêm Tours</a></li>
-                            <li><a href="#">Danh sách Tours</a></li>
+                            <li><a href="{{ route('admin.page-add-tours') }}">Thêm Tours</a></li>
+                            <li><a href="{{ route('admin.tours') }}">Danh sách Tours</a></li>
                         </ul>
                     </li>
 
-                    <li><a href="#"><i class="fa fa-home"></i> Quản lý Booking</a> </li>
+                    
                     <li><a href="#"><i class="fa fa-envelope-o"></i> Liên hệ </a> </li>
                 </ul>
             </div>
@@ -74,25 +74,25 @@
                     <a href="javascript:;" class="user-profile dropdown-toggle" aria-haspopup="true" id="navbarDropdown"
                         data-toggle="dropdown" aria-expanded="false">
                         <img src="{{ asset('admin/assets/images/user-profile/avt_admin.jpg') }}" alt="">
-                        {{-- @if (session()->has('admin'))
+                        @if (session()->has('admin'))
                             {{ session('admin') }}
-                        @endif --}}
+                        @endif
                     </a>
                     <div class="dropdown-menu dropdown-usermenu pull-right" aria-labelledby="navbarDropdown">
                         <a class="dropdown-item" href="javascript:;"> Thông tin cá nhân</a>
-                        <a class="dropdown-item" href="#"><i
+                        <a class="dropdown-item" href="{{ route('admin.logout') }}"><i
                                 class="fa fa-sign-out pull-right"></i> Đăng xuất</a>
                     </div>
                 </li>
 
-                <li role="presentation" class="nav-item dropdown open">
+                {{-- <li role="presentation" class="nav-item dropdown open">
                     <a href="javascript:;" class="dropdown-toggle info-number" id="navbarDropdown1"
                         data-toggle="dropdown" aria-expanded="false">
                         <i class="fa fa-envelope-o"></i>
-                        <span class="badge bg-green"></span>
+                        <span class="badge bg-green">{{ $unreadCount }}</span>
                     </a>
                     <ul class="dropdown-menu list-unstyled msg_list" role="menu" aria-labelledby="navbarDropdown1">
-                        {{-- @foreach ($unreadContacts->take(3) as $item)
+                        @foreach ($unreadContacts->take(3) as $item)
                             <li class="nav-item">
                                 <a class="dropdown-item" href="{{ route('admin.contact') }}">
                                     <span>
@@ -102,9 +102,9 @@
                                     <span class="message text-contact-truncate" >{{ $item->message }} </span>
                                 </a>
                             </li>
-                        @endforeach --}}
+                        @endforeach
                     </ul>
-                </li>
+                </li> --}}
             </ul>
         </nav>
     </div>

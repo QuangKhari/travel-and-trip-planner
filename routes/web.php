@@ -74,21 +74,24 @@ Route::get('/my-tours', [MyTourController::class, 'index'])->name('my-tours');
 
 //admin
 Route::prefix('admin')->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/login', [LoginAdminController::class, 'index'])->name('admin.login');
     Route::post('/login-account', [LoginAdminController::class, 'loginAdmin'])->name('admin.login-account');
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+    Route::get('/logout', [LoginAdminController::class, 'logout'])->name('admin.logout');
+
     Route::get('/tours', [ToursManagementController::class, 'index'])->name('admin.tours');
 
     Route::get('/tour-edit', [ToursManagementController::class, 'getTourEdit'])->name('admin.tour-edit');
     Route::post('/edit-tour', [ToursManagementController::class, 'updateTour'])->name('admin.edit-tour');
 
+
+    Route::get('/page-add-tours', [ToursManagementController::class, 'pageAddTours'])->name('admin.page-add-tours');
+    Route::post('/add-tours', [ToursManagementController::class, 'addTours'])->name('admin.add-tours');
     Route::post('/delete-tour', [ToursManagementController::class, 'deleteTour'])->name('admin.delete-tour');
-    Route::post('/add-temp-images', [ToursManagementController::class, 'uploadTempImagesTours'])->name('admin.add-temp-images');
+    Route::post('/add-temp-images', [ToursManagementController::class, 'addImagesTours'])->name('admin.add-temp-images');
 
     Route::post('/add-images-tours', [ToursManagementController::class, 'addImagesTours'])->name('admin.add-images-tours');
     Route::post('/add-timeline', [ToursManagementController::class, 'addTimeline'])->name('admin.add-timeline');
-    Route::get('/page-add-tours', [ToursManagementController::class, 'pageAddTours'])->name('admin.page-add-tours');
-    Route::post('/add-tours', [ToursManagementController::class, 'addTours'])->name('admin.add-tours');
 
 
     Route::get('/users', [UserManagementController::class, 'index'])->name('admin.users');
