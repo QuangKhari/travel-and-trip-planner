@@ -27,7 +27,7 @@ class LoginAdminController extends Controller
 
             toastr()->success('Đăng nhập thành công');
 
-            return redirect()->route('admin.tours');
+            return redirect()->route('admin.dashboard');
         }
 
         toastr()->error('Thông tin đăng nhập không chính xác');

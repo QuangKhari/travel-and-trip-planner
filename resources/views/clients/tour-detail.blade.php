@@ -27,23 +27,23 @@
                 <div class="row gap-10 justify-content-center rel">
                     <div class="col-lg-4 col-md-6">
                         <div class="gallery-item">
-                            <img src="{{ asset('clients/assets/images/gallery-tours/' . ($tourDetail->images[0] ?? 'default.jpg')) }}" alt="Destination">
+                            <img src="{{ asset('admin/assets/images/gallery-tours/' . ($tourDetail->images[0] ?? 'default.jpg')) }}" alt="Destination">
                         </div>
                         <div class="gallery-item">
-                            <img src="{{ asset('clients/assets/images/gallery-tours/' . ($tourDetail->images[1] ?? 'default.jpg')) }}" alt="Destination">
-                        </div>
-                    </div>
-                    <div class="col-lg-4 col-md-6">
-                        <div class="gallery-item">
-                            <img src="{{ asset('clients/assets/images/gallery-tours/' . ($tourDetail->images[2] ?? 'default.jpg')) }}" alt="Destination">
+                            <img src="{{ asset('admin/assets/images/gallery-tours/' . ($tourDetail->images[1] ?? 'default.jpg')) }}" alt="Destination">
                         </div>
                     </div>
                     <div class="col-lg-4 col-md-6">
                         <div class="gallery-item">
-                            <img src="{{ asset('clients/assets/images/gallery-tours/' . ($tourDetail->images[3] ?? 'default.jpg')) }}" alt="Destination">
+                            <img src="{{ asset('admin/assets/images/gallery-tours/' . ($tourDetail->images[2] ?? 'default.jpg')) }}" alt="Destination">
+                        </div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="gallery-item">
+                            <img src="{{ asset('admin/assets/images/gallery-tours/' . ($tourDetail->images[3] ?? 'default.jpg')) }}" alt="Destination">
                         </div>
                         <div class="gallery-item">
-                            <img src="{{ asset('clients/assets/images/gallery-tours/' . ($tourDetail->images[4] ?? 'default.jpg')) }}" alt="Destination">
+                            <img src="{{ asset('admin/assets/images/gallery-tours/' . ($tourDetail->images[4] ?? 'default.jpg')) }}" alt="Destination">
                         </div>
                     </div>
                     
