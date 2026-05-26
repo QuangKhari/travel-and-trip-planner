@@ -11,7 +11,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+
+        'checkLoginClient' =>
+        \App\Http\Middleware\CheckLoggedInClients::class,
+
+         'checkUserBlocked' =>
+        \App\Http\Middleware\CheckUserBlocked::class,
+
+    ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -59,6 +59,13 @@ class LoginController extends Controller
     $user = $this->login->login($data_login);
 
     if($user){
+        if ($user->status == 'b') {
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Tài khoản đã bị chặn'
+            ]);
+        }
 
         $request->session()->put('username', $username);
 
@@ -70,7 +77,10 @@ class LoginController extends Controller
 
     }else{
 
-        return redirect()->route('login');
+        return response()->json([
+                'success' => false,
+                'message' => 'Thông tin tài khoản không chính xác!',
+            ]);
 
 
     }
