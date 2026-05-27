@@ -187,4 +187,85 @@ class ToursManagementController extends Controller
         'timeline' => $timeline
     ]);
 }
+    public function updateTour(Request $request)
+    {
+        $tourId = $request->tourId;
+        $name = $request->input('name');
+        $destination = $request->input('destination');
+        $domain = $request->input('domain');
+        $quantity = $request->input('number');
+        $price_adult = $request->input('price_adult');
+        $price_child = $request->input('price_child');
+        $description = $request->input('description');
+
+        $dataTours = [
+            'title'       => $name,
+            'description' => $description,
+            'quantity'    => $quantity,
+            'priceAdult'  => $price_adult,
+            'priceChild'  => $price_child,
+            'destination' => $destination,
+            'domain'      => $domain,
+        ];
+
+        $delete_timeline = $this->tours->deleteData($tourId, 'tbl_timeline');
+        $delete_images = $this->tours->deleteData($tourId, 'tbl_images');
+
+        $updateTour = $this->tours->updateTour($tourId, $dataTours);
+
+        // Tạo mảng tạm để lưu tên ảnh
+        $images = $request->input('images');  // Mảng các tên ảnh gửi lên từ request
+
+        if ($images && is_array($images)) {
+            foreach ($images as $image) {
+                $dataUpload = [
+                    'tourId' => $tourId,
+                    'imageURL' => $image, 
+                    'description' => $name  
+                ];
+                $this->tours->uploadImages($dataUpload);
+            }
+        }
+
+        $timelines = $request->input('timeline');
+
+        if ($timelines && is_array($timelines)) {
+            foreach ($timelines as $timeline) {
+                $data = [
+                    'tourId' => $tourId,
+                    'title' => $timeline['title'],
+                    'description' => $timeline['itinerary']
+                ];
+
+                $this->tours->addTimeLine($data);  // Gọi phương thức addTimeLine()
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Sửa thành công!',
+        ]);
+
+    }
+
+    public function deleteTour(Request $request)
+    {
+        $tourId = $request->tourId;
+
+        $result = $this->tours->deleteTour($tourId);
+        $tours = $this->tours->getAllTours();
+        // Kiểm tra kết quả trả về từ Model
+        if ($result['success']) {
+            return response()->json([
+                'success' => true,
+                'message' => $result['message'],
+                'data' => view('admin.partials.list-tours', compact('tours'))->render()
+            ]);
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message']
+            ]);
+        }
+    }
 }

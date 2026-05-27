@@ -303,9 +303,7 @@ $(document).ready(function () {
                 if (stepIndex === 2) {
                     var formDataImages = getFormDataImages();
 
-                    if (formDataImages === false) {
-                        return false; // Dừng lại nếu ảnh không đủ
-                    }
+                    
 
                     // Thêm ảnh vào formDataEdit
                     formDataEdit.images = formDataImages; // Gán danh sách ảnh cho formDataEdit
