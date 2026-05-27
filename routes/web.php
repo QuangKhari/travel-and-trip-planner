@@ -20,6 +20,7 @@ use App\Http\Controllers\admin\LoginAdminController;
 use App\Http\Controllers\admin\ToursManagementController;
 use App\Http\Controllers\admin\UserManagementController;
 use App\Http\Controllers\admin\DashboardController;
+use App\Http\Controllers\admin\BookingManagementController;
 
 
 
@@ -67,7 +68,10 @@ Route::post('/create-momo-payment', [BookingController::class, 'createMomoPaymen
 
 //tour booked
 Route::get('/tour-booked', [TourBookedController::class, 'index'])->name('tour-booked');
+Route::post('/checkBooking', [BookingController::class, 'checkBooking'])->name('checkBooking')->middleware('checkLoginClient');
 Route::post('/cancel-booking', [TourBookedController::class, 'cancelBooking'])->name('cancel-booking');
+Route::post('/reviews', [TourDetailController::class, 'reviews'])->name('reviews')->middleware('checkLoginClient');
+
 
 //My tour
 Route::get('/my-tours', [MyTourController::class, 'index'])->name('my-tours');
@@ -97,6 +101,16 @@ Route::prefix('admin')->group(function () {
     Route::get('/users', [UserManagementController::class, 'index'])->name('admin.users');
     Route::post('/active-user', [UserManagementController::class, 'activeUser'])->name('admin.active-user');
     Route::post('/status-user', [UserManagementController::class, 'changeStatus'])->name('admin.status-user');
+
+    //Management Booking
+    Route::get('/booking', [BookingManagementController::class, 'index'])->name('admin.booking');
+    Route::post('/confirm-booking', [BookingManagementController::class, 'confirmBooking'])->name('admin.confirm-booking');
+    Route::get('/booking-detail/{id?}', [BookingManagementController::class, 'showDetail'])->name('admin.booking-detail');
+    Route::post('/finish-booking', [BookingManagementController::class, 'finishBooking'])->name('admin.finish-booking');
+    Route::post('/received-money', [BookingManagementController::class, 'receiviedMoney'])->name('admin.received');
+
+    //Send mail pdf
+    Route::post('/admin/send-pdf', [BookingManagementController::class, 'sendPdf'])->name('admin.send.pdf');
 
 
 });

@@ -147,6 +147,45 @@ class Tours extends Model
 
         return $booked;
     }
+    //Tạo đánh giá về tours
+    public function createReviews($data)
+    {
+        return DB::table('tbl_reviews')->insert($data);
+    }
+
+    //Lấy danh sách nội dung reviews 
+    public function getReviews($id)
+    {
+        $getReviews = DB::table('tbl_reviews')
+            ->join('tbl_users', 'tbl_users.userId', '=', 'tbl_reviews.userId')
+            ->where('tourId', $id)
+            ->orderBy('tbl_reviews.timestamp', 'desc')
+            ->take(3)
+            ->get();
+
+        return $getReviews;
+    }
+
+    //Lấy số lượng đánh giá và số sao trung bình của tour
+    public function reviewStats($id)
+    {
+        $reviewStats = DB::table('tbl_reviews')
+            ->where('tourId', $id)
+            ->selectRaw('AVG(rating) as averageRating, COUNT(*) as reviewCount')
+            ->first();
+
+        return $reviewStats;
+    }
+
+    //Kiểm tra xem người dùng đã đánh giá tour này hay chưa?
+
+    public function checkReviewExist($tourId, $userId)
+    {
+        return DB::table('tbl_reviews')
+            ->where('tourId', $tourId)
+            ->where('userId', $userId)
+            ->exists(); // Trả về true nếu bản ghi tồn tại, false nếu không tồn tại
+    }
     public function searchTours($data)
     {
         $tours = DB::table($this->table);

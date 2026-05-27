@@ -182,5 +182,14 @@ class BookingController extends Controller
         }
 
     
-}
+    }
+    public function checkBooking(Request $req){
+        $tourId = $req->tourId;
+        $userId = $this->getUserId();
+        $check = $this->booking->checkBooking($tourId,$userId);
+        if (!$check) {
+            return response()->json(['success' => false]);
+        }
+        return response()->json(['success' => true]);
+    }
 }

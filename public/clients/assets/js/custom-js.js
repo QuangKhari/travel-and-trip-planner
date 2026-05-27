@@ -184,13 +184,23 @@ $(document).ready(function () {
      * ***************************************/
     // Kiểm tra nếu thanh trượt đã tồn tại
     if ($(".price-slider-range").length) {
-        $(".price-slider-range").on("slide", function (event, ui) {
+        $(".price-slider-range").on("slidestop", function (event, ui) {
             filterTours(ui.values[0], ui.values[1]);
         });
     }
-    $('input[name="domain"]').on("change", filterTours);
-    $('input[name="filter_star"]').on("change", filterTours);
-    $('input[name="duration"]').on("change", filterTours);
+    let filterTimeout;
+
+function debounceFilter() {
+    clearTimeout(filterTimeout);
+
+    filterTimeout = setTimeout(() => {
+        filterTours();
+    }, 300);
+}
+
+$('input[name="domain"]').on("change", debounceFilter);
+$('input[name="filter_star"]').on("change", debounceFilter);
+$('input[name="duration"]').on("change", debounceFilter);
 
     $("#sorting_tours").on("change", function () {
         filterTours(null, null);
@@ -261,11 +271,21 @@ $(document).ready(function () {
 
     // Hàm để clear các filter đã chọn
     $(".clear_filter a").on("click", function (e) {
-        e.preventDefault();
-        $(".loader").show();
-        $("#tours-container").addClass("hidden-content");
-        // Reset slider giá về giá trị mặc định (ví dụ: 0 đến 20000000)
-        $(".price-slider-range").slider("values", [0, 20000000]);
+    e.preventDefault();
+
+    // reset slider
+    $(".price-slider-range").slider("values", [0, 20000000]);
+
+    // bỏ chọn filter
+    $('input[name="domain"]').prop("checked", false);
+    $('input[name="filter_star"]').prop("checked", false);
+    $('input[name="duration"]').prop("checked", false);
+
+    // reset sorting
+    $("#sorting_tours").val("default");
+
+    // gọi lại filter
+    filterTours(0, 20000000);
 
         // Bỏ chọn radio và checkbox
         $('input[name="domain"]').prop("checked", false);
