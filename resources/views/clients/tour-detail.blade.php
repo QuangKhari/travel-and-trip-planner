@@ -92,7 +92,7 @@
                     <div class="col-lg-8">
                         <div class="tour-details-content">
                             <h3>Khám phá Tours</h3>
-                            <p> {{ $tourDetail->description }} </p>
+                            <p> {!! $tourDetail->description !!} </p>
                             <div class="row pb-55">
                                 <div class="col-md-6">
                                     <div class="tour-include-exclude mt-30">
