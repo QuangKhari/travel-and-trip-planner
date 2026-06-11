@@ -21,6 +21,7 @@ use App\Http\Controllers\admin\ToursManagementController;
 use App\Http\Controllers\admin\UserManagementController;
 use App\Http\Controllers\admin\DashboardController;
 use App\Http\Controllers\admin\BookingManagementController;
+use App\Http\Controllers\admin\ReviewManagementController;
 
 
 
@@ -110,6 +111,11 @@ Route::prefix('admin')->group(function () {
     Route::post('/finish-booking', [BookingManagementController::class, 'finishBooking'])->name('admin.finish-booking');
     Route::post('/received-money', [BookingManagementController::class, 'receiviedMoney'])->name('admin.received');
     Route::post('/confirm-payment', [BookingManagementController::class, 'confirmPayment'])->name('admin.confirm-payment');
+
+    //reviews
+    Route::get('/reviews', [ReviewManagementController::class, 'index'])->name('admin.reviews');
+    Route::get('/reviews/{id}', [ReviewManagementController::class, 'show'])->name('admin.reviews.show');
+    Route::delete('/reviews/{id}', [ReviewManagementController::class, 'destroy'])->name('admin.reviews.destroy');
 
     //Send mail pdf
     Route::post('/admin/send-pdf', [BookingManagementController::class, 'sendPdf'])->name('admin.send.pdf');

@@ -11,6 +11,8 @@ class ToursModel extends Model
     use HasFactory;
 
     protected $table = 'tbl_tours';
+    protected $primaryKey = 'tourId';
+    public $timestamps = false;
 
     public function getAllTours()
     {

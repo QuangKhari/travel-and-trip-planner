@@ -59,9 +59,9 @@
                                                 <address>
                                                     <strong>Công ty Travela</strong>
                                                     <br>470 Trần Đại Nghĩa
-                                                    <br>Ngũ Hành Sơn, Đà Nẵng
-                                                    <br>Phone: 1 (804) 123-9876
-                                                    <br>Email: minhdien.dev@gmail.com
+                                                    <br>Gỉai Phóng, Hai Bà Trưng, Hà Nội
+                                                    <br>Phone: 12345678901
+                                                    <br>Email: aaaaaa@gmail.com
                                                 </address>
                                             </div>
                                             <!-- /.col -->
