@@ -61,6 +61,7 @@ Route::post('/change-avatar-profile', [UserProfileController::class, 'changeAvat
 //booking
 Route::post('/booking/{id?}', [BookingController::class, 'index'])->name('booking');
 Route::post('/create-booking', [BookingController::class, 'createBooking'])->name('create-booking');
+Route::get('/payment-confirm', [BookingController::class, 'confirmQrPayment'])->name('payment.confirm');
 
 //trả bằng momo
 Route::post('/create-momo-payment', [BookingController::class, 'createMomoPayment'])->name('createMomoPayment');
@@ -108,6 +109,7 @@ Route::prefix('admin')->group(function () {
     Route::get('/booking-detail/{id?}', [BookingManagementController::class, 'showDetail'])->name('admin.booking-detail');
     Route::post('/finish-booking', [BookingManagementController::class, 'finishBooking'])->name('admin.finish-booking');
     Route::post('/received-money', [BookingManagementController::class, 'receiviedMoney'])->name('admin.received');
+    Route::post('/confirm-payment', [BookingManagementController::class, 'confirmPayment'])->name('admin.confirm-payment');
 
     //Send mail pdf
     Route::post('/admin/send-pdf', [BookingManagementController::class, 'sendPdf'])->name('admin.send.pdf');

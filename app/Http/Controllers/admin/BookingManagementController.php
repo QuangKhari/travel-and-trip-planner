@@ -168,4 +168,30 @@ class BookingManagementController extends Controller
 
         return $list_booking;
     }
+    public function confirmPayment(Request $request)
+    {
+        $bookingId = $request->bookingId;
+
+        $result = $this->booking->updateCheckout($bookingId, [
+            'paymentStatus' => 'y'
+        ]);
+
+        if ($result) {
+
+            $list_booking = $this->booking->getBooking();
+            $list_booking = $this->updateHideBooking($list_booking);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Xác nhận thanh toán thành công.',
+                'data' => view('admin.partials.list-booking',
+                    compact('list_booking'))->render()
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Xác nhận thất bại.'
+        ]);
+    }
 }

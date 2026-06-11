@@ -90,6 +90,11 @@
                     <input type="hidden" name="transactionIdMomo" value="{{ $transIdMomo }}">
                 @endif
             </label>
+            <label class="payment-option">
+                <input type="radio" name="payment" value="banking" required>
+                <img src="{{ asset('clients/assets/images/booking/qr-bank.png') }}" alt="QR Banking">
+                Thanh toán chuyển khoản QR
+            </label>
 
             <input type="hidden" name="payment_hidden" id="payment_hidden">
         </div>

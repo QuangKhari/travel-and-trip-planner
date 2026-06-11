@@ -17,4 +17,10 @@ class Checkout extends Model
         // Chèn dữ liệu và trả về ID của bản ghi vừa tạo
         return DB::table($this->table)->insertGetId($data);
     }
+    public function updateCheckout($bookingId, $data)
+    {
+        return DB::table($this->table)
+            ->where('bookingId', $bookingId)
+            ->update($data);
+    }
 }

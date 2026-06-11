@@ -33,6 +33,10 @@ class BookingController extends Controller
         return view('clients.booking', compact('title', 'tour', 'transIdMomo'));
     }
 
+    private function generateBookingCode()
+    {
+    return 'TOUR' . date('YmdHis') . rand(100,999);
+    }
     public function createBooking(Request $req)
     {
         //dd($req->all());
@@ -41,11 +45,12 @@ class BookingController extends Controller
         $fullName = $req->input('fullName');
         $numAdults = $req->input('numAdults');
         $numChildren = $req->input('numChildren');
-        $paymentMethod = $req->input('payment_hidden');
+        $paymentMethod = $req->payment;
         $tel = $req->input('tel');
         $totalPrice = $req->input('totalPrice');
         $tourId = $req->input('tourId');
         $userId = $this->getUserId();
+        $bookingCode = $this->generateBookingCode();
 
         $dataBooking = [
             'tourId' => $tourId,
@@ -56,18 +61,26 @@ class BookingController extends Controller
             'numAdults' => $numAdults,
             'numChildren' => $numChildren,
             'phoneNumber' => $tel,
-            'totalPrice' => $totalPrice
+            'totalPrice' => $totalPrice,
+            'bookingCode' => $bookingCode
         ];
 
         //dd($dataBooking);
         $bookingId = $this->booking->createBooking($dataBooking);
+
+        session([
+            'bookingId' => $bookingId,
+            'bookingCode' => $bookingCode
+        ]);
 
         $dataCheckout = [
             'bookingId' => $bookingId,
             'paymentMethod' => $paymentMethod,
             'amount' => $totalPrice,
             'paymentStatus' => 'n',
+            
         ];
+        
         $checkout = $this->checkout->createCheckout($dataCheckout);
 
 
@@ -84,9 +97,34 @@ class BookingController extends Controller
         ];
 
         $updateQuantity = $this->tour->updateTours($tourId, $dataUpdate);
+        if($paymentMethod == 'banking'){
+            return view('clients.qr-payment',[
+                'title' => 'Thanh toán QR',
+                'bookingCode' => $bookingCode,
+                'amount' => $totalPrice,
+                'bookingId' => $bookingId
+            ]);
+        }
         toastr()->success('Đặt tour thành công!');
         return redirect()->route('tours');
     }
+    
+
+    public function confirmQrPayment()
+    {
+        $bookingId = session('bookingId');
+
+        $dataUpdate = [
+            'paymentStatus' => 'w'
+        ];
+
+        $this->checkout->updateCheckout($bookingId, $dataUpdate);
+
+        return redirect()->route('tours')
+        ->with('success', 'Đã gửi yêu cầu xác nhận thanh toán.');
+    }
+    
+
     public function createMomoPayment(Request $request)
     {
         session()->put('tourId', $request->tourId);

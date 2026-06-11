@@ -625,6 +625,32 @@ $(document).ready(function () {
             },
         });
     });
+    $(document).on("click", ".confirm-payment", function (e) {
+        e.preventDefault();
+
+        const bookingId = $(this).data("bookingid");
+        const urlPayment = $(this).data("urlpayment");
+
+        $.ajax({
+            url: urlPayment,
+            method: "POST",
+            data: {
+                bookingId: bookingId,
+                _token: $('meta[name="csrf-token"]').attr("content"),
+            },
+            success: function (response) {
+                if (response.success) {
+                    $("#tbody-booking").html(response.data);
+                    toastr.success(response.message);
+                } else {
+                    toastr.error(response.message);
+                }
+            },
+            error: function () {
+                toastr.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
+            }
+        });
+    });
 
     
     /********************************************
