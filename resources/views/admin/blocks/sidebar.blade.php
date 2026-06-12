@@ -27,7 +27,7 @@
                 <h3>Tổng quan</h3>
                 <ul class="nav side-menu">
                     <li><a href="{{ route('admin.dashboard') }}"><i class="fa fa-dashboard"></i> Dashboard</a> </li>
-                    <li><a href="#}"><i class="fa fa-table"></i> Quản lý Admin</a> </li>
+                    <li><a href="{{ route('admin.admin') }}"><i class="fa fa-table"></i> Quản lý Admin</a> </li>
                     <li><a href="{{ route('admin.users') }}"><i class="fa fa-table"></i> Quản lý người dùng</a> </li>
                     <li><a><i class="fa fa-table"></i> Quản lý Tours<span class="fa fa-chevron-down"></span></a>
                         <ul class="nav child_menu">
@@ -38,6 +38,7 @@
 
                     <li><a href="{{ route('admin.booking') }}"><i class="fa fa-home"></i> Quản lý Booking</a> </li>
                     <li><a href="{{ route('admin.reviews') }}"><i class="fa fa-star"></i> Quản lý Đánh giá</a></li>
+                    <li><a href="{{ route('admin.promotion') }}"><i class="fa fa-tags"></i> Quản lý Khuyến mãi</a></li>
                     <li><a href="#"><i class="fa fa-envelope-o"></i> Liên hệ </a> </li>
                 </ul>
             </div>

@@ -138,39 +138,45 @@
                             </div>
                             
                             <div class="widget widget-tour" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
-                                <h6 class="widget-title">Phổ biến Tours</h6>
-                                <div class="destination-item tour-grid style-three bgc-lighter">
-                                    <div class="image">
-                                        <span class="badge">10% Off</span>
-                                        <img src="{{ asset('clients/assets/images/widgets/tour1.jpg')}}" alt="Tour">
-                                    </div>
-                                    <div class="content">
-                                        <div class="destination-header">
-                                            <span class="location"><i class="fal fa-map-marker-alt"></i> Bali, Indonesia</span>
-                                            <div class="ratting">
-                                                <i class="fas fa-star"></i>
-                                                <span>(4.8)</span>
+                            <h6 class="widget-title">Tours Phổ Biến</h6>
+
+                            @forelse ($popularTours as $popular)
+                                <div class="destination-item tour-grid style-three bgc-lighter mb-15">
+                                <div class="image">
+                                    <span class="badge">
+                                        {{ number_format($popular->averageRating, 1) }} ⭐
+                                    </span>
+                                    @if ($popular->thumbnail !== 'default.jpg')
+                                        <img src="{{ asset('admin/assets/images/gallery-tours/' . $popular->thumbnail) }}"
+                                        alt="{{ $popular->title }}"
+                                        style="width: 100%; height: 80px; object-fit: cover;">
+                                    @else
+                                        <img src="{{ asset('clients/assets/images/widgets/tour1.jpg') }}"
+                                        alt="Tour">
+                                    @endif
+                                </div>
+                                <div class="content">
+                                    <div class="destination-header">
+                                        <span class="location">
+                                            <i class="fal fa-map-marker-alt"></i> 
+                                            {{ $popular->destination }}
+                                        </span>
+                                        <div class="ratting">
+                                            <i class="fas fa-star"></i>
+                                            <span>({{ number_format($popular->averageRating, 1) }})</span>
                                             </div>
                                         </div>
-                                        <h6><a href="tour-details.html">Relinking Beach, Bali, Indonesia</a></h6>
-                                    </div>
-                                </div>
-                                <div class="destination-item tour-grid style-three bgc-lighter">
-                                    <div class="image">
-                                        <img src="{{ asset('clients/assets/images/widgets/tour1.jpg')}}" alt="Tour">
-                                    </div>
-                                    <div class="content">
-                                        <div class="destination-header">
-                                            <span class="location"><i class="fal fa-map-marker-alt"></i> Bali, Indonesia</span>
-                                            <div class="ratting">
-                                                <i class="fas fa-star"></i>
-                                                <span>(4.8)</span>
-                                            </div>
-                                        </div>
-                                        <h6><a href="tour-details.html">Relinking Beach, Bali, Indonesia</a></h6>
-                                    </div>
-                                </div>
+                                        <h6>
+                                        <a href="{{ route('tour-detail', $popular->tourId) }}">
+                                            {{ Str::limit($popular->title, 40) }}
+                                        </a>
+                                </h6>
                             </div>
+                        </div>
+                            @empty
+                                <p>Chưa có tour phổ biến</p>
+                            @endforelse
+                        </div>
                         </div>
                         
                         <div class="widget widget-cta mt-30" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
@@ -299,9 +305,9 @@
                                     <h5>Get In Touch</h5>
                                 </div>
                                 <ul class="list-style-one">
-                                    <li><i class="fal fa-map-marked-alt"></i> 578 Level, D-block 45 Street Melbourne, Australia</li>
-                                    <li><i class="fal fa-envelope"></i> <a href="mailto:supportrevelo@gmail.com">supportrevelo @gmail.com</a></li>
-                                    <li><i class="fal fa-phone-volume"></i> <a href="callto:+88012334588">+880 (123) 345 88</a></li>
+                                    <li><i class="fal fa-map-marked-alt"></i> 71 Giari Phóng, Hai Bà Trưng, Hà Nội</li>
+                                    <li><i class="fal fa-envelope"></i> <a href="mailto:supportravelo@gmail.com">supportravelo @gmail.com</a></li>
+                                    <li><i class="fal fa-phone-volume"></i> <a href="callto:+00000000000">+00000000000</a></li>
                                 </ul>
                             </div>
                         </div>

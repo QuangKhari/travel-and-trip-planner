@@ -27,8 +27,9 @@ class ToursController extends Controller
             'mien_nam' => optional($domain->firstWhere('domain', 'n'))->count,
         ];
 
+        $popularTours = $this->tours->getPopularTours(2);
 
-        return view('clients.tours', compact('title', 'tours', 'domainsCount'));
+        return view('clients.tours', compact('title', 'tours', 'domainsCount', 'popularTours'));
     }
 
     //filter tours
@@ -54,9 +55,10 @@ class ToursController extends Controller
 
         // Handle star rating filter
         if ($req->filled('star')) {
-            $star = (int) $req->star;
-            $conditions[] = ['averageRating', '=', $star];
-        }
+    $star = (int) $req->star;
+    $conditions[] = ['averageRating', '>=', $star];
+    $conditions[] = ['averageRating', '<', $star + 1];
+}
 
         // Handle duration filter
         if ($req->filled('time')) {

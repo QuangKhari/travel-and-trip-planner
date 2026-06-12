@@ -548,28 +548,56 @@ $('input[name="duration"]').on("change", debounceFilter);
 
     // Áp dụng mã giảm giá
     $(".btn-coupon").on("click", function (e) {
-        e.preventDefault();
-        const couponCode = $(".order-coupon input").val();
+    e.preventDefault();
+    const couponCode = $("#couponCode").val().trim();
 
-        // Giả sử mã giảm giá là "DISCOUNT10" giảm 10%
-        if (couponCode === "DISCOUNT10") {
-            discount =
-                0.1 *
-                (parseInt($("#numAdults").val()) *
-                    $("#numAdults").data("price-adults") +
-                    parseInt($("#numChildren").val()) *
-                        $("#numChildren").data("price-children"));
-            toastr.success("Áp dụng mã giảm giá thành công!");
-        } else {
-            discount = 0;
-            toastr.error("Mã giảm giá không hợp lệ!");
+    if (!couponCode) {
+        toastr.error("Vui lòng nhập mã giảm giá!");
+        return;
+    }
+
+    if (totalPrice <= 0) {
+        toastr.error("Vui lòng chọn số lượng hành khách trước!");
+        return;
+    }
+
+    $.ajax({
+        url: applyCouponUrl, // khai báo biến này trong blade (xem bên dưới)
+        method: "POST",
+        data: {
+            _token: $('input[name="_token"]').val(),
+            code: couponCode,
+            totalPrice: totalPrice
+        },
+        success: function (res) {
+            if (res.success) {
+                // Cập nhật biến discount để updateSummary dùng
+                discount = res.discountAmount;
+
+                // Cập nhật hiển thị dòng giảm giá
+                $(".summary-item:nth-child(3) .total-price").text(
+                    res.discountAmount.toLocaleString() + " VNĐ"
+                );
+
+                // Lưu promotionId để gửi khi submit
+                $("#promotionId").val(res.promotionId);
+                $("#discountAmount").val(res.discountAmount);
+
+                // Khóa không cho áp 2 lần
+                $("#couponCode").prop("disabled", true);
+                $(".btn-coupon").prop("disabled", true).text("Đã áp dụng");
+
+                updateSummary();
+                toastr.success(res.message);
+            } else {
+                toastr.error(res.message);
+            }
+        },
+        error: function () {
+            toastr.error("Có lỗi xảy ra, vui lòng thử lại!");
         }
-
-        $(".summary-item:nth-child(3) .total-price").text(
-            discount.toLocaleString() + " VNĐ"
-        );
-        updateSummary();
     });
+});
 
     // Sự kiện khi thay đổi trạng thái checkbox
     $("#agree").on("change", function () {

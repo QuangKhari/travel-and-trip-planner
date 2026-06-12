@@ -52,7 +52,11 @@ class User extends Model
                 ->value('rating'); // Dùng value() để lấy giá trị rating
         }
         foreach ($myTours as $tour) {
-            // Lấy danh sách hình ảnh thuộc về tour
+            $tour->rating = DB::table('tbl_reviews')
+                ->where('tourId', $tour->tourId)
+                ->where('userId', $id)
+                ->value('rating') ?? 0; 
+            
             $tour->images = DB::table('tbl_images')
                 ->where('tourId', $tour->tourId)
                 ->pluck('imageUrl');

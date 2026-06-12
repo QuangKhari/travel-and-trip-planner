@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\clients\Tours;
 use App\Models\clients\Booking;
 use App\Models\clients\Checkout;
+use App\Models\admin\PromotionModel;
 use Illuminate\Support\Facades\Http;
 
 
@@ -16,6 +17,7 @@ class BookingController extends Controller
     private $tour;
     private $booking;
     private $checkout;
+    private $promotion;
 
      public function __construct()
     {
@@ -23,6 +25,7 @@ class BookingController extends Controller
         $this->tour = new Tours();
         $this->booking = new Booking();
         $this->checkout = new Checkout();
+        $this->promotion = new PromotionModel();
     }
     public function index($id)
     {
@@ -39,6 +42,10 @@ class BookingController extends Controller
     }
     public function createBooking(Request $req)
     {
+    //     dd([
+    //     'couponCode' => $req->input('couponCode'),
+    //     'all' => $req->all()
+    // ]);
         //dd($req->all());
         $address = $req->input('address');
         $email = $req->input('email');
@@ -65,7 +72,6 @@ class BookingController extends Controller
             'bookingCode' => $bookingCode
         ];
 
-        //dd($dataBooking);
         $bookingId = $this->booking->createBooking($dataBooking);
 
         session([
@@ -78,35 +84,40 @@ class BookingController extends Controller
             'paymentMethod' => $paymentMethod,
             'amount' => $totalPrice,
             'paymentStatus' => 'n',
-            
         ];
-        
+    
         $checkout = $this->checkout->createCheckout($dataCheckout);
-
-
-
 
         if(empty($bookingId) || empty($checkout)){
             toastr()->error('Đặt tour thất bại. Vui lòng thử lại.');
             return redirect()->back();
         }
-        // update quantity
+
+        // Trừ số lượng promotion
+        $promotionId = $req->input('promotionId');
+        if (!empty($promotionId)) {
+            $this->promotion->decreaseQuantity($promotionId);
+        }
+
+        // Update quantity tour
         $tour = $this->tour->getTourDetail($tourId);
         $dataUpdate = [
             'quantity' => $tour->quantity - ($numAdults + $numChildren)
         ];
+        $this->tour->updateTours($tourId, $dataUpdate);
 
-        $updateQuantity = $this->tour->updateTours($tourId, $dataUpdate);
         if($paymentMethod == 'banking'){
-            return view('clients.qr-payment',[
+         return view('clients.qr-payment',[
                 'title' => 'Thanh toán QR',
                 'bookingCode' => $bookingCode,
                 'amount' => $totalPrice,
                 'bookingId' => $bookingId
             ]);
         }
+
         toastr()->success('Đặt tour thành công!');
         return redirect()->route('tours');
+       
     }
     
 
@@ -230,4 +241,56 @@ class BookingController extends Controller
         }
         return response()->json(['success' => true]);
     }
+    public function applyCoupon(Request $request)
+{
+    $code = strtoupper(trim($request->input('code')));
+    $totalPrice = (int) $request->input('totalPrice');
+
+    $promotion = $this->promotion->getPromotionByCode($code);
+
+    // Kiểm tra tồn tại
+    if (!$promotion) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Mã giảm giá không tồn tại'
+        ]);
+    }
+
+    // Kiểm tra còn hiệu lực
+    if ($promotion->status !== 'y') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Mã giảm giá đã bị vô hiệu hóa'
+        ]);
+    }
+
+    // Kiểm tra số lượng
+    if ($promotion->quantity <= 0) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Mã giảm giá đã hết lượt sử dụng'
+        ]);
+    }
+
+    // Kiểm tra thời hạn
+    $now = now();
+    if ($now->lt($promotion->startDate) || $now->gt($promotion->endDate)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Mã giảm giá chưa đến hạn hoặc đã hết hạn'
+        ]);
+    }
+
+    $discountAmount = $totalPrice * ($promotion->discount / 100);
+    $newTotal = $totalPrice - $discountAmount;
+
+    return response()->json([
+        'success'        => true,
+        'promotionId'    => $promotion->promotionId,
+        'discount'       => $promotion->discount,
+        'discountAmount' => $discountAmount,
+        'newTotal'       => $newTotal,
+        'message'        => "Áp dụng thành công! Giảm {$promotion->discount}%"
+    ]);
+}
 }

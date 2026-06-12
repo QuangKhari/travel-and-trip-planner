@@ -22,6 +22,8 @@ use App\Http\Controllers\admin\UserManagementController;
 use App\Http\Controllers\admin\DashboardController;
 use App\Http\Controllers\admin\BookingManagementController;
 use App\Http\Controllers\admin\ReviewManagementController;
+use App\Http\Controllers\admin\AdminManagementController;
+use App\Http\Controllers\admin\PromotionManagementController;
 
 
 
@@ -99,7 +101,12 @@ Route::prefix('admin')->group(function () {
     Route::post('/add-images-tours', [ToursManagementController::class, 'addImagesTours'])->name('admin.add-images-tours');
     Route::post('/add-timeline', [ToursManagementController::class, 'addTimeline'])->name('admin.add-timeline');
 
+    //Management admin
+    Route::get('/admin', [AdminManagementController::class, 'index'])->name('admin.admin');
+    Route::post('/update-admin', [AdminManagementController::class, 'updateAdmin'])->name('admin.update-admin');
+    Route::post('/update-avatar', [AdminManagementController::class, 'updateAvatar'])->name('admin.update-avatar');
 
+    //Management User
     Route::get('/users', [UserManagementController::class, 'index'])->name('admin.users');
     Route::post('/active-user', [UserManagementController::class, 'activeUser'])->name('admin.active-user');
     Route::post('/status-user', [UserManagementController::class, 'changeStatus'])->name('admin.status-user');
@@ -111,6 +118,14 @@ Route::prefix('admin')->group(function () {
     Route::post('/finish-booking', [BookingManagementController::class, 'finishBooking'])->name('admin.finish-booking');
     Route::post('/received-money', [BookingManagementController::class, 'receiviedMoney'])->name('admin.received');
     Route::post('/confirm-payment', [BookingManagementController::class, 'confirmPayment'])->name('admin.confirm-payment');
+    Route::post('/apply-coupon', [BookingController::class, 'applyCoupon'])->name('apply-coupon');
+
+    //Promotion
+    Route::get('/promotion', [PromotionManagementController::class, 'index'])->name('admin.promotion');
+    Route::post('/add-promotion', [PromotionManagementController::class, 'addPromotion'])->name('admin.add-promotion');
+    Route::get('/promotion-edit/{id}', [PromotionManagementController::class, 'getPromotionEdit'])->name('admin.promotion-edit');
+    Route::post('/edit-promotion', [PromotionManagementController::class, 'editPromotion'])->name('admin.edit-promotion');
+    Route::post('/delete-promotion', [PromotionManagementController::class, 'deletePromotion'])->name('admin.delete-promotion');
 
     //reviews
     Route::get('/reviews', [ReviewManagementController::class, 'index'])->name('admin.reviews');

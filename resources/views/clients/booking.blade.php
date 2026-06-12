@@ -141,9 +141,14 @@
                     </div>
                 </div>
                 <div class="order-coupon">
-                    <input type="text" placeholder="Mã giảm giá" style="width: 65%;">
-                    <button style="width: 30%" class="booking-btn btn-coupon">Áp dụng</button>
-                </div>
+                <input type="text" id="couponCode" name="couponCode"
+                    placeholder="Mã giảm giá" style="width: 65%;">
+                <button type="button" style="width: 30%"
+                        class="booking-btn btn-coupon">Áp dụng</button>
+                    </div>
+                    <p id="coupon-message" style="font-size: 13px; margin-top: 5px;"></p>
+                    <input type="hidden" name="promotionId" id="promotionId" value="">
+                    <input type="hidden" name="discountAmount" id="discountAmount" value="0">
 
                 <div id="paypal-button-container"></div>
 
@@ -156,5 +161,8 @@
         </div>
     </form>
 </section>
+<script>
+    var applyCouponUrl = "{{ route('apply-coupon') }}";
+</script>
 
 @include('clients.blocks.footer')

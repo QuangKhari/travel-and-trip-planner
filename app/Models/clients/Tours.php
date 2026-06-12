@@ -99,13 +99,17 @@ class Tours extends Model
         }
 
         // Áp dụng điều kiện về averageRating trong phần HAVING
-        if (!empty($filters)) {
-            foreach ($filters as $filter) {
-                if ($filter[0] === 'averageRating') {
-                    $getTours = $getTours->having('averageRating', $filter[1], $filter[2]); // Sử dụng HAVING để lọc averageRating
-                }
-            }
-        }
+        $ratingFilters = array_filter($filters, fn($f) => $f[0] === 'averageRating');
+
+if (!empty($ratingFilters)) {
+    foreach ($ratingFilters as $filter) {
+        $getTours = $getTours->having(
+            DB::raw('AVG(tbl_reviews.rating)'),
+            $filter[1],
+            $filter[2]
+        );
+    }
+}
 
         if (!empty($sorting) && isset($sorting[0]) && isset($sorting[1])) {
             $getTours = $getTours->orderBy($sorting[0], $sorting[1]);
@@ -227,4 +231,68 @@ class Tours extends Model
         }
         return $tours;
     }
+    public function getPopularTours($limit = 2)
+{
+    // Lấy tour có rating
+    $ratedTours = DB::table($this->table)
+        ->leftJoin('tbl_reviews', 'tbl_tours.tourId', '=', 'tbl_reviews.tourId')
+        ->select(
+            'tbl_tours.tourId',
+            'tbl_tours.title',
+            'tbl_tours.destination',
+            'tbl_tours.priceAdult',
+            DB::raw('AVG(tbl_reviews.rating) as averageRating'),
+            DB::raw('COUNT(tbl_reviews.reviewId) as reviewCount')
+        )
+        ->where('tbl_tours.availability', 1)
+        ->groupBy(
+            'tbl_tours.tourId',
+            'tbl_tours.title',
+            'tbl_tours.destination',
+            'tbl_tours.priceAdult'
+        )
+        ->havingRaw('AVG(tbl_reviews.rating) IS NOT NULL')
+        ->orderByDesc('averageRating')
+        ->orderByDesc('reviewCount')
+        ->limit($limit)
+        ->get();
+
+    // Nếu chưa đủ số lượng, lấy thêm tour random để bù
+    $remaining = $limit - $ratedTours->count();
+
+    if ($remaining > 0) {
+        // Lấy ID các tour đã có để loại trừ
+        $excludeIds = $ratedTours->pluck('tourId')->toArray();
+
+        $randomTours = DB::table($this->table)
+            ->select(
+                'tourId',
+                'title',
+                'destination',
+                'priceAdult',
+                DB::raw('NULL as averageRating'),
+                DB::raw('0 as reviewCount')
+            )
+            ->where('availability', 1)
+            ->whereNotIn('tourId', $excludeIds)
+            ->inRandomOrder()
+            ->limit($remaining)
+            ->get();
+
+        // Gộp 2 collection lại
+        $tours = $ratedTours->concat($randomTours);
+    } else {
+        $tours = $ratedTours;
+    }
+
+    // Lấy ảnh cho từng tour
+    foreach ($tours as $tour) {
+    $tour->images = DB::table('tbl_images')
+        ->where('tourId', $tour->tourId)
+        ->pluck('imageUrl');
+    // Ảnh đầu tiên để hiển thị
+    $tour->thumbnail = $tour->images->first() ?? 'default.jpg';
+    }
+    return $tours;
+}
 }

@@ -5,13 +5,47 @@
     <div class="container">
         <div class="row">
             <div class="col-lg-3 col-md-6 col-sm-10 rmb-75">
+                <div class="shop-sidebar mb-30">
+                    @if (!$toursPopular->isEmpty())
+                        <div class="widget widget-tour" data-aos="fade-up" data-aos-duration="1500"
+                            data-aos-offset="50">
+                            <h6 class="widget-title">Phổ biến Tours</h6>
+                            @foreach ($toursPopular as $tour)
+                                <div class="destination-item tour-grid style-three bgc-lighter">
+                                    <div class="image">
+                                        <img src="{{ asset('admin/assets/images/gallery-tours/' . ($tour->images->first() ?? 'default.jpg')) }}"
+                                            alt="Tour">
+                                    </div>
+                                    <div class="content">
+                                        <div class="destination-header">
+                                            <span class="location"><i class="fal fa-map-marker-alt"></i>
+                                                {{ $tour->destination }}</span>
+                                            <div class="ratting">
+                                                <i class="fas fa-star"></i>
+                                                @if (isset($tour->rating) && $tour->rating)
+                                                    <span>{{ number_format($tour->rating, 1) }}</span>
+                                                @else
+                                                    <span>Chưa đánh giá</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <h6><a
+                                                href="{{ route('tour-detail', ['id' => $tour->tourId]) }}">{{ $tour->title }}</a>
+                                        </h6>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+
             </div>
             <div class="col-lg-9">
                 @foreach ($myTours as $tour)
                     <div class="destination-item style-three bgc-lighter" data-aos="fade-up" data-aos-duration="1500"
                         data-aos-offset="50">
                         <div class="image">
-                            @if ($tour->bookingStatus == 'b')
+                            @if ($tour->bookingStatus == 'n')
                                 <span class="badge">Đợi xác nhận</span>
                             @elseif ($tour->bookingStatus == 'y')
                                 <span class="badge bgc-pink">Sắp khởi hành</span>
@@ -22,7 +56,7 @@
                             @endif
 
 
-                            <img src="{{ asset('clients/assets/images/gallery-tours/' . $tour->images[0] . '') }}"
+                            <img src="{{ asset('admin/assets/images/gallery-tours/' . (isset($tour->images) && $tour->images->isNotEmpty() ? $tour->images[0] : 'default.jpg')) }}"
                                 alt="Tour List">
                         </div>
                         <div class="content">

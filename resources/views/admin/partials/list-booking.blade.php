@@ -12,7 +12,7 @@
         <td>
             @if ($booking->bookingStatus == 'c')
                 <span class="badge badge-danger">Đã hủy</span>
-            @elseif ($booking->bookingStatus == 'b')
+            @elseif ($booking->bookingStatus == 'n')
                 <span class="badge badge-warning">Chưa xác nhận</span>
             @elseif ($booking->bookingStatus == 'y')
                 <span class="badge badge-primary">Đã xác nhận</span>
@@ -46,7 +46,7 @@
                 <div class="dropdown-menu" x-placement="bottom-start"
                     style="position: absolute; will-change: transform; top: 0px; left: 0px; transform: translate3d(71px, 38px, 0px);">
 
-                    @if ($booking->bookingStatus == 'b')
+                    @if ($booking->bookingStatus == 'n')
                         <a class="dropdown-item confirm-booking"
                             href="javascript:void(0)"
                             data-bookingId="{{ $booking->bookingId }}"

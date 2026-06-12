@@ -3,10 +3,7 @@
 namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\clients\Tours;
-use App\Models\clients\Booking;
-use App\Models\clients\Checkout;
 
 class MyTourController extends Controller
 {
@@ -25,7 +22,8 @@ class MyTourController extends Controller
         
         $myTours = $this->user->getMyTours($userId);
         $userId = $this->getUserId();
+        $toursPopular = $this->tours->getPopularTours(2);
 
-        return view('clients.my-tours', compact('title', 'myTours'));
+        return view('clients.my-tours', compact('title', 'myTours', 'toursPopular'));
     }
 }
