@@ -214,7 +214,7 @@
                     </div>
                 </div>
             </div>
-            <div class="row">
+            {{-- <div class="row">
                 <div class="col-md-12 col-sm-12 ">
 
                     <div class="x_panel">
@@ -241,7 +241,7 @@
                     <div class="clearfix"></div>
                 </div>
 
-            </div>
+            </div> --}}
         </div>
         <!-- /page content -->
     </div>
