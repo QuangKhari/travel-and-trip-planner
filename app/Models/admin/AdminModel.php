@@ -12,13 +12,46 @@ class AdminModel extends Model
 
     protected $table = 'tbl_admin';
 
-    public function getAdmin(){
-        return DB::table($this->table)->first();
+    // Lấy tài khoản admin chính
+    public function getAdmin()
+    {
+        return DB::table($this->table)->where('role', 'admin')->first();
     }
 
-    public function updateAdmin($data){
+    // Lấy danh sách theo role
+    public function getByRole($role)
+    {
+        return DB::table($this->table)->where('role', $role)->get();
+    }
+
+    // Cập nhật thông tin admin
+    public function updateAdmin($data)
+    {
         return DB::table($this->table)
-        ->where('username', 'admin')
-        ->update($data);
+            ->where('role', 'admin')
+            ->update($data);
+    }
+
+    // Thêm tài khoản mới (manager hoặc staff)
+    public function addAdmin($data)
+    {
+        return DB::table($this->table)->insertGetId($data);
+    }
+
+    // Xóa theo ID và role (tránh xóa nhầm)
+    public function deleteByIdAndRole($adminId, $role)
+    {
+        return DB::table($this->table)
+            ->where('adminId', $adminId)
+            ->where('role', $role)
+            ->delete();
+    }
+
+    // Lấy theo ID
+    public function getAdminById($adminId)
+    {
+        return DB::table($this->table)
+            ->where('adminId', $adminId)
+            ->first();
     }
 }

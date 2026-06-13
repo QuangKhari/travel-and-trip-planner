@@ -19,6 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
          'checkUserBlocked' =>
         \App\Http\Middleware\CheckUserBlocked::class,
 
+        'checkAdminRole'   => \App\Http\Middleware\CheckAdminRole::class,
+
     ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -175,8 +175,24 @@ $(document).ready(function () {
     /****************************************
      *              HEADER                  *
      * ***************************************/
-    $("#userDropdown").click(function () {
-        $("#dropdownMenu").toggle(); // Toggle dropdown menu when user clicks
+    $("#userDropdown").click(function (e) {
+        e.stopPropagation();
+        $("#dropdownMenu").toggle();
+    });
+
+// Đóng dropdown khi click ra ngoài
+    $(document).click(function (e) {
+        if (!$(e.target).closest('.menu-sidebar').length) {
+            $("#dropdownMenu").hide();
+        }
+    });
+
+    $("#dropdownMenu a").on('click', function (e) {
+        e.stopPropagation(); // ngăn bubble lên document
+        var href = $(this).attr('href');
+        if (href && href !== '#') {
+            window.location.href = href;
+        }
     });
 
     /****************************************

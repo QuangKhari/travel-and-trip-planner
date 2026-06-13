@@ -24,32 +24,27 @@ class LoginAdminController extends Controller
     public function loginAdmin(Request $request)
     {
         $username = $request->username;
-        $password = md5($request->password);
-        if ($username === 'admin' && $password === '123456') {
+    $password = md5($request->password);
 
-        $request->session()->put('admin', 'admin');
+    // Bỏ hardcode admin/123456, tìm trong DB
+    $login = $this->login->login($username, $password);
 
+    if ($login !== null) {
+        $request->session()->put('admin', $login->userName);
+        $request->session()->put('adminRole', $login->role); // ✅ lưu role
+        $request->session()->put('adminId', $login->adminId);
         toastr()->success('Đăng nhập thành công');
-
         return redirect()->route('admin.dashboard');
-        }
-
-        $login = $this->login->login($username, $password);
-
-        if ($login !== null) {
-            $request->session()->put('admin', $username);
-            toastr()->success('Đăng nhập thành công');
-            return redirect()->route('admin.dashboard');
-        } else {
-            toastr()->error('Thông tin đăng nhập không chính xác');
-            return redirect()->route('admin.login');
-        }
-    }
-
-    public function logout(Request $request)
-    {
-        $request->session()->forget('admin');
-        toastr()->success("Đăng xuất thành công!", 'Thông báo');
+    } else {
+        toastr()->error('Thông tin đăng nhập không chính xác');
         return redirect()->route('admin.login');
     }
+}
+
+public function logout(Request $request)
+{
+    $request->session()->forget(['admin', 'adminRole', 'adminId']); // xóa hết session
+    toastr()->success("Đăng xuất thành công!", 'Thông báo');
+    return redirect()->route('admin.login');
+}
 }

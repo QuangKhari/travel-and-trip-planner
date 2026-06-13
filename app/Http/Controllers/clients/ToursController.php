@@ -94,19 +94,17 @@ class ToursController extends Controller
         //dd($req->all(), $sorting);
         $tours = $this->tours->filterTours($conditions, $sorting);
         //dd($tours);
-        // If not paginated, simulate pagination
-        if (!$tours instanceof \Illuminate\Pagination\LengthAwarePaginator) {
-            // Create a fake paginator (pagination for non-paginated collection)
-            $tours = new \Illuminate\Pagination\LengthAwarePaginator(
-                $tours, // Collection
-                count($tours), // Total items
-                9, // Per page
-                1, // Current page
-                ['path' => url()->current()] // Path for pagination
-            );
-        }
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        $perPage = 9;
+        $currentItems = $tours->slice(($currentPage - 1) * $perPage, $perPage)->values();
 
-        //dd($tours);
+        $tours = new LengthAwarePaginator(
+            $currentItems,
+            $tours->count(),
+            $perPage,
+            $currentPage,
+            ['path' => url()->current()]
+        );
 
         return view('clients.partials.filter-tours', compact('tours'));
 
