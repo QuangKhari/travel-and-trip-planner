@@ -56,9 +56,8 @@
 <!-- Dropzone.js -->
 <script src="{{ asset('admin/vendors/dropzone/dist/min/dropzone.min.js') }}"></script>
 <!-- Custom Theme Scripts -->
-<script src="{{ asset('admin/build/js/custom.js') }}"></script>
-<!-- jQuery Smart Wizard -->
 <script src="{{ asset('admin/vendors/jQuery-Smart-Wizard/js/jquery.smartWizard.js') }}"></script>
+<script src="{{ asset('admin/build/js/custom.js') }}"></script>
 {{-- jquery-toast  --}}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 

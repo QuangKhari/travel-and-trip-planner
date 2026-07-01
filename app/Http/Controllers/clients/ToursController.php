@@ -28,6 +28,26 @@ class ToursController extends Controller
         ];
 
         $popularTours = $this->tours->getPopularTours(2);
+        $allTours = $this->tours->filterTours([], []);
+
+    $currentPage = LengthAwarePaginator::resolveCurrentPage();
+    $perPage = 9;
+    $currentItems = $allTours->slice(($currentPage - 1) * $perPage, $perPage)->values();
+
+    $tours = new LengthAwarePaginator(
+        $currentItems,
+        $allTours->count(),
+        $perPage,
+        $currentPage,
+        [
+        'path' => route('filter-tours'),
+        'query' => $request->except('page')
+    ]
+);
+
+if ($request->ajax()) {
+    return view('clients.partials.filter-tours', compact('tours'));
+}
 
         return view('clients.tours', compact('title', 'tours', 'domainsCount', 'popularTours'));
     }
@@ -103,8 +123,12 @@ class ToursController extends Controller
             $tours->count(),
             $perPage,
             $currentPage,
-            ['path' => url()->current()]
+            [
+                'path' => route('filter-tours'),
+                'query' => $req->except('page')
+            ]
         );
+        
 
         return view('clients.partials.filter-tours', compact('tours'));
 

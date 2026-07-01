@@ -138,7 +138,7 @@
                                     </h5>
                                     <div id="collapseTwo{{ $timeline->timeLineId}}" class="accordion-collapse collapse" data-bs-parent="#faq-accordion-two">
                                         <div class="accordion-body">
-                                            <p>{{ $timeline->description }}</p>
+                                            <p>{!! $timeline->description !!}</p>
                                         </div>
                                     </div>
                                 </div>

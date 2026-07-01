@@ -70,3 +70,10 @@
     </ul>
 </div>
 @endif
+<style>
+.pagination-tours{
+    display:flex !important;
+    visibility:visible !important;
+    opacity:1 !important;
+}
+</style>

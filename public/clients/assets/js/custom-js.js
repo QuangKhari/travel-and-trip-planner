@@ -266,22 +266,36 @@ $('input[name="duration"]').on("change", debounceFilter);
         var url = $(this).attr("href");
         console.log(url);
 
+        var domain = $('input[name="domain"]:checked').val();
+var star = $('input[name="filter_star"]:checked').val();
+var duration = $('input[name="duration"]:checked').val();
+var sorting = $("#sorting_tours").val();
+
+var minPrice = $(".price-slider-range").slider("values", 0);
+var maxPrice = $(".price-slider-range").slider("values", 1);
+
         $.ajax({
             url: url,
             type: "GET",
-            dataType: "json",
+            data: {
+        minPrice: minPrice,
+        maxPrice: maxPrice,
+        domain: domain,
+        star: star,
+        time: duration,
+        sorting: sorting
+    },
+            
             success: function (response) {
                 // Cập nhật toàn bộ nội dung (tours và phân trang)
-                $("#tours-container")
-                    .html(response.tours)
-                    .removeClass("hidden-content");
-                $("#tours-container .destination-item").addClass("aos-animate");
-                $("#tours-container .pagination-tours").addClass("aos-animate");
-                $(".loader").hide();
-            },
-            error: function (xhr, status, error) {
-                console.log("Có lỗi xảy ra trong quá trình tải dữ liệu!");
-            },
+                $("#tours-container").html(response).removeClass("hidden-content");
+            $("#tours-container .destination-item").addClass("aos-animate");
+            $(".loader").hide();
+        },
+        error: function (xhr, status, error) {
+            $(".loader").hide();
+            console.log("Có lỗi xảy ra trong quá trình tải dữ liệu!");
+        },
         });
     });
 

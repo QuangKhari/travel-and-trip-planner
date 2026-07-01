@@ -2400,7 +2400,7 @@ function init_SmartWizard() {
         });
 
         // Thêm tourid vào formData khi gửi tệp
-        myDropzone.on("sending", function (file, xhr, formData) {
+         ("sending", function (file, xhr, formData) {
             formData.append("tourId", tourId); // Thêm tourid vào formData
         });
 
