@@ -44,7 +44,7 @@ class LoginAdminController extends Controller
 public function logout(Request $request)
 {
     $request->session()->forget(['admin', 'adminRole', 'adminId']); // xóa hết session
-    toastr()->success("Đăng xuất thành công!", 'Thông báo');
+    toastr()->success("Đăng xuất thành công!");
     return redirect()->route('admin.login');
 }
 }

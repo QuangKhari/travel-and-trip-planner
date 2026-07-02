@@ -24,6 +24,7 @@ use App\Http\Controllers\admin\BookingManagementController;
 use App\Http\Controllers\admin\ReviewManagementController;
 use App\Http\Controllers\admin\AdminManagementController;
 use App\Http\Controllers\admin\PromotionManagementController;
+use App\Http\Controllers\clients\ForgotPasswordController;
 
 
 
@@ -33,7 +34,7 @@ Route::get('/about', [AboutController::class, 'index'])->name('about');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::get('/destination', [DestinationController::class, 'index'])->name('destination');
 Route::get('/travel-guides', [TravelGuidesController::class, 'index'])->name('team');
-Route::get('/tour-detail/{id?}', [TourDetailController::class, 'index'])->name('tour-detail');
+Route::get('/tour-detail/{id}', [TourDetailController::class, 'index'])->whereNumber('id')->name('tour-detail');
 Route::get('/blogs', [BlogController::class, 'index'])->name('blogs');
 Route::get('/blog-detail', [BlogDetailController::class, 'index'])->name('blog-detail');
 Route::get('/search', [SearchController::class, 'index'])->name('search');
@@ -45,6 +46,9 @@ Route::post('/login', [LoginController::class, 'login'])->name('user-login');
 Route::post('/register', [LoginController::class, 'register'])->name('register');
 Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
 
+Route::get('/quen-mat-khau', [ForgotPasswordController::class, 'index'])->name('password.request');
+Route::post('/xac-thuc-tai-khoan', [ForgotPasswordController::class, 'verifyAccount'])->name('password.verify');
+Route::post('/doi-mat-khau', [ForgotPasswordController::class, 'reset'])->name('password.update');
 
 
 //tours, filter tours, tour detail
@@ -111,7 +115,7 @@ Route::prefix('admin')->group(function () {
         Route::get('/page-add-tours', [ToursManagementController::class, 'pageAddTours'])->name('admin.page-add-tours');
         Route::post('/add-tours', [ToursManagementController::class, 'addTours'])->name('admin.add-tours');
         Route::post('/delete-tour', [ToursManagementController::class, 'deleteTour'])->name('admin.delete-tour');
-        Route::post('/add-temp-images', [ToursManagementController::class, 'addImagesTours'])->name('admin.add-temp-images');
+        Route::post('/add-temp-images', [ToursManagementController::class, 'uploadTempImagesTours'])->name('admin.add-temp-images');
         Route::post('/add-images-tours', [ToursManagementController::class, 'addImagesTours'])->name('admin.add-images-tours');
         Route::post('/add-timeline', [ToursManagementController::class, 'addTimeline'])->name('admin.add-timeline');
 
@@ -137,6 +141,7 @@ Route::prefix('admin')->group(function () {
         Route::delete('/reviews/{id}', [ReviewManagementController::class, 'destroy'])->name('admin.reviews.destroy');
 
         //Management Staff - manager thêm/xóa staff
+        Route::get('/admin', [AdminManagementController::class, 'index'])->name('admin.admin');
         Route::post('/add-staff', [AdminManagementController::class, 'addStaff'])->name('admin.add-staff');
         Route::post('/delete-staff', [AdminManagementController::class, 'deleteStaff'])->name('admin.delete-staff');
     });
@@ -144,7 +149,6 @@ Route::prefix('admin')->group(function () {
     // Chỉ admin
     Route::middleware(['checkAdminRole:admin'])->group(function () {
         //Management Admin
-        Route::get('/admin', [AdminManagementController::class, 'index'])->name('admin.admin');
         Route::post('/update-admin', [AdminManagementController::class, 'updateAdmin'])->name('admin.update-admin');
         Route::post('/update-avatar', [AdminManagementController::class, 'updateAvatar'])->name('admin.update-avatar');
 

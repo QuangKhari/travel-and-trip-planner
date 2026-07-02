@@ -31,4 +31,20 @@ class Login extends Model
 
     }
 
+    public function checkAccountMatch($username, $email)
+    {
+        $check = DB::table($this->table)
+            ->where('username', $username)
+            ->where('email', $email)
+            ->first();
+        return $check;
+    }
+
+    public function updatePassword($email, $password)
+    {
+        return DB::table($this->table)
+            ->where('email', $email)
+            ->update(['password' => $password]);
+    }
+
 }

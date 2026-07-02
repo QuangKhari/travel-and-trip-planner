@@ -14,6 +14,7 @@
 
                 <div class="clearfix"></div>
 
+                @if (session('adminRole') == 'admin')
                 {{-- Thông tin Admin --}}
                 <div class="row">
                     <div class="col-md-12">
@@ -155,15 +156,13 @@
                                         @forelse ($managers as $index => $manager)
                                             <tr id="manager-row-{{ $manager->adminId }}">
                                                 <td>{{ $index + 1 }}</td>
-                                                <td>{{ $manager->username }}</td>
+                                                <td>{{ $manager->userName }}</td>
                                                 <td>{{ $manager->fullName }}</td>
                                                 <td>{{ $manager->email }}</td>
                                                 <td>{{ $manager->address }}</td>
                                                 <td>
-                                                    <button class="btn btn-danger btn-delete"
-                                                        data-id="{{ $manager->adminId }}"
-                                                        data-role="manager"
-                                                        data-url="{{ route('admin.delete-manager') }}">
+                                                    <button type="button" class="btn btn-danger"
+                                                        onclick="handleDeleteAdmin({{ $manager->adminId }}, '{{ route('admin.delete-manager') }}', this)">
                                                         <i class="fa fa-trash"></i> Xóa
                                                     </button>
                                                 </td>
@@ -179,6 +178,7 @@
                         </div>
                     </div>
                 </div>
+                @endif
 
                 {{-- Danh sách Nhân viên --}}
                 <div class="row">
@@ -239,15 +239,13 @@
                                         @forelse ($staffs as $index => $staff)
                                             <tr id="staff-row-{{ $staff->adminId }}">
                                                 <td>{{ $index + 1 }}</td>
-                                                <td>{{ $staff->username }}</td>
+                                                <td>{{ $staff->userName }}</td>
                                                 <td>{{ $staff->fullName }}</td>
                                                 <td>{{ $staff->email }}</td>
                                                 <td>{{ $staff->address }}</td>
                                                 <td>
-                                                    <button class="btn btn-danger btn-delete"
-                                                        data-id="{{ $staff->adminId }}"
-                                                        data-role="staff"
-                                                        data-url="{{ route('admin.delete-staff') }}">
+                                                    <button type="button" class="btn btn-danger"
+                                                        onclick="handleDeleteAdmin({{ $staff->adminId }}, '{{ route('admin.delete-staff') }}', this)">
                                                         <i class="fa fa-trash"></i> Xóa
                                                     </button>
                                                 </td>
@@ -272,34 +270,50 @@
 
 {{-- JS xóa manager và staff --}}
 <script>
-$('.btn-delete').on('click', function () {
-    if (!confirm('Bạn có chắc muốn xóa tài khoản này?')) return;
-
-    const adminId = $(this).data('id');
-    const role = $(this).data('role');
-    const url = $(this).data('url');
-    const row = $(this).closest('tr');
-
-    $.ajax({
-        url: url,
-        method: 'POST',
-        data: {
-            _token: '{{ csrf_token() }}',
-            adminId: adminId
-        },
-        success: function (res) {
-            if (res.success) {
-                row.remove();
-                toastr.success(res.message);
-            } else {
-                toastr.error(res.message);
-            }
-        },
-        error: function () {
-            toastr.error('Có lỗi xảy ra, vui lòng thử lại');
+    function handleDeleteAdmin(adminId, url, btnEl) {
+        if (!confirm('Bạn có chắc muốn xóa tài khoản này?')) {
+            return;
         }
-    });
-});
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', url, true);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+        xhr.onload = function () {
+            var res;
+            try {
+                res = JSON.parse(xhr.responseText);
+            } catch (e) {
+                alert('Có lỗi xảy ra, vui lòng thử lại (phản hồi không hợp lệ)');
+                return;
+            }
+
+            if (res.success) {
+                var row = btnEl.closest('tr');
+                if (row) {
+                    row.parentNode.removeChild(row);
+                }
+                if (window.toastr) {
+                    toastr.success(res.message);
+                } else {
+                    alert(res.message);
+                }
+            } else {
+                if (window.toastr) {
+                    toastr.error(res.message);
+                } else {
+                    alert(res.message);
+                }
+            }
+        };
+
+        xhr.onerror = function () {
+            alert('Không thể kết nối tới server, vui lòng thử lại');
+        };
+
+        xhr.send('_token={{ csrf_token() }}&adminId=' + encodeURIComponent(adminId));
+    }
 </script>
 
 @include('admin.blocks.footer')

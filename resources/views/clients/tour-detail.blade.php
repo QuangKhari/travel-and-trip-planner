@@ -10,7 +10,7 @@
                         <h2 class="page-title mb-10" data-aos="fade-left" data-aos-duration="1500" data-aos-offset="50">{{ $tourDetail->destination }}</h2>
                         <nav aria-label="breadcrumb">
                             <ol class="breadcrumb justify-content-center mb-20" data-aos="fade-right" data-aos-delay="200" data-aos-duration="1500" data-aos-offset="50">
-                                <li class="breadcrumb-item"><a href="index.html">Trang chủ</a></li>
+                                <li class="breadcrumb-item"><a href="{{ route('home') }}">Trang chủ</a></li>
                                 <li class="breadcrumb-item active">{{ $title }}</li>
                             </ol>
                         </nav>
@@ -239,7 +239,7 @@
                                 <i class="fal fa-arrow-right"></i>
                             </button>
                             <div class="text-center">
-                                <a href="contact">Bạn cần trợ giúp không?</a>
+                                <a href="{{ route('contact') }}">Bạn cần trợ giúp không?</a>
                             </div>
                         </form>
                     </div>
@@ -249,7 +249,7 @@
                         <h5 class="widget-title">Cần trợ giúp?</h5>
                         <ul class="list-style-one">
                             <li><i class="far fa-envelope"></i> <a
-                                    href="emilto:minhdien.dev@gmail.com">aaa@gmail.com</a></li>
+                                    href="mailto:aaa@gmail.com">aaa@gmail.com</a></li>
                             <li><i class="far fa-phone-volume"></i> <a href="callto:+000(123)45688">+000 (123) 456
                                     88</a></li>
                         </ul>

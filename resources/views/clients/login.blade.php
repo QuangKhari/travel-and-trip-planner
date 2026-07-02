@@ -28,6 +28,11 @@
                                 <input type="password" name="password_login" id="password_login" placeholder="Mật khẩu"/>
                             </div>
                             <div class="invalid-feedback" style="margin-top:-15px" id="validate_password"></div>
+
+                            <div class="forgot-password-link" style="text-align: right; margin-top: -10px; margin-bottom: 15px;">
+                                <a href="{{ route('password.request') }}" style="font-size: 13px; color: #777;">Quên mật khẩu?</a>
+                            </div>
+
                             <div class="form-group form-button">
                                 <input type="submit" name="signin" id="signin" class="form-submit" value="Đăng nhập"/>
                             </div>
@@ -39,6 +44,10 @@
                                 <li><a href="#"><i class="display-flex-center zmdi zmdi-twitter"></i></a></li>
                                 <li><a href="#"><i class="display-flex-center zmdi zmdi-google"></i></a></li>
                             </ul>
+                        </div>
+
+                        <div class="admin-login-link" style="text-align: center; margin-top: 15px;">
+                            <a href="{{ route('admin.login') }}" style="font-size: 13px; color: #777;">Đăng nhập với vai trò quản trị viên</a>
                         </div>
                     </div>
                 </div>

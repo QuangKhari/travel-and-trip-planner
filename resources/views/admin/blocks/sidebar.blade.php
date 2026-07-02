@@ -54,8 +54,8 @@
                         <li><a href="{{ route('admin.promotion') }}"><i class="fa fa-tags"></i> Quản lý Khuyến mãi</a></li>
                     @endif
 
-                    {{-- Chỉ admin --}}
-                    @if (session('adminRole') == 'admin')
+                    {{-- Admin và manager --}}
+                    @if (in_array(session('adminRole'), ['admin', 'manager']))
                         <li><a href="{{ route('admin.admin') }}"><i class="fa fa-user"></i> Quản lý tài khoản</a></li>
                     @endif
 
@@ -65,20 +65,79 @@
         <!-- /sidebar menu -->
 
         <!-- menu footer buttons -->
-        <div class="sidebar-footer hidden-small">
-            <a data-toggle="tooltip" data-placement="top" title="Settings">
-                <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
-            </a>
-            <a data-toggle="tooltip" data-placement="top" title="FullScreen">
-                <span class="glyphicon glyphicon-fullscreen" aria-hidden="true"></span>
-            </a>
-            <a data-toggle="tooltip" data-placement="top" title="Lock">
-                <span class="glyphicon glyphicon-eye-close" aria-hidden="true"></span>
-            </a>
-            <a data-toggle="tooltip" data-placement="top" title="Logout" href="{{ route('admin.logout') }}">
-                <span class="glyphicon glyphicon-off" aria-hidden="true"></span>
+        <div class="sidebar-footer hidden-small" style="width: 100% !important; position: static !important; left: auto !important; float: none !important; padding: 0 15px 20px 15px; box-sizing: border-box; margin-top: auto !important;">
+            <a href="javascript:void(0)" id="btn-logout-admin" class="btn-logout-custom">
+                <i class="fa fa-sign-out"></i>
+                <span>Đăng xuất</span>
             </a>
         </div>
         <!-- /menu footer buttons -->
+
+        <style>
+            .left_col.scroll-view {
+                display: flex !important;
+                flex-direction: column !important;
+                min-height: 100vh !important;
+            }
+
+            #sidebar-menu {
+                flex: 1 !important;
+            }
+
+            .btn-logout-custom {
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                width: 100%;
+                white-space: nowrap;
+                padding: 10px 0;
+                border-radius: 6px;
+                background-color: rgba(231, 76, 60, 0.1);
+                color: #e74c3c;
+                font-size: 14px;
+                font-weight: 600;
+                text-decoration: none;
+                border: 1px solid rgba(231, 76, 60, 0.3);
+                transition: all 0.25s ease;
+                box-sizing: border-box;
+            }
+
+            .btn-logout-custom:hover {
+                background-color: #e74c3c;
+                color: #ffffff;
+                border-color: #e74c3c;
+                text-decoration: none;
+            }
+
+            .btn-logout-custom i {
+                font-size: 15px;
+            }
+        </style>
+
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    document.getElementById('btn-logout-admin').addEventListener('click', function (e) {
+        e.preventDefault();
+
+        Swal.fire({
+            title: 'Đăng xuất?',
+            text: 'Bạn có chắc chắn muốn đăng xuất khỏi hệ thống quản trị?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Đăng xuất',
+            cancelButtonText: 'Hủy',
+            confirmButtonColor: '#e74c3c',
+            cancelButtonColor: '#95a5a6',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = "{{ route('admin.logout') }}";
+            }
+        });
+    });
+</script>
