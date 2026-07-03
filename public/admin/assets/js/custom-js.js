@@ -545,21 +545,28 @@ $(document).ready(function () {
     addTimelineEntry();
 
     $(".add-tours #wizard .buttonFinish").on("click", function () {
-        // Lấy form cần kiểm tra
-        const form = $("#timeline-form")[0]; // Chuyển đổi về DOM element để sử dụng checkValidity()
+    const form = $("#timeline-form")[0];
 
-        // Kiểm tra tính hợp lệ của form
-        if (form.checkValidity()) {
-            // Form hợp lệ -> Gửi form
-            $("#timeline-form").submit();
-        } else {
-            // Form không hợp lệ -> Hiện toastr
-            toastr.error("Vui lòng điền đầy đủ thông tin trong form!");
+    if (form.checkValidity()) {
+        $("#timeline-form .temp-image-input").remove();
 
-            // Kích hoạt kiểm tra lỗi trên form để hiển thị lỗi HTML5
-            form.reportValidity();
+        if (window.uploadedTempImages && window.uploadedTempImages.length) {
+            window.uploadedTempImages.forEach(function (filename) {
+                $("<input>").attr({
+                    type: "hidden",
+                    class: "temp-image-input",
+                    name: "images[]",
+                    value: filename
+                }).appendTo("#timeline-form");
+            });
         }
-    });
+
+        $("#timeline-form").submit();
+    } else {
+        toastr.error("Vui lòng điền đầy đủ thông tin trong form!");
+        form.reportValidity();
+    }
+});
 
     /********************************************
      * BOOKING MANAGEMENT                          *

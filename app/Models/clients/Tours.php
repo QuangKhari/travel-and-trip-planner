@@ -20,7 +20,7 @@ class Tours extends Model
             // Lấy danh sách hình ảnh thuộc về tour
             $tour->images = DB::table('tbl_images')
                 ->where('tourId', $tour->tourId)
-                ->pluck('imageUrl');
+                ->pluck('imageURL');
         }
         return $allTours;
     }
@@ -39,7 +39,7 @@ class Tours extends Model
             $getTourDetail->images = DB::table('tbl_images')
                 ->where('tourId', $getTourDetail->tourId)
                 ->limit(5)
-                ->pluck('imageUrl');
+                ->pluck('imageURL');
 
             $getTourDetail->timeline = DB::table('tbl_timeline')
                 ->where('tourId', $getTourDetail->tourId)
@@ -125,7 +125,7 @@ if (!empty($ratingFilters)) {
         foreach ($tours as $tour) {
             $tour->images = DB::table('tbl_images')
                 ->where('tourId', $tour->tourId)
-                ->pluck('imageUrl');
+                ->pluck('imageURL');
             $tour->rating = $this->reviewStats($tour->tourId)->averageRating;
         }
 
@@ -225,7 +225,7 @@ if (!empty($ratingFilters)) {
             // Lấy danh sách hình ảnh thuộc về tour
             $tour->images = DB::table('tbl_images')
                 ->where('tourId', $tour->tourId)
-                ->pluck('imageUrl');
+                ->pluck('imageURL');
             // Lấy số lượng đánh giá và số sao trung bình của tour
             $tour->rating = $this->reviewStats($tour->tourId)->averageRating;
         }
@@ -289,7 +289,7 @@ if (!empty($ratingFilters)) {
     foreach ($tours as $tour) {
     $tour->images = DB::table('tbl_images')
         ->where('tourId', $tour->tourId)
-        ->pluck('imageUrl');
+        ->pluck('imageURL');
     // Ảnh đầu tiên để hiển thị
     $tour->thumbnail = $tour->images->first() ?? 'default.jpg';
     }

@@ -162,15 +162,29 @@ class ToursManagementController extends Controller
         }
 
         foreach ($timelines as $timeline) {
-            $this->tours->addTimeLine($timeline);
-        }
-        $dataUpdate = [
-            'availability' => 1
-        ];
+    $this->tours->addTimeLine($timeline);
+}
 
-        $updateAvailability = $this->tours->updateTour($tourId, $dataUpdate);
-        toastr()->success('Thêm tour thành công!');
-        return redirect()->route('admin.page-add-tours');
+// Chuyển ảnh đã upload tạm ở Bước 2 (gửi lên qua images[]) sang bảng chính thức tbl_images
+$images = $request->input('images');
+if ($images && is_array($images)) {
+    foreach ($images as $image) {
+        $dataUpload = [
+            'tourId' => $tourId,
+            'imageURL' => $image,
+            'description' => ''
+        ];
+        $this->tours->uploadImages($dataUpload);
+    }
+}
+
+$dataUpdate = [
+    'availability' => 1
+];
+
+$updateAvailability = $this->tours->updateTour($tourId, $dataUpdate);
+toastr()->success('Thêm tour thành công!');
+return redirect()->route('admin.page-add-tours');
     }
     public function getTourEdit(Request $request)
 {

@@ -45,7 +45,7 @@ Route::get('/login', [LoginController::class, 'index'])->name('login');
 Route::post('/login', [LoginController::class, 'login'])->name('user-login');
 Route::post('/register', [LoginController::class, 'register'])->name('register');
 Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
-
+//quên mật khẩu 
 Route::get('/quen-mat-khau', [ForgotPasswordController::class, 'index'])->name('password.request');
 Route::post('/xac-thuc-tai-khoan', [ForgotPasswordController::class, 'verifyAccount'])->name('password.verify');
 Route::post('/doi-mat-khau', [ForgotPasswordController::class, 'reset'])->name('password.update');

@@ -2311,7 +2311,7 @@ function init_SmartWizard() {
             }
 
             // Nếu có lỗi, ngừng chuyển bước
-            if (!isValid || finishStep1) {
+            if (!isValid) {
                 return false; // Trả về false để ngừng chuyển bước nếu form đã được gửi
             }
 
@@ -2331,31 +2331,34 @@ function init_SmartWizard() {
                 _token: $('input[name="_token"]').val(),
             };
 
-            $.ajax({
-                type: "POST",
-                url: formActionUrl,
-                data: formData,
-                success: function (response) {
-                    if (response.success) {
-                        isValid = true;
-                        tourId = response.tourId;
-                        finishStep1 = true; // Đánh dấu form đã được gửi
-                        $(".hiddenTourId").val(tourId);
-                        // Thông báo cho file custom-js.js rằng giá trị đã được cập nhật
-                        $(document).trigger("dataUpdated", [daysDifference]);
-                        toastr.success("Hãy thêm hình ảnh cho tour vừa tạo!");
-                    } else {
-                        toastr.error("Không thể thêm tour. Vui lòng thử lại.");
-                    }
-                },
-                error: function (xhr, textStatus, errorThrown) {
-                    toastr.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
-                },
-            });
+            if (finishStep1) {
+    return true; // Đã tạo tour rồi (quay lại bước 1 rồi next lại) -> cho qua luôn, không gọi lại AJAX
+}
 
-            if (isValid) {
-                return true; // Cho phép chuyển bước
-            }
+$.ajax({
+    type: "POST",
+    url: formActionUrl,
+    data: formData,
+    success: function (response) {
+        if (response.success) {
+            tourId = response.tourId;
+            finishStep1 = true; // Đánh dấu form đã được gửi
+            $(".hiddenTourId").val(tourId);
+            $(document).trigger("dataUpdated", [daysDifference]);
+            toastr.success("Hãy thêm hình ảnh cho tour vừa tạo!");
+
+            // Chỉ chuyển sang Bước 2 SAU KHI đã có tourId
+            $(".add-tours #wizard").smartWizard("goToStep", 2);
+        } else {
+            toastr.error("Không thể thêm tour. Vui lòng thử lại.");
+        }
+    },
+    error: function (xhr, textStatus, errorThrown) {
+        toastr.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
+    },
+});
+
+return false; // Luôn chặn chuyển bước ngay lập tức; việc chuyển bước do dòng smartWizard("next") ở trên đảm nhiệm
         },
         onNextStep: function (obj, context) {
             // Kiểm tra xem có sự kiện NextStep không
@@ -2368,41 +2371,48 @@ function init_SmartWizard() {
     if ($("#myDropzone").length) {
         // Khởi tạo Dropzone cho bước 2
         var myDropzone = new Dropzone("#myDropzone", {
-            url: "http://127.0.0.1:8000/admin/add-images-tours",
+    url: "http://127.0.0.1:8000/admin/add-temp-images",
             paramName: "image",
             maxFilesize: 5,
             acceptedFiles: "image/*",
             addRemoveLinks: true,
-            autoProcessQueue: false, // Không tự động upload
-            maxFiles: 5, // Giới hạn số file tối đa
-            parallelUploads: 5, // Số file được upload song song
+            autoProcessQueue: false,
+            maxFiles: 5,
+            parallelUploads: 5,
         });
 
         // Xử lý khi bấm nút "Next"
         $(".add-tours #wizard .buttonNext").on("click", function (event) {
-            let currentStep =
-                $(".add-tours #wizard").smartWizard("currentStep");
-            if (currentStep === 2) {
-                event.preventDefault(); // Ngăn hành vi mặc định
+    let currentStep =
+        $(".add-tours #wizard").smartWizard("currentStep");
+    if (currentStep === 2) {
+        // Nếu ảnh đã upload xong hết (queuecomplete đã chạy) -> cho đi tiếp bình thường
+        if (finishStep2) {
+            return;
+        }
 
-                // Kiểm tra xem có tệp nào trong Dropzone không
-                if (myDropzone.getQueuedFiles().length >= 5) {
-                    console.log("Uploading images...");
+        event.preventDefault();
 
-                    // Xử lý upload toàn bộ hàng đợi
-                    myDropzone.processQueue();
-                } else {
-                    toastr.warning(
-                        "Vui lòng thêm ít nhất 5 hình ảnh trước khi tiếp tục."
-                    );
-                }
-            }
-        });
+        if (myDropzone.getQueuedFiles().length >= 5) {
+            console.log("Uploading images...");
+            myDropzone.processQueue();
+        } else {
+            toastr.warning(
+                "Vui lòng thêm ít nhất 5 hình ảnh trước khi tiếp tục."
+            );
+        }
+    }
+});
 
-        // Thêm tourid vào formData khi gửi tệp
-         ("sending", function (file, xhr, formData) {
-            formData.append("tourId", tourId); // Thêm tourid vào formData
-        });
+        window.uploadedTempImages = []; // reset danh sách mỗi lần khởi tạo wizard
+
+// Xử lý khi từng tệp được tải lên thành công
+myDropzone.on("success", function (file, response) {
+    console.log("File uploaded successfully:", response);
+    if (response && response.data && response.data.filename) {
+        window.uploadedTempImages.push(response.data.filename);
+    }
+});
 
         // Xử lý khi từng tệp được tải lên thành công
         myDropzone.on("success", function (file, response) {
