@@ -33,4 +33,11 @@ class Booking extends Model
         ->where('bookingStatus', 'f')
         ->exists(); // Trả về true nếu bản ghi tồn tại, false nếu không tồn tại
     }
+
+    public function updateTransferProof($bookingId, $imagePath)
+    {
+        return DB::table($this->table)
+            ->where('bookingId', $bookingId)
+            ->update(['transferProofImage' => $imagePath]);
+    }
 }

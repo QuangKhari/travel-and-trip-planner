@@ -3222,6 +3222,8 @@ function init_DataTables() {
     }
     console.log("init_DataTables");
 
+
+    //In hóa đơn, danh sách tours, danh sách booking
     var handleDataTableButtons = function () {
         if ($("#datatable-listTours, #datatable-booking").length) {
             $("#datatable-listTours, #datatable-booking").DataTable({

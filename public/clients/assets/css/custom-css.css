@@ -54,6 +54,9 @@
     height: 100%;
     border-radius: 8px;
 }
+.tour-gallery .gallery-item:nth-child(3) {
+    grid-column: span 2;
+}
 
 /****************************************
 *              PAGE TOURS              *

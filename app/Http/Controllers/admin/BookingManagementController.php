@@ -58,7 +58,7 @@ class BookingManagementController extends Controller
         $title = 'Chi tiết đơn đặt';
 
         $invoice_booking = $this->booking->getInvoiceBooking($bookingId);
-        // dd($invoice_booking);
+        //dd($invoice_booking);
         $hide='hide';
         if ($invoice_booking->transactionId == null) {
             $invoice_booking->transactionId = 'Thanh toán tại công ty Travela';

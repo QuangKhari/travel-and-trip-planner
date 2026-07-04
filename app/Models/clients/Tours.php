@@ -129,7 +129,7 @@ if (!empty($ratingFilters)) {
             $tour->rating = $this->reviewStats($tour->tourId)->averageRating;
         }
 
-        // dd($queryLog); // In ra log truy vấn nếu cần thiết
+        // dd($queryLog); // In ra log truy vấn 
         return $tours;
     }
     public function updateTours($tourId, $data)

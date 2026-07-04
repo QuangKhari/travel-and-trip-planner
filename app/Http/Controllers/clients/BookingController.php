@@ -134,6 +134,43 @@ class BookingController extends Controller
         return redirect()->route('tours')
         ->with('success', 'Đã gửi yêu cầu xác nhận thanh toán.');
     }
+
+    // Nhận ảnh biên lai chuyển khoản từ khách hàng, gắn vào đúng đơn booking đang chờ
+    public function uploadTransferProof(Request $request)
+    {
+        $request->validate([
+            'transferProof' => 'required|image|max:5120', // tối đa 5MB
+        ]);
+
+        $bookingId = session('bookingId');
+
+        if (!$bookingId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không tìm thấy đơn đặt tour, vui lòng đặt lại.'
+            ]);
+        }
+
+        $file = $request->file('transferProof');
+        $filename = 'proof_' . $bookingId . '_' . time() . '.' . $file->getClientOriginalExtension();
+        $destinationPath = public_path('clients/assets/images/transfer-proofs/');
+
+        if (!file_exists($destinationPath)) {
+            mkdir($destinationPath, 0755, true);
+        }
+
+        $file->move($destinationPath, $filename);
+
+        $this->booking->updateTransferProof($bookingId, $filename);
+
+        // Đồng thời đánh dấu đơn đang chờ admin xác nhận
+        $this->checkout->updateCheckout($bookingId, ['paymentStatus' => 'w']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã gửi ảnh chuyển khoản. Vui lòng chờ quản trị viên xác nhận.'
+        ]);
+    }
     
 
     public function createMomoPayment(Request $request)

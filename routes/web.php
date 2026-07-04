@@ -80,6 +80,7 @@ Route::get('/tour-booked', [TourBookedController::class, 'index'])->name('tour-b
 Route::post('/checkBooking', [BookingController::class, 'checkBooking'])->name('checkBooking')->middleware('checkLoginClient');
 Route::post('/cancel-booking', [TourBookedController::class, 'cancelBooking'])->name('cancel-booking');
 Route::post('/reviews', [TourDetailController::class, 'reviews'])->name('reviews')->middleware('checkLoginClient');
+Route::post('/upload-transfer-proof', [BookingController::class, 'uploadTransferProof'])->name('booking.upload-transfer-proof');
 
 
 //My tour

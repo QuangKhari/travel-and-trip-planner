@@ -92,7 +92,7 @@
             </label>
             <label class="payment-option">
                 <input type="radio" name="payment" value="banking" required>
-                <img src="{{ asset('clients/assets/images/booking/qr-bank.png') }}" alt="QR Banking">
+                <img src="{{ asset('clients/assets/images/booking/qr-bank.jpg') }}" alt="QR Banking">
                 Thanh toán chuyển khoản QR
             </label>
 

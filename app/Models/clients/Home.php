@@ -14,23 +14,25 @@ class Home extends Model
 
     public function getHomeTours()
     {
-        // Lấy thông tin tour
         $tours = DB::table($this->table)
-            ->get();
+->where('availability', 1)
+->inRandomOrder()
+->limit(6)
+->get();
 
-        foreach ($tours as $tour) {
-            // Lấy danh sách hình ảnh thuộc về tour
-            $tour->images = DB::table('tbl_images')
-                ->where('tourId', $tour->tourId)
-                ->pluck('imageUrl');
+foreach ($tours as $tour) {
+    // Lấy danh sách ảnh của tour
+    $tour->images = DB::table('tbl_images')
+        ->where('tourId', $tour->tourId)
+        ->pluck('imageURL');
 
-            $tour->timelines = DB::table('tbl_timeline')
-                ->where('tourId', $tour->tourId)
-                ->pluck('title');
-            
-        }
+    // Lấy tiêu đề lịch trình của tour
+    $tour->timelines = DB::table('tbl_timeline')
+        ->where('tourId', $tour->tourId)
+        ->pluck('title');
+}
 
-        return $tours;
+return $tours;
     }
 
 
