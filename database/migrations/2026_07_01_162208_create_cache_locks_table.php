@@ -1,8 +1,6 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -11,11 +9,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('cache_locks', function (Blueprint $table) {
-            $table->string('key')->primary();
-            $table->string('owner');
-            $table->integer('expiration')->index();
-        });
+        // Bảng cache_locks đã được tạo trong migration create_cache_table.
     }
 
     /**
@@ -23,6 +17,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('cache_locks');
+        // Không xóa bảng cache_locks do migration khác quản lý.
     }
 };

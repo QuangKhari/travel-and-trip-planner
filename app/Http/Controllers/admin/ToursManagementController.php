@@ -5,16 +5,23 @@ namespace App\Http\Controllers\admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\admin\ToursModel;
+use App\Services\InvalidImageException;
+use App\Services\TourImageService;
+use App\Support\TourImage;
 use Carbon\Carbon;
-use Intervention\Image\Facades\Image;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 
 class ToursManagementController extends Controller
 {
     private $tours;
-    public function __construct()
+    private TourImageService $images;
+
+    public function __construct(TourImageService $images)
     {
         $this->tours = new ToursModel();
+        $this->images = $images;
     }
     public function index()
     {
@@ -81,60 +88,42 @@ class ToursManagementController extends Controller
 
     }
 
-    public function addImagesTours(Request $request)
+        public function addImagesTours(Request $request)
     {
-        try {
-            $image = $request->file('image');
-            $tourId = $request->tourId;
-
-            // Kiểm tra xem file có hợp lệ không
-            if (!$image->isValid()) {
-                return response()->json(['success' => false, 'message' => 'Invalid file upload'], 400);
-            }
-
-            // Lấy tên gốc của file (không bao gồm đường dẫn)
-            $originalName = pathinfo($image->getClientOriginalName(), PATHINFO_FILENAME);
-
-            // Lấy phần mở rộng của file
-            $extension = $image->getClientOriginalExtension();
-
-            // Tạo tên file mới: [original_name]_[timestamp].[extension]
-            $filename = preg_replace('/[^A-Za-z0-9_\-]/', '_', $originalName) . '_' . time() . '.' . $extension;
-
-            // Resize hình ảnh về kích thước 400x350
-            $resizedImage = Image::make($image)->resize(400, 350);
-
-            // Di chuyển file vào thư mục đích
-            $destinationPath = public_path('admin/assets/images/gallery-tours/');
-            $resizedImage->save($destinationPath . $filename); // Lưu ảnh đã resize
-
-            // Tạo dữ liệu để lưu vào cơ sở dữ liệu
-            $dataUpload = [
-                'tourId' => $tourId,
-                'imageURL' => $filename,
-                'description' => $originalName
-            ];
-
-            // Lưu thông tin vào cơ sở dữ liệu
-            $uploadImage = $this->tours->uploadImages($dataUpload);
-
-            // Kiểm tra kết quả lưu trữ
-            if ($uploadImage) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Image uploaded successfully',
-                    'data' => [
-                        'filename' => $filename,
-                        'tourId' => $tourId
-                    ]
-                ], 200);
-            }
-
-            return response()->json(['success' => false, 'message' => 'Failed to save image data'], 500);
-        } catch (\Exception $e) {
-            // Xử lý lỗi bất ngờ
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        [$meta, $error] = $this->storeUploadedImage($request);
+        if ($error) {
+            return $error;
         }
+
+        $tourId = (int) $request->tourId;
+        try {
+            $ok = DB::table('tbl_images')->insert([
+                'tourId'      => $tourId,
+                'imageURL'    => $meta['stem'],
+                'width'       => $meta['width'],
+                'height'      => $meta['height'],
+                'sizeBytes'   => $meta['sizeBytes'],
+                'sortOrder'   => (int) DB::table('tbl_images')->where('tourId', $tourId)->count(),
+                'description' => pathinfo($request->file('image')->getClientOriginalName(), PATHINFO_FILENAME),
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json(['success' => false, 'message' => 'Không lưu được thông tin ảnh.'], 500);
+        }
+
+        if (!$ok) {
+            return response()->json(['success' => false, 'message' => 'Không lưu được thông tin ảnh.'], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Image uploaded successfully',
+            'data'    => [
+                'filename' => $meta['stem'],
+                'url'      => TourImage::url($meta['stem'], 320),
+                'tourId'   => $tourId,
+            ],
+        ], 200);
     }
 
     public function addTimeline(Request $request)
@@ -168,12 +157,17 @@ class ToursManagementController extends Controller
 // Chuyển ảnh đã upload tạm ở Bước 2 (gửi lên qua images[]) sang bảng chính thức tbl_images
 $images = $request->input('images');
 if ($images && is_array($images)) {
+    $position = 0;
     foreach ($images as $image) {
+        if (!$this->images->isStem($image)) {
+            continue; // chỉ nhận đường dẫn do hệ thống sinh ra, bỏ qua giá trị lạ
+        }
         $dataUpload = [
             'tourId' => $tourId,
             'imageURL' => $image,
             'description' => ''
-        ];
+        ] + $this->images->describe($image);
+        $dataUpload['sortOrder'] = $position++;
         $this->tours->uploadImages($dataUpload);
     }
 }
@@ -191,7 +185,10 @@ return redirect()->route('admin.page-add-tours');
     $tourId = $request->tourId;
 
     $tour = $this->tours->getTour($tourId);
-    $images = $this->tours->getImages($tourId);
+    $images = $this->tours->getImages($tourId)->map(function ($image) {
+        $image->thumbUrl = TourImage::url($image->imageURL, 320);
+        return $image;
+    });
     $timeline = $this->tours->getTimeLine($tourId);
 
     return response()->json([
@@ -202,61 +199,70 @@ return redirect()->route('admin.page-add-tours');
     ]);
 }
 
-    public function uploadTempImagesTours(Request $request)
+        public function uploadTempImagesTours(Request $request)
     {
+        [$meta, $error] = $this->storeUploadedImage($request);
+        if ($error) {
+            return $error;
+        }
+
+        $tourId = (int) $request->tourId;
         try {
-            $image = $request->file('image');
-            $tourId = $request->tourId;
+            $this->tours->uploadTempImages([
+                'tourId'       => $tourId,
+                'imageTempURL' => $meta['stem'],
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json(['success' => false, 'message' => 'Không lưu được thông tin ảnh tạm.'], 500);
+        }
 
-            // Kiểm tra xem file có hợp lệ không
-            if (!$image->isValid()) {
-                return response()->json(['success' => false, 'message' => 'Invalid file upload'], 400);
-            }
+        return response()->json([
+            'success' => true,
+            'message' => 'Image uploaded successfully',
+            'data'    => [
+                'filename' => $meta['stem'],
+                'url'      => TourImage::url($meta['stem'], 320),
+                'tourId'   => $tourId,
+            ],
+        ], 200);
+    }
 
-            // Lấy tên gốc của file (không bao gồm đường dẫn)
-            $originalName = pathinfo($image->getClientOriginalName(), PATHINFO_FILENAME);
+    /**
+     * Kiểm tra request + lưu ảnh qua TourImageService.
+     *
+     * @return array{0:?array,1:?\Illuminate\Http\JsonResponse} [meta, lỗi]
+     */
 
-            // Lấy phần mở rộng của file
-            $extension = $image->getClientOriginalExtension();
+    private function storeUploadedImage(Request $request): array
+    {
+        $validator = Validator::make($request->all(), [
+            'tourId' => ['required', 'integer', 'min:1'],
+            'image'  => ['required', 'file'],
+        ], [
+            'tourId.required' => 'Thiếu mã tour.',
+            'image.required'  => 'Chưa chọn ảnh.',
+        ]);
 
-            // Tạo tên file mới: [original_name]_[timestamp].[extension]
-            $filename = preg_replace('/[^A-Za-z0-9_\-]/', '_', $originalName) . '_' . time() . '.' . $extension;
+        if ($validator->fails()) {
+            return [null, response()->json(['success' => false, 'message' => $validator->errors()->first()], 422)];
+        }
 
-            // Resize hình ảnh về kích thước 400x350
-            $resizedImage = Image::make($image)->resize(400, 350);
+        $tourId = (int) $request->input('tourId');
+        if (!DB::table('tbl_tours')->where('tourId', $tourId)->exists()) {
+            return [null, response()->json(['success' => false, 'message' => 'Tour không tồn tại.'], 404)];
+        }
 
-            // Di chuyển file vào thư mục đích
-            $destinationPath = public_path('admin/assets/images/gallery-tours/');
-            $resizedImage->save($destinationPath . $filename); // Lưu ảnh đã resize
-
-            // Tạo dữ liệu để lưu vào cơ sở dữ liệu
-            $dataUpload = [
-                'tourId' => $tourId,
-                'imageTempURL' => $filename,
-            ];
-
-            // Lưu thông tin vào cơ sở dữ liệu
-            $uploadImage = $this->tours->uploadTempImages($dataUpload);
-
-            // Kiểm tra kết quả lưu trữ
-            if ($uploadImage) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Image uploaded successfully',
-                    'data' => [
-                        'filename' => $filename,
-                        'tourId' => $tourId
-                    ]
-                ], 200);
-            }
-
-            return response()->json(['success' => false, 'message' => 'Failed to save image data'], 500);
-        } catch (\Exception $e) {
-            // Xử lý lỗi bất ngờ
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        try {
+            return [$this->images->storeUploaded($request->file('image'), $tourId), null];
+        } catch (InvalidImageException $e) {
+            return [null, response()->json(['success' => false, 'message' => $e->getMessage()], 422)];
+        } catch (\Throwable $e) {
+            report($e);
+            return [null, response()->json(['success' => false, 'message' => 'Không xử lý được ảnh. Thử lại hoặc chọn ảnh khác.'], 500)];
         }
     }
-    public function updateTour(Request $request)
+        public function updateTour(Request $request)
     {
         $tourId = $request->tourId;
         $name = $request->input('name');
@@ -277,38 +283,45 @@ return redirect()->route('admin.page-add-tours');
             'domain'      => $domain,
         ];
 
-        $delete_timeline = $this->tours->deleteData($tourId, 'tbl_timeline');
-        $delete_images = $this->tours->deleteData($tourId, 'tbl_images');
+        // Ảnh đang có trước khi sửa (để biết ảnh nào bị gỡ và cần xóa file sau khi lưu thành công)
+        $oldStems = $this->tours->getImages($tourId)->pluck('imageURL')->all();
 
-        $updateTour = $this->tours->updateTour($tourId, $dataTours);
-
-        // Tạo mảng tạm để lưu tên ảnh
-        $images = $request->input('images');  // Mảng các tên ảnh gửi lên từ request
-
-        if ($images && is_array($images)) {
-            foreach ($images as $image) {
-                $dataUpload = [
-                    'tourId' => $tourId,
-                    'imageURL' => $image, 
-                    'description' => $name  
-                ];
-                $this->tours->uploadImages($dataUpload);
-            }
-        }
-
+        $images = $request->input('images');  // Mảng đường dẫn ảnh (stem) gửi lên từ form
+        // Chấp nhận đường dẫn mới (tours/{id}/{hash}) hoặc tên file cũ trơn (chưa chạy media:migrate-tour-images); loại giá trị lạ.
+        $images = is_array($images)
+            ? array_values(array_unique(array_filter($images, fn ($i) => is_string($i) && $i !== '' && ($this->images->isStem($i) || $i === basename($i)))))
+            : [];
         $timelines = $request->input('timeline');
 
-        if ($timelines && is_array($timelines)) {
-            foreach ($timelines as $timeline) {
-                $data = [
-                    'tourId' => $tourId,
-                    'title' => $timeline['title'],
-                    'description' => $timeline['itinerary']
-                ];
+        DB::transaction(function () use ($tourId, $dataTours, $images, $name, $timelines) {
+            $this->tours->deleteData($tourId, 'tbl_timeline');
+            $this->tours->deleteData($tourId, 'tbl_images');
 
-                $this->tours->addTimeLine($data);  // Gọi phương thức addTimeLine()
+            $this->tours->updateTour($tourId, $dataTours);
+
+            foreach ($images as $position => $image) {
+                $this->tours->uploadImages([
+                    'tourId'      => $tourId,
+                    'imageURL'    => $image,
+                    'description' => $name,
+                    'sortOrder'   => $position,
+                    'isCover'     => $position === 0 ? 1 : 0,
+                ] + $this->images->describe($image));
             }
-        }
+
+            if ($timelines && is_array($timelines)) {
+                foreach ($timelines as $timeline) {
+                    $this->tours->addTimeLine([
+                        'tourId'      => $tourId,
+                        'title'       => $timeline['title'],
+                        'description' => $timeline['itinerary'],
+                    ]);
+                }
+            }
+        });
+
+        // Chỉ xóa file vật lý SAU KHI transaction thành công (chính sách §6.5)
+        $this->images->deleteMany(array_diff($oldStems, $images));
 
         return response()->json([
             'success' => true,
@@ -325,6 +338,7 @@ return redirect()->route('admin.page-add-tours');
         $tours = $this->tours->getAllTours();
         // Kiểm tra kết quả trả về từ Model
         if ($result['success']) {
+            $this->images->deleteTourDirectory((int) $tourId);   // xóa ảnh vật lý sau khi DB đã xóa thành công
             return response()->json([
                 'success' => true,
                 'message' => $result['message'],

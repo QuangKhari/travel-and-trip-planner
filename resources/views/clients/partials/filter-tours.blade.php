@@ -5,7 +5,7 @@
             <div class="image">
                 <span class="badge bgc-pink">Featured</span>
                 <a href="#" class="heart"><i class="fas fa-heart"></i></a>
-                <img src="{{ asset('admin/assets/images/gallery-tours/' . ($tour->images->first() ?? 'default.jpg')) }}" alt="Tour List">
+                <img loading="lazy" decoding="async" src="{{ \App\Support\TourImage::url(($tour->images->first() ?? 'default.jpg'), 800) }}" alt="Tour List">
             </div>
             <div class="content equal-content-fix">
                 <div class="destination-header">

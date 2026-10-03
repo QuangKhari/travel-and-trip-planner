@@ -147,7 +147,7 @@
                                         {{ number_format($popular->averageRating, 1) }} ⭐
                                     </span>
                                     @if ($popular->thumbnail !== 'default.jpg')
-                                        <img src="{{ asset('admin/assets/images/gallery-tours/' . $popular->thumbnail) }}"
+                                        <img loading="lazy" decoding="async" src="{{ \App\Support\TourImage::url($popular->thumbnail, 800) }}"
                                         alt="{{ $popular->title }}"
                                         style="width: 100%; height: 80px; object-fit: cover;">
                                     @else

@@ -13,7 +13,7 @@
                             @foreach ($toursPopular as $tour)
                                 <div class="destination-item tour-grid style-three bgc-lighter">
                                     <div class="image">
-                                        <img src="{{ asset('admin/assets/images/gallery-tours/' . ($tour->images->first() ?? 'default.jpg')) }}"
+                                        <img loading="lazy" decoding="async" src="{{ \App\Support\TourImage::url(($tour->images->first() ?? 'default.jpg'), 800) }}"
                                             alt="Tour">
                                     </div>
                                     <div class="content">
@@ -56,7 +56,7 @@
                             @endif
 
 
-                            <img src="{{ asset('admin/assets/images/gallery-tours/' . (isset($tour->images) && $tour->images->isNotEmpty() ? $tour->images[0] : 'default.jpg')) }}"
+                            <img loading="lazy" decoding="async" src="{{ \App\Support\TourImage::url((isset($tour->images) && $tour->images->isNotEmpty() ? $tour->images[0] : 'default.jpg'), 800) }}"
                                 alt="Tour List">
                         </div>
                         <div class="content">
