@@ -23,13 +23,21 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 
-
-*.zip
-*.bak
-
+# Ảnh upload là DỮ LIỆU, không phải source
+/storage/app/public/*
+!/storage/app/public/.gitignore
+/public/storage
+# Thư mục ảnh tour kiểu cũ (đã chuyển sang storage)
+/public/admin/assets/images/gallery-tours/*
+/public/clients/assets/images/gallery-tours/*
+# Biên lai chuyển khoản do khách tải lên (dữ liệu nhạy cảm)
+/public/clients/assets/images/transfer-proofs/*
 
 # Avatar do người dùng tải lên là dữ liệu, không phải source (giữ lại 3 ảnh mặc định)
 /public/admin/assets/images/user-profile/*
 !/public/admin/assets/images/user-profile/unnamed.png
 !/public/admin/assets/images/user-profile/user_avatar.jpg
 !/public/admin/assets/images/user-profile/avt_admin.jpg
+
+*.zip
+*.bak
