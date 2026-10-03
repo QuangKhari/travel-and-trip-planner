@@ -28,7 +28,7 @@
                                     <div class="profile_img">
                                         <div id="crop-avatar">
                                             <img id="avatarAdminPreview" class="img-responsive avatar-view"
-                                                src="{{ asset('admin/assets/images/user-profile/avt_admin.jpg') }}"
+                                                src="{{ \App\Support\Avatar::admin() }}"
                                                 alt="Avatar" style="width:100%">
                                             <input type="file" name="avatarAdmin" id="avatarAdmin"
                                                 style="display: none" accept="image/*">

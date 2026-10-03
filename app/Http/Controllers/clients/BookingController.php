@@ -9,6 +9,9 @@ use App\Models\clients\Booking;
 use App\Models\clients\Checkout;
 use App\Models\admin\PromotionModel;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
+use App\Services\InvalidImageException;
+use App\Services\UserMediaService;
 
 
 
@@ -136,10 +139,11 @@ class BookingController extends Controller
     }
 
     // Nhận ảnh biên lai chuyển khoản từ khách hàng, gắn vào đúng đơn booking đang chờ
-    public function uploadTransferProof(Request $request)
+        public function uploadTransferProof(Request $request, UserMediaService $media)
     {
+        // Loại file thật được kiểm tra trong service (không tin đuôi file)
         $request->validate([
-            'transferProof' => 'required|image|max:5120', // tối đa 5MB
+            'transferProof' => 'required|file|max:5120', // tối đa 5MB
         ]);
 
         $bookingId = session('bookingId');
@@ -151,17 +155,21 @@ class BookingController extends Controller
             ]);
         }
 
-        $file = $request->file('transferProof');
-        $filename = 'proof_' . $bookingId . '_' . time() . '.' . $file->getClientOriginalExtension();
-        $destinationPath = public_path('clients/assets/images/transfer-proofs/');
-
-        if (!file_exists($destinationPath)) {
-            mkdir($destinationPath, 0755, true);
+        try {
+            // Lưu ở kho RIÊNG TƯ (storage/app/private), không có URL công khai
+            $path = $media->storeProof($request->file('transferProof'), (int) $bookingId);
+        } catch (InvalidImageException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
 
-        $file->move($destinationPath, $filename);
+        $old = DB::table('tbl_booking')->where('bookingId', $bookingId)->value('transferProofImage');
 
-        $this->booking->updateTransferProof($bookingId, $filename);
+        $this->booking->updateTransferProof($bookingId, $path);
+
+        // Khách gửi lại biên lai mới → xóa biên lai cũ của đơn này
+        if ($old && $old !== $path) {
+            $media->deleteProof($old);
+        }
 
         // Đồng thời đánh dấu đơn đang chờ admin xác nhận
         $this->checkout->updateCheckout($bookingId, ['paymentStatus' => 'w']);

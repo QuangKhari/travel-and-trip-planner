@@ -5,6 +5,9 @@ namespace App\Http\Controllers\clients;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\clients\User;
+use App\Services\InvalidImageException;
+use App\Services\UserMediaService;
+use App\Support\Avatar;
 
 
 class UserProfileController extends Controller
@@ -69,39 +72,43 @@ class UserProfileController extends Controller
             return response()->json(['error' => true, 'message' => 'Mật khẩu cũ không chính xác.'], 500);
         }
     }
-    public function changeAvatar(Request $req)
+        public function changeAvatar(Request $req, UserMediaService $media)
     {
         $userId = $this->getUserId();
 
+        // Loại file thật được kiểm tra trong service (không tin đuôi file)
         $req->validate([
-            'avatar' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB
+            'avatar' => 'required|file|max:5120', // 5MB
         ]);
 
-        // Lấy tệp ảnh
-        $avatar = $req->file('avatar');
-
-        // Tạo tên mới cho tệp ảnh
-        $filename = time() . '.' . $avatar->getClientOriginalExtension(); // Tên tệp mới theo thời gian
-
         $user = $this->user->getUser($userId);
-        if ($user->avatar) {
-            // Đường dẫn đến ảnh cũ
-            $oldAvatarPath = public_path('admin/assets/images/user-profile/' . $user->avatar);
 
-            // Kiểm tra tệp cũ có tồn tại và xóa nếu có
-            if (file_exists($oldAvatarPath)) {
-                unlink($oldAvatarPath);
-            }
+        try {
+            $path = $media->storeAvatar($req->file('avatar'), (int) $userId);
+        } catch (InvalidImageException $e) {
+            return response()->json(['error' => true, 'message' => $e->getMessage()], 422);
         }
 
-        // Di chuyển ảnh vào thư mục public/admin/assets/images/user-profile/
-        $avatar->move(public_path('admin/assets/images/user-profile'), $filename);
-        $update = $this->user->updateUser($userId, ['avatar' => $filename]);
-        $req->session()->put('avatar', $filename);
-        if (!$update) {
+        $changed = $path !== $user->avatar;
+        $update = $this->user->updateUser($userId, ['avatar' => $path]);
+
+        if (!$update && $changed) {
+            $media->deleteAvatar($path); // DB không lưu được → không để file mồ côi
             return response()->json(['error' => true, 'message' => 'Có vấn đề khi cập nhật ảnh!']);
         }
-        return response()->json(['success' => true, 'message' => 'Cập nhật ảnh thành công!']);
+
+        if ($changed) {
+            // Chỉ xóa ảnh cũ nếu là ảnh do hệ thống sinh ra; ảnh mặc định/legacy được giữ nguyên
+            $media->deleteAvatar($user->avatar);
+        }
+
+        $req->session()->put('avatar', $path);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Cập nhật ảnh thành công!',
+            'url'     => Avatar::url($path),
+        ]);
     }
     
 }

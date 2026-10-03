@@ -41,7 +41,7 @@
                                             </ul>
                                         </div>
                                         <div class="right col-md-5 col-sm-5 text-center">
-                                            <img src="{{ asset('admin/assets/images/user-profile/' . $user->avatar) }}"
+                                            <img src="{{ \App\Support\Avatar::url($user->avatar) }}"
                                                 alt="" class="img-circle img-fluid">
                                         </div>
                                     </div>

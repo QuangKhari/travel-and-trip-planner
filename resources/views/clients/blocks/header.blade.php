@@ -133,7 +133,7 @@
                                                 $avatar = session()->get('avatar', 'user_avatar.jpg');
                                             @endphp
                                             <img id="avatarPreview" class="img-account-profile rounded-circle"
-                                                src="{{ asset('admin/assets/images/user-profile/' . $avatar) }}"
+                                                src="{{ \App\Support\Avatar::url($avatar) }}"
                                                 style="width: 36px; height: 36px;">
                                         @else
                                             <i class='bx bxs-user bx-tada' style="font-size: 36px; color: black;"></i>

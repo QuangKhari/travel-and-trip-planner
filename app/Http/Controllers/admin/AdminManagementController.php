@@ -5,6 +5,8 @@ namespace App\Http\Controllers\admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\admin\AdminModel;
+use App\Services\InvalidImageException;
+use App\Services\UserMediaService;
 
 class AdminManagementController extends Controller
 {
@@ -50,16 +52,18 @@ class AdminManagementController extends Controller
         return response()->json(['success' => false, 'message' => 'Không có thông tin nào thay đổi!']);
     }
 
-    public function updateAvatar(Request $req)
+        public function updateAvatar(Request $req, UserMediaService $media)
     {
-        $avatar = $req->file('avatarAdmin');
-        $filename = 'avt_admin.jpg';
-        unlink(public_path('admin/assets/images/user-profile/avt_admin.jpg'));
-        $update = $avatar->move(public_path('admin/assets/images/user-profile'), $filename);
+        $req->validate([
+            'avatarAdmin' => 'required|file|max:5120',
+        ]);
 
-        if (!$update) {
-            return response()->json(['error' => true, 'message' => 'Có vấn đề khi cập nhật ảnh!']);
+        try {
+            $media->storeAdminAvatar($req->file('avatarAdmin'));
+        } catch (InvalidImageException $e) {
+            return response()->json(['error' => true, 'message' => $e->getMessage()], 422);
         }
+
         return response()->json(['success' => true, 'message' => 'Cập nhật ảnh thành công!']);
     }
 

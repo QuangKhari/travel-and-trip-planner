@@ -101,6 +101,7 @@ Route::prefix('admin')->group(function () {
         Route::get('/booking', [BookingManagementController::class, 'index'])->name('admin.booking');
         Route::get('/booking-detail/{id?}', [BookingManagementController::class, 'showDetail'])->name('admin.booking-detail');
         Route::post('/confirm-booking', [BookingManagementController::class, 'confirmBooking'])->name('admin.confirm-booking');
+        Route::get('/transfer-proof/{id}', [BookingManagementController::class, 'transferProof'])->name('admin.transfer-proof');
 
         //Reviews
         Route::get('/reviews', [ReviewManagementController::class, 'index'])->name('admin.reviews');

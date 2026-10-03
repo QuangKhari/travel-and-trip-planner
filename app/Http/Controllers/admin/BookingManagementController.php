@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\admin\BookingModel;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
+use App\Services\UserMediaService;
 
 class BookingManagementController extends Controller
 {
@@ -15,6 +17,40 @@ class BookingManagementController extends Controller
     {
         $this->booking = new BookingModel();
     }
+
+        public function transferProof($id, UserMediaService $media)
+    {
+        $path = DB::table('tbl_booking')->where('bookingId', (int) $id)->value('transferProofImage');
+
+        if (!$path) {
+            abort(404);
+        }
+
+        $headers = [
+            'Cache-Control'          => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+            'Content-Disposition'    => 'inline',
+        ];
+
+        if ($media->isProofPath($path)) {
+            /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+            $disk = $media->proofDisk();
+            if (!$disk->exists($path)) {
+                abort(404);
+            }
+
+            return $disk->response($path, null, $headers);
+        }
+
+        // Dạng cũ (chưa chạy media:migrate-user-images): file còn nằm trong public/
+        $legacy = public_path('clients/assets/images/transfer-proofs/' . basename($path));
+        if (is_file($legacy)) {
+            return response()->file($legacy, $headers);
+        }
+
+        abort(404);
+    }
+
     public function index()
     {
         $title = 'Quản lý đặt Tour';

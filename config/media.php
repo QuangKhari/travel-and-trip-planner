@@ -42,4 +42,21 @@ return [
     // Dọn ảnh mồ côi: chỉ xóa file chưa được tbl_images tham chiếu và cũ hơn N giờ
     // (để không xóa nhầm ảnh vừa upload trong wizard chưa bấm Hoàn tất).
     'orphan_min_age_hours' => (int) env('MEDIA_ORPHAN_MIN_AGE_HOURS', 24),
+
+        // ---- Ảnh đại diện (công khai, disk = media.disk) ----
+    'avatar' => [
+        'dir'         => 'avatars',                                        // avatars/{userId}/{hash}.webp
+        'size'        => 320,                                              // cắt vuông 320x320
+        'quality'     => (int) env('MEDIA_AVATAR_QUALITY', 82),
+        'max_file_kb' => (int) env('MEDIA_AVATAR_MAX_KB', 5120),
+    ],
+
+    // ---- Biên lai chuyển khoản (RIÊNG TƯ: không có URL công khai) ----
+    'proof' => [
+        'disk'        => env('MEDIA_PROOF_DISK', 'local'),                 // storage/app/private
+        'dir'         => 'transfer-proofs',                                // transfer-proofs/{bookingId}/{hash}.webp
+        'max_width'   => 1600,                                             // đủ đọc chữ trên biên lai
+        'quality'     => (int) env('MEDIA_PROOF_QUALITY', 85),
+        'max_file_kb' => (int) env('MEDIA_PROOF_MAX_KB', 5120),
+    ],
 ];

@@ -135,9 +135,9 @@
                                                 @endif
                                                 @if (!empty($invoice_booking->transferProofImage))
                                                     <p class="lead" style="margin-top: 20px;">Ảnh biên lai chuyển khoản:</p>
-                                                        <a href="{{ asset('clients/assets/images/transfer-proofs/' . $invoice_booking->transferProofImage) }}"
+                                                        <a href="{{ route('admin.transfer-proof', $invoice_booking->bookingId) }}"
                                                             target="_blank">
-                                                            <img src="{{ asset('clients/assets/images/transfer-proofs/' . $invoice_booking->transferProofImage) }}"
+                                                            <img src="{{ route('admin.transfer-proof', $invoice_booking->bookingId) }}"
                                                             alt="Ảnh biên lai chuyển khoản"
                                                             style="max-width: 280px; border: 1px solid #ddd; border-radius: 6px;">
                                                         </a>

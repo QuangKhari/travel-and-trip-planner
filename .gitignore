@@ -26,3 +26,10 @@ Thumbs.db
 
 *.zip
 *.bak
+
+
+# Avatar do người dùng tải lên là dữ liệu, không phải source (giữ lại 3 ảnh mặc định)
+/public/admin/assets/images/user-profile/*
+!/public/admin/assets/images/user-profile/unnamed.png
+!/public/admin/assets/images/user-profile/user_avatar.jpg
+!/public/admin/assets/images/user-profile/avt_admin.jpg
