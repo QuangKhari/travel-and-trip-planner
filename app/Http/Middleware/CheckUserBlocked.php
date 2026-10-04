@@ -4,37 +4,33 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\DB;
 
 class CheckUserBlocked
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  Closure(Request): (Response)  $next
-     */
     public function handle(Request $request, Closure $next)
     {
+        $userId = $request->session()->get('userId');
 
-        if (!$request->session()->has('username')) {
-
+        if (!$userId) {
             return redirect()->route('login');
         }
 
-        $username = $request->session()->get('username');
+        $user = DB::table('tbl_users')->where('userId', $userId)->first();
 
-        $user = DB::table('tbl_users')
-            ->where('username', $username)
-            ->first();
+        // Không còn tồn tại hoặc bị chặn -> hủy phiên (L-A-07)
+        if (!$user || $user->status == 'b') {
+            $request->session()->forget(['username', 'userId']);
 
-        // Kiểm tra bị chặn
-        if ($user && $user->status == 'b') {
-
-            $request->session()->flush();
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tài khoản đã bị chặn',
+                    'redirectUrl' => route('login'),
+                ], 403);
+            }
 
             toastr()->error('Tài khoản đã bị chặn');
-
             return redirect()->route('login');
         }
 

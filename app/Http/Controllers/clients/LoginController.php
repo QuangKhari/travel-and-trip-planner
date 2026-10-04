@@ -9,7 +9,8 @@ use App\Models\clients\Login;
 class LoginController extends Controller
 {
     private $login;
-    public function __construct(){
+    public function __construct()
+    {
         $this->login = new Login();
     }
     public function index()
@@ -27,68 +28,68 @@ class LoginController extends Controller
 
         $checkAccountExist = $this->login->checkUserExist($username_regis, $email);
 
-        if($checkAccountExist){
+        if ($checkAccountExist) {
             return response()->json([
                 'success' => false,
                 'message' => 'Tài khoản đã tồn tại'
             ]);
         }
         $dataInsert = [
-                'username' => $username_regis,
-                'email' => $email,
-                'password' => md5($password_regis)
-            ];
-            $this->login->registerAccount($dataInsert);
-            return response()->json([
-                'success' => true,
-                'message' => 'Đăng ký thành công'
-            ]);
+            'username' => $username_regis,
+            'email' => $email,
+            'password' => md5($password_regis)
+        ];
+        $this->login->registerAccount($dataInsert);
+        return response()->json([
+            'success' => true,
+            'message' => 'Đăng ký thành công'
+        ]);
     }
 
 
-    //xử lý người dùng đăng nhập
-    public function login(Request $request){
-        $username = $request->username;
-    $password = $request->password;
+    //xử lý người dùng đăng nhập
+    public function login(Request $request)
+    {
+        $data_login = [
+            'username' => $request->username,
+            'password' => md5($request->password),   // Tuần 2 (L-A-02) sẽ đổi sang bcrypt
+        ];
 
-    $data_login = [
-        'username' => $username,
-        'password' => md5($password)
-    ];
+        $user = $this->login->login($data_login);
 
-    $user = $this->login->login($data_login);
-
-    if($user){
-        if ($user->status == 'b') {
-
+        if (!$user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Tài khoản đã bị chặn'
+                'message' => 'Thông tin tài khoản không chính xác!',
             ]);
         }
 
-        $request->session()->put('username', $username);
+        if ($user->status == 'b') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tài khoản đã bị chặn',
+            ]);
+        }
+
+        // Cấp session id mới để chống session fixation (L-A-01)
+        $request->session()->regenerate();
+        $request->session()->put('username', $user->username);
+        $request->session()->put('userId', $user->userId);
 
         return response()->json([
             'success' => true,
             'message' => 'Đăng nhập thành công',
-            'redirectUrl' => route('home')
+            'redirectUrl' => route('home'),
         ]);
-
-    }else{
-
-        return response()->json([
-                'success' => false,
-                'message' => 'Thông tin tài khoản không chính xác!',
-            ]);
-
-
     }
-    
-}
+
     public function logout(Request $request)
     {
-        $request->session()->forget('username');
+        // Xóa cả userId (trước đây chỉ xóa username nên người sau thấy hồ sơ người trước)
+        $request->session()->forget(['username', 'userId']);
+        $request->session()->regenerate();
+        $request->session()->regenerateToken();
+
         return redirect()->route('home');
     }
 }

@@ -13,27 +13,28 @@
     <!-- Favicon Icon -->
     <link rel="shortcut icon" href="{{ asset('clients/assets/images/logos/favicon.png') }}" type="image/x-icon">
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&amp;display=swap"
+        rel="stylesheet">
     <!-- Flaticon -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/flaticon.min.css')}}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/flaticon.min.css') }}">
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/fontawesome-5.14.0.min.css')}}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/fontawesome-5.14.0.min.css') }}">
     <!-- Bootstrap -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/bootstrap.min.css')}}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/bootstrap.min.css') }}">
     <!-- Magnific Popup -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/magnific-popup.min.css')}}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/magnific-popup.min.css') }}">
     <!-- Nice Select -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/nice-select.min.css')}}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/nice-select.min.css') }}">
     <!-- Animate -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/aos.css')}}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/aos.css') }}">
     <!-- Slick -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/slick.min.css')}}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/slick.min.css') }}">
     <!-- Main Style -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/style.css')}}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/style.css') }}">
     <!-- Datetime picker -->
     <link rel="stylesheet" href="{{ asset('clients/assets/css/jquery.datetimepicker.min.css') }}" />
     <!-- Custom css -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/custom-css.css')}}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/custom-css.css') }}">
     <!-- jQuery UI -->
     <link rel="stylesheet" href="{{ asset('clients/assets/css/jquery-ui.min.css') }}">
 
@@ -43,8 +44,9 @@
     <link rel="stylesheet" href="{{ asset('clients/assets/css/css-login/style.css') }}">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
-    
+
 </head>
+
 <body>
     <div class="page-wrapper">
 
@@ -56,21 +58,25 @@
 
                     <div class="header-inner rel d-flex align-items-center">
                         <div class="logo-outer">
-                            <div class="logo"><a href="{{route('home')}}"><img src="{{ asset('clients/assets/images/logos/logo.png') }}" alt="Logo" title="Logo"></a></div>
+                            <div class="logo"><a href="{{ route('home') }}"><img
+                                        src="{{ asset('clients/assets/images/logos/logo.png') }}" alt="Logo"
+                                        title="Logo"></a></div>
                         </div>
 
                         <div class="nav-outer mx-lg-auto ps-xxl-5 clearfix">
                             <!-- Main Menu -->
                             <nav class="main-menu navbar-expand-lg">
                                 <div class="navbar-header">
-                                   <div class="mobile-logo">
-                                       <a href="{{route('home')}}">
-                                            <img src="{{ asset('clients/assets/images/logos/logo.png') }}" alt="Logo" title="Logo">
-                                       </a>
-                                   </div>
-                                   
+                                    <div class="mobile-logo">
+                                        <a href="{{ route('home') }}">
+                                            <img src="{{ asset('clients/assets/images/logos/logo.png') }}"
+                                                alt="Logo" title="Logo">
+                                        </a>
+                                    </div>
+
                                     <!-- Toggle Button -->
-                                    <button type="button" class="navbar-toggle" data-bs-toggle="collapse" data-bs-target=".navbar-collapse">
+                                    <button type="button" class="navbar-toggle" data-bs-toggle="collapse"
+                                        data-bs-target=".navbar-collapse">
                                         <span class="icon-bar"></span>
                                         <span class="icon-bar"></span>
                                         <span class="icon-bar"></span>
@@ -80,19 +86,23 @@
                                 <div class="navbar-collapse collapse clearfix">
                                     <ul class="navigation clearfix">
                                         <li class="{{ Request::url() == route('home') ? 'active' : '' }}">
-                                            <a href="{{route('home')}}"><Table>Trang chủ</Table></a>
+                                            <a href="{{ route('home') }}">
+                                                <Table>Trang chủ</Table>
+                                            </a>
                                         </li>
                                         <li class="{{ Request::url() == route('about') ? 'active' : '' }}">
-                                            <a href="{{ route('about') }}">Giới thiệu</a></li>
-                                        <li class="dropdown" {{ Request::is('tours') || Request::is('team') || Request::is('tour-detail/*') ? 'active' : '' }}>
+                                            <a href="{{ route('about') }}">Giới thiệu</a>
+                                        </li>
+                                        <li class="dropdown"
+                                            {{ Request::is('tours') || Request::is('team') || Request::is('tour-detail/*') ? 'active' : '' }}>
                                             <a href="#">Tours</a>
                                             <ul>
-                                                <li><a href="{{route('tours')}}">Tour</a></li>
-                                                <li><a href="{{route('team')}}">Hướng dẫn viên</a></li>
+                                                <li><a href="{{ route('tours') }}">Tour</a></li>
+                                                <li><a href="{{ route('team') }}">Hướng dẫn viên</a></li>
                                             </ul>
                                         </li>
                                         <li class="{{ Request::url() == route('destination') ? 'active' : '' }}">
-                                            <a href="{{route('destination')}}">Điểm đến</a>
+                                            <a href="{{ route('destination') }}">Điểm đến</a>
                                         </li>
                                         <li class="{{ Request::url() == route('contact') ? 'active' : '' }}">
                                             <a href="{{ route('contact') }}">Liên hệ</a>
@@ -106,7 +116,7 @@
                             </nav>
                             <!-- Main Menu End-->
                         </div>
-                        
+
                         <!-- Nav Search -->
                         <div class="nav-search">
                             <button class="far fa-search"></button>
@@ -117,7 +127,7 @@
                                 <button type="submit" class="searchbutton far fa-search"></button>
                             </form>
                         </div>
-                        
+
                         <!-- Menu Button -->
                         <div class="menu-btns py-10">
                             <a href="{{ route('tours') }}" class="theme-btn style-two bgc-secondary">
@@ -140,14 +150,21 @@
                                             <i class='bx bxs-user bx-tada' style="font-size: 36px; color: white;"></i>
                                         @endif
                                     </button>
-                                    
+
                                     <ul class="dropdown-menu" id="dropdownMenu">
                                         @if (session()->has('username'))
                                             <li>{{ session()->get('username') }}</li>
-                                            <li><a href="{{route('user-profile')}}">Thông tin cá nhân</a></li>
+                                            <li><a href="{{ route('user-profile') }}">Thông tin cá nhân</a></li>
                                             <li><a href="{{ route('my-tours') }}">Tour đã đặt</a></li>
-                                            <li><a href="{{ route('logout') }}">Đăng xuất</a></li>
-                                            
+                                            <li>
+                                                <form action="{{ route('logout') }}" method="POST"
+                                                    style="margin:0;">
+                                                    @csrf
+                                                    <button type="submit"
+                                                        style="background:none;border:0;padding:0;cursor:pointer;font:inherit;color:inherit;text-align:left;">Đăng
+                                                        xuất</button>
+                                                </form>
+                                            </li>
                                         @else
                                             <li><a href="{{ route('login') }}">Đăng nhập</a></li>
                                         @endif

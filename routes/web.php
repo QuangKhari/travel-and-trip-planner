@@ -44,7 +44,7 @@ Route::get('/search-voice-text', [SearchController::class, 'searchTours'])->name
 Route::get('/login', [LoginController::class, 'index'])->name('login');
 Route::post('/login', [LoginController::class, 'login'])->name('user-login');
 Route::post('/register', [LoginController::class, 'register'])->name('register');
-Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 //quên mật khẩu 
 Route::get('/quen-mat-khau', [ForgotPasswordController::class, 'index'])->name('password.request');
 Route::post('/xac-thuc-tai-khoan', [ForgotPasswordController::class, 'verifyAccount'])->name('password.verify');
@@ -58,40 +58,46 @@ Route::get('/filter-tours', [ToursController::class, 'filterTours'])->name('filt
 
 
 
-//infor
-Route::get('/user-profile', [UserProfileController::class, 'index'])->name('user-profile')->middleware('checkLoginClient', 'checkUserBlocked');
-Route::post('/user-profile', [UserProfileController::class, 'update'])->name('update-user-profile');
-Route::post('/change-password-profile', [UserProfileController::class, 'changePassword'])->name('change-password');
-Route::post('/change-avatar-profile', [UserProfileController::class, 'changeAvatar'])->name('change-avatar');
+// ===== Khu vực cần đăng nhập và tài khoản không bị khóa (L-A-06, L-A-07) =====
+Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
+    // hồ sơ
+    Route::get('/user-profile', [UserProfileController::class, 'index'])->name('user-profile');
+    Route::post('/user-profile', [UserProfileController::class, 'update'])->name('update-user-profile');
+    Route::post('/change-password-profile', [UserProfileController::class, 'changePassword'])->name('change-password');
+    Route::post('/change-avatar-profile', [UserProfileController::class, 'changeAvatar'])->name('change-avatar');
 
+    // đặt tour
+    Route::post('/booking/{id?}', [BookingController::class, 'index'])->name('booking');
+    Route::post('/create-booking', [BookingController::class, 'createBooking'])->name('create-booking');
+    Route::post('/apply-coupon', [BookingController::class, 'applyCoupon'])->name('apply-coupon');
+    Route::post('/checkBooking', [BookingController::class, 'checkBooking'])->name('checkBooking');
 
-//booking
-Route::post('/booking/{id?}', [BookingController::class, 'index'])->name('booking');
-Route::post('/create-booking', [BookingController::class, 'createBooking'])->name('create-booking');
-Route::get('/payment-confirm', [BookingController::class, 'confirmQrPayment'])->name('payment.confirm');
-Route::post('/apply-coupon', [BookingController::class, 'applyCoupon'])->name('apply-coupon');
+    // đơn đã đặt, đánh giá
+    Route::get('/tour-booked', [TourBookedController::class, 'index'])->name('tour-booked');
+    Route::post('/cancel-booking', [TourBookedController::class, 'cancelBooking'])->name('cancel-booking');
+    Route::post('/reviews', [TourDetailController::class, 'reviews'])->name('reviews');
+    Route::get('/my-tours', [MyTourController::class, 'index'])->name('my-tours');
+});
 
-//trả bằng momo
-Route::post('/create-momo-payment', [BookingController::class, 'createMomoPayment'])->name('createMomoPayment');
+// ===== TẠM TẮT (L-B-06, L-B-14, L-B-15) – thay bằng VNPay ở Tuần 3–4 =====
+// /payment-confirm: đã xóa hẳn (không có view nào gọi).
+// Hai route dưới giữ lại tên để view không báo "Route not defined", nhưng luôn trả 410.
+Route::match(['get', 'post'], '/create-momo-payment', fn() => response()->json([
+    'success' => false,
+    'message' => 'Thanh toán MoMo đã ngừng hỗ trợ.',
+], 410))->name('createMomoPayment');
 
-
-//tour booked
-Route::get('/tour-booked', [TourBookedController::class, 'index'])->name('tour-booked');
-Route::post('/checkBooking', [BookingController::class, 'checkBooking'])->name('checkBooking')->middleware('checkLoginClient');
-Route::post('/cancel-booking', [TourBookedController::class, 'cancelBooking'])->name('cancel-booking');
-Route::post('/reviews', [TourDetailController::class, 'reviews'])->name('reviews')->middleware('checkLoginClient');
-Route::post('/upload-transfer-proof', [BookingController::class, 'uploadTransferProof'])->name('booking.upload-transfer-proof');
-
-
-//My tour
-Route::get('/my-tours', [MyTourController::class, 'index'])->name('my-tours');
+Route::post('/upload-transfer-proof', fn() => response()->json([
+    'success' => false,
+    'message' => 'Chức năng tải biên lai đã tạm ngừng.',
+], 410))->name('booking.upload-transfer-proof');
 
 //admin
 Route::prefix('admin')->group(function () {
     //Đăng nhập, đăng xuất
     Route::get('/login', [LoginAdminController::class, 'index'])->name('admin.login');
     Route::post('/login-account', [LoginAdminController::class, 'loginAdmin'])->name('admin.login-account');
-    Route::get('/logout', [LoginAdminController::class, 'logout'])->name('admin.logout');
+    Route::post('/logout', [LoginAdminController::class, 'logout'])->name('admin.logout');
 
     // Tất cả role đều vào được (admin, manager, staff)
     Route::middleware(['checkAdminRole:admin,manager,staff'])->group(function () {
@@ -159,4 +165,3 @@ Route::prefix('admin')->group(function () {
         Route::post('/delete-manager', [AdminManagementController::class, 'deleteManager'])->name('admin.delete-manager');
     });
 });
-

@@ -9,8 +9,7 @@
         <!-- menu profile quick info -->
         <div class="profile clearfix">
             <div class="profile_pic">
-                <img src="{{ \App\Support\Avatar::admin() }}" alt="..."
-                    class="img-circle profile_img">
+                <img src="{{ \App\Support\Avatar::admin() }}" alt="..." class="img-circle profile_img">
             </div>
             <div class="profile_info">
                 <span>Xin chào,</span>
@@ -51,7 +50,8 @@
                                 <li><a href="{{ route('admin.tours') }}">Danh sách Tours</a></li>
                             </ul>
                         </li>
-                        <li><a href="{{ route('admin.promotion') }}"><i class="fa fa-tags"></i> Quản lý Khuyến mãi</a></li>
+                        <li><a href="{{ route('admin.promotion') }}"><i class="fa fa-tags"></i> Quản lý Khuyến mãi</a>
+                        </li>
                     @endif
 
                     {{-- Admin và manager --}}
@@ -65,7 +65,8 @@
         <!-- /sidebar menu -->
 
         <!-- menu footer buttons -->
-        <div class="sidebar-footer hidden-small" style="width: 100% !important; position: static !important; left: auto !important; float: none !important; padding: 0 15px 20px 15px; box-sizing: border-box; margin-top: auto !important;">
+        <div class="sidebar-footer hidden-small"
+            style="width: 100% !important; position: static !important; left: auto !important; float: none !important; padding: 0 15px 20px 15px; box-sizing: border-box; margin-top: auto !important;">
             <a href="javascript:void(0)" id="btn-logout-admin" class="btn-logout-custom">
                 <i class="fa fa-sign-out"></i>
                 <span>Đăng xuất</span>
@@ -119,9 +120,13 @@
     </div>
 </div>
 
+<form id="form-logout-admin" action="{{ route('admin.logout') }}" method="POST" style="display:none;">
+    @csrf
+</form>
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    document.getElementById('btn-logout-admin').addEventListener('click', function (e) {
+    document.getElementById('btn-logout-admin').addEventListener('click', function(e) {
         e.preventDefault();
 
         Swal.fire({
@@ -136,7 +141,7 @@
             reverseButtons: true
         }).then((result) => {
             if (result.isConfirmed) {
-                window.location.href = "{{ route('admin.logout') }}";
+                document.getElementById('form-logout-admin').submit();
             }
         });
     });
