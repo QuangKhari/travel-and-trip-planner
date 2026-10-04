@@ -82,7 +82,15 @@ class ForgotPasswordController extends Controller
             ]);
         }
 
-        $this->login->updatePassword($email, md5($password));
+        if ($user->status == 'b') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tài khoản đã bị chặn'
+            ]);
+        }
+
+        // Đổi theo userId của đúng tài khoản vừa xác thực (L-A-05), KHÔNG theo email
+        $this->login->updatePassword($user->userId, md5($password));
 
         return response()->json([
             'success' => true,

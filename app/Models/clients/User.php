@@ -34,15 +34,24 @@ class User extends Model
         return $update;
     }
 
+    // Email này đã có tài khoản KHÁC dùng chưa? (không tính chính mình)
+    public function emailTakenByOther($email, $userId): bool
+    {
+        return DB::table($this->table)
+            ->where('email', $email)
+            ->where('userId', '!=', $userId)
+            ->exists();
+    }
+
     public function getMyTours($id)
     {
         $myTours =  DB::table('tbl_booking')
-        ->join('tbl_tours', 'tbl_booking.tourId', '=', 'tbl_tours.tourId')
-        ->join('tbl_checkout', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
-        ->where('tbl_booking.userId', $id)
-        ->orderByDesc('tbl_booking.bookingDate')
-        ->take(3)
-        ->get();
+            ->join('tbl_tours', 'tbl_booking.tourId', '=', 'tbl_tours.tourId')
+            ->join('tbl_checkout', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
+            ->where('tbl_booking.userId', $id)
+            ->orderByDesc('tbl_booking.bookingDate')
+            ->take(3)
+            ->get();
 
         foreach ($myTours as $tour) {
             // Lấy rating từ tbl_reviews cho mỗi tour
@@ -55,8 +64,8 @@ class User extends Model
             $tour->rating = DB::table('tbl_reviews')
                 ->where('tourId', $tour->tourId)
                 ->where('userId', $id)
-                ->value('rating') ?? 0; 
-            
+                ->value('rating') ?? 0;
+
             $tour->images = DB::table('tbl_images')
                 ->where('tourId', $tour->tourId)
                 ->pluck('imageUrl');
@@ -64,5 +73,4 @@ class User extends Model
 
         return $myTours;
     }
-    
 }

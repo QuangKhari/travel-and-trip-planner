@@ -8,15 +8,15 @@ use App\Models\clients\User;
 use App\Services\InvalidImageException;
 use App\Services\UserMediaService;
 use App\Support\Avatar;
+use Illuminate\Support\Facades\Validator;
 
 
 class UserProfileController extends Controller
 {
-     public function __construct()
+    public function __construct()
     {
         parent::__construct(); // Gọi constructor của Controller để khởi tạo $user
     }
-
 
     public function index()
     {
@@ -33,28 +33,50 @@ class UserProfileController extends Controller
         $user = $this->user->getUser($userId);
         return view('clients.user-profile', compact('title', 'user'));
     }
-    public function update(Request $req){
-        $fullName = $req->fullName;
-        $address = $req->address;
-        $email = $req->email;
-        $phone = $req->phone;
-        $username =session()->get('username');
-        $userId = $this->user->getUserId($username);
 
-        $dataUpdate = [
-            'fullName' => $fullName,
-            'address' => $address,
-            'email' => $email,
-            'phoneNumber' => $phone
-        ];
+    public function update(Request $req)
+    {
         $userId = $this->getUserId();
-        $update = $this->user->updateUser($userId, $dataUpdate);
-        if (!$update) {
-                return response()->json(['error' => true, 'message' => 'Mật khẩu mới trùng với mật khẩu cũ!']);
-        }
-        return response()->json(['success' => true, 'message' => 'Cập nhật thông tin thành công!']);
 
+        $validator = Validator::make($req->all(), [
+            'fullName' => 'required|string|max:50',
+            'address'  => 'nullable|string|max:255',
+            'email'    => ['required', 'email:filter', 'max:255', 'regex:/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/'],
+            'phone'    => ['nullable', 'regex:/^[0-9+\-\s().]{8,15}$/'],
+        ], [
+            'fullName.required' => 'Vui lòng nhập họ tên.',
+            'fullName.max'      => 'Họ tên tối đa 50 ký tự.',
+            'email.required'    => 'Vui lòng nhập email.',
+            'email.email'       => 'Email không hợp lệ.',
+            'email.regex'       => 'Email không hợp lệ (cần có dạng ten@ten-mien.com).',
+            'phone.regex'       => 'Số điện thoại không hợp lệ (8–15 ký tự).',
+        ]);
+
+        if ($validator->fails()) {
+            // Trả 200 + success=false để JS hiện đúng thông báo (JS chỉ đọc message khi HTTP 200)
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()]);
+        }
+
+        $email = trim($req->email);
+
+        if ($this->user->emailTakenByOther($email, $userId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Email này đã được tài khoản khác sử dụng.',
+            ]);
+        }
+
+        // updateUser trả về 0 khi dữ liệu không thay đổi: đó KHÔNG phải lỗi
+        $this->user->updateUser($userId, [
+            'fullName'    => trim($req->fullName),
+            'address'     => $req->address,
+            'email'       => $email,
+            'phoneNumber' => $req->phone,
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Cập nhật thông tin thành công!']);
     }
+
     public function changePassword(Request $req)
     {
         $userId = $this->getUserId();
@@ -66,13 +88,13 @@ class UserProfileController extends Controller
                 return response()->json(['error' => true, 'message' => 'Mật khẩu mới trùng với mật khẩu cũ!']);
             } else {
                 return response()->json(['success' => true, 'message' => 'Đổi mật khẩu thành công!']);
-
             }
         } else {
             return response()->json(['error' => true, 'message' => 'Mật khẩu cũ không chính xác.'], 500);
         }
     }
-        public function changeAvatar(Request $req, UserMediaService $media)
+
+    public function changeAvatar(Request $req, UserMediaService $media)
     {
         $userId = $this->getUserId();
 
@@ -110,5 +132,4 @@ class UserProfileController extends Controller
             'url'     => Avatar::url($path),
         ]);
     }
-    
 }

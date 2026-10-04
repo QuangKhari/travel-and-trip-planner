@@ -5,6 +5,7 @@ namespace App\Http\Controllers\clients;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\clients\Login;
+use Illuminate\Support\Facades\Validator;
 
 class LoginController extends Controller
 {
@@ -13,6 +14,7 @@ class LoginController extends Controller
     {
         $this->login = new Login();
     }
+
     public function index()
     {
         $title = 'Đăng nhập';
@@ -21,25 +23,46 @@ class LoginController extends Controller
 
     public function register(Request $request)
     {
-        $username_regis = $request->username_regis;
-        $email = $request->email;
-        $password_regis = $request->password_regis;
+        $validator = Validator::make($request->all(), [
+            'username_regis' => 'required|string|max:50',
+            'email'          => ['required', 'email:filter', 'max:255', 'regex:/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/'],
+            'password_regis' => 'required|string|min:6|max:100',
+        ], [
+            'username_regis.required' => 'Vui lòng nhập tên tài khoản.',
+            'username_regis.max'      => 'Tên tài khoản tối đa 50 ký tự.',
+            'email.required'          => 'Vui lòng nhập email.',
+            'email.email'             => 'Email không hợp lệ.',
+            'email.regex'             => 'Email không hợp lệ (cần có dạng ten@ten-mien.com).',
+            'password_regis.required' => 'Vui lòng nhập mật khẩu.',
+            'password_regis.min'      => 'Mật khẩu phải có ít nhất 6 ký tự.',
+        ]);
 
+        if ($validator->fails()) {
+            // Trả 200 + success=false để JS hiện đúng thông báo
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+            ]);
+        }
 
-        $checkAccountExist = $this->login->checkUserExist($username_regis, $email);
+        $username_regis = trim($request->username_regis);
+        $email = trim($request->email);
 
-        if ($checkAccountExist) {
+        if ($this->login->checkUserExist($username_regis, $email)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Tài khoản đã tồn tại'
             ]);
         }
+
         $dataInsert = [
             'username' => $username_regis,
-            'email' => $email,
-            'password' => md5($password_regis)
+            'fullName' => $username_regis,   // cột fullName bắt buộc; người dùng sửa lại ở trang hồ sơ
+            'email'    => $email,
+            'password' => md5($request->password_regis),   // Tuần 2 (L-A-02) đổi sang bcrypt
         ];
         $this->login->registerAccount($dataInsert);
+
         return response()->json([
             'success' => true,
             'message' => 'Đăng ký thành công'

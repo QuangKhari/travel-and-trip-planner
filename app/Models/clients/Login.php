@@ -12,7 +12,6 @@ class Login extends Model
     public function registerAccount($data)
     {
         return DB::table($this->table)->insert($data);
-
     }
     public function checkUserExist($username, $email)
     {
@@ -22,13 +21,13 @@ class Login extends Model
             ->exists();
         return $check;
     }
-    public function login($account){
+    public function login($account)
+    {
         $getUser = DB::table($this->table)
-        ->where('username', $account['username'])
-        ->where('password', $account['password'])
-        ->first();
+            ->where('username', $account['username'])
+            ->where('password', $account['password'])
+            ->first();
         return $getUser;
-
     }
 
     public function checkAccountMatch($username, $email)
@@ -40,11 +39,10 @@ class Login extends Model
         return $check;
     }
 
-    public function updatePassword($email, $password)
+    public function updatePassword($userId, $password)
     {
         return DB::table($this->table)
-            ->where('email', $email)
+            ->where('userId', $userId)
             ->update(['password' => $password]);
     }
-
 }
