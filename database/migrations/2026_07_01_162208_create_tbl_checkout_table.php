@@ -15,7 +15,7 @@ return new class extends Migration
             $table->integer('checkoutId', true);
             $table->integer('bookingId')->index('fk_checkout_booking');
             $table->string('paymentMethod');
-            $table->timestamp('paymentDate')->useCurrentOnUpdate()->useCurrent();
+            $table->timestamp('paymentDate')->useCurrent();
             $table->double('amount');
             $table->string('paymentStatus');
             $table->string('transactionId')->nullable();

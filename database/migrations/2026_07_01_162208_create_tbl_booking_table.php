@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('email', 50);
             $table->string('phoneNumber', 50);
             $table->string('address');
-            $table->timestamp('bookingDate')->useCurrentOnUpdate()->useCurrent();
+            $table->timestamp('bookingDate')->useCurrent();
             $table->integer('numChildren');
             $table->integer('numAdults');
             $table->double('totalPrice');

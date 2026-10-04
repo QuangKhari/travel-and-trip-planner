@@ -16,7 +16,7 @@ return new class extends Migration
             $table->integer('tourId')->index('fk_image_tour');
             $table->string('imageURL');
             $table->string('description')->nullable();
-            $table->timestamp('uploadDate')->useCurrentOnUpdate()->useCurrent();
+            $table->timestamp('uploadDate')->useCurrent();
         });
     }
 

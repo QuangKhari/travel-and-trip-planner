@@ -16,7 +16,7 @@ return new class extends Migration
             $table->integer('tourId');
             $table->string('imageTempURL');
             $table->string('description')->nullable();
-            $table->timestamp('uploadDate')->useCurrentOnUpdate()->useCurrent();
+            $table->timestamp('uploadDate')->useCurrent();
         });
     }
 

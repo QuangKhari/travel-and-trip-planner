@@ -17,7 +17,7 @@ return new class extends Migration
             $table->integer('userId')->index('fk_review_user');
             $table->double('rating');
             $table->string('comment')->nullable();
-            $table->timestamp('timestamp')->useCurrentOnUpdate()->useCurrent();
+            $table->timestamp('timestamp')->useCurrent();
         });
     }
 

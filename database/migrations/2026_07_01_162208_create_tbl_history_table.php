@@ -16,7 +16,7 @@ return new class extends Migration
             $table->integer('userId')->index('fk_history_user');
             $table->integer('tourId')->index('fk_history_tour');
             $table->string('actionType');
-            $table->timestamp('timestamp')->useCurrentOnUpdate()->useCurrent();
+            $table->timestamp('timestamp')->useCurrent();
         });
     }
 

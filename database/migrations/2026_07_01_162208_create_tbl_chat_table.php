@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('messages');
             $table->enum('readStatus', ['y', 'n'])->nullable()->default('n')->comment('y: yes
 n: no');
-            $table->timestamp('createdDate')->useCurrentOnUpdate()->useCurrent();
+            $table->timestamp('createdDate')->useCurrent();
             $table->string('ipAdress', 50);
         });
     }
