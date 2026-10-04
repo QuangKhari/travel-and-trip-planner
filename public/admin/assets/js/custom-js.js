@@ -842,19 +842,21 @@ $(document).ready(function () {
     $("#formProfileAdmin").on("submit", function (e) {
         e.preventDefault();
 
-        var name = $("#fullName").val().trim();
-        var password = $("#password").val().trim();
-        var email = $("#email").val().trim();
-        var address = $("#address").val().trim();
+        var form = $(this);
+        var name = form.find('[name="fullName"]').val().trim();
+        var password = form.find('[name="password"]').val().trim();
+        var email = form.find('[name="email"]').val().trim();
+        var address = form.find('[name="address"]').val().trim();
 
         var isValid = true;
 
-        if (password === "" || password.length < 6) {
+        // Mật khẩu để trống = không đổi; nếu nhập thì phải đủ 6 ký tự
+        if (password !== "" && password.length < 6) {
             isValid = false;
-            toastr.error("Mật khẩu phải có ít nhất 6 ký tự.");
+            toastr.error("Mật khẩu mới phải có ít nhất 6 ký tự.");
         }
 
-        var emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+        var emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!emailPattern.test(email)) {
             isValid = false;
             toastr.error("Email không hợp lệ.");
@@ -867,7 +869,7 @@ $(document).ready(function () {
 
         if (isValid) {
             $.ajax({
-                url: $(this).attr("action"),
+                url: form.attr("action"),
                 method: "POST",
                 data: {
                     fullName: name,
@@ -882,13 +884,25 @@ $(document).ready(function () {
                         $("#nameAdmin").text(response.data.fullName);
                         $("#emailAdmin").text(response.data.email);
                         $("#addressAdmin").text(response.data.address);
+                        form.find('[name="password"]').val("");
                     } else {
                         toastr.error(response.message);
                     }
                 },
-                error: function (xhr, status, error) {
-                    // Xử lý lỗi nếu có
-                    toastr.error("Đã có lỗi xảy ra. Vui lòng thử lại!");
+                error: function (xhr) {
+                    // 422: lỗi kiểm tra dữ liệu của Laravel, hiện thông báo đầu tiên
+                    if (
+                        xhr.status === 422 &&
+                        xhr.responseJSON &&
+                        xhr.responseJSON.errors
+                    ) {
+                        var first = Object.values(
+                            xhr.responseJSON.errors,
+                        )[0][0];
+                        toastr.error(first);
+                    } else {
+                        toastr.error("Đã có lỗi xảy ra. Vui lòng thử lại!");
+                    }
                 },
             });
         }

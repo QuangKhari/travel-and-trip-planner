@@ -29,30 +29,42 @@ class AdminManagementController extends Controller
 
     public function updateAdmin(Request $request)
     {
-        $admin = $this->admin->getAdmin();
-        $password = $request->password;
-
-        if ($password != $admin->password) {
-            $password = md5($password);
-        }
+        $request->validate([
+            'fullName' => 'required|string|max:100',
+            'email'    => ['required', 'email:filter', 'max:255', 'regex:/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/'],
+            'address'  => 'required|string|max:255',
+            'password' => 'nullable|string|min:6|max:100',
+        ]);
 
         $dataUpdate = [
             'fullName' => $request->fullName,
-            'password' => $password,
             'email'    => $request->email,
-            'address'  => $request->address
+            'address'  => $request->address,
         ];
+
+        // Chỉ đổi mật khẩu khi người dùng nhập mật khẩu mới (L-A-18)
+        if ($request->filled('password')) {
+            $dataUpdate['password'] = md5($request->password);   // Tuần 2 (L-A-02) đổi sang bcrypt
+        }
 
         $update = $this->admin->updateAdmin($dataUpdate);
         $newinfo = $this->admin->getAdmin();
 
         if ($update) {
-            return response()->json(['success' => true, 'data' => $newinfo]);
+            // Chỉ trả các trường cần hiển thị, KHÔNG trả hash mật khẩu
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'fullName' => $newinfo->fullName,
+                    'email'    => $newinfo->email,
+                    'address'  => $newinfo->address,
+                ],
+            ]);
         }
         return response()->json(['success' => false, 'message' => 'Không có thông tin nào thay đổi!']);
     }
 
-        public function updateAvatar(Request $req, UserMediaService $media)
+    public function updateAvatar(Request $req, UserMediaService $media)
     {
         $req->validate([
             'avatarAdmin' => 'required|file|max:5120',

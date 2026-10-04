@@ -360,6 +360,11 @@ $(document).ready(function () {
         var address = $("#inputLocation").val();
         var email = $("#inputEmailAddress").val();
         var phone = $("#inputPhone").val();
+        var emailPattern = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
+        if (!emailPattern.test(email.trim())) {
+            toastr.error("Email không hợp lệ (cần có dạng ten@ten-mien.com).");
+            return;
+        }
 
         var dataUpdate = {
             fullName: fullName,
