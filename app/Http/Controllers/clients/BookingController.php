@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use App\Services\InvalidImageException;
 use App\Services\UserMediaService;
+use App\Services\BookingException;
+use App\Services\BookingService;
+use Illuminate\Support\Facades\Validator;
 
 
 
@@ -22,7 +25,7 @@ class BookingController extends Controller
     private $checkout;
     private $promotion;
 
-     public function __construct()
+    public function __construct()
     {
         parent::__construct(); // Gọi constructor của Controller để khởi tạo $user
         $this->tour = new Tours();
@@ -30,99 +33,78 @@ class BookingController extends Controller
         $this->checkout = new Checkout();
         $this->promotion = new PromotionModel();
     }
-    public function index($id)
+
+    public function index($id = null)
     {
         $title = 'Đặt tour';
-        $tour = $this->tour->getTourDetail($id);
+        $tour = $id ? $this->tour->getTourDetail($id) : null;
+
+        // Không có tour, hoặc tour đã ẩn: 404 (không tiết lộ tour ẩn có tồn tại hay không) (L-B-08)
+        if (!$tour || (int) $tour->availability !== 1) {
+            abort(404);
+        }
+
+        $today = now()->toDateString();
+        if ($tour->startDate <= $today) {
+            toastr()->error('Tour đã khởi hành, không thể đặt.');
+            return redirect()->route('tour-detail', ['id' => $tour->tourId]);
+        }
+        if ((int) $tour->quantity <= 0) {
+            toastr()->error('Tour đã hết chỗ.');
+            return redirect()->route('tour-detail', ['id' => $tour->tourId]);
+        }
+
         $transIdMomo = null;
-        //dd($tour);
         return view('clients.booking', compact('title', 'tour', 'transIdMomo'));
     }
 
-    private function generateBookingCode()
+    public function createBooking(Request $req, BookingService $bookings)
     {
-    return 'TOUR' . date('YmdHis') . rand(100,999);
-    }
-    public function createBooking(Request $req)
-    {
-    //     dd([
-    //     'couponCode' => $req->input('couponCode'),
-    //     'all' => $req->all()
-    // ]);
-        //dd($req->all());
-        $address = $req->input('address');
-        $email = $req->input('email');
-        $fullName = $req->input('fullName');
-        $numAdults = $req->input('numAdults');
-        $numChildren = $req->input('numChildren');
-        $paymentMethod = $req->payment;
-        $tel = $req->input('tel');
-        $totalPrice = $req->input('totalPrice');
-        $tourId = $req->input('tourId');
-        $userId = $this->getUserId();
-        $bookingCode = $this->generateBookingCode();
-
-        $dataBooking = [
-            'tourId' => $tourId,
-            'userId' => $userId,
-            'address' => $address,
-            'fullName' => $fullName,
-            'email' => $email,
-            'numAdults' => $numAdults,
-            'numChildren' => $numChildren,
-            'phoneNumber' => $tel,
-            'totalPrice' => $totalPrice,
-            'bookingCode' => $bookingCode
-        ];
-
-        $bookingId = $this->booking->createBooking($dataBooking);
-
-        session([
-            'bookingId' => $bookingId,
-            'bookingCode' => $bookingCode
+        $validator = Validator::make($req->all(), [
+            'tourId'      => 'required|integer|min:1',
+            'fullName'    => 'required|string|max:255',
+            'email'       => ['required', 'email:filter', 'max:50', 'regex:/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/'],
+            'tel'         => ['required', 'regex:/^[0-9]{10,11}$/'],
+            'address'     => 'required|string|max:255',
+            'numAdults'   => 'required|integer|min:1|max:50',
+            'numChildren' => 'required|integer|min:0|max:50',
+            'payment'     => 'required|in:office-payment',
+            'couponCode'  => 'nullable|string|max:50',
+        ], [
+            'fullName.required'    => 'Vui lòng nhập họ và tên.',
+            'email.required'       => 'Vui lòng nhập email.',
+            'email.email'          => 'Email không hợp lệ.',
+            'email.regex'          => 'Email không hợp lệ (cần có dạng ten@ten-mien.com).',
+            'email.max'            => 'Email tối đa 50 ký tự.',
+            'tel.required'         => 'Vui lòng nhập số điện thoại.',
+            'tel.regex'            => 'Số điện thoại phải có 10-11 chữ số.',
+            'address.required'     => 'Vui lòng nhập địa chỉ.',
+            'numAdults.min'        => 'Phải có ít nhất 1 người lớn.',
+            'numAdults.max'        => 'Tối đa 50 người lớn mỗi đơn.',
+            'numChildren.max'      => 'Tối đa 50 trẻ em mỗi đơn.',
+            'payment.required'     => 'Vui lòng chọn phương thức thanh toán.',
+            'payment.in'           => 'Hiện chỉ hỗ trợ thanh toán tại văn phòng.',
         ]);
 
-        $dataCheckout = [
-            'bookingId' => $bookingId,
-            'paymentMethod' => $paymentMethod,
-            'amount' => $totalPrice,
-            'paymentStatus' => 'n',
-        ];
-    
-        $checkout = $this->checkout->createCheckout($dataCheckout);
+        $tourId = (int) $req->input('tourId');
 
-        if(empty($bookingId) || empty($checkout)){
-            toastr()->error('Đặt tour thất bại. Vui lòng thử lại.');
-            return redirect()->back();
+        if ($validator->fails()) {
+            toastr()->error($validator->errors()->first());
+            return $tourId
+                ? redirect()->route('tour-detail', ['id' => $tourId])
+                : redirect()->route('tours');
         }
 
-        // Trừ số lượng promotion
-        $promotionId = $req->input('promotionId');
-        if (!empty($promotionId)) {
-            $this->promotion->decreaseQuantity($promotionId);
+        try {
+            $result = $bookings->create((int) $this->getUserId(), $validator->validated());
+        } catch (BookingException $e) {
+            toastr()->error($e->getMessage());
+            return redirect()->route('tour-detail', ['id' => $tourId]);
         }
 
-        // Update quantity tour
-        $tour = $this->tour->getTourDetail($tourId);
-        $dataUpdate = [
-            'quantity' => $tour->quantity - ($numAdults + $numChildren)
-        ];
-        $this->tour->updateTours($tourId, $dataUpdate);
-
-        if($paymentMethod == 'banking'){
-         return view('clients.qr-payment',[
-                'title' => 'Thanh toán QR',
-                'bookingCode' => $bookingCode,
-                'amount' => $totalPrice,
-                'bookingId' => $bookingId
-            ]);
-        }
-
-        toastr()->success('Đặt tour thành công!');
+        toastr()->success('Đặt tour thành công! Mã đơn: ' . $result['bookingCode']);
         return redirect()->route('tours');
-       
     }
-    
 
     public function confirmQrPayment()
     {
@@ -135,11 +117,11 @@ class BookingController extends Controller
         $this->checkout->updateCheckout($bookingId, $dataUpdate);
 
         return redirect()->route('tours')
-        ->with('success', 'Đã gửi yêu cầu xác nhận thanh toán.');
+            ->with('success', 'Đã gửi yêu cầu xác nhận thanh toán.');
     }
 
     // Nhận ảnh biên lai chuyển khoản từ khách hàng, gắn vào đúng đơn booking đang chờ
-        public function uploadTransferProof(Request $request, UserMediaService $media)
+    public function uploadTransferProof(Request $request, UserMediaService $media)
     {
         // Loại file thật được kiểm tra trong service (không tin đuôi file)
         $request->validate([
@@ -179,22 +161,22 @@ class BookingController extends Controller
             'message' => 'Đã gửi ảnh chuyển khoản. Vui lòng chờ quản trị viên xác nhận.'
         ]);
     }
-    
+
 
     public function createMomoPayment(Request $request)
     {
         session()->put('tourId', $request->tourId);
-        
+
         try {
             // $amount = $request->amount;
             $amount = 10000;
-    
+
             // Các thông tin cần thiết của MoMo
             $endpoint = "https://test-payment.momo.vn/v2/gateway/api/create";
             $partnerCode = "MOMOBKUN20180529"; // mã partner của bạn
             $accessKey = "klm05TvNBzhg7h7j"; // access key của bạn
             $secretKey = "at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa"; // secret key của bạn
-    
+
             $orderInfo = "Thanh toán đơn hàng";
             $requestId = time();
             $orderId = time();
@@ -202,22 +184,22 @@ class BookingController extends Controller
             $redirectUrl = "http://127.0.0.1:8000/booking"; // URL chuyển hướng
             $ipnUrl = "http://127.0.0.1:8000/booking"; // URL IPN
             $requestType = 'payWithATM'; // Kiểu yêu cầu
-    
+
             // Tạo rawHash và chữ ký theo cách thủ công
-            $rawHash = "accessKey=" . $accessKey . 
-                       "&amount=" . $amount . 
-                       "&extraData=" . $extraData . 
-                       "&ipnUrl=" . $ipnUrl . 
-                       "&orderId=" . $orderId . 
-                       "&orderInfo=" . $orderInfo . 
-                       "&partnerCode=" . $partnerCode . 
-                       "&redirectUrl=" . $redirectUrl . 
-                       "&requestId=" . $requestId . 
-                       "&requestType=" . $requestType;
-    
+            $rawHash = "accessKey=" . $accessKey .
+                "&amount=" . $amount .
+                "&extraData=" . $extraData .
+                "&ipnUrl=" . $ipnUrl .
+                "&orderId=" . $orderId .
+                "&orderInfo=" . $orderInfo .
+                "&partnerCode=" . $partnerCode .
+                "&redirectUrl=" . $redirectUrl .
+                "&requestId=" . $requestId .
+                "&requestType=" . $requestType;
+
             // Tạo chữ ký
             $signature = hash_hmac("sha256", $rawHash, $secretKey);
-    
+
             // Dữ liệu gửi đến MoMo
             $data = [
                 'partnerCode' => $partnerCode,
@@ -234,10 +216,10 @@ class BookingController extends Controller
                 'requestType' => $requestType,
                 'signature' => $signature
             ];
-    
+
             // Gửi yêu cầu POST đến MoMo để tạo yêu cầu thanh toán
             $response = Http::post($endpoint, $data);
-    
+
             if ($response->successful()) {
                 $body = $response->json();
                 if (isset($body['payUrl'])) {
@@ -255,14 +237,13 @@ class BookingController extends Controller
             return response()->json(['error' => 'Đã xảy ra lỗi', 'message' => $e->getMessage(), 'trace' => $e->getTraceAsString()], 500);
         }
     }
-    
 
     public function handlePaymentMomoCallback(Request $request)
     {
         $resultCode = $request->input('resultCode');
         $transIdMomo = $request->query('transId');
         // dd(session()->get('tourId'));
-        $tourId = session()->get('tourId'); 
+        $tourId = session()->get('tourId');
         $tour = $this->tour->getTourDetail($tourId);
         session()->forget('tourId');
         // Handle the payment response
@@ -274,68 +255,69 @@ class BookingController extends Controller
             $title = 'Thanh toán thất bại';
             return view('clients.booking', compact('title', 'tour'));
         }
-
-    
     }
-    public function checkBooking(Request $req){
+
+    public function checkBooking(Request $req)
+    {
         $tourId = $req->tourId;
         $userId = $this->getUserId();
-        $check = $this->booking->checkBooking($tourId,$userId);
+        $check = $this->booking->checkBooking($tourId, $userId);
         if (!$check) {
             return response()->json(['success' => false]);
         }
         return response()->json(['success' => true]);
     }
+
     public function applyCoupon(Request $request)
-{
-    $code = strtoupper(trim($request->input('code')));
-    $totalPrice = (int) $request->input('totalPrice');
+    {
+        $code = strtoupper(trim($request->input('code')));
+        $totalPrice = (int) $request->input('totalPrice');
 
-    $promotion = $this->promotion->getPromotionByCode($code);
+        $promotion = $this->promotion->getPromotionByCode($code);
 
-    // Kiểm tra tồn tại
-    if (!$promotion) {
+        // Kiểm tra tồn tại
+        if (!$promotion) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Mã giảm giá không tồn tại'
+            ]);
+        }
+
+        // Kiểm tra còn hiệu lực
+        if ($promotion->status !== 'y') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Mã giảm giá đã bị vô hiệu hóa'
+            ]);
+        }
+
+        // Kiểm tra số lượng
+        if ($promotion->quantity <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Mã giảm giá đã hết lượt sử dụng'
+            ]);
+        }
+
+        // Kiểm tra thời hạn
+        $now = now();
+        if ($now->lt($promotion->startDate) || $now->gt($promotion->endDate)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Mã giảm giá chưa đến hạn hoặc đã hết hạn'
+            ]);
+        }
+
+        $discountAmount = $totalPrice * ($promotion->discount / 100);
+        $newTotal = $totalPrice - $discountAmount;
+
         return response()->json([
-            'success' => false,
-            'message' => 'Mã giảm giá không tồn tại'
+            'success'        => true,
+            'promotionId'    => $promotion->promotionId,
+            'discount'       => $promotion->discount,
+            'discountAmount' => $discountAmount,
+            'newTotal'       => $newTotal,
+            'message'        => "Áp dụng thành công! Giảm {$promotion->discount}%"
         ]);
     }
-
-    // Kiểm tra còn hiệu lực
-    if ($promotion->status !== 'y') {
-        return response()->json([
-            'success' => false,
-            'message' => 'Mã giảm giá đã bị vô hiệu hóa'
-        ]);
-    }
-
-    // Kiểm tra số lượng
-    if ($promotion->quantity <= 0) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Mã giảm giá đã hết lượt sử dụng'
-        ]);
-    }
-
-    // Kiểm tra thời hạn
-    $now = now();
-    if ($now->lt($promotion->startDate) || $now->gt($promotion->endDate)) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Mã giảm giá chưa đến hạn hoặc đã hết hạn'
-        ]);
-    }
-
-    $discountAmount = $totalPrice * ($promotion->discount / 100);
-    $newTotal = $totalPrice - $discountAmount;
-
-    return response()->json([
-        'success'        => true,
-        'promotionId'    => $promotion->promotionId,
-        'discount'       => $promotion->discount,
-        'discountAmount' => $discountAmount,
-        'newTotal'       => $newTotal,
-        'message'        => "Áp dụng thành công! Giảm {$promotion->discount}%"
-    ]);
-}
 }
