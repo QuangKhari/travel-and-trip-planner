@@ -236,6 +236,21 @@ class ToursManagementController extends Controller
 
     private function storeUploadedImage(Request $request): array
     {
+        // File vượt upload_max_filesize / post_max_size của PHP: báo đúng nguyên nhân thay vì "Chưa chọn ảnh"
+        $uploaded = $request->file('image');
+        if ($uploaded && !$uploaded->isValid()) {
+            return [null, response()->json([
+                'success' => false,
+                'message' => 'Tải ảnh thất bại: ' . $uploaded->getErrorMessage(),
+            ], 422)];
+        }
+        if (!$request->hasFile('image') && $request->server('CONTENT_LENGTH') && empty($request->all())) {
+            return [null, response()->json([
+                'success' => false,
+                'message' => 'Ảnh vượt giới hạn dung lượng của PHP (post_max_size). Hãy tăng giới hạn trong php.ini.',
+            ], 422)];
+        }
+
         $validator = Validator::make($request->all(), [
             'tourId' => ['required', 'integer', 'min:1'],
             'image'  => ['required', 'file'],
@@ -337,7 +352,9 @@ class ToursManagementController extends Controller
         $tours = $this->tours->getAllTours();
         // Kiểm tra kết quả trả về từ Model
         if ($result['success']) {
-            $this->images->deleteTourDirectory((int) $tourId);   // xóa ảnh vật lý sau khi DB đã xóa thành công
+            if (empty($result['hidden'])) {
+                $this->images->deleteTourDirectory((int) $tourId);
+            }   // xóa ảnh vật lý sau khi DB đã xóa thành công
             return response()->json([
                 'success' => true,
                 'message' => $result['message'],

@@ -326,7 +326,7 @@ $(document).ready(function () {
             addRemoveLinks: true,
             dictRemoveFile: "Xóa ảnh",
             autoProcessQueue: true, // Không tự động upload
-            maxFiles: 5, // Giới hạn số file tối đa
+            maxFiles: 12, // Khớp giới hạn phía server (media.limits.max_images_per_tour)
             parallelUploads: 5, // Số file được upload song song
             headers: {
                 "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content"), // Thêm CSRF token vào headers
@@ -335,6 +335,24 @@ $(document).ready(function () {
                 // Lắng nghe sự kiện 'sending' để thêm thông tin vào formData
                 this.on("sending", function (file, xhr, formData) {
                     formData.append("tourId", tourIdSendingImage); // tourId là ID của tour mà bạn cần gửi
+                });
+
+                // Hiển thị thông báo lỗi dạng chữ (server trả JSON {success:false,message}) thay vì "[object Object]"
+                this.on("error", function (file, response) {
+                    var msg = "Không tải được ảnh.";
+                    if (typeof response === "string") {
+                        msg = response;
+                    } else if (response && response.message) {
+                        msg = response.message;
+                    } else if (response && response.errors) {
+                        msg = Object.values(response.errors)[0][0];
+                    }
+                    var el =
+                        file.previewElement &&
+                        file.previewElement.querySelector(
+                            "[data-dz-errormessage]",
+                        );
+                    if (el) el.textContent = msg;
                 });
             },
         });

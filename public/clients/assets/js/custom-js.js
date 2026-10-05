@@ -626,7 +626,7 @@ $(document).ready(function () {
                     $("#discountAmount").val(res.discountAmount);
 
                     // Khóa không cho áp 2 lần
-                    $("#couponCode").prop("disabled", true);
+                    $("#couponCode").prop("readonly", true);
                     $(".btn-coupon").prop("disabled", true).text("Đã áp dụng");
 
                     updateSummary();

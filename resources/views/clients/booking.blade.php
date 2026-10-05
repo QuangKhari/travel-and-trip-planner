@@ -77,25 +77,13 @@
             <h2 class="booking-header">Phương Thức Thanh Toán</h2>
 
             <label class="payment-option">
-                <input type="radio" name="payment" value="office-payment" required>
+                <input type="radio" name="payment" value="office-payment" checked required>
                 <img src="{{ asset('clients/assets/images/contact/icon.png') }}" alt="Office Payment">
                 Thanh toán tại văn phòng
             </label>
-
-            <label class="payment-option">
-                <input type="radio" name="payment" value="momo-payment" required>
-                <img src="{{ asset('clients/assets/images/booking/thanh-toan-momo.png') }}" alt="MoMo">
-                Thanh toán bằng Momo
-                @if (!is_null($transIdMomo))
-                    <input type="hidden" name="transactionIdMomo" value="{{ $transIdMomo }}">
-                @endif
-            </label>
-            <label class="payment-option">
-                <input type="radio" name="payment" value="banking" required>
-                <img src="{{ asset('clients/assets/images/booking/qr-bank.jpg') }}" alt="QR Banking">
-                Thanh toán chuyển khoản QR
-            </label>
-
+            <p style="font-size: 13px; color: #777; margin-top: 8px;">
+                Thanh toán trực tuyến (VNPay) sẽ sớm được hỗ trợ.
+            </p>
             <input type="hidden" name="payment_hidden" id="payment_hidden">
         </div>
 
@@ -141,22 +129,17 @@
                     </div>
                 </div>
                 <div class="order-coupon">
-                <input type="text" id="couponCode" name="couponCode"
-                    placeholder="Mã giảm giá" style="width: 65%;">
-                <button type="button" style="width: 30%"
-                        class="booking-btn btn-coupon">Áp dụng</button>
-                    </div>
-                    <p id="coupon-message" style="font-size: 13px; margin-top: 5px;"></p>
-                    <input type="hidden" name="promotionId" id="promotionId" value="">
-                    <input type="hidden" name="discountAmount" id="discountAmount" value="0">
+                    <input type="text" id="couponCode" name="couponCode" placeholder="Mã giảm giá"
+                        style="width: 65%;">
+                    <button type="button" style="width: 30%" class="booking-btn btn-coupon">Áp dụng</button>
+                </div>
+                <p id="coupon-message" style="font-size: 13px; margin-top: 5px;"></p>
+                <input type="hidden" name="promotionId" id="promotionId" value="">
+                <input type="hidden" name="discountAmount" id="discountAmount" value="0">
 
                 <div id="paypal-button-container"></div>
 
                 <button type="submit" class="booking-btn btn-submit-booking">Xác Nhận</button>
-
-                <button id="btn-momo-payment" class="booking-btn" style="display: none;"
-                    data-urlmomo = "#">Thanh toán với Momo <img src="{{ asset('clients/assets/images/booking/thanh-toan-momo.png') }}" alt="" style="width: 10%"></button>
-
             </div>
         </div>
     </form>
