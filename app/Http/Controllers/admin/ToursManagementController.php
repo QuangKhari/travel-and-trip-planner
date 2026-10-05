@@ -11,6 +11,7 @@ use App\Support\TourImage;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use App\Support\HtmlSanitizer;
 
 
 class ToursManagementController extends Controller
@@ -48,10 +49,10 @@ class ToursManagementController extends Controller
         $price_child = $request->input('price_child');
         $start_date = $request->input('start_date');
         $end_date = $request->input('end_date');
-        $description = $request->input('description');
+        $description = HtmlSanitizer::clean($request->input('description'));
 
 
-       $startDate = Carbon::createFromFormat('d/m/Y', $start_date)->format('Y-m-d');
+        $startDate = Carbon::createFromFormat('d/m/Y', $start_date)->format('Y-m-d');
         $endDate = Carbon::createFromFormat('d/m/Y', $end_date)->format('Y-m-d');
 
         // Tính số ngày giữa start_date và end_date
@@ -85,10 +86,9 @@ class ToursManagementController extends Controller
             'message' => 'Tour added successfully!',
             'tourId' => $createTour
         ]);
-
     }
 
-        public function addImagesTours(Request $request)
+    public function addImagesTours(Request $request)
     {
         [$meta, $error] = $this->storeUploadedImage($request);
         if ($error) {
@@ -144,62 +144,62 @@ class ToursManagementController extends Controller
                     $timelines[] = [
                         'tourId' => $tourId,
                         'title' => $value,
-                        'description' => $request->input($itineraryKey),
+                        'description' => HtmlSanitizer::clean($request->input($itineraryKey)),
                     ];
                 }
             }
         }
 
         foreach ($timelines as $timeline) {
-    $this->tours->addTimeLine($timeline);
-}
-
-// Chuyển ảnh đã upload tạm ở Bước 2 (gửi lên qua images[]) sang bảng chính thức tbl_images
-$images = $request->input('images');
-if ($images && is_array($images)) {
-    $position = 0;
-    foreach ($images as $image) {
-        if (!$this->images->isStem($image)) {
-            continue; // chỉ nhận đường dẫn do hệ thống sinh ra, bỏ qua giá trị lạ
+            $this->tours->addTimeLine($timeline);
         }
-        $dataUpload = [
-            'tourId' => $tourId,
-            'imageURL' => $image,
-            'description' => ''
-        ] + $this->images->describe($image);
-        $dataUpload['sortOrder'] = $position++;
-        $this->tours->uploadImages($dataUpload);
-    }
-}
 
-$dataUpdate = [
-    'availability' => 1
-];
+        // Chuyển ảnh đã upload tạm ở Bước 2 (gửi lên qua images[]) sang bảng chính thức tbl_images
+        $images = $request->input('images');
+        if ($images && is_array($images)) {
+            $position = 0;
+            foreach ($images as $image) {
+                if (!$this->images->isStem($image)) {
+                    continue; // chỉ nhận đường dẫn do hệ thống sinh ra, bỏ qua giá trị lạ
+                }
+                $dataUpload = [
+                    'tourId' => $tourId,
+                    'imageURL' => $image,
+                    'description' => ''
+                ] + $this->images->describe($image);
+                $dataUpload['sortOrder'] = $position++;
+                $this->tours->uploadImages($dataUpload);
+            }
+        }
 
-$updateAvailability = $this->tours->updateTour($tourId, $dataUpdate);
-toastr()->success('Thêm tour thành công!');
-return redirect()->route('admin.page-add-tours');
+        $dataUpdate = [
+            'availability' => 1
+        ];
+
+        $updateAvailability = $this->tours->updateTour($tourId, $dataUpdate);
+        toastr()->success('Thêm tour thành công!');
+        return redirect()->route('admin.page-add-tours');
     }
     public function getTourEdit(Request $request)
-{
-    $tourId = $request->tourId;
+    {
+        $tourId = $request->tourId;
 
-    $tour = $this->tours->getTour($tourId);
-    $images = $this->tours->getImages($tourId)->map(function ($image) {
-        $image->thumbUrl = TourImage::url($image->imageURL, 320);
-        return $image;
-    });
-    $timeline = $this->tours->getTimeLine($tourId);
+        $tour = $this->tours->getTour($tourId);
+        $images = $this->tours->getImages($tourId)->map(function ($image) {
+            $image->thumbUrl = TourImage::url($image->imageURL, 320);
+            return $image;
+        });
+        $timeline = $this->tours->getTimeLine($tourId);
 
-    return response()->json([
-        'success' => true,
-        'tour' => $tour,
-        'images' => $images,
-        'timeline' => $timeline
-    ]);
-}
+        return response()->json([
+            'success' => true,
+            'tour' => $tour,
+            'images' => $images,
+            'timeline' => $timeline
+        ]);
+    }
 
-        public function uploadTempImagesTours(Request $request)
+    public function uploadTempImagesTours(Request $request)
     {
         [$meta, $error] = $this->storeUploadedImage($request);
         if ($error) {
@@ -262,7 +262,7 @@ return redirect()->route('admin.page-add-tours');
             return [null, response()->json(['success' => false, 'message' => 'Không xử lý được ảnh. Thử lại hoặc chọn ảnh khác.'], 500)];
         }
     }
-        public function updateTour(Request $request)
+    public function updateTour(Request $request)
     {
         $tourId = $request->tourId;
         $name = $request->input('name');
@@ -271,7 +271,7 @@ return redirect()->route('admin.page-add-tours');
         $quantity = $request->input('number');
         $price_adult = $request->input('price_adult');
         $price_child = $request->input('price_child');
-        $description = $request->input('description');
+        $description = HtmlSanitizer::clean($request->input('description'));
 
         $dataTours = [
             'title'       => $name,
@@ -289,7 +289,7 @@ return redirect()->route('admin.page-add-tours');
         $images = $request->input('images');  // Mảng đường dẫn ảnh (stem) gửi lên từ form
         // Chấp nhận đường dẫn mới (tours/{id}/{hash}) hoặc tên file cũ trơn (chưa chạy media:migrate-tour-images); loại giá trị lạ.
         $images = is_array($images)
-            ? array_values(array_unique(array_filter($images, fn ($i) => is_string($i) && $i !== '' && ($this->images->isStem($i) || $i === basename($i)))))
+            ? array_values(array_unique(array_filter($images, fn($i) => is_string($i) && $i !== '' && ($this->images->isStem($i) || $i === basename($i)))))
             : [];
         $timelines = $request->input('timeline');
 
@@ -314,7 +314,7 @@ return redirect()->route('admin.page-add-tours');
                     $this->tours->addTimeLine([
                         'tourId'      => $tourId,
                         'title'       => $timeline['title'],
-                        'description' => $timeline['itinerary'],
+                        'description' => HtmlSanitizer::clean($timeline['itinerary']),
                     ]);
                 }
             }
@@ -327,7 +327,6 @@ return redirect()->route('admin.page-add-tours');
             'success' => true,
             'message' => 'Sửa thành công!',
         ]);
-
     }
 
     public function deleteTour(Request $request)
