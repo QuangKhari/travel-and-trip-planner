@@ -4,80 +4,77 @@ namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Models\clients\Tours;
-use App\Models\clients\Booking;
-use App\Models\clients\Checkout;
-use Carbon\Carbon;
 
 class TourBookedController extends Controller
 {
     private $tour;
-    private $booking;
 
     public function __construct()
     {
+        parent::__construct(); // khởi tạo $this->user cho getUserId()
         $this->tour = new Tours();
-        $this->booking = new Booking();
     }
-    
+
     public function index(Request $req)
     {
-        //dd($req->all());
         $title = "Tour đã đặt";
 
-        $bookingId = $req->input('bookingId');
-        $checkoutId = $req->input('checkoutId');
-        $tour_booked = $this->tour->tourBooked($bookingId, $checkoutId);
+        $bookingId  = (int) $req->input('bookingId');
+        $checkoutId = (int) $req->input('checkoutId');
+        $userId     = (int) $this->getUserId();
 
-        // Check if the tour_booked has valid data before accessing properties
-        if ($tour_booked && $tour_booked->startDate) {
-            $today = Carbon::now();
+        $tour_booked = $this->tour->tourBooked($bookingId, $checkoutId, $userId);
 
-            $startDate = Carbon::parse($tour_booked->startDate);
-
-            // Calculate the difference in days
-            $diffInDays = $startDate->diffInDays($today);
-
-            // Set 'hide' based on the condition
-            $hide = $diffInDays < 7 ? 'hide' : '';
-        } else {
-            $hide = '';
+        // Không phải đơn của mình (hoặc không tồn tại): 404, không phân biệt hai trường hợp (L-B-04)
+        if (!$tour_booked) {
+            abort(404);
         }
 
-        // dd($tour_booked);
+        $hide = ''; // ràng buộc 7 ngày xử lý riêng ở L-B-07
         return view("clients.tour-booked", compact('title', 'tour_booked', 'hide', 'bookingId'));
     }
 
     public function cancelBooking(Request $req)
     {
-        $tourId = $req->tourId;
-        $quantityAdults = $req->quantity__adults;
-        $quantityChildren = $req->quantity__children;
-        $bookingId = $req->bookingId;
+        $bookingId = (int) $req->input('bookingId');
+        $userId    = (int) $this->getUserId();
+        $cancelled = false;
 
+        // Chỉ dùng bookingId từ trình duyệt. Tour, số lượng, trạng thái đều lấy từ database (L-B-05)
+        DB::transaction(function () use ($bookingId, $userId, &$cancelled) {
+            $booking = DB::table('tbl_booking')
+                ->where('bookingId', $bookingId)
+                ->where('userId', $userId)           // chỉ chủ đơn
+                ->lockForUpdate()
+                ->first();
 
-        $tour = $this->tour->getTourDetail($tourId);
-        $currentQuantity = $tour->quantity;
+            if (!$booking) {
+                abort(404);
+            }
 
-        // Tính toán số lượng trả lại
-        $return_quantity = $quantityAdults + $quantityChildren;
+            // Chỉ hủy được đơn chưa xác nhận (n) hoặc đã xác nhận (y); đã hủy (c) hoặc hoàn tất (f) thì không
+            if (!in_array($booking->bookingStatus, ['n', 'y'], true)) {
+                return;
+            }
 
-        // Cập nhật lại số lượng mới cho tour
-        $newQuantity = $currentQuantity + $return_quantity;
-        $updateQuantity = $this->tour->updateTours($tourId, ['quantity' => $newQuantity]);
+            DB::table('tbl_booking')
+                ->where('bookingId', $bookingId)
+                ->update(['bookingStatus' => 'c']);
 
-        // Hủy booking
-        $updateBooking = $this->booking->cancelBooking($bookingId);
+            // Trả chỗ đúng số lượng đã đặt, đúng một lần
+            DB::table('tbl_tours')
+                ->where('tourId', $booking->tourId)
+                ->increment('quantity', (int) $booking->numAdults + (int) $booking->numChildren);
 
-        if ($updateQuantity && $updateBooking) {
-            toastr()->success('Hủy thành công!', [
-    'positionClass' => 'toast-top-right'
-]);
-            
-        }else{
-            toastr()->error('Có lỗi xảy ra !', [
-    'positionClass' => 'toast-top-right'
-]);
+            $cancelled = true;
+        });
+
+        if ($cancelled) {
+            toastr()->success('Hủy thành công!', ['positionClass' => 'toast-top-right']);
+        } else {
+            toastr()->error('Đơn này không thể hủy.', ['positionClass' => 'toast-top-right']);
         }
 
         return redirect()->route('home');

@@ -137,6 +137,7 @@ class Tours extends Model
         // dd($queryLog); // In ra log truy vấn 
         return $tours;
     }
+
     public function updateTours($tourId, $data)
     {
         $update = DB::table($this->table)
@@ -145,17 +146,20 @@ class Tours extends Model
 
         return $update;
     }
-    public function tourBooked($bookingId, $checkoutId)
+
+    public function tourBooked($bookingId, $checkoutId, $userId)
     {
         $booked = DB::table($this->table)
             ->join('tbl_booking', 'tbl_tours.tourId', '=', 'tbl_booking.tourId')
             ->join('tbl_checkout', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
             ->where('tbl_booking.bookingId', '=', $bookingId)
             ->where('tbl_checkout.checkoutId', '=', $checkoutId)
+            ->where('tbl_booking.userId', '=', $userId)   // chỉ chủ đơn (L-B-04)
             ->first();
 
         return $booked;
     }
+
     //Tạo đánh giá về tours
     public function createReviews($data)
     {
