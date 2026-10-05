@@ -213,7 +213,7 @@ $(document).ready(function () {
 $(document).ready(function () {
     if ($(".js-switch")[0]) {
         var elems = Array.prototype.slice.call(
-            document.querySelectorAll(".js-switch")
+            document.querySelectorAll(".js-switch"),
         );
         elems.forEach(function (html) {
             var switchery = new Switchery(html, {
@@ -279,7 +279,7 @@ function countChecked() {
     }
 
     var checkCount = $(
-        ".bulk_action input[name='table_records']:checked"
+        ".bulk_action input[name='table_records']:checked",
     ).length;
 
     if (checkCount) {
@@ -582,7 +582,7 @@ function init_flot_chart() {
         $.plot(
             $("#chart_plot_01"),
             [arr_data1, arr_data2],
-            chart_plot_01_settings
+            chart_plot_01_settings,
         );
     }
 
@@ -603,7 +603,7 @@ function init_flot_chart() {
                     },
                 },
             ],
-            chart_plot_02_settings
+            chart_plot_02_settings,
         );
     }
 
@@ -624,7 +624,7 @@ function init_flot_chart() {
                     },
                 },
             ],
-            chart_plot_03_settings
+            chart_plot_03_settings,
         );
     }
 }
@@ -732,7 +732,7 @@ function init_chart_doughnut() {
             var chart_element = $(this);
 
             var chartValues = JSON.parse(
-                chart_element.attr("data-chart-values")
+                chart_element.attr("data-chart-values"),
             );
 
             var chart_doughnut_settings = {
@@ -760,7 +760,7 @@ function init_chart_doughnut() {
 
             var chart_doughnut = new Chart(
                 chart_element,
-                chart_doughnut_settings
+                chart_doughnut_settings,
             );
         });
     }
@@ -794,7 +794,7 @@ function init_gauge() {
     if ($("#chart_gauge_01").length) {
         var chart_gauge_01_elem = document.getElementById("chart_gauge_01");
         var chart_gauge_01 = new Gauge(chart_gauge_01_elem).setOptions(
-            chart_gauge_settings
+            chart_gauge_settings,
         );
     }
 
@@ -808,7 +808,7 @@ function init_gauge() {
     if ($("#chart_gauge_02").length) {
         var chart_gauge_02_elem = document.getElementById("chart_gauge_02");
         var chart_gauge_02 = new Gauge(chart_gauge_02_elem).setOptions(
-            chart_gauge_settings
+            chart_gauge_settings,
         );
     }
 
@@ -842,7 +842,7 @@ function init_sparklines() {
             },
             barSpacing: 2,
             barColor: "#26B99A",
-        }
+        },
     );
 
     $(".sparkline_two").sparkline(
@@ -856,7 +856,7 @@ function init_sparklines() {
             },
             barSpacing: 2,
             barColor: "#26B99A",
-        }
+        },
     );
 
     $(".sparkline_three").sparkline(
@@ -870,7 +870,7 @@ function init_sparklines() {
             lineWidth: 2,
             spotColor: "#26B99A",
             minSpotColor: "#26B99A",
-        }
+        },
     );
 
     $(".sparkline11").sparkline(
@@ -884,7 +884,7 @@ function init_sparklines() {
             },
             barSpacing: 2,
             barColor: "#26B99A",
-        }
+        },
     );
 
     $(".sparkline22").sparkline(
@@ -898,7 +898,7 @@ function init_sparklines() {
             lineWidth: 3,
             spotColor: "#34495E",
             minSpotColor: "#34495E",
-        }
+        },
     );
 
     $(".sparkline_bar").sparkline(
@@ -909,7 +909,7 @@ function init_sparklines() {
                 7: "#a1a1a1",
             },
             barColor: "#26B99A",
-        }
+        },
     );
 
     $(".sparkline_area").sparkline([5, 6, 7, 9, 9, 5, 3, 2, 2, 4, 6, 7], {
@@ -934,7 +934,7 @@ function init_sparklines() {
             width: 85,
             spotColor: "#34495E",
             minSpotColor: "#34495E",
-        }
+        },
     );
 
     $(".sparkline_pie").sparkline([1, 1, 2, 1], {
@@ -949,7 +949,7 @@ function init_sparklines() {
             barWidth: 3,
             lineColor: "#26B99A",
             width: "85",
-        }
+        },
     );
 }
 
@@ -1376,8 +1376,8 @@ function init_wysiwyg() {
                         fontName +
                         "'\">" +
                         fontName +
-                        "</a></li>"
-                )
+                        "</a></li>",
+                ),
             );
         });
         $("a[title]").tooltip({
@@ -1434,7 +1434,7 @@ function init_wysiwyg() {
             '<div class="alert"> <button type="button" class="close" data-dismiss="alert">&times;</button>' +
                 "<strong>File upload error</strong> " +
                 msg +
-                " </div>"
+                " </div>",
         ).prependTo("#alerts");
     }
 
@@ -1512,7 +1512,7 @@ function init_cropper() {
                     e.height,
                     e.rotate,
                     e.scaleX,
-                    e.scaleY
+                    e.scaleY,
                 );
             },
             "zoom.cropper": function (e) {
@@ -1596,7 +1596,7 @@ function init_cropper() {
             result = $image.cropper(
                 data.method,
                 data.option,
-                data.secondOption
+                data.secondOption,
             );
 
             switch (data.method) {
@@ -1742,7 +1742,7 @@ function init_knob() {
                         this.radius - this.lineWidth,
                         pa.s,
                         pa.e,
-                        pa.d
+                        pa.d,
                     );
                     this.g.stroke();
                 }
@@ -1755,7 +1755,7 @@ function init_knob() {
                     this.radius - this.lineWidth,
                     a.s,
                     a.e,
-                    a.d
+                    a.d,
                 );
                 this.g.stroke();
 
@@ -1768,7 +1768,7 @@ function init_knob() {
                     this.radius - this.lineWidth + 1 + (this.lineWidth * 2) / 3,
                     0,
                     2 * Math.PI,
-                    false
+                    false,
                 );
                 this.g.stroke();
 
@@ -1938,7 +1938,7 @@ function init_daterangepicker() {
     var cb = function (start, end, label) {
         console.log(start.toISOString(), end.toISOString(), label);
         $("#reportrange span").html(
-            start.format("MMMM D, YYYY") + " - " + end.format("MMMM D, YYYY")
+            start.format("MMMM D, YYYY") + " - " + end.format("MMMM D, YYYY"),
         );
     };
 
@@ -2003,7 +2003,7 @@ function init_daterangepicker() {
     $("#reportrange span").html(
         moment().subtract(29, "days").format("MMMM D, YYYY") +
             " - " +
-            moment().format("MMMM D, YYYY")
+            moment().format("MMMM D, YYYY"),
     );
     $("#reportrange").daterangepicker(optionSet1, cb);
     $("#reportrange").on("show.daterangepicker", function () {
@@ -2017,7 +2017,7 @@ function init_daterangepicker() {
             "apply event fired, start/end dates are " +
                 picker.startDate.format("MMMM D, YYYY") +
                 " to " +
-                picker.endDate.format("MMMM D, YYYY")
+                picker.endDate.format("MMMM D, YYYY"),
         );
     });
     $("#reportrange").on("cancel.daterangepicker", function (ev, picker) {
@@ -2043,7 +2043,7 @@ function init_daterangepicker_right() {
     var cb = function (start, end, label) {
         console.log(start.toISOString(), end.toISOString(), label);
         $("#reportrange_right span").html(
-            start.format("MMMM D, YYYY") + " - " + end.format("MMMM D, YYYY")
+            start.format("MMMM D, YYYY") + " - " + end.format("MMMM D, YYYY"),
         );
     };
 
@@ -2108,7 +2108,7 @@ function init_daterangepicker_right() {
     $("#reportrange_right span").html(
         moment().subtract(29, "days").format("MMMM D, YYYY") +
             " - " +
-            moment().format("MMMM D, YYYY")
+            moment().format("MMMM D, YYYY"),
     );
 
     $("#reportrange_right").daterangepicker(optionSet1, cb);
@@ -2124,7 +2124,7 @@ function init_daterangepicker_right() {
             "apply event fired, start/end dates are " +
                 picker.startDate.format("MMMM D, YYYY") +
                 " to " +
-                picker.endDate.format("MMMM D, YYYY")
+                picker.endDate.format("MMMM D, YYYY"),
         );
     });
     $("#reportrange_right").on("cancel.daterangepicker", function (ev, picker) {
@@ -2161,7 +2161,7 @@ function init_daterangepicker_single_call() {
         },
         function (start, end, label) {
             console.log(start.toISOString(), end.toISOString(), label);
-        }
+        },
     );
     $("#single_cal2").daterangepicker(
         {
@@ -2170,7 +2170,7 @@ function init_daterangepicker_single_call() {
         },
         function (start, end, label) {
             console.log(start.toISOString(), end.toISOString(), label);
-        }
+        },
     );
     $("#single_cal3").daterangepicker(
         {
@@ -2179,7 +2179,7 @@ function init_daterangepicker_single_call() {
         },
         function (start, end, label) {
             console.log(start.toISOString(), end.toISOString(), label);
-        }
+        },
     );
     $("#single_cal4").daterangepicker(
         {
@@ -2188,7 +2188,7 @@ function init_daterangepicker_single_call() {
         },
         function (start, end, label) {
             console.log(start.toISOString(), end.toISOString(), label);
-        }
+        },
     );
 }
 
@@ -2236,14 +2236,14 @@ function init_SmartWizard() {
             }
             // Kiểm tra các trường bắt buộc
             $(
-                "#form-step1 input, #form-step1 select, #form-step1 textarea"
+                "#form-step1 input, #form-step1 select, #form-step1 textarea",
             ).each(function () {
                 if ($(this).prop("required") && $(this).val().trim() === "") {
                     isValid = false; // Đặt isValid thành false nếu có lỗi
                     $(this).addClass("is-invalid"); // Thêm lớp lỗi
                     toastr.error(
                         "Vui lòng điền đầy đủ các trường bắt buộc!",
-                        "Lỗi!"
+                        "Lỗi!",
                     );
                 } else {
                     $(this).removeClass("is-invalid"); // Xóa lớp lỗi nếu trường hợp hợp lệ
@@ -2287,7 +2287,7 @@ function init_SmartWizard() {
                     isValid = false;
                     event.preventDefault();
                     toastr.error(
-                        "Ngày khởi hành không thể lớn hơn ngày kết thúc."
+                        "Ngày khởi hành không thể lớn hơn ngày kết thúc.",
                     );
                     $("#start_date").addClass("is-invalid");
                     $("#end_date").addClass("is-invalid");
@@ -2296,7 +2296,7 @@ function init_SmartWizard() {
                     isValid = false;
                     event.preventDefault();
                     toastr.error(
-                        "Ngày bắt đầu không thể nhỏ hơn ngày hôm nay."
+                        "Ngày bắt đầu không thể nhỏ hơn ngày hôm nay.",
                     );
                     $("#start_date").addClass("is-invalid");
                 } else {
@@ -2332,33 +2332,36 @@ function init_SmartWizard() {
             };
 
             if (finishStep1) {
-    return true; // Đã tạo tour rồi (quay lại bước 1 rồi next lại) -> cho qua luôn, không gọi lại AJAX
-}
+                return true; // Đã tạo tour rồi (quay lại bước 1 rồi next lại) -> cho qua luôn, không gọi lại AJAX
+            }
 
-$.ajax({
-    type: "POST",
-    url: formActionUrl,
-    data: formData,
-    success: function (response) {
-        if (response.success) {
-            tourId = response.tourId;
-            finishStep1 = true; // Đánh dấu form đã được gửi
-            $(".hiddenTourId").val(tourId);
-            $(document).trigger("dataUpdated", [daysDifference]);
-            toastr.success("Hãy thêm hình ảnh cho tour vừa tạo!");
+            $.ajax({
+                type: "POST",
+                url: formActionUrl,
+                data: formData,
+                success: function (response) {
+                    if (response.success) {
+                        tourId = response.tourId;
+                        finishStep1 = true; // Đánh dấu form đã được gửi
+                        $(".hiddenTourId").val(tourId);
+                        $(document).trigger("dataUpdated", [daysDifference]);
+                        toastr.success("Hãy thêm hình ảnh cho tour vừa tạo!");
 
-            // Chỉ chuyển sang Bước 2 SAU KHI đã có tourId
-            $(".add-tours #wizard").smartWizard("goToStep", 2);
-        } else {
-            toastr.error("Không thể thêm tour. Vui lòng thử lại.");
-        }
-    },
-    error: function (xhr, textStatus, errorThrown) {
-        toastr.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
-    },
-});
+                        // Chỉ chuyển sang Bước 2 SAU KHI đã có tourId
+                        $(".add-tours #wizard").smartWizard("goToStep", 2);
+                    } else {
+                        toastr.error(
+                            response.message ||
+                                "Không thể thêm tour. Vui lòng thử lại.",
+                        );
+                    }
+                },
+                error: function (xhr, textStatus, errorThrown) {
+                    toastr.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
+                },
+            });
 
-return false; // Luôn chặn chuyển bước ngay lập tức; việc chuyển bước do dòng smartWizard("next") ở trên đảm nhiệm
+            return false; // Luôn chặn chuyển bước ngay lập tức; việc chuyển bước do dòng smartWizard("next") ở trên đảm nhiệm
         },
         onNextStep: function (obj, context) {
             // Kiểm tra xem có sự kiện NextStep không
@@ -2371,7 +2374,7 @@ return false; // Luôn chặn chuyển bước ngay lập tức; việc chuyển
     if ($("#myDropzone").length) {
         // Khởi tạo Dropzone cho bước 2
         var myDropzone = new Dropzone("#myDropzone", {
-    url: "http://127.0.0.1:8000/admin/add-temp-images",
+            url: "/admin/add-temp-images",
             paramName: "image",
             maxFilesize: 5,
             acceptedFiles: "image/*",
@@ -2383,36 +2386,36 @@ return false; // Luôn chặn chuyển bước ngay lập tức; việc chuyển
 
         // Xử lý khi bấm nút "Next"
         $(".add-tours #wizard .buttonNext").on("click", function (event) {
-    let currentStep =
-        $(".add-tours #wizard").smartWizard("currentStep");
-    if (currentStep === 2) {
-        // Nếu ảnh đã upload xong hết (queuecomplete đã chạy) -> cho đi tiếp bình thường
-        if (finishStep2) {
-            return;
-        }
+            let currentStep =
+                $(".add-tours #wizard").smartWizard("currentStep");
+            if (currentStep === 2) {
+                // Nếu ảnh đã upload xong hết (queuecomplete đã chạy) -> cho đi tiếp bình thường
+                if (finishStep2) {
+                    return;
+                }
 
-        event.preventDefault();
+                event.preventDefault();
 
-        if (myDropzone.getQueuedFiles().length >= 5) {
-            console.log("Uploading images...");
-            myDropzone.processQueue();
-        } else {
-            toastr.warning(
-                "Vui lòng thêm ít nhất 5 hình ảnh trước khi tiếp tục."
-            );
-        }
-    }
-});
+                if (myDropzone.getQueuedFiles().length >= 5) {
+                    console.log("Uploading images...");
+                    myDropzone.processQueue();
+                } else {
+                    toastr.warning(
+                        "Vui lòng thêm ít nhất 5 hình ảnh trước khi tiếp tục.",
+                    );
+                }
+            }
+        });
 
         window.uploadedTempImages = []; // reset danh sách mỗi lần khởi tạo wizard
 
-// Xử lý khi từng tệp được tải lên thành công
-myDropzone.on("success", function (file, response) {
-    console.log("File uploaded successfully:", response);
-    if (response && response.data && response.data.filename) {
-        window.uploadedTempImages.push(response.data.filename);
-    }
-});
+        // Xử lý khi từng tệp được tải lên thành công
+        myDropzone.on("success", function (file, response) {
+            console.log("File uploaded successfully:", response);
+            if (response && response.data && response.data.filename) {
+                window.uploadedTempImages.push(response.data.filename);
+            }
+        });
 
         // Xử lý khi từng tệp được tải lên thành công
         myDropzone.on("success", function (file, response) {
@@ -2459,7 +2462,7 @@ function init_validator() {
         .on(
             "blur",
             "input[required], input.optional, select.required",
-            validator.checkField
+            validator.checkField,
         )
         .on("change", "select.required", validator.checkField)
         .on("keypress", "input[required][pattern]", validator.keypress);
@@ -2526,7 +2529,7 @@ function init_CustomNotification() {
                     options.type +
                     "' href='#ntf" +
                     cnt +
-                    "'><i class='fa fa-bell animated shake'></i></a></li>"
+                    "'><i class='fa fa-bell animated shake'></i></a></li>",
             );
             $("#custom_notifications #notif-group").append(message);
             cnt++;
@@ -2728,7 +2731,7 @@ function init_charts() {
                         },
                     ],
                 },
-            }
+            },
         );
     }
 
@@ -2772,7 +2775,7 @@ function init_charts() {
                         },
                     ],
                 },
-            }
+            },
         );
     }
 
@@ -2816,7 +2819,7 @@ function init_charts() {
                         },
                     ],
                 },
-            }
+            },
         );
     }
 
@@ -2860,7 +2863,7 @@ function init_charts() {
                         },
                     ],
                 },
-            }
+            },
         );
     }
 
@@ -2870,13 +2873,23 @@ function init_charts() {
         var ctx = document.getElementById("lineChart");
         var revenue = $("#lineChart").data("revenue-per-month");
         console.log(revenue);
-        
+
         var lineChart = new Chart(ctx, {
             type: "line",
             data: {
                 labels: [
-                    "January", "February", "March", "April", "May", "June",
-                    "July", "August", "September", "October", "November", "December"
+                    "January",
+                    "February",
+                    "March",
+                    "April",
+                    "May",
+                    "June",
+                    "July",
+                    "August",
+                    "September",
+                    "October",
+                    "November",
+                    "December",
                 ],
                 datasets: [
                     {
@@ -2888,8 +2901,8 @@ function init_charts() {
                         pointHoverBackgroundColor: "#fff",
                         pointHoverBorderColor: "rgba(220,220,220,1)",
                         pointBorderWidth: 1,
-                        data: revenue
-                    }
+                        data: revenue,
+                    },
                 ],
             },
         });
@@ -3146,7 +3159,7 @@ function init_calendar() {
                             end: end,
                             allDay: allDay,
                         },
-                        true // make the event "stick"
+                        true, // make the event "stick"
                     );
                 }
 
@@ -3221,7 +3234,6 @@ function init_DataTables() {
         return;
     }
     console.log("init_DataTables");
-
 
     //In hóa đơn, danh sách tours, danh sách booking
     var handleDataTableButtons = function () {
@@ -3789,7 +3801,7 @@ function init_echarts() {
     if ($("#echart_sonar").length) {
         var echartRadar = echarts.init(
             document.getElementById("echart_sonar"),
-            theme
+            theme,
         );
 
         echartRadar.setOption({
@@ -3874,7 +3886,7 @@ function init_echarts() {
     if ($("#echart_pyramid").length) {
         var echartFunnel = echarts.init(
             document.getElementById("echart_pyramid"),
-            theme
+            theme,
         );
 
         echartFunnel.setOption({
@@ -3949,7 +3961,7 @@ function init_echarts() {
     if ($("#echart_gauge").length) {
         var echartGauge = echarts.init(
             document.getElementById("echart_gauge"),
-            theme
+            theme,
         );
 
         echartGauge.setOption({
@@ -4074,7 +4086,7 @@ function init_echarts() {
     if ($("#echart_line").length) {
         var echartLine = echarts.init(
             document.getElementById("echart_line"),
-            theme
+            theme,
         );
 
         echartLine.setOption({
@@ -4175,7 +4187,7 @@ function init_echarts() {
     if ($("#echart_scatter").length) {
         var echartScatter = echarts.init(
             document.getElementById("echart_scatter"),
-            theme
+            theme,
         );
 
         echartScatter.setOption({
@@ -4841,7 +4853,7 @@ function init_echarts() {
     if ($("#echart_bar_horizontal").length) {
         var echartBar = echarts.init(
             document.getElementById("echart_bar_horizontal"),
-            theme
+            theme,
         );
 
         echartBar.setOption({
@@ -4898,7 +4910,7 @@ function init_echarts() {
     if ($("#echart_pie2").length) {
         var echartPieCollapse = echarts.init(
             document.getElementById("echart_pie2"),
-            theme
+            theme,
         );
 
         echartPieCollapse.setOption({
@@ -4973,35 +4985,40 @@ function init_echarts() {
     //echart Donut
 
     if ($("#echart_donut").length) {
-        var echartDonut = echarts.init(document.getElementById("echart_donut"), theme);
-    
+        var echartDonut = echarts.init(
+            document.getElementById("echart_donut"),
+            theme,
+        );
+
         var paymentData = $("#echart_donut").data("payment-method");
-    
+
         var paymentMethodNames = {
             "momo-payment": "Thanh toán bằng Momo",
             "paypal-payment": "Thanh toán bằng Paypal",
             "office-payment": "Thanh toán tại văn phòng",
         };
-    
+
         var paymentMethodColors = {
-            "momo-payment": "#FF0000",  
-            "paypal-payment": "#0000FF", 
+            "momo-payment": "#FF0000",
+            "paypal-payment": "#0000FF",
             "office-payment": "#FFA500",
         };
-    
+
         // Chuẩn bị dữ liệu cho biểu đồ ECharts
-        var chartData = paymentData.map(function(item) {
+        var chartData = paymentData.map(function (item) {
             return {
-                value: item.count, 
-                name: paymentMethodNames[item.paymentMethod] || item.paymentMethod, 
+                value: item.count,
+                name:
+                    paymentMethodNames[item.paymentMethod] ||
+                    item.paymentMethod,
                 itemStyle: {
-                    color: paymentMethodColors[item.paymentMethod] || "#CCCCCC"
-                }
+                    color: paymentMethodColors[item.paymentMethod] || "#CCCCCC",
+                },
             };
         });
-    
-        console.log(chartData);  // Kiểm tra dữ liệu chuẩn bị cho biểu đồ
-    
+
+        console.log(chartData); // Kiểm tra dữ liệu chuẩn bị cho biểu đồ
+
         // Thiết lập biểu đồ ECharts
         echartDonut.setOption({
             tooltip: {
@@ -5012,8 +5029,11 @@ function init_echarts() {
             legend: {
                 x: "center",
                 y: "bottom",
-                data: paymentData.map(function(item) {
-                    return paymentMethodNames[item.paymentMethod] || item.paymentMethod;  // Tên phương thức thanh toán trong legend
+                data: paymentData.map(function (item) {
+                    return (
+                        paymentMethodNames[item.paymentMethod] ||
+                        item.paymentMethod
+                    ); // Tên phương thức thanh toán trong legend
                 }),
             },
             toolbox: {
@@ -5044,11 +5064,13 @@ function init_echarts() {
             series: [
                 {
                     name: "Payment Methods",
-                    type: "pie",  
-                    radius: ["35%", "55%"], 
-                    data: chartData,  
-                    color: paymentData.map(function(item) {
-                        return paymentMethodColors[item.paymentMethod] || "#CCCCCC";
+                    type: "pie",
+                    radius: ["35%", "55%"],
+                    data: chartData,
+                    color: paymentData.map(function (item) {
+                        return (
+                            paymentMethodColors[item.paymentMethod] || "#CCCCCC"
+                        );
                     }),
                     itemStyle: {
                         normal: {
@@ -5056,12 +5078,12 @@ function init_echarts() {
                                 show: true, // Hiển thị nhãn
                             },
                             labelLine: {
-                                show: true,  // Hiển thị đường nối từ nhãn
+                                show: true, // Hiển thị đường nối từ nhãn
                             },
                         },
                         emphasis: {
                             label: {
-                                show: true,  // Hiển thị nhãn khi di chuột
+                                show: true, // Hiển thị nhãn khi di chuột
                                 position: "center",
                                 textStyle: {
                                     fontSize: "14",
@@ -5074,14 +5096,13 @@ function init_echarts() {
             ],
         });
     }
-    
 
     //echart Pie
 
     if ($("#echart_pie").length) {
         var echartPie = echarts.init(
             document.getElementById("echart_pie"),
-            theme
+            theme,
         );
 
         echartPie.setOption({
@@ -5190,7 +5211,7 @@ function init_echarts() {
     if ($("#echart_mini_pie").length) {
         var echartMiniPie = echarts.init(
             document.getElementById("echart_mini_pie"),
-            theme
+            theme,
         );
 
         echartMiniPie.setOption({
@@ -5305,7 +5326,7 @@ function init_echarts() {
     if ($("#echart_world_map").length) {
         var echartMap = echarts.init(
             document.getElementById("echart_world_map"),
-            theme
+            theme,
         );
 
         echartMap.setOption({
@@ -5323,7 +5344,7 @@ function init_echarts() {
                     value =
                         value[0].replace(
                             /(\d{1,3})(?=(?:\d{3})+(?!\d))/g,
-                            "$1,"
+                            "$1,",
                         ) +
                         "." +
                         value[1];

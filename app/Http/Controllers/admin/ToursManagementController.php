@@ -41,50 +41,72 @@ class ToursManagementController extends Controller
 
     public function addTours(Request $request)
     {
-        $name = $request->input('name');
-        $destination = $request->input('destination');
-        $domain = $request->input('domain');
-        $quantity = $request->input('number');
-        $price_adult = $request->input('price_adult');
-        $price_child = $request->input('price_child');
-        $start_date = $request->input('start_date');
-        $end_date = $request->input('end_date');
-        $description = HtmlSanitizer::clean($request->input('description'));
+        $validator = Validator::make($request->all(), [
+            'name'        => 'required|string|max:255',
+            'destination' => 'required|string|max:255',
+            'domain'      => 'required|in:b,t,n',
+            'number'      => 'required|integer|min:1|max:100000',
+            'price_adult' => 'required|numeric|min:0',
+            'price_child' => 'required|numeric|min:0',
+            'start_date'  => 'required|date_format:d/m/Y',
+            'end_date'    => 'required|date_format:d/m/Y',
+            'description' => 'required|string',
+        ], [
+            'name.required'        => 'Vui lòng nhập tên tour.',
+            'destination.required' => 'Vui lòng nhập điểm đến.',
+            'domain.required'      => 'Vui lòng chọn khu vực.',
+            'domain.in'            => 'Khu vực không hợp lệ.',
+            'number.required'      => 'Vui lòng nhập số lượng.',
+            'number.integer'       => 'Số lượng phải là số nguyên.',
+            'number.min'           => 'Số lượng phải từ 1 trở lên.',
+            'price_adult.required' => 'Vui lòng nhập giá người lớn.',
+            'price_adult.numeric'  => 'Giá người lớn không hợp lệ.',
+            'price_adult.min'      => 'Giá người lớn không được âm.',
+            'price_child.required' => 'Vui lòng nhập giá trẻ em.',
+            'price_child.numeric'  => 'Giá trẻ em không hợp lệ.',
+            'price_child.min'      => 'Giá trẻ em không được âm.',
+            'start_date.required'  => 'Vui lòng chọn ngày bắt đầu.',
+            'start_date.date_format' => 'Ngày bắt đầu phải có dạng ngày/tháng/năm.',
+            'end_date.required'    => 'Vui lòng chọn ngày kết thúc.',
+            'end_date.date_format' => 'Ngày kết thúc phải có dạng ngày/tháng/năm.',
+            'description.required' => 'Vui lòng điền mô tả.',
+        ]);
 
+        // HTTP 200 + success=false: JS của wizard chỉ hiện message của server khi nhận 200
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()]);
+        }
 
-        $startDate = Carbon::createFromFormat('d/m/Y', $start_date)->format('Y-m-d');
-        $endDate = Carbon::createFromFormat('d/m/Y', $end_date)->format('Y-m-d');
+        $start = Carbon::createFromFormat('d/m/Y', $request->input('start_date'))->startOfDay();
+        $end   = Carbon::createFromFormat('d/m/Y', $request->input('end_date'))->startOfDay();
 
-        // Tính số ngày giữa start_date và end_date
-        $days = Carbon::createFromFormat('Y-m-d', $startDate)->diffInDays(Carbon::createFromFormat('Y-m-d', $endDate));
+        if ($end->lt($start)) {
+            return response()->json(['success' => false, 'message' => 'Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.']);
+        }
+
+        // Ngày đầu và ngày cuối đều tính
+        $days   = (int) $start->diffInDays($end) + 1;
         $nights = $days - 1;
+        $time   = "{$days} ngày {$nights} đêm";
 
-        // Định dạng thời gian theo kiểu "X ngày Y đêm"
-        $time = "{$days} ngày {$nights} đêm";
+        $createTour = $this->tours->createTours([
+            'title'        => $request->input('name'),
+            'time'         => $time,
+            'description'  => HtmlSanitizer::clean($request->input('description')),
+            'quantity'     => (int) $request->input('number'),
+            'priceAdult'   => $request->input('price_adult'),
+            'priceChild'   => $request->input('price_child'),
+            'destination'  => $request->input('destination'),
+            'domain'       => $request->input('domain'),
+            'availability' => 0,    // chỉ được bật ở bước cuối, khi đã đủ ảnh (xem Bước 3)
+            'startDate'    => $start->format('Y-m-d'),
+            'endDate'      => $end->format('Y-m-d'),
+        ]);
 
-
-        $dataTours = [
-            'title' => $name,
-            'time' => $time,
-            'description' => $description,
-            'quantity' => $quantity,
-            'priceAdult' => $price_adult,
-            'priceChild' => $price_child,
-            'destination' => $destination,
-            'domain' => $domain,
-            'availability' => 0,
-            'startDate' => $startDate,
-            'endDate' => $endDate
-        ];
-        //dd($dataTours);
-
-        $createTour = $this->tours->createTours($dataTours);
-
-        // dd($createTour);
         return response()->json([
             'success' => true,
             'message' => 'Tour added successfully!',
-            'tourId' => $createTour
+            'tourId'  => $createTour,
         ]);
     }
 
