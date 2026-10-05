@@ -18,6 +18,7 @@ class ToursManagementController extends Controller
 {
     private $tours;
     private TourImageService $images;
+    private const MIN_IMAGES = 5;   // số ảnh tối thiểu để đăng một tour
 
     public function __construct(TourImageService $images)
     {
@@ -150,63 +151,102 @@ class ToursManagementController extends Controller
 
     public function addTimeline(Request $request)
     {
-        $tourId = $request->tourId;
+        $tourId = (int) $request->tourId;
+        $tour = DB::table('tbl_tours')->where('tourId', $tourId)->first();
 
-        // Tạo một mảng chứa các timeline
+        if (!$tour) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không tìm thấy tour.',
+            ], 404);
+        }
+
+        // Bấm "Hoàn thành" lần hai: tour đã đăng rồi thì không thêm nữa (L-E-12)
+        if ((int) $tour->availability === 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tour này đã được thêm trước đó.',
+            ], 409);
+        }
+
+        // Gom các cặp `day-X` / `itinerary-X`, sắp theo số ngày
         $timelines = [];
-
-        // Lặp qua tất cả các keys trong request để tìm các cặp `day-X` và `itinerary-X`
         foreach ($request->all() as $key => $value) {
-            if (preg_match('/^day-(\d+)$/', $key, $matches)) {
-                $dayNumber = $matches[1]; // Lấy số ngày (X) từ `day-X`
-
-                // Tìm `itinerary-X` tương ứng
-                $itineraryKey = "itinerary-{$dayNumber}";
-                if ($request->has($itineraryKey)) {
-                    $timelines[] = [
-                        'tourId' => $tourId,
-                        'title' => $value,
-                        'description' => HtmlSanitizer::clean($request->input($itineraryKey)),
-                    ];
-                }
+            if (preg_match('/^day-(\d+)$/', $key, $matches) && $request->has("itinerary-{$matches[1]}")) {
+                $timelines[(int) $matches[1]] = [
+                    'tourId'      => $tourId,
+                    'title'       => $value,
+                    'description' => HtmlSanitizer::clean($request->input("itinerary-{$matches[1]}")),
+                ];
             }
         }
+        ksort($timelines);
 
-        foreach ($timelines as $timeline) {
-            $this->tours->addTimeLine($timeline);
+        // Lấy ảnh tạm trực tiếp từ DB, không phụ thuộc images[] do JavaScript gửi lên
+        $images = DB::table('tbl_temp_images')
+            ->where('tourId', $tourId)
+            ->orderBy('imageId')
+            ->pluck('imageTempURL')
+            ->filter(fn($i) => is_string($i) && $this->images->isStem($i))
+            ->unique()
+            ->values()
+            ->all();
+
+        if (count($images) < self::MIN_IMAGES) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cần ít nhất ' . self::MIN_IMAGES . ' hình ảnh hợp lệ để đăng tour. Tour vẫn đang ở trạng thái ẩn.'
+            ], 422);
         }
 
-        // Chuyển ảnh đã upload tạm ở Bước 2 (gửi lên qua images[]) sang bảng chính thức tbl_images
-        $images = $request->input('images');
-        if ($images && is_array($images)) {
-            $position = 0;
-            foreach ($images as $image) {
-                if (!$this->images->isStem($image)) {
-                    continue; // chỉ nhận đường dẫn do hệ thống sinh ra, bỏ qua giá trị lạ
-                }
-                $dataUpload = [
-                    'tourId' => $tourId,
-                    'imageURL' => $image,
-                    'description' => ''
-                ] + $this->images->describe($image);
-                $dataUpload['sortOrder'] = $position++;
-                $this->tours->uploadImages($dataUpload);
+        if (empty($timelines)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vui lòng nhập lộ trình cho tour. Tour vẫn đang ở trạng thái ẩn.'
+            ], 422);
+        }
+
+        // Tất cả hoặc không gì cả
+        DB::transaction(function () use ($tourId, $timelines, $images) {
+            foreach ($timelines as $timeline) {
+                $this->tours->addTimeLine($timeline);
             }
-        }
 
-        $dataUpdate = [
-            'availability' => 1
-        ];
+            foreach ($images as $position => $image) {
+                $this->tours->uploadImages([
+                    'tourId'      => $tourId,
+                    'imageURL'    => $image,
+                    'description' => '',
+                    'sortOrder'   => $position,
+                    'isCover'     => $position === 0 ? 1 : 0,
+                ] + $this->images->describe($image));
+            }
 
-        $updateAvailability = $this->tours->updateTour($tourId, $dataUpdate);
-        toastr()->success('Thêm tour thành công!');
-        return redirect()->route('admin.page-add-tours');
+            DB::table('tbl_temp_images')
+                ->where('tourId', $tourId)
+                ->delete();
+
+            $this->tours->updateTour($tourId, ['availability' => 1]);
+        });
+
+        return response()->json([
+            'success'  => true,
+            'message'  => 'Thêm tour thành công!',
+            'redirect' => route('admin.page-add-tours'),
+        ]);
     }
+
     public function getTourEdit(Request $request)
     {
-        $tourId = $request->tourId;
+        $tourId = (int) $request->tourId;
 
         $tour = $this->tours->getTour($tourId);
+
+        // Id lạ: 404 thay vì trả `tour: null` (L-E-14)
+        if (!$tour) {
+            return response()->json(['success' => false, 'message' => 'Không tìm thấy tour.'], 404);
+        }
+
         $images = $this->tours->getImages($tourId)->map(function ($image) {
             $image->thumbUrl = TourImage::url($image->imageURL, 320);
             return $image;
@@ -214,10 +254,10 @@ class ToursManagementController extends Controller
         $timeline = $this->tours->getTimeLine($tourId);
 
         return response()->json([
-            'success' => true,
-            'tour' => $tour,
-            'images' => $images,
-            'timeline' => $timeline
+            'success'  => true,
+            'tour'     => $tour,
+            'images'   => $images,
+            'timeline' => $timeline,
         ]);
     }
 
@@ -299,70 +339,102 @@ class ToursManagementController extends Controller
             return [null, response()->json(['success' => false, 'message' => 'Không xử lý được ảnh. Thử lại hoặc chọn ảnh khác.'], 500)];
         }
     }
+
     public function updateTour(Request $request)
     {
-        $tourId = $request->tourId;
+        $validator = Validator::make($request->all(), [
+            'tourId'      => 'required|integer|exists:tbl_tours,tourId',
+            'name'        => 'required|string|max:255',
+            'destination' => 'required|string|max:255',
+            'domain'      => 'required|in:b,t,n',
+            'number'      => 'required|integer|min:0|max:100000',
+            'price_adult' => 'required|numeric|min:0',
+            'price_child' => 'required|numeric|min:0',
+            'description' => 'nullable|string',
+            'images'      => 'nullable|array',
+            'timeline'    => 'nullable|array',
+        ], [
+            'tourId.exists'        => 'Không tìm thấy tour.',
+            'name.required'        => 'Vui lòng nhập tên tour.',
+            'destination.required' => 'Vui lòng nhập điểm đến.',
+            'domain.in'            => 'Khu vực không hợp lệ.',
+            'number.integer'       => 'Số lượng phải là số nguyên.',
+            'number.min'           => 'Số lượng không được âm.',
+            'price_adult.min'      => 'Giá người lớn không được âm.',
+            'price_child.min'      => 'Giá trẻ em không được âm.',
+        ]);
+
+        // HTTP 200 + success=false để JS hiện đúng thông báo
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()]);
+        }
+
+        $tourId = (int) $request->tourId;
         $name = $request->input('name');
-        $destination = $request->input('destination');
-        $domain = $request->input('domain');
-        $quantity = $request->input('number');
-        $price_adult = $request->input('price_adult');
-        $price_child = $request->input('price_child');
-        $description = HtmlSanitizer::clean($request->input('description'));
 
         $dataTours = [
             'title'       => $name,
-            'description' => $description,
-            'quantity'    => $quantity,
-            'priceAdult'  => $price_adult,
-            'priceChild'  => $price_child,
-            'destination' => $destination,
-            'domain'      => $domain,
+            'description' => HtmlSanitizer::clean($request->input('description')),
+            'quantity'    => (int) $request->input('number'),
+            'priceAdult'  => $request->input('price_adult'),
+            'priceChild'  => $request->input('price_child'),
+            'destination' => $request->input('destination'),
+            'domain'      => $request->input('domain'),
         ];
 
         // Ảnh đang có trước khi sửa (để biết ảnh nào bị gỡ và cần xóa file sau khi lưu thành công)
         $oldStems = $this->tours->getImages($tourId)->pluck('imageURL')->all();
 
-        $images = $request->input('images');  // Mảng đường dẫn ảnh (stem) gửi lên từ form
-        // Chấp nhận đường dẫn mới (tours/{id}/{hash}) hoặc tên file cũ trơn (chưa chạy media:migrate-tour-images); loại giá trị lạ.
+        // Chấp nhận đường dẫn mới (tours/{id}/{hash}) hoặc tên file cũ trơn; loại giá trị lạ.
+        $images = $request->input('images');
         $images = is_array($images)
             ? array_values(array_unique(array_filter($images, fn($i) => is_string($i) && $i !== '' && ($this->images->isStem($i) || $i === basename($i)))))
             : [];
         $timelines = $request->input('timeline');
 
-        DB::transaction(function () use ($tourId, $dataTours, $images, $name, $timelines) {
-            $this->tours->deleteData($tourId, 'tbl_timeline');
-            $this->tours->deleteData($tourId, 'tbl_images');
+        // Thiếu dữ liệu = giữ nguyên (L-E-04)
+        $replaceImages   = count($images) > 0;
+        $replaceTimeline = is_array($timelines) && count($timelines) > 0;
 
+        DB::transaction(function () use ($tourId, $dataTours, $images, $name, $timelines, $replaceImages, $replaceTimeline) {
             $this->tours->updateTour($tourId, $dataTours);
 
-            foreach ($images as $position => $image) {
-                $this->tours->uploadImages([
-                    'tourId'      => $tourId,
-                    'imageURL'    => $image,
-                    'description' => $name,
-                    'sortOrder'   => $position,
-                    'isCover'     => $position === 0 ? 1 : 0,
-                ] + $this->images->describe($image));
+            if ($replaceImages) {
+                $this->tours->deleteData($tourId, 'tbl_images');
+                foreach ($images as $position => $image) {
+                    $this->tours->uploadImages([
+                        'tourId'      => $tourId,
+                        'imageURL'    => $image,
+                        'description' => $name,
+                        'sortOrder'   => $position,
+                        'isCover'     => $position === 0 ? 1 : 0,
+                    ] + $this->images->describe($image));
+                }
             }
 
-            if ($timelines && is_array($timelines)) {
+            if ($replaceTimeline) {
+                $this->tours->deleteData($tourId, 'tbl_timeline');
                 foreach ($timelines as $timeline) {
                     $this->tours->addTimeLine([
                         'tourId'      => $tourId,
-                        'title'       => $timeline['title'],
-                        'description' => HtmlSanitizer::clean($timeline['itinerary']),
+                        'title'       => $timeline['title'] ?? '',
+                        'description' => HtmlSanitizer::clean($timeline['itinerary'] ?? ''),
                     ]);
                 }
             }
         });
 
-        // Chỉ xóa file vật lý SAU KHI transaction thành công (chính sách §6.5)
-        $this->images->deleteMany(array_diff($oldStems, $images));
+        // Chỉ xóa file vật lý SAU KHI transaction thành công, và chỉ khi ảnh được thay
+        if ($replaceImages) {
+            $this->images->deleteMany(array_diff($oldStems, $images));
+        }
+
+        $tours = $this->tours->getAllTours();
 
         return response()->json([
             'success' => true,
-            'message' => 'Sửa thành công!',
+            'message' => 'Sửa tour thành công!',
+            'data' => view('admin.partials.list-tours', compact('tours'))->render(),
         ]);
     }
 

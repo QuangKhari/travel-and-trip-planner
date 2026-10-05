@@ -82,12 +82,14 @@ $(document).ready(function () {
             },
         });
     });
+
     /********************************************
      * TOURS MANAGEMENT                          *
      ********************************************/
     if ($("#description").length) {
         CKEDITOR.replace("description");
     }
+
     $("#start_date, #end_date").datetimepicker({
         format: "d/m/Y",
         timepicker: false,
@@ -96,9 +98,12 @@ $(document).ready(function () {
     var timelineCounter_edit;
     var formDataEdit = {};
     var tourIdSendingImage;
+    var originalImageStems = [];
+
     $(document).on("click", ".edit-tour", function (e) {
         e.preventDefault();
         console.log("edittour-click");
+
         var tourId = $(this).data("tourid");
         var urlEdit = $(this).data("urledit");
         tourIdSendingImage = tourId;
@@ -129,6 +134,7 @@ $(document).ready(function () {
                         tour.startDate,
                         "YYYY-MM-DD",
                     ).format("DD/MM/YYYY");
+
                     const endDate = moment(tour.endDate, "YYYY-MM-DD").format(
                         "DD/MM/YYYY",
                     );
@@ -136,7 +142,7 @@ $(document).ready(function () {
                     // Điền dữ liệu vào các field
                     $("input[name='name']").val(tour.title);
                     $("input[name='destination']").val(tour.destination);
-                    $("select[name='domain']").val(tour.domain); // Giá trị select
+                    $("select[name='domain']").val(tour.domain);
                     $("input[name='number']").val(tour.quantity);
                     $("input[name='price_adult']").val(tour.priceAdult);
                     $("input[name='price_child']").val(tour.priceChild);
@@ -152,7 +158,8 @@ $(document).ready(function () {
                             );
                         },
                     );
-                    timelineCounter_edit = 1; // Đặt lại bộ đếm
+
+                    timelineCounter_edit = 1;
 
                     // Xóa các timeline hiện tại trước khi load dữ liệu
                     $("#step-3").empty();
@@ -163,9 +170,10 @@ $(document).ready(function () {
                     });
                 } else {
                     toastr.error(response.message);
+
                     setTimeout(() => {
                         $("#edit-tour-modal").modal("hide");
-                    }, 500); // Delay ngắn để đảm bảo modal đóng
+                    }, 500);
                 }
             },
             error: function (xhr, textStatus, errorThrown) {
@@ -177,169 +185,207 @@ $(document).ready(function () {
     function getFormDataImages() {
         var formDataImages = [];
 
-        // Lấy các ảnh cũ từ Dropzone (những ảnh đã được thêm vào)
-        var oldImages = dropzoneOldImages.files.filter(function (file) {
-            return file.status === "accepted" || file.status === "complete";
-        });
+        if (!dropzoneOldImages) {
+            return formDataImages;
+        }
 
-        // Thêm các ảnh cũ vào formDataImages
-        oldImages.forEach(function (file) {
-            formDataImages.push(file.name); // Lấy tên của ảnh cũ
-        });
+        dropzoneOldImages.files.forEach(function (file) {
+            if (file.status !== "accepted" && file.status !== "complete") {
+                return;
+            }
 
-        // Thêm các ảnh đã upload thành công từ Dropzone
-        dropzoneOldImages.getAcceptedFiles().forEach(function (file) {
             if (file.xhr && file.xhr.responseText) {
-                var response = JSON.parse(file.xhr.responseText); // Chuyển đổi JSON response nếu cần
-                if (
-                    response.success &&
-                    response.data &&
-                    response.data.filename
-                ) {
-                    var newImageName = response.data.filename; // Lấy tên file từ response
-                    formDataImages.push(newImageName); // Thêm vào formDataImages
+                try {
+                    var response = JSON.parse(file.xhr.responseText);
+
+                    if (
+                        response.success &&
+                        response.data &&
+                        response.data.filename
+                    ) {
+                        formDataImages.push(response.data.filename);
+                        return;
+                    }
+                } catch (e) {
+                    console.error("Không đọc được response upload ảnh:", e);
                 }
+            }
+
+            if (file.name) {
+                formDataImages.push(file.name);
             }
         });
 
-        // Loại bỏ các tên ảnh trùng lặp
         formDataImages = [...new Set(formDataImages)];
 
-        console.log(formDataImages);
+        return formDataImages;
+    }
 
-        // Kiểm tra formDataImages đã chứa đủ ảnh chưa (ít nhất 5 ảnh)
-        if (formDataImages.length < 5) {
-            toastr.error("Vui lòng tải lên ít nhất 5 ảnh.");
-            return false; // Dừng lại nếu số lượng ảnh không đủ
+    function saveEditTour() {
+        var finishStep1 = true;
+
+        $("#form-step1 input, #form-step1 select, #form-step1 textarea").each(
+            function () {
+                if ($(this).prop("required") && $(this).val().trim() === "") {
+                    finishStep1 = false;
+                    $(this).addClass("is-invalid");
+                } else {
+                    $(this).removeClass("is-invalid");
+                }
+            },
+        );
+
+        var domain = $("#domain").val();
+
+        if (!domain) {
+            finishStep1 = false;
+            $("#domain").addClass("is-invalid");
+        } else {
+            $("#domain").removeClass("is-invalid");
         }
 
-        return formDataImages;
+        var description = "";
+
+        if (CKEDITOR.instances["description"]) {
+            description = CKEDITOR.instances["description"].getData();
+        }
+
+        if (!description) {
+            finishStep1 = false;
+            toastr.error("Vui lòng điền mô tả!");
+        }
+
+        if (!finishStep1) {
+            toastr.error("Vui lòng kiểm tra lại thông tin Bước 1.");
+            return;
+        }
+
+        var formDataImages = getFormDataImages();
+
+        var originalImages = [...originalImageStems].sort();
+        var currentImages = [...formDataImages].sort();
+
+        var imagesChanged =
+            JSON.stringify(originalImages) !== JSON.stringify(currentImages);
+
+        if (imagesChanged && formDataImages.length < 5) {
+            toastr.error("Tour phải có ít nhất 5 ảnh.");
+            return;
+        }
+
+        var timelines = [];
+
+        $(".timeline-entry").each(function () {
+            const title = $(this).find('input[name^="day"]').val();
+
+            const textarea = $(this).find("textarea");
+
+            const editor = CKEDITOR.instances[textarea.attr("id")];
+
+            timelines.push({
+                title: title,
+                itinerary: editor ? editor.getData() : textarea.val(),
+            });
+        });
+
+        if (timelines.length === 0) {
+            toastr.error("Tour phải có ít nhất một ngày trong lộ trình.");
+            return;
+        }
+
+        formDataEdit = {
+            tourId: tourIdSendingImage,
+            name: $("input[name='name']").val(),
+            destination: $("input[name='destination']").val(),
+            domain: $("#domain").val(),
+            number: $("input[name='number']").val(),
+            price_adult: $("input[name='price_adult']").val(),
+            price_child: $("input[name='price_child']").val(),
+            start_date: $("#start_date").val(),
+            end_date: $("#end_date").val(),
+            description: description,
+            images: imagesChanged ? formDataImages : [],
+            timeline: timelines,
+            _token: $('input[name="_token"]').val(),
+        };
+
+        console.log("Dữ liệu Edit Tour:", formDataEdit);
+
+        var urlUpdate = $("#timeline-form").attr("action");
+
+        $.ajax({
+            url: urlUpdate,
+            type: "POST",
+            data: formDataEdit,
+
+            success: function (response) {
+                if (response.success) {
+                    $("#tbody-listTours").html(response.data);
+
+                    $("#edit-tour-modal").modal("hide");
+
+                    toastr.success(response.message);
+                } else {
+                    toastr.error(response.message);
+                }
+            },
+
+            error: function (xhr) {
+                toastr.error(
+                    xhr.responseJSON?.message ||
+                        "Có lỗi xảy ra. Vui lòng thử lại sau.",
+                );
+            },
+        });
     }
 
     function init_SmartWizard_Edit_Tour() {
         if (typeof $.fn.smartWizard === "undefined") {
             return;
         }
+
         console.log("init_SmartWizard_Edit_Tour");
-        // $("#edit-tour-modal #wizard").smartWizard("goToStep", 1);
 
         $("#edit-tour-modal #wizard").smartWizard({
-            onLeaveStep: function (obj, context) {
-                var stepIndex = context.fromStep; // Lấy chỉ số bước hiện tại khi rời khỏi bước
-                var nextStepIndex = context.toStep; // Lấy chỉ số bước tiếp theo
-                console.log("Leaving Step: " + stepIndex);
-                console.log("Next Step: " + nextStepIndex);
+            enableAllSteps: true,
+            noForwardJumping: false,
+            transitionEffect: "slide",
 
-                var finishStep1 = true;
-                var finishStep2 = true;
-                // Kiểm tra bước 1
-                if (stepIndex === 1) {
-                    // Kiểm tra các trường trong form step1
-                    $(
-                        "#form-step1 input, #form-step1 select, #form-step1 textarea",
-                    ).each(function () {
-                        if (
-                            $(this).prop("required") &&
-                            $(this).val().trim() === ""
-                        ) {
-                            finishStep1 = false; // Đặt finishStep1 thành false nếu có trường hợp không hợp lệ
-                            $(this).addClass("is-invalid"); // Thêm lớp lỗi
-                            toastr.error(
-                                "Vui lòng điền đầy đủ các trường bắt buộc!",
-                                "Lỗi!",
-                            );
-                        } else {
-                            $(this).removeClass("is-invalid"); // Xóa lớp lỗi nếu trường hợp hợp lệ
-                        }
-                    });
+            onLeaveStep: function () {
+                return true;
+            },
 
-                    // Kiểm tra trường domain
-                    var domain = $("#domain").val();
-                    if (!domain) {
-                        finishStep1 = false;
-                        $("#domain").addClass("is-invalid"); // Thêm lớp lỗi nếu không chọn khu vực
-                        toastr.error("Vui lòng chọn khu vực!", "Lỗi!");
-                    } else {
-                        $("#domain").removeClass("is-invalid");
-                    }
-
-                    // Kiểm tra mô tả
-                    var description =
-                        CKEDITOR.instances["description"].getData();
-                    if (!description) {
-                        finishStep1 = false;
-                        toastr.error("Vui lòng điền mô tả!");
-                    }
-
-                    console.log(finishStep1); // Kiểm tra giá trị của finishStep1
-
-                    // Tạo formData từ các trường trong form bước 1
-                    formDataEdit = {
-                        tourId: tourIdSendingImage,
-                        name: $("input[name='name']").val(),
-                        destination: $("input[name='destination']").val(),
-                        domain: $("#domain").val(),
-                        number: $("input[name='number']").val(),
-                        price_adult: $("input[name='price_adult']").val(),
-                        price_child: $("input[name='price_child']").val(),
-                        start_date: $("#start_date").val(),
-                        end_date: $("#end_date").val(),
-                        description: description,
-                        _token: $('input[name="_token"]').val(),
-                        images: [],
-                        timeline: [],
-                    };
-                    console.log("formDataEdit step 1:");
-                    console.log(formDataEdit);
-
-                    // Nếu tất cả hợp lệ, cho phép chuyển bước
-                    if (finishStep1) {
-                        return true;
-                    } else {
-                        return false;
-                    }
-                }
-                // Kiểm tra bước 2 (ảnh)
-                if (stepIndex === 2) {
-                    var formDataImages = getFormDataImages();
-
-                    // Thêm ảnh vào formDataEdit
-                    formDataEdit.images = formDataImages; // Gán danh sách ảnh cho formDataEdit
-                    console.log("formDataEdit step 2:");
-                    console.log(formDataEdit);
-                    if (finishStep2) {
-                        return true;
-                    } else {
-                        return false;
-                    }
-                }
+            onFinish: function () {
+                saveEditTour();
+                return false;
             },
         });
 
-        // Khởi tạo Dropzone
-        Dropzone.autoDiscover = false; // Ngăn Dropzone tự động init
+        Dropzone.autoDiscover = false;
+
         dropzoneOldImages = new Dropzone("#myDropzone-listTour", {
-            url: "/admin/add-temp-images", // URL tương đối: chạy đúng ở mọi host/cổng
+            url: "/admin/add-temp-images",
             method: "post",
             paramName: "image",
             acceptedFiles: "image/*",
             addRemoveLinks: true,
             dictRemoveFile: "Xóa ảnh",
-            autoProcessQueue: true, // Không tự động upload
-            maxFiles: 12, // Khớp giới hạn phía server (media.limits.max_images_per_tour)
-            parallelUploads: 5, // Số file được upload song song
+            autoProcessQueue: true,
+            maxFiles: 12,
+            parallelUploads: 5,
+
             headers: {
-                "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content"), // Thêm CSRF token vào headers
+                "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content"),
             },
+
             init: function () {
-                // Lắng nghe sự kiện 'sending' để thêm thông tin vào formData
                 this.on("sending", function (file, xhr, formData) {
-                    formData.append("tourId", tourIdSendingImage); // tourId là ID của tour mà bạn cần gửi
+                    formData.append("tourId", tourIdSendingImage);
                 });
 
-                // Hiển thị thông báo lỗi dạng chữ (server trả JSON {success:false,message}) thay vì "[object Object]"
                 this.on("error", function (file, response) {
                     var msg = "Không tải được ảnh.";
+
                     if (typeof response === "string") {
                         msg = response;
                     } else if (response && response.message) {
@@ -347,12 +393,16 @@ $(document).ready(function () {
                     } else if (response && response.errors) {
                         msg = Object.values(response.errors)[0][0];
                     }
+
                     var el =
                         file.previewElement &&
                         file.previewElement.querySelector(
                             "[data-dz-errormessage]",
                         );
-                    if (el) el.textContent = msg;
+
+                    if (el) {
+                        el.textContent = msg;
+                    }
                 });
             },
         });
@@ -362,11 +412,17 @@ $(document).ready(function () {
         });
 
         $(".buttonNext").addClass("btn btn-success");
+
         $(".buttonPrevious").addClass("btn btn-primary");
+
         $(".buttonFinish").addClass("btn btn-default");
     }
 
     function loadOldImages(images) {
+        originalImageStems = images.map(function (image) {
+            return image.imageURL;
+        });
+
         images.forEach(function (image) {
             // thumbUrl do server trả về (getTourEdit); dự phòng cho ảnh dạng cũ chưa được chuyển
             let imageUrl =
@@ -374,21 +430,25 @@ $(document).ready(function () {
                 `/admin/assets/images/gallery-tours/${image.imageURL}`;
 
             let mockFile = {
-                name: image.imageURL, // Tên tệp ảnh
-                url: imageUrl, // Đường dẫn đầy đủ
-                status: "accepted", // Đặt trạng thái của file là 'accepted'
+                name: image.imageURL,
+                url: imageUrl,
+                status: "accepted",
             };
 
             // Thêm file vào Dropzone
             dropzoneOldImages.emit("addedfile", mockFile);
-            dropzoneOldImages.emit("thumbnail", mockFile, imageUrl); // Hiển thị thumbnail
+
+            dropzoneOldImages.emit("thumbnail", mockFile, imageUrl);
+
             dropzoneOldImages.emit("complete", mockFile);
+
             dropzoneOldImages.files.push(mockFile);
         });
     }
 
     function editTimelineEntry(data = null) {
         const title = data ? data.title : `Ngày ${timelineCounter_edit}`;
+
         const description = data ? data.description : "";
 
         const timelineEntry = `
@@ -412,53 +472,12 @@ $(document).ready(function () {
         if ($(`#itinerary-${timelineCounter_edit}`).length) {
             CKEDITOR.replace(`itinerary-${timelineCounter_edit}`);
         }
+
         // formDataEdit.timeline.push(itineraryData);
 
         timelineCounter_edit++;
     }
 
-    $("#edit-tour-modal").on("shown.bs.modal", function () {
-        $("#edit-tour-modal #wizard .buttonFinish")
-            .off("click")
-            .on("click", function (e) {
-                // Thêm các timeline entries vào formDataEdit
-                formDataEdit.timeline = []; // Xóa dữ liệu cũ nếu có
-                $(".timeline-entry").each(function () {
-                    const title = $(this).find('input[name^="day"]').val(); // Lấy title ngày
-                    const itinerary =
-                        CKEDITOR.instances[
-                            $(this).find("textarea").attr("id")
-                        ].getData(); // Lấy lộ trình từ CKEditor
-                    formDataEdit.timeline.push({
-                        title: title,
-                        itinerary: itinerary,
-                    });
-                });
-
-                console.log(
-                    "formDataEdit sau khi nhấn hoàn thành:",
-                    formDataEdit,
-                );
-                var urlUpdate = $("#timeline-form").attr("action");
-
-                $.ajax({
-                    url: urlUpdate, // Thay đổi URL phù hợp với API của bạn
-                    type: "POST",
-                    data: formDataEdit,
-                    success: function (response) {
-                        if (response.success) {
-                            toastr.success(response.message);
-                            $("#edit-tour-modal").modal("hide");
-                            // Reload lại toàn bộ trang
-                            location.reload();
-                        }
-                    },
-                    error: function (xhr, textStatus, errorThrown) {
-                        toastr.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
-                    },
-                });
-            });
-    });
     // Khi modal đóng
     $("#edit-tour-modal").on("hidden.bs.modal", function () {
         console.log("close modal");
@@ -469,13 +488,17 @@ $(document).ready(function () {
         // Kiểm tra nếu Dropzone đã được khởi tạo
         if (Dropzone.forElement("#myDropzone-listTour") !== undefined) {
             // Hủy bỏ Dropzone cũ
-            // $("#myDropzone-listTour .dz-preview").remove();
             Dropzone.forElement("#myDropzone-listTour").destroy();
         }
+
+        formDataEdit = {};
+        originalImageStems = [];
+        timelineCounter_edit = 1;
     });
 
     $(document).on("click", ".delete-tour", function (e) {
         e.preventDefault();
+
         var tourId = $(this).data("tourid");
         var urlDelete = $(this).attr("href");
 
@@ -488,14 +511,17 @@ $(document).ready(function () {
                 _token: csrfToken,
                 tourId: tourId,
             },
+
             success: function (response) {
                 if (response.success) {
                     $("#tbody-listTours").html(response.data);
+
                     toastr.success(response.message);
                 } else {
                     toastr.error(response.message);
                 }
             },
+
             error: function (xhr, textStatus, errorThrown) {
                 toastr.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
             },
@@ -512,6 +538,7 @@ $(document).ready(function () {
     $(document).on("dataUpdated", function (event, daysDifference) {
         maxTimelineDays = daysDifference;
     });
+
     // Hàm thêm một timeline entry mới
     function addTimelineEntry() {
         // Kiểm tra nếu số lượng timeline entries đã đạt giới hạn
@@ -521,6 +548,7 @@ $(document).ready(function () {
             toastr.error(`Không thể thêm quá ${maxTimelineDays} ngày.`);
             return;
         }
+
         const timelineEntry = `
                 <div class="timeline-entry" id="timeline-entry-${timelineCounter}">
                     <label for="day-${timelineCounter}">Ngày ${timelineCounter}</label>
@@ -553,41 +581,70 @@ $(document).ready(function () {
     $("#step-3").on("click", ".remove-btn", function () {
         const id = $(this).data("id");
 
-        $(`#timeline-entry-${id}`).remove(); // Xóa div chứa timeline entry
+        $(`#timeline-entry-${id}`).remove();
     });
 
     // Thêm nút thêm timeline vào div#step-3
     const addButton = `<button type="button" id="add-timeline" class="btn btn-round btn-info" style="margin-top: 20px;">Thêm Timeline</button>`;
+
     $("#step-3").append(addButton);
 
     // Thêm timeline đầu tiên khi trang tải xong
     addTimelineEntry();
 
-    $(".add-tours #wizard .buttonFinish").on("click", function () {
-        const form = $("#timeline-form")[0];
+    $(".add-tours #wizard .buttonFinish")
+        .off("click")
+        .on("click", function (e) {
+            e.preventDefault();
 
-        if (form.checkValidity()) {
-            $("#timeline-form .temp-image-input").remove();
+            const form = $("#timeline-form")[0];
 
-            if (window.uploadedTempImages && window.uploadedTempImages.length) {
-                window.uploadedTempImages.forEach(function (filename) {
-                    $("<input>")
-                        .attr({
-                            type: "hidden",
-                            class: "temp-image-input",
-                            name: "images[]",
-                            value: filename,
-                        })
-                        .appendTo("#timeline-form");
-                });
+            if (!form.checkValidity()) {
+                toastr.error("Vui lòng điền đầy đủ thông tin trong form!");
+
+                form.reportValidity();
+
+                return;
             }
 
-            $("#timeline-form").submit();
-        } else {
-            toastr.error("Vui lòng điền đầy đủ thông tin trong form!");
-            form.reportValidity();
-        }
-    });
+            $("#timeline-form textarea").each(function () {
+                const instance = CKEDITOR.instances[this.id];
+
+                if (instance) {
+                    instance.updateElement();
+                }
+            });
+
+            $.ajax({
+                url: $("#timeline-form").attr("action"),
+
+                type: "POST",
+
+                data: $("#timeline-form").serialize(),
+
+                success: function (response) {
+                    if (response.success) {
+                        toastr.success(response.message);
+
+                        setTimeout(function () {
+                            window.location.href = response.redirect;
+                        }, 1500);
+                    } else {
+                        toastr.error(
+                            response.message ||
+                                "Không thể hoàn thành thêm tour.",
+                        );
+                    }
+                },
+
+                error: function (xhr) {
+                    toastr.error(
+                        xhr.responseJSON?.message ||
+                            "Không thể hoàn thành thêm tour. Vui lòng thử lại.",
+                    );
+                },
+            });
+        });
 
     /********************************************
      * BOOKING MANAGEMENT                          *
@@ -596,8 +653,11 @@ $(document).ready(function () {
         e.preventDefault();
 
         const bookingId = $(this).data("bookingid");
+
         const urlConfirm = $(this).data("urlconfirm");
+
         console.log("Booking ID:", bookingId);
+
         console.log("urlConfirm:", urlConfirm);
 
         // Thực hiện các hành động khác, ví dụ gọi AJAX
@@ -608,15 +668,19 @@ $(document).ready(function () {
                 bookingId: bookingId,
                 _token: $('meta[name="csrf-token"]').attr("content"),
             },
+
             success: function (response) {
                 if (response.success) {
                     $("#tbody-booking").html(response.data);
+
                     $(".confirm-booking").remove();
+
                     toastr.success(response.message);
                 } else {
                     toastr.error(response.message);
                 }
             },
+
             error: function (error) {
                 toastr.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
             },
@@ -627,8 +691,11 @@ $(document).ready(function () {
         e.preventDefault();
 
         const bookingId = $(this).data("bookingid");
+
         const urlFinish = $(this).data("urlfinish");
+
         console.log("Booking ID:", bookingId);
+
         console.log("urlFinish:", urlFinish);
 
         // Thực hiện các hành động khác, ví dụ gọi AJAX
@@ -639,24 +706,30 @@ $(document).ready(function () {
                 bookingId: bookingId,
                 _token: $('meta[name="csrf-token"]').attr("content"),
             },
+
             success: function (response) {
                 if (response.success) {
                     $("#tbody-booking").html(response.data);
+
                     $(".finish-booking").remove();
+
                     toastr.success(response.message);
                 } else {
                     toastr.error(response.message);
                 }
             },
+
             error: function (error) {
                 toastr.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
             },
         });
     });
+
     $(document).on("click", ".confirm-payment", function (e) {
         e.preventDefault();
 
         const bookingId = $(this).data("bookingid");
+
         const urlPayment = $(this).data("urlpayment");
 
         $.ajax({
@@ -666,14 +739,17 @@ $(document).ready(function () {
                 bookingId: bookingId,
                 _token: $('meta[name="csrf-token"]').attr("content"),
             },
+
             success: function (response) {
                 if (response.success) {
                     $("#tbody-booking").html(response.data);
+
                     toastr.success(response.message);
                 } else {
                     toastr.error(response.message);
                 }
             },
+
             error: function () {
                 toastr.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
             },
@@ -686,7 +762,9 @@ $(document).ready(function () {
     $("#send-pdf-btn").click(function () {
         // Lấy bookingId và email từ button
         const bookingId = $(this).data("bookingid");
+
         const email = $(this).data("email");
+
         const urlSendPdf = $(this).data("urlsendmail");
 
         // Gửi AJAX request
@@ -698,9 +776,11 @@ $(document).ready(function () {
                 email: email,
                 _token: $('meta[name="csrf-token"]').attr("content"),
             },
+
             beforeSend: function () {
                 toastr.warning("Đang gửi mail!!!");
             },
+
             success: function (response) {
                 if (response.success) {
                     toastr.success(response.message);
@@ -708,18 +788,24 @@ $(document).ready(function () {
                     toastr.error(response.message);
                 }
             },
+
             error: function (xhr, status, error) {
                 toastr.error("Đã xảy ra lỗi khi gửi email. Vui lòng thử lại!");
-                console.error(xhr.responseText); // Log lỗi chi tiết trong console
+
+                console.error(xhr.responseText);
             },
         });
     });
+
     $(document).on("click", "#received-money", function (e) {
         e.preventDefault();
 
         const bookingId = $(this).data("bookingid");
+
         const urlPaid = $(this).data("urlpaid");
+
         console.log("Booking ID:", bookingId);
+
         console.log("url:", urlPaid);
 
         // Thực hiện các hành động khác, ví dụ gọi AJAX
@@ -730,14 +816,17 @@ $(document).ready(function () {
                 bookingId: bookingId,
                 _token: $('meta[name="csrf-token"]').attr("content"),
             },
+
             success: function (response) {
                 if (response.success) {
                     $("#received-money").remove();
+
                     toastr.success(response.message);
                 } else {
                     toastr.error(response.message);
                 }
             },
+
             error: function (error) {
                 toastr.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
             },
@@ -749,6 +838,7 @@ $(document).ready(function () {
      ********************************************/
     $(".contact-item").click(function (e) {
         e.preventDefault();
+
         $(".mail_view").show();
 
         // Lấy dữ liệu từ các thuộc tính data-*
@@ -758,11 +848,14 @@ $(document).ready(function () {
         var contactId = $(this).data("contactid");
 
         $(".mail_view .inbox-body .sender-info strong").text(fullName);
+
         $(".mail_view .inbox-body .sender-info span").text("(" + email + ")");
+
         $(".mail_view .view-mail p").text(message);
 
         // Thêm thuộc tính data-email vào button
         $(".send-reply-contact").attr("data-email", email);
+
         $(".send-reply-contact").attr("data-contactid", contactId);
     });
 
@@ -775,13 +868,16 @@ $(document).ready(function () {
 
         // Lấy thông tin từ nút gửi
         var email = $(this).attr("data-email");
+
         var contactId = $(this).attr("data-contactid");
+
         var editorContent = CKEDITOR.instances["editor-contact"].getData();
 
         var urlReply = $(this).data("url");
 
         if (!email) {
             toastr.error("Không có địa chỉ email để gửi.");
+
             return;
         }
 
@@ -790,24 +886,32 @@ $(document).ready(function () {
             url: urlReply,
             type: "POST",
             dataType: "json",
+
             headers: {
-                "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content"), // CSRF Token
+                "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content"),
             },
+
             data: {
                 contactId: contactId,
                 email: email,
                 message: editorContent,
             },
+
             success: function (response) {
                 if (response.success) {
                     toastr.success(response.message);
+
                     // Xóa element contact-item sau khi phản hồi thành công
                     $(
                         ".contact-item[data-contactid='" + contactId + "']",
                     ).remove();
+
                     $(".mail_view").hide();
-                    CKEDITOR.instances["editor-contact"].setData(""); // Xóa nội dung CKEditor
-                    $("#editor-contact").empty(); // Dọn sạch nội dung div nếu cần
+
+                    CKEDITOR.instances["editor-contact"].setData("");
+
+                    $("#editor-contact").empty();
+
                     $(".compose").slideToggle();
 
                     $(this)
@@ -815,6 +919,7 @@ $(document).ready(function () {
                         .removeAttr("data-contactid");
                 }
             },
+
             error: function (xhr) {
                 alert("Đã xảy ra lỗi khi gửi email. Vui lòng thử lại.");
             },
@@ -834,21 +939,27 @@ $(document).ready(function () {
         // Validate username
         if (sqlInjectionPattern.test(username)) {
             toastr.error("Tên tài khoản chứa ký tự không hợp lệ!");
-            e.preventDefault(); // Ngăn form submit
+
+            e.preventDefault();
+
             return false;
         }
 
         // Validate password
         if (sqlInjectionPattern.test(password)) {
             toastr.error("Mật khẩu chứa ký tự không hợp lệ!");
-            e.preventDefault(); // Ngăn form submit
+
+            e.preventDefault();
+
             return false;
         }
 
         // Đảm bảo mật khẩu có ít nhất 6 ký tự
         if (password.length < 6) {
             toastr.error("Mật khẩu phải có ít nhất 6 ký tự!");
-            e.preventDefault(); // Ngăn form submit
+
+            e.preventDefault();
+
             return false;
         }
     });
@@ -861,9 +972,13 @@ $(document).ready(function () {
         e.preventDefault();
 
         var form = $(this);
+
         var name = form.find('[name="fullName"]').val().trim();
+
         var password = form.find('[name="password"]').val().trim();
+
         var email = form.find('[name="email"]').val().trim();
+
         var address = form.find('[name="address"]').val().trim();
 
         var isValid = true;
@@ -871,17 +986,21 @@ $(document).ready(function () {
         // Mật khẩu để trống = không đổi; nếu nhập thì phải đủ 6 ký tự
         if (password !== "" && password.length < 6) {
             isValid = false;
+
             toastr.error("Mật khẩu mới phải có ít nhất 6 ký tự.");
         }
 
         var emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
         if (!emailPattern.test(email)) {
             isValid = false;
+
             toastr.error("Email không hợp lệ.");
         }
 
         if (address === "") {
             isValid = false;
+
             toastr.error("Vui lòng nhập địa chỉ.");
         }
 
@@ -889,6 +1008,7 @@ $(document).ready(function () {
             $.ajax({
                 url: form.attr("action"),
                 method: "POST",
+
                 data: {
                     fullName: name,
                     password: password,
@@ -896,17 +1016,23 @@ $(document).ready(function () {
                     address: address,
                     _token: $('meta[name="csrf-token"]').attr("content"),
                 },
+
                 success: function (response) {
                     if (response.success) {
                         toastr.success("Cập nhật thành công!");
+
                         $("#nameAdmin").text(response.data.fullName);
+
                         $("#emailAdmin").text(response.data.email);
+
                         $("#addressAdmin").text(response.data.address);
+
                         form.find('[name="password"]').val("");
                     } else {
                         toastr.error(response.message);
                     }
                 },
+
                 error: function (xhr) {
                     // 422: lỗi kiểm tra dữ liệu của Laravel, hiện thông báo đầu tiên
                     if (
@@ -917,6 +1043,7 @@ $(document).ready(function () {
                         var first = Object.values(
                             xhr.responseJSON.errors,
                         )[0][0];
+
                         toastr.error(first);
                     } else {
                         toastr.error("Đã có lỗi xảy ra. Vui lòng thử lại!");
@@ -925,6 +1052,7 @@ $(document).ready(function () {
             });
         }
     });
+
     //Update avatar
     $("#avatarAdmin").on("change", function () {
         const file = event.target.files[0];
@@ -932,31 +1060,41 @@ $(document).ready(function () {
         if (file) {
             // Hiển thị ảnh vừa chọn trước khi gửi lên server
             const reader = new FileReader();
+
             reader.onload = function (e) {
                 $("#avatarAdminPreview").attr("src", e.target.result);
+
                 $("#navbarDropdown img").attr("src", e.target.result);
+
                 $(".profile_img").attr("src", e.target.result);
             };
+
             reader.readAsDataURL(file);
+
             var url = $("#btn_avatar").attr("action");
+
             // Tạo FormData để gửi file qua AJAX
             const formData = new FormData();
+
             formData.append("avatarAdmin", file);
 
             console.log(formData);
 
-            // // Gửi AJAX đến server
+            // Gửi AJAX đến server
             $.ajax({
                 url: url,
                 type: "POST",
+
                 headers: {
                     "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr(
                         "content",
                     ),
                 },
+
                 data: formData,
                 contentType: false,
                 processData: false,
+
                 success: function (response) {
                     if (response.success) {
                         toastr.success(response.message);
@@ -964,6 +1102,7 @@ $(document).ready(function () {
                         toastr.error(response.message);
                     }
                 },
+
                 error: function (xhr, status, error) {
                     toastr.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
                 },
