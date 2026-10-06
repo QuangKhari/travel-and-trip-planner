@@ -47,8 +47,9 @@ Route::post('/register', [LoginController::class, 'register'])->middleware('thro
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 //quên mật khẩu 
 Route::get('/quen-mat-khau', [ForgotPasswordController::class, 'index'])->name('password.request');
-Route::post('/xac-thuc-tai-khoan', [ForgotPasswordController::class, 'verifyAccount'])->name('password.verify');
-Route::post('/doi-mat-khau', [ForgotPasswordController::class, 'reset'])->name('password.update');
+Route::post('/quen-mat-khau', [ForgotPasswordController::class, 'sendLink'])->middleware('throttle:5,1,password-email')->name('password.email');
+Route::get('/dat-lai-mat-khau/{token}', [ForgotPasswordController::class, 'showResetForm'])->name('password.reset.form');
+Route::post('/doi-mat-khau', [ForgotPasswordController::class, 'reset'])->middleware('throttle:10,1,password-reset')->name('password.update');
 
 
 //tours, filter tours, tour detail
