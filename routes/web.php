@@ -42,8 +42,8 @@ Route::get('/search-voice-text', [SearchController::class, 'searchTours'])->name
 
 //Đăng nhập, đăng ký, đăng xuất
 Route::get('/login', [LoginController::class, 'index'])->name('login');
-Route::post('/login', [LoginController::class, 'login'])->name('user-login');
-Route::post('/register', [LoginController::class, 'register'])->name('register');
+Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:10,1,user-login')->name('user-login');
+Route::post('/register', [LoginController::class, 'register'])->middleware('throttle:10,1,register')->name('register');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 //quên mật khẩu 
 Route::get('/quen-mat-khau', [ForgotPasswordController::class, 'index'])->name('password.request');
@@ -96,7 +96,7 @@ Route::post('/upload-transfer-proof', fn() => response()->json([
 Route::prefix('admin')->group(function () {
     //Đăng nhập, đăng xuất
     Route::get('/login', [LoginAdminController::class, 'index'])->name('admin.login');
-    Route::post('/login-account', [LoginAdminController::class, 'loginAdmin'])->name('admin.login-account');
+    Route::post('/login-account', [LoginAdminController::class, 'loginAdmin'])->middleware('throttle:10,1,admin-login')->name('admin.login-account');
     Route::post('/logout', [LoginAdminController::class, 'logout'])->name('admin.logout');
 
     // Tất cả role đều vào được (admin, manager, staff)

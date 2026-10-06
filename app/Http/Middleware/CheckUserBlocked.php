@@ -19,7 +19,7 @@ class CheckUserBlocked
         $user = DB::table('tbl_users')->where('userId', $userId)->first();
 
         // Không còn tồn tại hoặc bị chặn -> hủy phiên (L-A-07)
-        if (!$user || $user->status == 'b') {
+        if (!$user || in_array($user->status, ['b', 'd'], true)) {
             $request->session()->forget(['username', 'userId']);
 
             if ($request->expectsJson() || $request->ajax()) {

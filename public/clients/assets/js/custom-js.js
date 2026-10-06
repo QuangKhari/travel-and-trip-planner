@@ -72,6 +72,12 @@ $(document).ready(function () {
                     }
                 },
                 error: function (xhr, textStatus, errorThrown) {
+                    if (xhr.status === 429) {
+                        toastr.error(
+                            "Bạn thử quá nhiều lần. Vui lòng đợi một phút rồi thử lại.",
+                        );
+                        return;
+                    }
                     toastr.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
                 },
             });

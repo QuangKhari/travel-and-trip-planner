@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\clients\Login;
 use Illuminate\Support\Facades\Validator;
+use App\Support\PasswordHasher;
 
 class LoginController extends Controller
 {
@@ -26,7 +27,7 @@ class LoginController extends Controller
         $validator = Validator::make($request->all(), [
             'username_regis' => 'required|string|max:50',
             'email'          => ['required', 'email:filter', 'max:255', 'regex:/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/'],
-            'password_regis' => 'required|string|min:6|max:100',
+            'password_regis' => 'required|string|min:6|max:72',
         ], [
             'username_regis.required' => 'Vui lòng nhập tên tài khoản.',
             'username_regis.max'      => 'Tên tài khoản tối đa 50 ký tự.',
@@ -35,6 +36,7 @@ class LoginController extends Controller
             'email.regex'             => 'Email không hợp lệ (cần có dạng ten@ten-mien.com).',
             'password_regis.required' => 'Vui lòng nhập mật khẩu.',
             'password_regis.min'      => 'Mật khẩu phải có ít nhất 6 ký tự.',
+            'password_regis.max'      => 'Mật khẩu tối đa 72 ký tự.',
         ]);
 
         if ($validator->fails()) {
@@ -59,7 +61,7 @@ class LoginController extends Controller
             'username' => $username_regis,
             'fullName' => $username_regis,   // cột fullName bắt buộc; người dùng sửa lại ở trang hồ sơ
             'email'    => $email,
-            'password' => md5($request->password_regis),   // Tuần 2 (L-A-02) đổi sang bcrypt
+            'password' => PasswordHasher::make($request->password_regis),
         ];
         $this->login->registerAccount($dataInsert);
 
@@ -73,25 +75,38 @@ class LoginController extends Controller
     //xử lý người dùng đăng nhập
     public function login(Request $request)
     {
-        $data_login = [
-            'username' => $request->username,
-            'password' => md5($request->password),   // Tuần 2 (L-A-02) sẽ đổi sang bcrypt
-        ];
+        $username = trim((string) $request->username);
+        $password = (string) $request->password;
 
-        $user = $this->login->login($data_login);
+        $user = $this->login->findByUsername($username);
 
-        if (!$user) {
+        // Sai username hoặc sai mật khẩu: cùng một thông báo, không cho biết tài khoản có tồn tại hay không
+        if (!$user || !PasswordHasher::check($password, $user->password)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Thông tin tài khoản không chính xác!',
             ]);
         }
 
-        if ($user->status == 'b') {
+        // Chỉ người nhập đúng mật khẩu mới biết tài khoản bị chặn
+        if ($user->status === 'b') {
             return response()->json([
                 'success' => false,
                 'message' => 'Tài khoản đã bị chặn',
             ]);
+        }
+
+        // Tài khoản đã xóa (L-A-08): coi như không tồn tại
+        if ($user->status === 'd') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Thông tin tài khoản không chính xác!',
+            ]);
+        }
+
+        // Nâng cấp MD5 -> bcrypt ngay lúc người dùng vừa nhập đúng mật khẩu
+        if (PasswordHasher::needsUpgrade($user->password)) {
+            $this->login->updatePassword($user->userId, PasswordHasher::make($password));
         }
 
         // Cấp session id mới để chống session fixation (L-A-01)

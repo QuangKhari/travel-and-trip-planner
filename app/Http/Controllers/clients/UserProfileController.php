@@ -9,6 +9,7 @@ use App\Services\InvalidImageException;
 use App\Services\UserMediaService;
 use App\Support\Avatar;
 use Illuminate\Support\Facades\Validator;
+use App\Support\PasswordHasher;
 
 
 class UserProfileController extends Controller
@@ -79,19 +80,35 @@ class UserProfileController extends Controller
 
     public function changePassword(Request $req)
     {
+        $validator = Validator::make($req->all(), [
+            'oldPass' => 'required|string',
+            'newPass' => 'required|string|min:6|max:72',
+        ], [
+            'oldPass.required' => 'Vui lòng nhập mật khẩu cũ.',
+            'newPass.required' => 'Vui lòng nhập mật khẩu mới.',
+            'newPass.min'      => 'Mật khẩu mới phải có ít nhất 6 ký tự.',
+            'newPass.max'      => 'Mật khẩu mới tối đa 72 ký tự.',
+        ]);
+
+        // 422: JS hiện thông báo từ xhr.responseJSON.message
+        if ($validator->fails()) {
+            return response()->json(['error' => true, 'message' => $validator->errors()->first()], 422);
+        }
+
         $userId = $this->getUserId();
         $user = $this->user->getUser($userId);
 
-        if (md5($req->oldPass) === $user->password) {
-            $update = $this->user->updateUser($userId, ['password' => md5($req->newPass)]);
-            if (!$update) {
-                return response()->json(['error' => true, 'message' => 'Mật khẩu mới trùng với mật khẩu cũ!']);
-            } else {
-                return response()->json(['success' => true, 'message' => 'Đổi mật khẩu thành công!']);
-            }
-        } else {
-            return response()->json(['error' => true, 'message' => 'Mật khẩu cũ không chính xác.'], 500);
+        if (!$user || !PasswordHasher::check($req->oldPass, $user->password)) {
+            return response()->json(['error' => true, 'message' => 'Mật khẩu cũ không chính xác.'], 422);
         }
+
+        if (PasswordHasher::check($req->newPass, $user->password)) {
+            return response()->json(['error' => true, 'message' => 'Mật khẩu mới trùng với mật khẩu cũ!'], 422);
+        }
+
+        $this->user->updateUser($userId, ['password' => PasswordHasher::make($req->newPass)]);
+
+        return response()->json(['success' => true, 'message' => 'Đổi mật khẩu thành công!']);
     }
 
     public function changeAvatar(Request $req, UserMediaService $media)

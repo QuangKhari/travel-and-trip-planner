@@ -21,13 +21,12 @@ class Login extends Model
             ->exists();
         return $check;
     }
-    public function login($account)
+    // Chỉ tìm theo username; việc so mật khẩu làm bằng PasswordHasher trong controller
+    public function findByUsername($username)
     {
-        $getUser = DB::table($this->table)
-            ->where('username', $account['username'])
-            ->where('password', $account['password'])
+        return DB::table($this->table)
+            ->where('username', $username)
             ->first();
-        return $getUser;
     }
 
     public function checkAccountMatch($username, $email)

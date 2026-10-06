@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\admin\AdminModel;
 use App\Services\InvalidImageException;
 use App\Services\UserMediaService;
+use App\Support\PasswordHasher;
 
 class AdminManagementController extends Controller
 {
@@ -33,7 +34,7 @@ class AdminManagementController extends Controller
             'fullName' => 'required|string|max:100',
             'email'    => ['required', 'email:filter', 'max:255', 'regex:/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/'],
             'address'  => 'required|string|max:255',
-            'password' => 'nullable|string|min:6|max:100',
+            'password' => 'nullable|string|min:6|max:72',
         ]);
 
         $dataUpdate = [
@@ -44,7 +45,7 @@ class AdminManagementController extends Controller
 
         // Chỉ đổi mật khẩu khi người dùng nhập mật khẩu mới (L-A-18)
         if ($request->filled('password')) {
-            $dataUpdate['password'] = md5($request->password);   // Tuần 2 (L-A-02) đổi sang bcrypt
+            $dataUpdate['password'] = PasswordHasher::make($request->password);
         }
 
         $update = $this->admin->updateAdmin($dataUpdate);
@@ -84,7 +85,7 @@ class AdminManagementController extends Controller
     {
         $request->validate([
             'userName' => 'required',
-            'password' => 'required|min:6',
+            'password' => 'required|min:6|max:72',
             'email'    => 'required|email',
             'fullName' => 'required',
             'address'  => 'required',
@@ -92,7 +93,7 @@ class AdminManagementController extends Controller
 
         $data = [
             'username' => $request->userName,
-            'password' => md5($request->password),
+            'password' => PasswordHasher::make($request->password),
             'email'    => $request->email,
             'fullName' => $request->fullName,
             'address'  => $request->address,
@@ -128,7 +129,7 @@ class AdminManagementController extends Controller
     {
         $request->validate([
             'userName' => 'required',
-            'password' => 'required|min:6',
+            'password' => 'required|min:6|max:72',
             'email'    => 'required|email',
             'fullName' => 'required',
             'address'  => 'required',
@@ -136,7 +137,7 @@ class AdminManagementController extends Controller
 
         $data = [
             'username' => $request->userName,
-            'password' => md5($request->password),
+            'password' => PasswordHasher::make($request->password),
             'email'    => $request->email,
             'fullName' => $request->fullName,
             'address'  => $request->address,

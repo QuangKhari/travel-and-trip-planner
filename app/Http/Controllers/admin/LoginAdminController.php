@@ -5,6 +5,7 @@ namespace App\Http\Controllers\admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\admin\LoginModel;
+use App\Support\PasswordHasher;
 
 class LoginAdminController extends Controller
 {
@@ -23,23 +24,29 @@ class LoginAdminController extends Controller
 
     public function loginAdmin(Request $request)
     {
-        $username = $request->username;
-        $password = md5($request->password);
+        $username = trim((string) $request->username);
+        $password = (string) $request->password;
 
-        // Bỏ hardcode admin/123456, tìm trong DB
-        $login = $this->login->login($username, $password);
+        $admin = $this->login->findByUserName($username);
 
-        if ($login !== null) {
+        // Tên cột là passWord; đọc cả hai cách viết để không phụ thuộc hoa/thường
+        $stored = $admin ? ($admin->passWord ?? $admin->password ?? null) : null;
+
+        if ($admin && PasswordHasher::check($password, $stored)) {
+            if (PasswordHasher::needsUpgrade($stored)) {
+                $this->login->updatePasswordById($admin->adminId, PasswordHasher::make($password));
+            }
+
             $request->session()->regenerate();
-            $request->session()->put('admin', $login->userName);
-            $request->session()->put('adminRole', $login->role);
-            $request->session()->put('adminId', $login->adminId);
+            $request->session()->put('admin', $admin->userName);
+            $request->session()->put('adminRole', $admin->role);
+            $request->session()->put('adminId', $admin->adminId);
             toastr()->success('Đăng nhập thành công');
             return redirect()->route('admin.dashboard');
-        } else {
-            toastr()->error('Thông tin đăng nhập không chính xác');
-            return redirect()->route('admin.login');
         }
+
+        toastr()->error('Thông tin đăng nhập không chính xác');
+        return redirect()->route('admin.login');
     }
 
     public function logout(Request $request)
