@@ -23,14 +23,13 @@ class ReviewManagementController extends Controller
 
                 $q->where('comment', 'like', "%{$search}%")
 
-                  ->orWhereHas('user', function ($user) use ($search) {
-                      $user->where('fullName', 'like', "%{$search}%");
-                  })
+                    ->orWhereHas('user', function ($user) use ($search) {
+                        $user->where('fullName', 'like', "%{$search}%");
+                    })
 
-                  ->orWhereHas('tour', function ($tour) use ($search) {
-                      $tour->where('tourName', 'like', "%{$search}%");
-                  });
-
+                    ->orWhereHas('tour', function ($tour) use ($search) {
+                        $tour->where('title', 'like', "%{$search}%");
+                    });
             });
         }
 

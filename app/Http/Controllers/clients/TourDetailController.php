@@ -9,11 +9,13 @@ use App\Models\clients\Tours;
 class TourDetailController extends Controller
 {
     private $tours;
+
     public function __construct()
     {
         parent::__construct(); // Gọi constructor của Controller để khởi tạo $user
         $this->tours = new Tours();
     }
+
     public function index($id = 0)
     {
         $title = 'Chi tiết tour';
@@ -35,39 +37,69 @@ class TourDetailController extends Controller
         //dd($tourDetail->timeline);
         return view('clients.tour-detail', compact('title', 'tourDetail', 'getReviews', 'avgStar', 'countReview', 'checkDisplay'));
     }
+
     public function reviews(Request $req)
     {
-        // dd($req);
-        $userId = $this->getUserId();
-        $tourId = $req->tourId;
-        $message = $req->message;
-        $star = $req->rating;
+        $validator = \Illuminate\Support\Facades\Validator::make($req->all(), [
+            'tourId' => ['required', 'integer', 'exists:tbl_tours,tourId'],
+            'rating' => ['required', 'integer', 'between:1,5'],
+            'message' => ['nullable', 'string', 'max:255'],
+        ]);
 
-        $dataReview = [
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $userId = (int) $this->getUserId();
+        $tourId = (int) $req->tourId;
+
+        $completed = \Illuminate\Support\Facades\DB::table('tbl_booking')
+            ->where('userId', $userId)
+            ->where('tourId', $tourId)
+            ->where('bookingStatus', 'f')
+            ->exists();
+
+        if (!$completed) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bạn chỉ có thể đánh giá tour đã hoàn tất.',
+            ], 403);
+        }
+
+        $alreadyReviewed = \Illuminate\Support\Facades\DB::table('tbl_reviews')
+            ->where('userId', $userId)
+            ->where('tourId', $tourId)
+            ->exists();
+
+        if ($alreadyReviewed) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bạn đã đánh giá tour này rồi.',
+            ], 409);
+        }
+
+        $this->tours->createReviews([
             'tourId' => $tourId,
             'userId' => $userId,
-            'comment' => $message,
-            'rating' => $star
-        ];
+            'comment' => trim((string) $req->message),
+            'rating' => (int) $req->rating,
+        ]);
 
-        $rating = $this->tours->createReviews($dataReview);
-        if (!$rating) {
-            return response()->json([
-                'error' => true
-            ], 500);
-        }
         $tourDetail = $this->tours->getTourDetail($tourId);
         $getReviews = $this->tours->getReviews($tourId);
         $reviewStats = $this->tours->reviewStats($tourId);
 
-        $avgStar = round($reviewStats->averageRating);
-        $countReview = $reviewStats->reviewCount;
-
-        // Trả về phản hồi thành công
         return response()->json([
             'success' => true,
             'message' => 'Đánh giá của bạn đã được gửi thành công!',
-            'data' => view('clients.partials.reviews', compact('tourDetail', 'getReviews', 'avgStar', 'countReview'))->render()
-        ], 200);
+            'data' => view('clients.partials.reviews', compact(
+                'tourDetail',
+                'getReviews',
+                'reviewStats'
+            ))->render(),
+        ]);
     }
 }
