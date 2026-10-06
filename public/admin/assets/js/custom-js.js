@@ -150,14 +150,17 @@ $(document).ready(function () {
                     $("#end_date").val(endDate);
 
                     // Đảm bảo CKEditor đã sẵn sàng
-                    CKEDITOR.instances["description"].on(
-                        "instanceReady",
-                        function () {
-                            CKEDITOR.instances["description"].setData(
-                                tour.description,
-                            );
-                        },
-                    );
+                    const editor = CKEDITOR.instances["description"];
+
+                    if (editor) {
+                        if (editor.status === "ready") {
+                            editor.setData(tour.description || "");
+                        } else {
+                            editor.once("instanceReady", function () {
+                                editor.setData(tour.description || "");
+                            });
+                        }
+                    }
 
                     timelineCounter_edit = 1;
 
@@ -364,7 +367,7 @@ $(document).ready(function () {
         Dropzone.autoDiscover = false;
 
         dropzoneOldImages = new Dropzone("#myDropzone-listTour", {
-            url: "/admin/add-temp-images",
+            url: $("#myDropzone-listTour").attr("action"),
             method: "post",
             paramName: "image",
             acceptedFiles: "image/*",

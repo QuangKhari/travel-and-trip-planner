@@ -110,8 +110,7 @@
                                 </li>
                             </ul>
                             <div id="step-1">
-                                <form class="form-info-tour" method="POST"
-                                    id="form-step1">
+                                <form class="form-info-tour" method="POST" id="form-step1">
                                     @csrf
                                     <div class="field item form-group">
                                         <label class="col-form-label col-md-3 col-sm-3  label-align">Tên
@@ -192,7 +191,7 @@
                             </div>
                             <div id="step-2">
                                 <h2 class="StepTitle">Thêm hình ảnh</h2>
-                                <form action="" class="dropzone dz-clickable"
+                                <form action="{{ route('admin.add-temp-images') }}" class="dropzone dz-clickable"
                                     id="myDropzone-listTour" enctype="multipart/form-data">
                                     @csrf
                                     <div class="dz-default dz-message">

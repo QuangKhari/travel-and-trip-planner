@@ -10,9 +10,10 @@ use Illuminate\Pagination\LengthAwarePaginator;
 class ToursController extends Controller
 {
     private $tours;
-    public function __construct(){
+    public function __construct()
+    {
         $this->tours = new Tours();
-    }    
+    }
 
 
 
@@ -30,24 +31,24 @@ class ToursController extends Controller
         $popularTours = $this->tours->getPopularTours(2);
         $allTours = $this->tours->filterTours([], []);
 
-    $currentPage = LengthAwarePaginator::resolveCurrentPage();
-    $perPage = 9;
-    $currentItems = $allTours->slice(($currentPage - 1) * $perPage, $perPage)->values();
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        $perPage = 9;
+        $currentItems = $allTours->slice(($currentPage - 1) * $perPage, $perPage)->values();
 
-    $tours = new LengthAwarePaginator(
-        $currentItems,
-        $allTours->count(),
-        $perPage,
-        $currentPage,
-        [
-        'path' => route('filter-tours'),
-        'query' => $request->except('page')
-    ]
-);
+        $tours = new LengthAwarePaginator(
+            $currentItems,
+            $allTours->count(),
+            $perPage,
+            $currentPage,
+            [
+                'path' => route('filter-tours'),
+                'query' => $request->except('page')
+            ]
+        );
 
-if ($request->ajax()) {
-    return view('clients.partials.filter-tours', compact('tours'));
-}
+        if ($request->ajax()) {
+            return view('clients.partials.filter-tours', compact('tours'));
+        }
 
         return view('clients.tours', compact('title', 'tours', 'domainsCount', 'popularTours'));
     }
@@ -75,41 +76,42 @@ if ($request->ajax()) {
 
         // Handle star rating filter
         if ($req->filled('star')) {
-    $star = (int) $req->star;
-    $conditions[] = ['averageRating', '>=', $star];
-    $conditions[] = ['averageRating', '<', $star + 1];
-}
+            $star = (int) $req->star;
+            $conditions[] = ['averageRating', '>=', $star];
+            $conditions[] = ['averageRating', '<', $star + 1];
+        }
 
-        // Handle duration filter
         if ($req->filled('time')) {
-            $duration = $req->time;
+
+            $duration = $req->input('time');
+
             $time = [
                 '3n2d' => '3 ngày 2 đêm',
                 '4n3d' => '4 ngày 3 đêm',
                 '6n5d' => '6 ngày 5 đêm'
             ];
-            $conditions[] = ['time', '=', $time[$duration]];
+
+            if (isset($time[$duration])) {
+                $conditions[] = ['time', '=', $time[$duration]];
+            }
         }
         // Handle orderby filter
         if ($req->sorting && $req->sorting != 'default') {
 
-    $sortingOption = trim($req->sorting);
+            $sortingOption = trim($req->sorting);
 
-    if ($sortingOption == 'new') {
-        $sorting = ['tourId', 'DESC'];
+            if ($sortingOption == 'new') {
+                $sorting = ['tourId', 'DESC'];
+            } elseif ($sortingOption == 'old') {
+                $sorting = ['tourId', 'ASC'];
+            } elseif ($sortingOption == 'hight-to-low') {
+                $sorting = ['priceAdult', 'DESC'];
+            } elseif ($sortingOption == 'low-to-high') {
+                $sorting = ['priceAdult', 'ASC'];
+            }
+        }
 
-    } elseif ($sortingOption == 'old') {
-        $sorting = ['tourId', 'ASC'];
 
-    } elseif ($sortingOption == 'hight-to-low') {
-        $sorting = ['priceAdult', 'DESC'];
-
-    } elseif ($sortingOption == 'low-to-high') {
-        $sorting = ['priceAdult', 'ASC'];
-    }
-}
-
-        
 
         //dd($req->all(), $sorting);
         $tours = $this->tours->filterTours($conditions, $sorting);
@@ -128,11 +130,8 @@ if ($request->ajax()) {
                 'query' => $req->except('page')
             ]
         );
-        
+
 
         return view('clients.partials.filter-tours', compact('tours'));
-
     }
-
-    
 }

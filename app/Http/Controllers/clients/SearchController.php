@@ -8,7 +8,6 @@ use App\Models\clients\Tours;
 use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
 
-
 class SearchController extends Controller
 {
     private $tours;
@@ -17,6 +16,7 @@ class SearchController extends Controller
     {
         $this->tours = new Tours();
     }
+
     public function index(Request $request)
     {
         $title = 'Tìm kiếm';
@@ -43,12 +43,38 @@ class SearchController extends Controller
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
 
-        // Chuyển đổi định dạng ngày tháng
-        $formattedStartDate = $startDate ? Carbon::createFromFormat('d/m/Y', $startDate)->format('Y-m-d') : null;
-        $formattedEndDate = $endDate ? Carbon::createFromFormat('d/m/Y', $endDate)->format('Y-m-d') : null;
+        /*
+         * Kiểm tra destination
+         */
+        if (!empty($destination) && !isset($destinationMap[$destination])) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Điểm đến không hợp lệ.');
+        }
 
-        // Chuyển đổi giá trị sang tên chi tiết nếu có trong mảng
-        $destinationName = $destinationMap[$destination];
+        /*
+         * Chuyển đổi định dạng ngày tháng
+         */
+        try {
+            $formattedStartDate = $startDate
+                ? Carbon::createFromFormat('d/m/Y', $startDate)->format('Y-m-d')
+                : null;
+
+            $formattedEndDate = $endDate
+                ? Carbon::createFromFormat('d/m/Y', $endDate)->format('Y-m-d')
+                : null;
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Ngày tìm kiếm không hợp lệ. Vui lòng nhập ngày theo định dạng dd/mm/yyyy.');
+        }
+
+        /*
+         * Chuyển đổi mã destination sang tên chi tiết
+         */
+        $destinationName = !empty($destination)
+            ? $destinationMap[$destination]
+            : null;
 
         $dataSearch = [
             'destination' => $destinationName,
@@ -58,30 +84,26 @@ class SearchController extends Controller
 
         $tours = $this->tours->searchTours($dataSearch);
 
-        // dd($tours);
-
         return view('clients.search', compact('title', 'tours'));
     }
 
     public function searchTours(Request $request)
-{
-$title = 'Kết quả tìm kiếm';
+    {
+        $title = 'Kết quả tìm kiếm';
 
-$keyword = trim($request->input('keyword'));
+        $keyword = trim($request->input('keyword'));
 
-if (empty($keyword)) {
-    return redirect()->route('home')
-        ->with('error', 'Vui lòng nhập từ khóa tìm kiếm.');
-}
+        if (empty($keyword)) {
+            return redirect()->route('home')
+                ->with('error', 'Vui lòng nhập từ khóa tìm kiếm.');
+        }
 
-$dataSearch = [
-    'keyword' => $keyword
-];
+        $dataSearch = [
+            'keyword' => $keyword
+        ];
 
-$tours = $this->tours->searchTours($dataSearch);
+        $tours = $this->tours->searchTours($dataSearch);
 
-return view('clients.search', compact('title', 'tours', 'keyword'));
-
-}
-
+        return view('clients.search', compact('title', 'tours', 'keyword'));
+    }
 }

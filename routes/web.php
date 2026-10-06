@@ -35,6 +35,7 @@ Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::get('/destination', [DestinationController::class, 'index'])->name('destination');
 Route::get('/travel-guides', [TravelGuidesController::class, 'index'])->name('team');
 Route::get('/tour-detail/{id}', [TourDetailController::class, 'index'])->whereNumber('id')->name('tour-detail');
+Route::post('/update-basic-tour', [ToursManagementController::class, 'updateBasicTour'])->name('admin.update-basic-tour');
 Route::get('/blogs', [BlogController::class, 'index'])->name('blogs');
 Route::get('/blog-detail', [BlogDetailController::class, 'index'])->name('blog-detail');
 Route::get('/search', [SearchController::class, 'index'])->name('search');

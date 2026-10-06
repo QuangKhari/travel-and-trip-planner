@@ -22,6 +22,12 @@ class TourDetailController extends Controller
         $userId = $this->getUserId();
 
         $tourDetail = $this->tours->getTourDetail($id);
+
+        // Tour không tồn tại -> trả về HTTP 404
+        if (!$tourDetail) {
+            abort(404);
+        }
+
         $getReviews = $this->tours->getReviews($id);
         $reviewStats = $this->tours->reviewStats($id);
 

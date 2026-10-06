@@ -491,4 +491,56 @@ class ToursManagementController extends Controller
             ]);
         }
     }
+
+    public function updateBasicTour(Request $request)
+    {
+        $data = $request->validate([
+            'tourId' => ['required', 'integer', 'exists,tourId'],
+            'name' => ['required', 'string', 'max:255'],
+            'destination' => ['required', 'string', 'max:255'],
+            'domain' => ['required', 'in,t,n'],
+            'number' => ['required', 'integer', 'min:1', 'max:100000'],
+            'price_adult' => ['required', 'numeric', 'min:0'],
+            'price_child' => ['required', 'numeric', 'min:0'],
+            'start_date' => ['required', 'date_format/m/Y'],
+            'end_date' => ['required', 'date_format/m/Y'],
+        ]);
+
+        $start = Carbon::createFromFormat(
+            'd/m/Y',
+            $data['start_date']
+        )->startOfDay();
+
+        $end = Carbon::createFromFormat(
+            'd/m/Y',
+            $data['end_date']
+        )->startOfDay();
+
+        if ($end->lt($start)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ngày kết thúc không hợp lệ.'
+            ], 422);
+        }
+
+        $days = $start->diffInDays($end) + 1;
+
+        DB::table('tbl_tours')
+            ->where('tourId', $data['tourId'])
+            ->update([
+                'title' => $data['name'],
+                'destination' => $data['destination'],
+                'domain' => $data['domain'],
+                'quantity' => $data['number'],
+                'priceAdult' => $data['price_adult'],
+                'priceChild' => $data['price_child'],
+                'time' => $days . ' ngày ' . ($days - 1) . ' đêm',
+                'startDate' => $start->toDateString(),
+                'endDate' => $end->toDateString(),
+            ]);
+
+        return response()->json([
+            'success' => true
+        ]);
+    }
 }
