@@ -24,8 +24,9 @@ class LoginModel extends Model
     {
         return DB::table($this->table)
             ->where('adminId', $adminId)
-            ->update(['password' => $hash]);
+            ->update(['passWord' => $hash]);
     }
+
     public function getAdmin()
     {
         return DB::table($this->table)->where('role', 'admin')->first();

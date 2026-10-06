@@ -46,7 +46,7 @@ class AdminManagementController extends Controller
 
         // Chỉ đổi mật khẩu khi người dùng nhập mật khẩu mới (L-A-18)
         if ($request->filled('password')) {
-            $dataUpdate['password'] = PasswordHasher::make($request->password);
+            $dataUpdate['passWord'] = PasswordHasher::make($request->password);
         }
 
         $adminId = (int) session('adminId');
