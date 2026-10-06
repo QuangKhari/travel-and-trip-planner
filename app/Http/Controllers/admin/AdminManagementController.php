@@ -21,7 +21,8 @@ class AdminManagementController extends Controller
     public function index()
     {
         $title = 'Quản lý tài khoản';
-        $admin = $this->admin->getAdmin();
+        // Tài khoản đang đăng nhập (không phải "admin đầu tiên tìm thấy")
+        $admin = $this->admin->getAdminById(session('adminId'));
         $managers = $this->admin->getByRole('manager');
         $staffs = $this->admin->getByRole('staff');
 
@@ -48,8 +49,9 @@ class AdminManagementController extends Controller
             $dataUpdate['password'] = PasswordHasher::make($request->password);
         }
 
-        $update = $this->admin->updateAdmin($dataUpdate);
-        $newinfo = $this->admin->getAdmin();
+        $adminId = (int) session('adminId');
+        $update = $this->admin->updateAdmin($adminId, $dataUpdate);
+        $newinfo = $this->admin->getAdminById($adminId);
 
         if ($update) {
             // Chỉ trả các trường cần hiển thị, KHÔNG trả hash mật khẩu

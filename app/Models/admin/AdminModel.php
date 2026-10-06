@@ -24,11 +24,11 @@ class AdminModel extends Model
         return DB::table($this->table)->where('role', $role)->get();
     }
 
-    // Cập nhật thông tin admin
-    public function updateAdmin($data)
+    // Cập nhật thông tin của MỘT tài khoản admin theo adminId
+    public function updateAdmin($adminId, $data)
     {
         return DB::table($this->table)
-            ->where('role', 'admin')
+            ->where('adminId', $adminId)
             ->update($data);
     }
 
