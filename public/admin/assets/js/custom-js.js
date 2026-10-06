@@ -671,9 +671,13 @@ $(document).ready(function () {
 
             success: function (response) {
                 if (response.success) {
+                    if ($.fn.DataTable.isDataTable("#datatable-booking")) {
+                        $("#datatable-booking").DataTable().destroy();
+                    }
+
                     $("#tbody-booking").html(response.data);
 
-                    $(".confirm-booking").remove();
+                    init_DataTables();
 
                     toastr.success(response.message);
                 } else {
@@ -709,9 +713,13 @@ $(document).ready(function () {
 
             success: function (response) {
                 if (response.success) {
+                    if ($.fn.DataTable.isDataTable("#datatable-booking")) {
+                        $("#datatable-booking").DataTable().destroy();
+                    }
+
                     $("#tbody-booking").html(response.data);
 
-                    $(".finish-booking").remove();
+                    init_DataTables();
 
                     toastr.success(response.message);
                 } else {
@@ -742,7 +750,13 @@ $(document).ready(function () {
 
             success: function (response) {
                 if (response.success) {
+                    if ($.fn.DataTable.isDataTable("#datatable-booking")) {
+                        $("#datatable-booking").DataTable().destroy();
+                    }
+
                     $("#tbody-booking").html(response.data);
+
+                    init_DataTables();
 
                     toastr.success(response.message);
                 } else {

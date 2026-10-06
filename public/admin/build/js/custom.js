@@ -2227,6 +2227,7 @@ function init_SmartWizard() {
     let finishStep1 = false;
     let finishStep2 = false;
     let creatingTour = false;
+    let movingToStep3 = false;
     let myDropzone = null;
 
     $(".add-tours #wizard").smartWizard({
@@ -2241,12 +2242,16 @@ function init_SmartWizard() {
                     return false;
                 }
 
-                if (myDropzone.getQueuedFiles().length >= 5) {
+                const uploadedCount = window.uploadedTempImages.length;
+                const queuedCount = myDropzone.getQueuedFiles().length;
+
+                if (uploadedCount + queuedCount >= 5) {
                     console.log("Uploading images...");
+                    movingToStep3 = true;
                     myDropzone.processQueue();
                 } else {
                     toastr.warning(
-                        "Vui lòng thêm ít nhất 5 hình ảnh trước khi tiếp tục.",
+                        `Vui lòng thêm ít nhất ${5 - uploadedCount} hình ảnh trước khi tiếp tục.`,
                     );
                 }
 
@@ -2447,6 +2452,10 @@ function init_SmartWizard() {
             toastr.error("Tải ảnh thất bại: " + msg);
 
             myDropzone.removeFile(file);
+
+            if (myDropzone.getAcceptedFiles().length < 5) {
+                myDropzone.element.classList.remove("dz-max-files-reached");
+            }
         });
 
         myDropzone.on("queuecomplete", function () {
@@ -2455,12 +2464,21 @@ function init_SmartWizard() {
 
                 toastr.success("Tất cả hình ảnh đã được tải lên thành công.");
 
-                toastr.success("Ấn tiếp theo để nhập lộ trình cho tours");
+                if (movingToStep3) {
+                    movingToStep3 = false;
+
+                    setTimeout(function () {
+                        $(".add-tours #wizard").smartWizard("goToStep", 3);
+                    }, 0);
+                } else {
+                    toastr.success("Ấn tiếp theo để nhập lộ trình cho tours");
+                }
             } else {
                 finishStep2 = false;
+                movingToStep3 = false;
 
                 toastr.error(
-                    "Chưa đủ 5 ảnh tải lên thành công, vui lòng thử lại.",
+                    `Chưa đủ 5 ảnh tải lên thành công. Còn thiếu ${5 - window.uploadedTempImages.length} ảnh.`,
                 );
             }
         });
