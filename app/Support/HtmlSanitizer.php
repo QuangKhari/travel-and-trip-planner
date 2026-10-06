@@ -2,12 +2,14 @@
 
 namespace App\Support;
 
+use App\Services\UnsafeHtmlException;
 use HTMLPurifier;
 use HTMLPurifier_Config;
 
 /**
  * Làm sạch HTML do người dùng/admin nhập (mô tả tour, lịch trình).
- * Chỉ giữ các thẻ định dạng cơ bản; loại bỏ script, onerror, iframe, javascript:...
+ * Lớp 1: chặn các mẫu XSS rõ ràng.
+ * Lớp 2: HTMLPurifier loại bỏ HTML/attribute/protocol nguy hiểm còn sót lại.
  */
 class HtmlSanitizer
 {
@@ -42,5 +44,40 @@ class HtmlSanitizer
         }
 
         return self::$purifier->purify($html);
+    }
+
+    public static function cleanOrReject(?string $html): string
+    {
+        if ($html === null || trim($html) === '') {
+            return '';
+        }
+
+        if (self::containsDangerousMarkup($html)) {
+            throw new UnsafeHtmlException(
+                'Nội dung mô tả chứa mã HTML/JavaScript không được phép. Vui lòng xóa nội dung nguy hiểm rồi thử lại.'
+            );
+        }
+
+        return self::clean($html);
+    }
+
+    private static function containsDangerousMarkup(string $html): bool
+    {
+        $patterns = [
+            '/<\s*script\b/i',
+            '/<\s*(iframe|object|embed|applet|svg|math|style)\b/i',
+            '/<[^>]*\bon[a-z][\w:-]*\s*=/i',
+            '/<[^>]*\bsrcdoc\s*=/i',
+            '/<[^>]*\b(?:href|src|action|formaction|xlink:href|poster|background)\s*=\s*["\']?\s*(?:javascript|vbscript)\s*:/i',
+            '/<[^>]*\b(?:href|src|action|formaction|xlink:href|poster|background)\s*=\s*["\']?\s*data\s*:/i',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $html) === 1) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

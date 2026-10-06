@@ -12,6 +12,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Support\HtmlSanitizer;
+use App\Services\UnsafeHtmlException;
 
 
 class ToursManagementController extends Controller
@@ -90,10 +91,16 @@ class ToursManagementController extends Controller
         $nights = $days - 1;
         $time   = "{$days} ngày {$nights} đêm";
 
+        try {
+            $description = HtmlSanitizer::cleanOrReject($request->input('description'));
+        } catch (UnsafeHtmlException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+        }
+
         $createTour = $this->tours->createTours([
             'title'        => $request->input('name'),
             'time'         => $time,
-            'description'  => HtmlSanitizer::clean($request->input('description')),
+            'description'  => $description,
             'quantity'     => (int) $request->input('number'),
             'priceAdult'   => $request->input('price_adult'),
             'priceChild'   => $request->input('price_child'),
@@ -173,10 +180,16 @@ class ToursManagementController extends Controller
         $timelines = [];
         foreach ($request->all() as $key => $value) {
             if (preg_match('/^day-(\d+)$/', $key, $matches) && $request->has("itinerary-{$matches[1]}")) {
+                try {
+                    $description = HtmlSanitizer::cleanOrReject($request->input("itinerary-{$matches[1]}"));
+                } catch (UnsafeHtmlException $e) {
+                    return response()->json(['success' => false, 'message' => $e->getMessage()]);
+                }
+
                 $timelines[(int) $matches[1]] = [
                     'tourId'      => $tourId,
                     'title'       => $value,
-                    'description' => HtmlSanitizer::clean($request->input("itinerary-{$matches[1]}")),
+                    'description' => $description,
                 ];
             }
         }
@@ -372,9 +385,15 @@ class ToursManagementController extends Controller
         $tourId = (int) $request->tourId;
         $name = $request->input('name');
 
+        try {
+            $description = HtmlSanitizer::cleanOrReject($request->input('description'));
+        } catch (UnsafeHtmlException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+        }
+
         $dataTours = [
             'title'       => $name,
-            'description' => HtmlSanitizer::clean($request->input('description')),
+            'description' => $description,
             'quantity'    => (int) $request->input('number'),
             'priceAdult'  => $request->input('price_adult'),
             'priceChild'  => $request->input('price_child'),
@@ -391,6 +410,17 @@ class ToursManagementController extends Controller
             ? array_values(array_unique(array_filter($images, fn($i) => is_string($i) && $i !== '' && ($this->images->isStem($i) || $i === basename($i)))))
             : [];
         $timelines = $request->input('timeline');
+
+        if (is_array($timelines)) {
+            foreach ($timelines as &$timeline) {
+                try {
+                    $timeline['itinerary'] = HtmlSanitizer::cleanOrReject($timeline['itinerary'] ?? '');
+                } catch (UnsafeHtmlException $e) {
+                    return response()->json(['success' => false, 'message' => $e->getMessage()]);
+                }
+            }
+            unset($timeline);
+        }
 
         // Thiếu dữ liệu = giữ nguyên (L-E-04)
         $replaceImages   = count($images) > 0;
@@ -418,7 +448,7 @@ class ToursManagementController extends Controller
                     $this->tours->addTimeLine([
                         'tourId'      => $tourId,
                         'title'       => $timeline['title'] ?? '',
-                        'description' => HtmlSanitizer::clean($timeline['itinerary'] ?? ''),
+                        'description' => $timeline['itinerary'] ?? '',
                     ]);
                 }
             }
