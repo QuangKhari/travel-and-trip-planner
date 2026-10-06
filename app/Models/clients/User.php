@@ -45,30 +45,38 @@ class User extends Model
 
     public function getMyTours($id)
     {
-        $myTours =  DB::table('tbl_booking')
+        $myTours = DB::table('tbl_booking')
             ->join('tbl_tours', 'tbl_booking.tourId', '=', 'tbl_tours.tourId')
-            ->join('tbl_checkout', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
+            ->leftJoin('tbl_checkout', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
             ->where('tbl_booking.userId', $id)
             ->orderByDesc('tbl_booking.bookingDate')
-            ->take(3)
+            ->select(
+                'tbl_booking.*',
+                'tbl_tours.title',
+                'tbl_tours.time',
+                'tbl_tours.destination',
+                'tbl_tours.startDate',
+                'tbl_tours.endDate',
+                'tbl_checkout.paymentMethod',
+                'tbl_checkout.paymentStatus'
+            )
             ->get();
 
-        foreach ($myTours as $tour) {
-            // Lấy rating từ tbl_reviews cho mỗi tour
-            $tour->rating = DB::table('tbl_reviews')
-                ->where('tourId', $tour->tourId)
-                ->where('userId', $id)
-                ->value('rating'); // Dùng value() để lấy giá trị rating
-        }
-        foreach ($myTours as $tour) {
-            $tour->rating = DB::table('tbl_reviews')
-                ->where('tourId', $tour->tourId)
-                ->where('userId', $id)
-                ->value('rating') ?? 0;
+        $tourIds = $myTours->pluck('tourId')->unique();
 
-            $tour->images = DB::table('tbl_images')
-                ->where('tourId', $tour->tourId)
-                ->pluck('imageUrl');
+        $ratings = DB::table('tbl_reviews')
+            ->where('userId', $id)
+            ->whereIn('tourId', $tourIds)
+            ->pluck('rating', 'tourId');
+
+        $images = DB::table('tbl_images')
+            ->whereIn('tourId', $tourIds)
+            ->get()
+            ->groupBy('tourId');
+
+        foreach ($myTours as $tour) {
+            $tour->rating = $ratings[$tour->tourId] ?? 0;
+            $tour->images = ($images[$tour->tourId] ?? collect())->pluck('imageURL');
         }
 
         return $myTours;
