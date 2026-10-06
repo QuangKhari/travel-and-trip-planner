@@ -15,7 +15,7 @@ return new class extends Migration
             $table->integer('userId', true);
             $table->string('fullName', 50);
             $table->string('username', 50);
-            $table->string('password', 50);
+            $table->string('password');
             $table->string('email');
             $table->string('avatar')->nullable();
             $table->string('phoneNumber', 15)->nullable();
