@@ -138,6 +138,8 @@ class BookingController extends Controller
         $tour = DB::table('tbl_tours')
             ->where('tourId', (int) $request->input('tourId'))
             ->where('availability', 1)
+            ->where('quantity', '>', 0)
+            ->whereDate('startDate', '>', now()->toDateString())
             ->first();
 
         if (!$tour) {

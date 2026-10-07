@@ -55,6 +55,8 @@ class Tours extends Model
         $getTourDetail = DB::table($this->table)
             ->where('tourId', $id)
             ->where('availability', 1)
+            ->where('quantity', '>', 0)
+            ->whereDate('startDate', '>', now()->toDateString())
             ->first();
 
 
