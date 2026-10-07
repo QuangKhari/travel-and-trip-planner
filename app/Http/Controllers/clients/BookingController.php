@@ -14,6 +14,7 @@ use App\Services\InvalidImageException;
 use App\Services\UserMediaService;
 use App\Services\BookingException;
 use App\Services\BookingService;
+use App\Services\CouponService;
 use Illuminate\Support\Facades\Validator;
 
 
@@ -102,7 +103,8 @@ class BookingController extends Controller
             return redirect()->route('tour-detail', ['id' => $tourId]);
         }
 
-        toastr()->success('Đặt tour thành công! Mã đơn: ' . $result['bookingCode']);
+        toastr()->success('Đặt tour thành công! Mã đơn: ' . $result['bookingCode']
+            . '. Chỗ được giữ trong ' . (int) config('travela.hold_hours', 48) . ' giờ, vui lòng đến văn phòng để xác nhận.');
         return redirect()->route('tours');
     }
 
@@ -272,7 +274,7 @@ class BookingController extends Controller
      * Chỉ để hiển thị: số tiền thật vẫn do BookingService tính lại khi đặt.
      * Server tự tính tổng tiền từ tourId + số khách, KHÔNG tin totalPrice từ trình duyệt.
      */
-    public function applyCoupon(Request $request)
+    public function applyCoupon(Request $request, CouponService $coupons)
     {
         $validator = Validator::make($request->all(), [
             'code'        => 'required|string|max:50',
@@ -301,38 +303,20 @@ class BookingController extends Controller
                 + $tour->priceChild * (int) $request->input('numChildren')
         );
 
-        $code      = strtoupper(trim((string) $request->input('code')));
-        $promotion = $this->promotion->getPromotionByCode($code);
-
-        if (!$promotion) {
-            return response()->json(['success' => false, 'message' => 'Mã giảm giá không tồn tại']);
+        // Mọi luật (còn lượt, còn hạn, giới hạn lượt/người) nằm ở CouponService
+        try {
+            $quote = $coupons->quote((string) $request->input('code'), $subtotal, (int) $this->getUserId());
+        } catch (BookingException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
         }
-
-        if ($promotion->status !== 'y') {
-            return response()->json(['success' => false, 'message' => 'Mã giảm giá đã bị vô hiệu hóa']);
-        }
-
-        if ($promotion->quantity <= 0) {
-            return response()->json(['success' => false, 'message' => 'Mã giảm giá đã hết lượt sử dụng']);
-        }
-
-        // startDate/endDate là kiểu DATE ('Y-m-d'): so sánh theo ngày, ngày cuối còn dùng được trọn ngày.
-        // Cùng cách so với BookingService để xem trước và đặt thật không lệch nhau.
-        $today = now()->toDateString();
-        if ($promotion->startDate > $today || $promotion->endDate < $today) {
-            return response()->json(['success' => false, 'message' => 'Mã giảm giá chưa đến hạn hoặc đã hết hạn']);
-        }
-
-        $percent        = min(100, max(0, (float) $promotion->discount));
-        $discountAmount = (int) round($subtotal * $percent / 100);
 
         return response()->json([
             'success'        => true,
-            'promotionId'    => $promotion->promotionId,
-            'discount'       => $percent,                    // phần trăm; JS tự tính lại khi đổi số khách
-            'discountAmount' => $discountAmount,
-            'newTotal'       => max(0, $subtotal - $discountAmount),
-            'message'        => "Áp dụng thành công! Giảm {$percent}%",
+            'promotionId'    => $quote['promotionId'],
+            'discount'       => $quote['percent'],            // phần trăm; JS tự tính lại khi đổi số khách
+            'discountAmount' => $quote['discount'],
+            'newTotal'       => max(0, $subtotal - $quote['discount']),
+            'message'        => 'Áp dụng thành công! Giảm ' . $quote['percent'] . '%',
         ]);
     }
 }
