@@ -68,6 +68,9 @@ class Tours extends Model
         return DB::table($this->table)
             ->select('domain', DB::raw('count(*) as count'))
             ->whereIn('domain', ['b', 't', 'n'])
+            ->where('availability', 1)
+            ->where('quantity', '>', 0)
+            ->whereDate('startDate', '>', now()->toDateString())
             ->groupBy('domain')
             ->get();
     }

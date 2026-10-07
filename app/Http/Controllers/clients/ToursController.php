@@ -21,7 +21,6 @@ class ToursController extends Controller
     public function index(Request $request)
     {
         $title = 'Tours';
-        $tours = $this->tours->getAllTours();
         $domain = $this->tours->getDomain();
         $domainsCount = [
             'mien_bac' => optional($domain->firstWhere('domain', 'b'))->count,
