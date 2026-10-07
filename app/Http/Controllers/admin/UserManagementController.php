@@ -59,7 +59,19 @@ class UserManagementController extends Controller
 
     public function changeStatus(Request $request)
     {
-        $userId = $request->userId;
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'userId' => 'required|integer|min:1',
+            'status' => 'required|in:b,d',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $userId = (int) $request->userId;
         $status = $request->status;
 
         $dataUpdate = [
