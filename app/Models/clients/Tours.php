@@ -254,6 +254,8 @@ class Tours extends Model
                 DB::raw('COUNT(tbl_reviews.reviewId) as reviewCount')
             )
             ->where('tbl_tours.availability', 1)
+            ->where('tbl_tours.quantity', '>', 0)
+            ->whereDate('tbl_tours.startDate', '>', now()->toDateString())
             ->groupBy(
                 'tbl_tours.tourId',
                 'tbl_tours.title',
@@ -283,6 +285,8 @@ class Tours extends Model
                     DB::raw('0 as reviewCount')
                 )
                 ->where('availability', 1)
+                ->where('quantity', '>', 0)
+                ->whereDate('startDate', '>', now()->toDateString())
                 ->whereNotIn('tourId', $excludeIds)
                 ->inRandomOrder()
                 ->limit($remaining)
