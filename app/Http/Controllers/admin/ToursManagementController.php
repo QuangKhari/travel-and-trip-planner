@@ -41,7 +41,13 @@ class ToursManagementController extends Controller
         return view('admin.add-tours', compact('title'));
     }
 
-    public function addTours(Request $request)
+    /**
+     * Validate + chuẩn hóa thông tin cơ bản của tour (Bước 1 wizard).
+     * Dùng chung cho tạo mới (addTours) và sửa bản nháp (updateBasicTour).
+     *
+     * @return array{0:?array,1:?\Illuminate\Http\JsonResponse} [dữ liệu ghi vào tbl_tours, phản hồi lỗi]
+     */
+    private function parseBasicTourInput(Request $request): array
     {
         $validator = Validator::make($request->all(), [
             'name'        => 'required|string|max:255',
@@ -76,39 +82,49 @@ class ToursManagementController extends Controller
 
         // HTTP 200 + success=false: JS của wizard chỉ hiện message của server khi nhận 200
         if ($validator->fails()) {
-            return response()->json(['success' => false, 'message' => $validator->errors()->first()]);
+            return [null, response()->json(['success' => false, 'message' => $validator->errors()->first()])];
         }
 
         $start = Carbon::createFromFormat('d/m/Y', $request->input('start_date'))->startOfDay();
         $end   = Carbon::createFromFormat('d/m/Y', $request->input('end_date'))->startOfDay();
 
         if ($end->lt($start)) {
-            return response()->json(['success' => false, 'message' => 'Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.']);
+            return [null, response()->json(['success' => false, 'message' => 'Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.'])];
         }
 
         // Ngày đầu và ngày cuối đều tính
         $days   = (int) $start->diffInDays($end) + 1;
         $nights = $days - 1;
-        $time   = "{$days} ngày {$nights} đêm";
 
         try {
             $description = HtmlSanitizer::cleanOrReject($request->input('description'));
         } catch (UnsafeHtmlException $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+            return [null, response()->json(['success' => false, 'message' => $e->getMessage()])];
         }
 
-        $createTour = $this->tours->createTours([
-            'title'        => $request->input('name'),
-            'time'         => $time,
-            'description'  => $description,
-            'quantity'     => (int) $request->input('number'),
-            'priceAdult'   => $request->input('price_adult'),
-            'priceChild'   => $request->input('price_child'),
-            'destination'  => $request->input('destination'),
-            'domain'       => $request->input('domain'),
+        return [[
+            'title'       => $request->input('name'),
+            'time'        => "{$days} ngày {$nights} đêm",
+            'description' => $description,
+            'quantity'    => (int) $request->input('number'),
+            'priceAdult'  => $request->input('price_adult'),
+            'priceChild'  => $request->input('price_child'),
+            'destination' => $request->input('destination'),
+            'domain'      => $request->input('domain'),
+            'startDate'   => $start->format('Y-m-d'),
+            'endDate'     => $end->format('Y-m-d'),
+        ], null];
+    }
+
+    public function addTours(Request $request)
+    {
+        [$fields, $error] = $this->parseBasicTourInput($request);
+        if ($error) {
+            return $error;
+        }
+
+        $createTour = $this->tours->createTours($fields + [
             'availability' => 0,    // chỉ được bật ở bước cuối, khi đã đủ ảnh (xem Bước 3)
-            'startDate'    => $start->format('Y-m-d'),
-            'endDate'      => $end->format('Y-m-d'),
         ]);
 
         return response()->json([
@@ -492,55 +508,38 @@ class ToursManagementController extends Controller
         }
     }
 
+    /**
+     * Sửa Bước 1 của tour NHÁP trong wizard. Trước đây sửa Bước 1 sau khi đã tạo thì không lưu.
+     * Chỉ áp dụng cho tour chưa đăng (availability = 0); tour đã đăng sửa bằng nút Sửa trong danh sách.
+     */
     public function updateBasicTour(Request $request)
     {
-        $data = $request->validate([
-            'tourId' => ['required', 'integer', 'exists,tourId'],
-            'name' => ['required', 'string', 'max:255'],
-            'destination' => ['required', 'string', 'max:255'],
-            'domain' => ['required', 'in,t,n'],
-            'number' => ['required', 'integer', 'min:1', 'max:100000'],
-            'price_adult' => ['required', 'numeric', 'min:0'],
-            'price_child' => ['required', 'numeric', 'min:0'],
-            'start_date' => ['required', 'date_format/m/Y'],
-            'end_date' => ['required', 'date_format/m/Y'],
-        ]);
+        $tourId = (int) $request->input('tourId');
+        $tour   = DB::table('tbl_tours')->where('tourId', $tourId)->first();
 
-        $start = Carbon::createFromFormat(
-            'd/m/Y',
-            $data['start_date']
-        )->startOfDay();
-
-        $end = Carbon::createFromFormat(
-            'd/m/Y',
-            $data['end_date']
-        )->startOfDay();
-
-        if ($end->lt($start)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Ngày kết thúc không hợp lệ.'
-            ], 422);
+        if (!$tour) {
+            return response()->json(['success' => false, 'message' => 'Không tìm thấy tour.'], 404);
         }
 
-        $days = $start->diffInDays($end) + 1;
+        if ((int) $tour->availability === 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tour đã đăng. Hãy dùng nút Sửa trong danh sách tour.',
+            ], 409);
+        }
 
-        DB::table('tbl_tours')
-            ->where('tourId', $data['tourId'])
-            ->update([
-                'title' => $data['name'],
-                'destination' => $data['destination'],
-                'domain' => $data['domain'],
-                'quantity' => $data['number'],
-                'priceAdult' => $data['price_adult'],
-                'priceChild' => $data['price_child'],
-                'time' => $days . ' ngày ' . ($days - 1) . ' đêm',
-                'startDate' => $start->toDateString(),
-                'endDate' => $end->toDateString(),
-            ]);
+        [$fields, $error] = $this->parseBasicTourInput($request);
+        if ($error) {
+            return $error;
+        }
+
+        // update() trả 0 khi không có gì đổi: đó không phải lỗi, nên không kiểm tra kết quả (cùng lý do L-F-01)
+        $this->tours->updateTour($tourId, $fields);
 
         return response()->json([
-            'success' => true
+            'success' => true,
+            'message' => 'Đã lưu thay đổi Bước 1.',
+            'tourId'  => $tourId,
         ]);
     }
 }

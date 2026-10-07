@@ -2225,6 +2225,7 @@ function init_SmartWizard() {
 
     let tourId;
     let finishStep1 = false;
+    let step1Approved = false; // cờ cho lần goToStep(2) do chính code gọi, tránh lưu lặp (L-E-08)
     let finishStep2 = false;
     let creatingTour = false;
     let movingToStep3 = false;
@@ -2263,8 +2264,9 @@ function init_SmartWizard() {
                 return true;
             }
 
-            // Tour đã được tạo rồi
-            if (finishStep1) {
+            // Lần chuyển bước do code gọi sau khi đã lưu xong: cho qua, không validate/lưu lại
+            if (step1Approved) {
+                step1Approved = false;
                 return true;
             }
 
@@ -2355,9 +2357,15 @@ function init_SmartWizard() {
                 return false;
             }
 
-            var formActionUrl = $("#form-step1").attr("action");
+            // Tour đã tạo rồi (quay lại Bước 1 để sửa) -> gọi API cập nhật thay vì tạo mới
+            var isUpdate = finishStep1;
+
+            var formActionUrl = isUpdate
+                ? $("#form-step1").data("update-url")
+                : $("#form-step1").attr("action");
 
             var formData = {
+                tourId: isUpdate ? tourId : undefined,
                 name: $("input[name='name']").val(),
                 destination: $("input[name='destination']").val(),
                 domain: $("#domain").val(),
@@ -2378,14 +2386,23 @@ function init_SmartWizard() {
                 data: formData,
                 success: function (response) {
                     if (response.success) {
-                        tourId = response.tourId;
-                        finishStep1 = true;
+                        if (!isUpdate) {
+                            tourId = response.tourId;
+                            finishStep1 = true;
 
-                        $(".hiddenTourId").val(tourId);
+                            $(".hiddenTourId").val(tourId);
 
+                            toastr.success(
+                                "Hãy thêm hình ảnh cho tour vừa tạo!",
+                            );
+                        } else {
+                            toastr.success("Đã lưu thay đổi ở Bước 1.");
+                        }
+
+                        // Ngày đổi thì số ngày tối đa của lộ trình cũng đổi
                         $(document).trigger("dataUpdated", [daysDifference]);
 
-                        toastr.success("Hãy thêm hình ảnh cho tour vừa tạo!");
+                        step1Approved = true;
 
                         setTimeout(function () {
                             $(".add-tours #wizard").smartWizard("goToStep", 2);

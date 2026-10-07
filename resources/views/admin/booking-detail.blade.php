@@ -126,7 +126,8 @@
                                                     <img src="{{ asset('admin/assets/images/icon/icon_momo.png') }}"
                                                         class="invoice_payment-method" alt="">
                                                 @elseif ($invoice_booking->paymentMethod == 'banking')
-                                                    <i class="fa fa-university" style="font-size: 40px; color: #26B99A;"></i>
+                                                    <i class="fa fa-university"
+                                                        style="font-size: 40px; color: #26B99A;"></i>
                                                     <span class="badge badge-success">Chuyển khoản ngân hàng</span>
                                                 @else
                                                     <img src="{{ asset('admin/assets/images/icon/icon_office.png') }}"
@@ -134,14 +135,16 @@
                                                     <span class="badge badge-info">Thanh toán tại văn phòng</span>
                                                 @endif
                                                 @if (!empty($invoice_booking->transferProofImage))
-                                                    <p class="lead" style="margin-top: 20px;">Ảnh biên lai chuyển khoản:</p>
-                                                        <a href="{{ route('admin.transfer-proof', $invoice_booking->bookingId) }}"
-                                                            target="_blank">
-                                                            <img src="{{ route('admin.transfer-proof', $invoice_booking->bookingId) }}"
+                                                    <p class="lead" style="margin-top: 20px;">Ảnh biên lai chuyển
+                                                        khoản:</p>
+                                                    <a href="{{ route('admin.transfer-proof', $invoice_booking->bookingId) }}"
+                                                        target="_blank">
+                                                        <img src="{{ route('admin.transfer-proof', $invoice_booking->bookingId) }}"
                                                             alt="Ảnh biên lai chuyển khoản"
                                                             style="max-width: 280px; border: 1px solid #ddd; border-radius: 6px;">
-                                                        </a>
-                                                    <p class="text-muted" style="margin-top: 5px;"><small>Bấm vào ảnh để xem kích thước đầy đủ</small></p>
+                                                    </a>
+                                                    <p class="text-muted" style="margin-top: 5px;"><small>Bấm vào ảnh để
+                                                            xem kích thước đầy đủ</small></p>
                                                 @endif
                                                 <p class="text-muted well well-sm no-shadow" style="margin-top: 10px;">
                                                     Vui lòng hoàn tất thanh toán theo hướng dẫn hoặc liên hệ với chúng
@@ -160,8 +163,8 @@
                                                                 <td>{{ number_format($invoice_booking->totalPrice, 0, ',', '.') }}
                                                                     vnđ</td>
                                                             </tr>
-                                                            
-                                                            
+
+
                                                         </tbody>
                                                     </table>
                                                 </div>
@@ -189,11 +192,19 @@
                                         </button>
                                     @endif
 
-                                    
+
                                     <button id="received-money" data-bookingid= "{{ $invoice_booking->bookingId }}"
-                                         data-urlPaid="{{ route('admin.received') }}"
-                                        class="btn btn-info pull-right {{ $hide }}" style="margin-right: 5px;"><i
-                                            class="glyphicon glyphicon-usd"></i> Đã thanh toán</button>
+                                        data-urlPaid="{{ route('admin.received') }}"
+                                        class="btn btn-info pull-right {{ $hide }}"
+                                        style="margin-right: 5px;"><i class="glyphicon glyphicon-usd"></i> Đã thanh
+                                        toán</button>
+
+                                    {{-- Gửi hóa đơn qua email: JS đọc data-urlsendmail ở public/admin/assets/js/custom-js.js --}}
+                                    <button id="send-pdf-btn" type="button" class="btn btn-success pull-right"
+                                        data-bookingid="{{ $invoice_booking->bookingId }}"
+                                        data-email="{{ $invoice_booking->email }}"
+                                        data-urlsendmail="{{ route('admin.send.pdf') }}" style="margin-right: 5px;"><i
+                                            class="fa fa-envelope"></i> Gửi hóa đơn qua email</button>
                                 </div>
                             </div>
                         </div>

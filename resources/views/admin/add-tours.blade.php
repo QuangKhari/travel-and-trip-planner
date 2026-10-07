@@ -74,7 +74,8 @@
                                     </ul>
                                     <div id="step-1">
                                         <form class="form-info-tour" action="{{ route('admin.add-tours') }}"
-                                            method="POST" id="form-step1">
+                                            data-update-url="{{ route('admin.update-basic-tour') }}" method="POST"
+                                            id="form-step1">
                                             @csrf
                                             <div class="field item form-group">
                                                 <label class="col-form-label col-md-3 col-sm-3  label-align">Tên
@@ -108,8 +109,7 @@
                                                 <label class="col-form-label col-md-3 col-sm-3  label-align">Số lượng
                                                     <span>*</span></label>
                                                 <div class="col-md-6 col-sm-6">
-                                                    <input class="form-control" type="number" name="number"
-                                                        required>
+                                                    <input class="form-control" type="number" name="number" required>
                                                 </div>
                                             </div>
                                             <div class="field item form-group">
@@ -167,7 +167,8 @@
                                             </div>
                                         </form>
                                     </div>
-                                    <form action="{{ route('admin.add-timeline') }}" id="timeline-form" method="POST">
+                                    <form action="{{ route('admin.add-timeline') }}" id="timeline-form"
+                                        method="POST">
                                         @csrf
                                         <input type="hidden" name="tourId" class="hiddenTourId">
                                         <div id="step-3">

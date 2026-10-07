@@ -79,7 +79,7 @@ class ToursModel extends Model
             return ['success' => true, 'hidden' => false, 'message' => 'Tour đã được xóa thành công.'];
         } catch (\Throwable $e) {
             report($e);
-            return ['success' => false, 'message' => 'Không thể xóa tour: ' . $e->getMessage()];
+            return ['success' => false, 'message' => 'Không thể xóa tour lúc này. Vui lòng thử lại sau.'];
         }
     }
 
