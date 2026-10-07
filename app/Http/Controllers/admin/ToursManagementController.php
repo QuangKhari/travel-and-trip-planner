@@ -185,6 +185,20 @@ class ToursManagementController extends Controller
             ], 404);
         }
 
+        if ($tour->startDate <= now()->toDateString()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ngày khởi hành phải sau ngày hiện tại. Tour vẫn đang ở trạng thái ẩn.'
+            ], 422);
+        }
+
+        if ((int) $tour->quantity <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Số lượng tour phải lớn hơn 0. Tour vẫn đang ở trạng thái ẩn.'
+            ], 422);
+        }
+
         // Bấm "Hoàn thành" lần hai: tour đã đăng rồi thì không thêm nữa (L-E-12)
         if ((int) $tour->availability === 1) {
             return response()->json([
