@@ -32,7 +32,8 @@
                     <div class="destination-item style-two" data-aos-duration="1500" data-aos-offset="50">
                         <div class="image" style="max-height: 250px">
                             <a href="#" class="heart"><i class="fas fa-heart"></i></a>
-                            <img loading="lazy" decoding="async" src="{{ \App\Support\TourImage::url($tour->images[0], 800) }}"
+                            <img loading="lazy" decoding="async"
+                                src="{{ \App\Support\TourImage::url($tour->images[0] ?? 'default.jpg', 800) }}"
                                 alt="Destination">
                         </div>
                         <div class="content">
@@ -53,6 +54,6 @@
     </div>
 </section>
 <!-- Popular Destinations Area end -->
-        
+
 @include('clients.blocks.new_letter')
 @include('clients.blocks.footer')
