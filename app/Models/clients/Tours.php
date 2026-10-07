@@ -43,6 +43,7 @@ class Tours extends Model
 
             $getTourDetail->timeline = DB::table('tbl_timeline')
                 ->where('tourId', $getTourDetail->tourId)
+                ->orderBy('timeLineId')   // đúng thứ tự ngày đã nhập 
                 ->get();
         }
 
@@ -62,8 +63,6 @@ class Tours extends Model
     //Filter tours
     public function filterTours($filters = [], $sorting = null, $perPage = null)
     {
-        DB::enableQueryLog();
-
         // Khởi tạo truy vấn với bảng tours
         $getTours = DB::table($this->table)
             ->leftJoin('tbl_reviews', 'tbl_tours.tourId', '=', 'tbl_reviews.tourId') // Join với bảng reviews
@@ -120,11 +119,7 @@ class Tours extends Model
             $getTours = $getTours->orderBy($sorting[0], $sorting[1]);
         }
 
-        // Thực hiện truy vấn để ghi log
         $tours = $getTours->get();
-
-        // In ra câu lệnh SQL đã ghi lại (nếu cần thiết)
-        $queryLog = DB::getQueryLog();
 
         // Lấy danh sách hình ảnh cho mỗi tour
         foreach ($tours as $tour) {
@@ -134,7 +129,6 @@ class Tours extends Model
             $tour->rating = $this->reviewStats($tour->tourId)->averageRating;
         }
 
-        // dd($queryLog); // In ra log truy vấn 
         return $tours;
     }
 
@@ -220,14 +214,17 @@ class Tours extends Model
         // Thêm điều kiện tìm kiếm với LIKE cho title, time và description
         if (!empty($data['keyword'])) {
             $tours->where(function ($query) use ($data) {
+                // Không tìm trong description: đó là HTML nên khớp cả tên thẻ/thuộc tính 
                 $query->where('title', 'LIKE', '%' . $data['keyword'] . '%')
-                    ->orWhere('description', 'LIKE', '%' . $data['keyword'] . '%')
                     ->orWhere('time', 'LIKE', '%' . $data['keyword'] . '%')
                     ->orWhere('destination', 'LIKE', '%' . $data['keyword'] . '%');
             });
         }
 
-        $tours = $tours->where('availability', 1);
+        // Chỉ tour đang mở, còn chỗ và chưa khởi hành
+        $tours = $tours->where('availability', 1)
+            ->where('quantity', '>', 0)
+            ->where('startDate', '>', now()->toDateString());
         $tours = $tours->limit(12)->get();
 
         foreach ($tours as $tour) {

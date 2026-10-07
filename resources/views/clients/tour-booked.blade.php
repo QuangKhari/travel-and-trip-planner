@@ -51,6 +51,13 @@
                             toán</a></label>
                 </div>
             </div>
+            @if ($tour_booked->bookingStatus == 'n' && !empty($tour_booked->holdExpiresAt))
+                <p style="color:#c0392b; font-weight:600;">
+                    Chỗ được giữ đến {{ \Carbon\Carbon::parse($tour_booked->holdExpiresAt)->format('H:i d/m/Y') }}.
+                    Quá hạn mà đơn chưa được xác nhận, đơn sẽ tự hủy.
+                </p>
+            @endif
+
             <!-- Payment Method -->
             <h2 class="booking-header">Phương Thức Thanh Toán</h2>
 

@@ -736,144 +736,15 @@ $(document).ready(function () {
         }
     });
 
-    // Hàm kiểm tra giá trị lựa chọn thanh toán
+    // Hiện chỉ còn thanh toán tại văn phòng: giữ #payment_hidden khớp với radio đang chọn
     $('input[name="payment"]').change(function () {
-        const paymentMethod = $(this).val();
-        $("#payment_hidden").val(paymentMethod);
-        const isPaymentSelected =
-            paymentMethod === "paypal-payment" ||
-            paymentMethod === "momo-payment";
-
-        $(".btn-submit-booking").toggle(!isPaymentSelected); // Ẩn hoặc hiện nút xác nhận
-        if (paymentMethod === "paypal-payment") {
-            var totalPricePayment = totalPrice / 25000; //switch to USD
-            paypal
-                .Buttons({
-                    createOrder: function (data, actions) {
-                        return actions.order.create({
-                            purchase_units: [
-                                {
-                                    amount: {
-                                        value: totalPricePayment.toFixed(2), // Số tiền thanh toán
-                                    },
-                                },
-                            ],
-                        });
-                    },
-                    onApprove: function (data, actions) {
-                        return actions.order.capture().then(function (details) {
-                            // Hiển thị thông tin thanh toán thành công
-                            console.log(
-                                "Transaction completed by " +
-                                    details.payer.name.given_name,
-                            );
-                            // Tạo input hidden mới
-                            var hiddenInput = $("<input>", {
-                                type: "hidden", // Loại input là hidden
-                                name: "transactionIdPaypal", // Tên của input
-                                value: details.id, // Giá trị là transactionId
-                            });
-
-                            // Thêm input hidden vào form
-                            $('input[name="payment"]:checked')
-                                .closest("form")
-                                .append(hiddenInput);
-                            toastr.success("Thanh toán thành công!");
-                            $("#paypal-button-container").hide(); // Ẩn nút PayPal
-
-                            // Vô hiệu hóa tất cả các radio button
-                            $('input[name="payment"]').prop("disabled", true);
-
-                            $(".btn-submit-booking").show(); // Hiện nút xác nhận
-                        });
-                    },
-                    onError: function (err) {
-                        console.error(err);
-                        toastr.error(
-                            "Có lỗi xảy ra trong quá trình thanh toán.",
-                        );
-                    },
-                })
-                .render("#paypal-button-container"); // Render nút PayPal vào thẻ chứa
-        } else {
-            // Nếu không phải là PayPal, ẩn nút chứa button PayPal
-            $("#paypal-button-container").empty(); // Xóa nút PayPal nếu có
-        }
-        if (paymentMethod === "momo-payment") {
-            $("#btn-momo-payment").show();
-        } else {
-            $("#btn-momo-payment").hide();
-        }
+        $("#payment_hidden").val($(this).val());
     });
 
-    // Save form data to localStorage before payment
-    $("#btn-momo-payment").click(function (e) {
-        e.preventDefault();
-        var urlMomo = $(this).data("urlmomo");
-
-        if (validateBookingForm()) {
-            // Gather form data
-            var bookingData = {
-                fullName: $("#username").val(),
-                email: $("#email").val(),
-                tel: $("#tel").val(),
-                address: $("#address").val(),
-                numAdults: $("#numAdults").val(),
-                numChildren: $("#numChildren").val(),
-                payment: $("input[name='payment']:checked").val(),
-                payment_hidden: $("#payment_hidden").val(),
-            };
-            console.log(bookingData);
-
-            // Save to localStorage
-            localStorage.setItem("bookingData", JSON.stringify(bookingData));
-
-            $.ajax({
-                url: urlMomo, // Route tạo yêu cầu thanh toán Momo
-                method: "POST",
-                data: {
-                    amount: totalPrice,
-                    tourId: $("input[name='tourId']").val(),
-                    _token: $('input[name="_token"]').val(),
-                },
-                success: function (response) {
-                    if (response && response.payUrl) {
-                        // Mở popup thanh toán hoặc chuyển hướng người dùng đến URL thanh toán Momo
-                        window.location.href = response.payUrl;
-                    } else {
-                        toastr.error("Không thể tạo thanh toán Momo.");
-                    }
-                },
-                error: function () {
-                    toastr.error("Có lỗi xảy ra khi kết nối đến Momo.");
-                },
-            });
-        }
-    });
-
-    var savedData = localStorage.getItem("bookingData");
-    if (savedData) {
-        var bookingData = JSON.parse(savedData);
-        console.log(bookingData);
-
-        $("#username").val(bookingData.fullName);
-        $("#email").val(bookingData.email);
-        $("#tel").val(bookingData.tel);
-        $("#address").val(bookingData.address);
-        $("#numAdults").val(bookingData.numAdults);
-        $("#numChildren").val(bookingData.numChildren);
-        $("input[name='payment'][value='" + bookingData.payment + "']").prop(
-            "checked",
-            true,
-        );
-        $("#payment_hidden").val(bookingData.payment_hidden);
-        $("#agree").prop("checked", true);
-        // Vô hiệu hóa tất cả các radio button
-        $('input[name="payment"]').prop("disabled", true);
-
-        // Clear booking data after populating the form
+    try {
         localStorage.removeItem("bookingData");
-    }
+    } catch (e) {}
+
     // Khởi tạo tổng giá khi trang vừa tải
     updateSummary();
     toggleButtonState();

@@ -60,7 +60,7 @@ Route::get('/filter-tours', [ToursController::class, 'filterTours'])->name('filt
 
 
 
-// ===== Khu vực cần đăng nhập và tài khoản không bị khóa (L-A-06, L-A-07) =====
+// ===== Khu vực cần đăng nhập và tài khoản không bị khóa =====
 Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     // hồ sơ
     Route::get('/user-profile', [UserProfileController::class, 'index'])->name('user-profile');
@@ -69,7 +69,8 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::post('/change-avatar-profile', [UserProfileController::class, 'changeAvatar'])->name('change-avatar');
 
     // đặt tour
-    Route::post('/booking/{id?}', [BookingController::class, 'index'])->name('booking');
+    // GET để F5 hoặc mở link trực tiếp không bị 405 
+    Route::match(['get', 'post'], '/booking/{id?}', [BookingController::class, 'index'])->name('booking');
     Route::post('/create-booking', [BookingController::class, 'createBooking'])->middleware('throttle:10,1,create-booking')->name('create-booking');
     Route::post('/apply-coupon', [BookingController::class, 'applyCoupon'])->middleware('throttle:20,1,apply-coupon')->name('apply-coupon');
     Route::post('/checkBooking', [BookingController::class, 'checkBooking'])->name('checkBooking');
