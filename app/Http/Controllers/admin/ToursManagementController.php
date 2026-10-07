@@ -438,7 +438,14 @@ class ToursManagementController extends Controller
             unset($timeline);
         }
 
-        // Thiếu dữ liệu = giữ nguyên (L-E-04)
+        if (count($images) > 0 && count($images) < self::MIN_IMAGES) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tour phải có ít nhất ' . self::MIN_IMAGES . ' hình ảnh.'
+            ], 422);
+        }
+
+        // Thiếu dữ liệu = giữ nguyên
         $replaceImages   = count($images) > 0;
         $replaceTimeline = is_array($timelines) && count($timelines) > 0;
 
