@@ -18,9 +18,12 @@ class DashboardModel extends Model
         $countBooking = DB::table('tbl_booking')
             ->where('bookingStatus', '!=', 'c')
             ->count();
+        // Chỉ tính đơn đã thanh toán VÀ chưa bị hủy
         $totalAmount = DB::table('tbl_checkout')
-            ->where('paymentStatus', 'y')
-            ->sum('amount');
+            ->join('tbl_booking', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
+            ->where('tbl_checkout.paymentStatus', 'y')
+            ->where('tbl_booking.bookingStatus', '!=', 'c')
+            ->sum('tbl_checkout.amount');
 
         // Trả về mảng chứa các dữ liệu tổng hợp
         return [
@@ -43,9 +46,12 @@ class DashboardModel extends Model
 
     public function getValuePayment()
     {
+        // Không đếm đơn đã hủy
         return DB::table('tbl_checkout')
-            ->select('paymentMethod', DB::raw('COUNT(*) as count'))
-            ->groupBy('paymentMethod')
+            ->join('tbl_booking', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
+            ->where('tbl_booking.bookingStatus', '!=', 'c')
+            ->select('tbl_checkout.paymentMethod', DB::raw('COUNT(*) as count'))
+            ->groupBy('tbl_checkout.paymentMethod')
             ->get()
             ->toArray();
     }
@@ -54,10 +60,11 @@ class DashboardModel extends Model
     {
         return DB::table('tbl_tours')
             ->join('tbl_booking', 'tbl_tours.tourId', '=', 'tbl_booking.tourId')
+            ->where('tbl_booking.bookingStatus', '!=', 'c')   // không đếm đơn đã hủy
             ->select('tbl_tours.tourId', 'tbl_tours.title', 'tbl_tours.quantity', DB::raw('SUM(tbl_booking.numAdults + tbl_booking.numChildren) as booked_quantity'))
             ->groupBy('tbl_tours.tourId', 'tbl_tours.quantity', 'tbl_tours.title')
             ->orderByDesc(DB::raw('SUM(tbl_booking.numAdults + tbl_booking.numChildren)')) // Sắp xếp theo số lượng đặt tour giảm dần
-            ->take(3) // Lấy 3 tour có số lượng đặt cao nhất
+            ->take(5) // Top 5 tour được đặt nhiều nhất (spec)
             ->get();
     }
 
@@ -65,29 +72,35 @@ class DashboardModel extends Model
     {
         return DB::table('tbl_booking')
             ->join('tbl_tours', 'tbl_booking.tourId', '=', 'tbl_tours.tourId')
-            ->where('tbl_booking.bookingStatus', 'b')
+            ->where('tbl_booking.bookingStatus', 'n')   // 'n' = chờ xác nhận; trước đây lọc 'b' không tồn tại (L-F-05)
             ->orderByDesc('tbl_booking.bookingDate')
             ->select('tbl_booking.*', 'tbl_tours.title as tour_name') // Chọn tất cả các cột từ tbl_booking và thêm tên tour từ tbl_tours
-            ->take(3)
+            ->take(5)
             ->get();
-
     }
 
-    public function getRevenuePerMonth()
+    /**
+     * Doanh thu 12 tháng của MỘT năm: tính theo đơn đã thanh toán, chưa hủy,
+     * nhóm theo tháng của ngày thanh toán; không cộng dồn các năm với nhau.
+     */
+    public function getRevenuePerMonth(?int $year = null)
     {
-        $monthlyRevenue = DB::table('tbl_booking')
-            ->select(DB::raw('MONTH(bookingDate) as month, SUM(totalPrice) as revenue'))
-            ->where('bookingStatus', 'y')
-            ->groupBy(DB::raw('MONTH(bookingDate)'))
-            ->orderBy('month', 'asc')
+        $year = $year ?? (int) now()->year;
+
+        $monthlyRevenue = DB::table('tbl_checkout')
+            ->join('tbl_booking', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
+            ->where('tbl_checkout.paymentStatus', 'y')
+            ->where('tbl_booking.bookingStatus', '!=', 'c')
+            ->whereYear('tbl_checkout.paymentDate', $year)
+            ->selectRaw('MONTH(tbl_checkout.paymentDate) AS month, SUM(tbl_checkout.amount) AS revenue')
+            ->groupByRaw('MONTH(tbl_checkout.paymentDate)')
             ->get();
 
-        // Chuẩn bị mảng doanh thu với 12 tháng
-        $revenueData = array_fill(0, 12, 0);  // Mảng chứa doanh thu cho 12 tháng
+        // Mảng 12 phần tử, tháng không có doanh thu = 0
+        $revenueData = array_fill(0, 12, 0);
 
-        // Gán doanh thu cho từng tháng
         foreach ($monthlyRevenue as $data) {
-                $revenueData[$data->month - 1] = $data->revenue;  // Gán doanh thu cho tháng tương ứng
+            $revenueData[$data->month - 1] = (float) $data->revenue;
         }
 
         return $revenueData;
