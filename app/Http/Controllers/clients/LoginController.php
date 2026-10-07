@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\clients\Login;
 use Illuminate\Support\Facades\Validator;
 use App\Support\PasswordHasher;
+use Illuminate\Database\QueryException;
 
 class LoginController extends Controller
 {
@@ -65,7 +66,23 @@ class LoginController extends Controller
             'email'    => $email,
             'password' => PasswordHasher::make($request->password_regis),
         ];
-        $this->login->registerAccount($dataInsert);
+        try {
+            $this->login->registerAccount($dataInsert);
+        } catch (QueryException $e) {
+            if ((string) $e->getCode() === '23000') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tài khoản hoặc email đã tồn tại.'
+                ]);
+            }
+
+            report($e);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể đăng ký tài khoản. Vui lòng thử lại sau.'
+            ], 500);
+        }
 
         return response()->json([
             'success' => true,
