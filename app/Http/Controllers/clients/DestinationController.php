@@ -9,15 +9,17 @@ use App\Models\clients\Tours;
 class DestinationController extends Controller
 {
     private $tours;
-    public function __construct(){
+
+    public function __construct()
+    {
+        parent::__construct();
         $this->tours = new Tours();
     }
+
     public function index()
     {
         $title = 'Điểm đến';
-        $tours = $this->tours->getAllTours( 9);
+        $tours = $this->tours->getAllTours(9);
         return view('clients.destination', compact('title', 'tours'));
     }
-
-    
 }

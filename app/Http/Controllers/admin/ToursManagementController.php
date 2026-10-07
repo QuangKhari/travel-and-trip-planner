@@ -23,6 +23,7 @@ class ToursManagementController extends Controller
 
     public function __construct(TourImageService $images)
     {
+        parent::__construct();
         $this->tours = new ToursModel();
         $this->images = $images;
     }
