@@ -11,8 +11,10 @@ use App\Support\PasswordHasher;
 class LoginController extends Controller
 {
     private $login;
+
     public function __construct()
     {
+        parent::__construct();
         $this->login = new Login();
     }
 

@@ -13,6 +13,7 @@ class LoginAdminController extends Controller
 
     public function __construct()
     {
+        parent::__construct();
         $this->login = new LoginModel();
     }
     public function index()

@@ -12,6 +12,7 @@ class DashboardController extends Controller
 
     public function __construct()
     {
+        parent::__construct();
         $this->dashboard = new DashboardModel();
     }
     public function index()
@@ -35,6 +36,6 @@ class DashboardController extends Controller
         $revenue = $this->dashboard->getRevenuePerMonth();
         // dd($revenue);
 
-        return view('admin.dashboard', compact('title', 'summary', 'dataDomain', 'paymentStatus','toursBooked','newBooking','revenue'));
+        return view('admin.dashboard', compact('title', 'summary', 'dataDomain', 'paymentStatus', 'toursBooked', 'newBooking', 'revenue'));
     }
 }

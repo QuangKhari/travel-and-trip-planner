@@ -15,6 +15,7 @@ class AdminManagementController extends Controller
 
     public function __construct()
     {
+        parent::__construct();
         $this->admin = new AdminModel();
     }
 

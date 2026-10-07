@@ -5,7 +5,6 @@ namespace App\Http\Controllers\clients;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\clients\Tours;
-use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
 
 class SearchController extends Controller
@@ -14,6 +13,7 @@ class SearchController extends Controller
 
     public function __construct()
     {
+        parent::__construct();
         $this->tours = new Tours();
     }
 

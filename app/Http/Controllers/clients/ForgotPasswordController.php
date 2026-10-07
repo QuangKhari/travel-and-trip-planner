@@ -21,6 +21,7 @@ class ForgotPasswordController extends Controller
 
     public function __construct()
     {
+        parent::__construct();
         $this->login = new Login();
     }
 

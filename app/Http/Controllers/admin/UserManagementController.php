@@ -12,6 +12,7 @@ class UserManagementController extends Controller
 
     public function __construct()
     {
+        parent::__construct();
         $this->users = new UserModel();
     }
     public function index()

@@ -122,14 +122,38 @@ class Tours extends Model
             $getTours = $getTours->orderBy($sorting[0], $sorting[1]);
         }
 
-        $tours = $getTours->get();
+        $tours = $perPage
+            ? $getTours->paginate($perPage)
+            : $getTours->get();
 
-        // Lấy danh sách hình ảnh cho mỗi tour
-        foreach ($tours as $tour) {
-            $tour->images = DB::table('tbl_images')
-                ->where('tourId', $tour->tourId)
-                ->pluck('imageURL');
-            $tour->rating = $this->reviewStats($tour->tourId)->averageRating;
+        $collection = $tours instanceof \Illuminate\Pagination\LengthAwarePaginator
+            ? $tours->getCollection()
+            : $tours;
+
+        if ($collection->isEmpty()) {
+            return $tours;
+        }
+
+        $tourIds = $collection->pluck('tourId')->all();
+
+        $imagesByTour = DB::table('tbl_images')
+            ->whereIn('tourId', $tourIds)
+            ->orderBy('sortOrder')
+            ->get(['tourId', 'imageURL'])
+            ->groupBy('tourId');
+
+        $ratingsByTour = DB::table('tbl_reviews')
+            ->whereIn('tourId', $tourIds)
+            ->select('tourId', DB::raw('AVG(rating) as averageRating'))
+            ->groupBy('tourId')
+            ->pluck('averageRating', 'tourId');
+
+        foreach ($collection as $tour) {
+            $tour->images = collect($imagesByTour->get($tour->tourId, []))
+                ->pluck('imageURL')
+                ->values();
+
+            $tour->rating = $ratingsByTour->get($tour->tourId);
         }
 
         return $tours;
@@ -151,7 +175,7 @@ class Tours extends Model
             ->join('tbl_checkout', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
             ->where('tbl_booking.bookingId', '=', $bookingId)
             ->where('tbl_checkout.checkoutId', '=', $checkoutId)
-            ->where('tbl_booking.userId', '=', $userId)   // chỉ chủ đơn (L-B-04)
+            ->where('tbl_booking.userId', '=', $userId)   // chỉ chủ đơn 
             ->first();
 
         return $booked;

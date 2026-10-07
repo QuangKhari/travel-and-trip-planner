@@ -12,8 +12,9 @@ class HomeController extends Controller
 
     public function __construct()
     {
+        parent::__construct();
         $this->homeTours = new Home();
-    }    
+    }
 
     public function index()
     {
@@ -21,6 +22,6 @@ class HomeController extends Controller
         $tours = $this->homeTours->getHomeTours();
         //dd($tours);
 
-        return view('clients.home', compact('title' , 'tours'));
+        return view('clients.home', compact('title', 'tours'));
     }
 }

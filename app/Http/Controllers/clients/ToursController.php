@@ -5,13 +5,14 @@ namespace App\Http\Controllers\clients;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\clients\Tours;
-use Illuminate\Pagination\LengthAwarePaginator;
 
 class ToursController extends Controller
 {
     private $tours;
+
     public function __construct()
     {
+        parent::__construct();
         $this->tours = new Tours();
     }
 
@@ -29,22 +30,9 @@ class ToursController extends Controller
         ];
 
         $popularTours = $this->tours->getPopularTours(2);
-        $allTours = $this->tours->filterTours([], []);
-
-        $currentPage = LengthAwarePaginator::resolveCurrentPage();
         $perPage = 9;
-        $currentItems = $allTours->slice(($currentPage - 1) * $perPage, $perPage)->values();
-
-        $tours = new LengthAwarePaginator(
-            $currentItems,
-            $allTours->count(),
-            $perPage,
-            $currentPage,
-            [
-                'path' => route('filter-tours'),
-                'query' => $request->except('page')
-            ]
-        );
+        $tours = $this->tours->filterTours([], [], $perPage);
+        $tours->withPath(route('filter-tours'))->appends($request->except('page'));
 
         if ($request->ajax()) {
             return view('clients.partials.filter-tours', compact('tours'));
@@ -114,22 +102,9 @@ class ToursController extends Controller
 
 
         //dd($req->all(), $sorting);
-        $tours = $this->tours->filterTours($conditions, $sorting);
-        //dd($tours);
-        $currentPage = LengthAwarePaginator::resolveCurrentPage();
         $perPage = 9;
-        $currentItems = $tours->slice(($currentPage - 1) * $perPage, $perPage)->values();
-
-        $tours = new LengthAwarePaginator(
-            $currentItems,
-            $tours->count(),
-            $perPage,
-            $currentPage,
-            [
-                'path' => route('filter-tours'),
-                'query' => $req->except('page')
-            ]
-        );
+        $tours = $this->tours->filterTours($conditions, $sorting, $perPage);
+        $tours->withPath(route('filter-tours'))->appends($req->except('page'));
 
 
         return view('clients.partials.filter-tours', compact('tours'));
