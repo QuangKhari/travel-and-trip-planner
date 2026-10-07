@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\DB;
  */
 class BookingService
 {
+
+    public function __construct(private CouponService $coupons) {}
+
     /**
      * @param array $in fullName, email, tel, address, numAdults, numChildren, tourId, couponCode (đã validate)
      * @return array{bookingId:int, bookingCode:string, totalPrice:int, discount:int}
@@ -52,30 +55,15 @@ class BookingService
             // 3. Server tự tính giá
             $subtotal = (int) round($tour->priceAdult * $adults + $tour->priceChild * $children);
 
-            // 4. Mã giảm giá (nếu có): kiểm ở server, trừ lượt nguyên tử
-            $discount = 0;
-            $couponCode = strtoupper(trim((string) ($in['couponCode'] ?? '')));
+            // 4. Mã giảm giá (nếu có): mọi luật nằm ở CouponService (L-B-03)
+            $discount    = 0;
+            $promotionId = null;
+            $couponCode  = trim((string) ($in['couponCode'] ?? ''));
+
             if ($couponCode !== '') {
-                $promo = DB::table('tbl_promotion')->where('code', $couponCode)->lockForUpdate()->first();
-
-                if (!$promo || $promo->status !== 'y') {
-                    throw new BookingException('Mã giảm giá không hợp lệ.');
-                }
-                if ($promo->startDate > $today || $promo->endDate < $today) {   // endDate tính trọn ngày cuối
-                    throw new BookingException('Mã giảm giá chưa đến hạn hoặc đã hết hạn.');
-                }
-
-                $used = DB::table('tbl_promotion')
-                    ->where('promotionId', $promo->promotionId)
-                    ->where('quantity', '>', 0)
-                    ->decrement('quantity', 1);
-
-                if ($used !== 1) {
-                    throw new BookingException('Mã giảm giá đã hết lượt sử dụng.');
-                }
-
-                $percent  = min(100, max(0, (float) $promo->discount));
-                $discount = (int) round($subtotal * $percent / 100);
+                $quote       = $this->coupons->redeem($couponCode, $subtotal, $userId);
+                $discount    = $quote['discount'];
+                $promotionId = $quote['promotionId'];
             }
 
             $total = max(0, $subtotal - $discount);
@@ -94,7 +82,13 @@ class BookingService
                 'numChildren' => $children,
                 'totalPrice'  => $total,
                 'bookingCode' => $bookingCode,
+                // Giữ chỗ có hạn: quá hạn mà chưa xác nhận thì lệnh bookings:expire-holds tự hủy
+                'holdExpiresAt' => now()->addHours((int) config('travela.hold_hours', 48)),
             ]);
+
+            if ($promotionId !== null) {
+                $this->coupons->attach($promotionId, $userId, $bookingId, $discount);
+            }
 
             DB::table('tbl_checkout')->insert([
                 'bookingId'     => $bookingId,
@@ -110,6 +104,58 @@ class BookingService
                 'discount'    => $discount,
             ];
         });
+    }
+
+    /**
+     * Hủy một đơn: đổi trạng thái, trả chỗ, nhả mã giảm giá.
+     * Phải gọi TRONG transaction, sau khi đã khóa dòng đơn (lockForUpdate) và kiểm tra trạng thái.
+     */
+    public function cancelLocked(object $booking): void
+    {
+        DB::table('tbl_booking')
+            ->where('bookingId', $booking->bookingId)
+            ->update(['bookingStatus' => 'c', 'holdExpiresAt' => null]);
+
+        DB::table('tbl_tours')
+            ->where('tourId', $booking->tourId)
+            ->increment('quantity', (int) $booking->numAdults + (int) $booking->numChildren);
+
+        $this->coupons->release((int) $booking->bookingId);
+    }
+
+    /**
+     * Hủy các đơn chờ xác nhận đã quá hạn giữ chỗ. Mỗi đơn một transaction riêng,
+     * kiểm tra lại sau khi khóa nên chạy chồng hai lần cũng không trả chỗ hai lần.
+     *
+     * @return int số đơn đã hủy
+     */
+    public function expireHolds(): int
+    {
+        $ids = DB::table('tbl_booking')
+            ->where('bookingStatus', 'n')
+            ->whereNotNull('holdExpiresAt')
+            ->where('holdExpiresAt', '<', now())
+            ->pluck('bookingId');
+
+        $cancelled = 0;
+
+        foreach ($ids as $id) {
+            DB::transaction(function () use ($id, &$cancelled) {
+                $booking = DB::table('tbl_booking')->where('bookingId', $id)->lockForUpdate()->first();
+
+                if (
+                    $booking
+                    && $booking->bookingStatus === 'n'
+                    && $booking->holdExpiresAt !== null
+                    && \Carbon\Carbon::parse($booking->holdExpiresAt)->isPast()
+                ) {
+                    $this->cancelLocked($booking);
+                    $cancelled++;
+                }
+            });
+        }
+
+        return $cancelled;
     }
 
     private function newBookingCode(): string
