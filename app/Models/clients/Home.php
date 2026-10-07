@@ -22,16 +22,32 @@ class Home extends Model
             ->limit(6)
             ->get();
 
-        foreach ($tours as $tour) {
-            // Lấy danh sách ảnh của tour
-            $tour->images = DB::table('tbl_images')
-                ->where('tourId', $tour->tourId)
-                ->pluck('imageURL');
+        $tourIds = $tours->pluck('tourId')->all();
 
-            // Lấy tiêu đề lịch trình của tour
-            $tour->timelines = DB::table('tbl_timeline')
-                ->where('tourId', $tour->tourId)
-                ->pluck('title');
+        if (empty($tourIds)) {
+            return $tours;
+        }
+
+        $imagesByTour = DB::table('tbl_images')
+            ->whereIn('tourId', $tourIds)
+            ->orderBy('sortOrder')
+            ->get(['tourId', 'imageURL'])
+            ->groupBy('tourId');
+
+        $timelinesByTour = DB::table('tbl_timeline')
+            ->whereIn('tourId', $tourIds)
+            ->orderBy('timeLineId')
+            ->get(['tourId', 'title'])
+            ->groupBy('tourId');
+
+        foreach ($tours as $tour) {
+            $tour->images = collect($imagesByTour->get($tour->tourId, []))
+                ->pluck('imageURL')
+                ->values();
+
+            $tour->timelines = collect($timelinesByTour->get($tour->tourId, []))
+                ->pluck('title')
+                ->values();
         }
 
         return $tours;

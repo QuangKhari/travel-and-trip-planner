@@ -269,14 +269,32 @@ class Tours extends Model
             ->where('startDate', '>', now()->toDateString());
         $tours = $tours->limit(12)->get();
 
-        foreach ($tours as $tour) {
-            // Lấy danh sách hình ảnh thuộc về tour
-            $tour->images = DB::table('tbl_images')
-                ->where('tourId', $tour->tourId)
-                ->pluck('imageURL');
-            // Lấy số lượng đánh giá và số sao trung bình của tour
-            $tour->rating = $this->reviewStats($tour->tourId)->averageRating;
+        $tourIds = $tours->pluck('tourId')->all();
+
+        if (empty($tourIds)) {
+            return $tours;
         }
+
+        $imagesByTour = DB::table('tbl_images')
+            ->whereIn('tourId', $tourIds)
+            ->orderBy('sortOrder')
+            ->get(['tourId', 'imageURL'])
+            ->groupBy('tourId');
+
+        $ratingsByTour = DB::table('tbl_reviews')
+            ->whereIn('tourId', $tourIds)
+            ->select('tourId', DB::raw('AVG(rating) as averageRating'))
+            ->groupBy('tourId')
+            ->pluck('averageRating', 'tourId');
+
+        foreach ($tours as $tour) {
+            $tour->images = collect($imagesByTour->get($tour->tourId, []))
+                ->pluck('imageURL')
+                ->values();
+
+            $tour->rating = $ratingsByTour->get($tour->tourId);
+        }
+
         return $tours;
     }
     public function getPopularTours($limit = 2)
@@ -338,11 +356,23 @@ class Tours extends Model
         }
 
         // Lấy ảnh cho từng tour
+        $tourIds = $tours->pluck('tourId')->all();
+
+        if (empty($tourIds)) {
+            return $tours;
+        }
+
+        $imagesByTour = DB::table('tbl_images')
+            ->whereIn('tourId', $tourIds)
+            ->orderBy('sortOrder')
+            ->get(['tourId', 'imageURL'])
+            ->groupBy('tourId');
+
         foreach ($tours as $tour) {
-            $tour->images = DB::table('tbl_images')
-                ->where('tourId', $tour->tourId)
-                ->pluck('imageURL');
-            // Ảnh đầu tiên để hiển thị
+            $tour->images = collect($imagesByTour->get($tour->tourId, []))
+                ->pluck('imageURL')
+                ->values();
+
             $tour->thumbnail = $tour->images->first() ?? 'default.jpg';
         }
         return $tours;
