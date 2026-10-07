@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\admin\BookingModel;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Services\UserMediaService;
 
 class BookingManagementController extends Controller
@@ -228,18 +229,24 @@ class BookingManagementController extends Controller
 
         try {
             Mail::send('admin.emails.invoice', compact('invoice_booking'), function ($message) use ($invoice_booking) {
+                // fullName do khách nhập: bỏ xuống dòng để không chèn được header thư
+                $name = str_replace(["\r", "\n"], ' ', (string) $invoice_booking->fullName);
+
                 $message->to($invoice_booking->email)
-                    ->subject('Hóa đơn đặt tour của khách hàng' . $invoice_booking->fullName);
+                    ->subject('Hóa đơn đặt tour ' . $invoice_booking->bookingCode . ' - ' . $name);
             });
 
             return response()->json([
                 'success' => true,
                 'message' => 'Hóa đơn đã được gửi qua email thành công.',
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            // Chi tiết lỗi chỉ ghi log, không trả cho trình duyệt
+            Log::error('Gửi hóa đơn thất bại: ' . $e->getMessage(), ['bookingId' => $bookingId]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Không thể gửi email: ' . $e->getMessage(),
+                'message' => 'Không thể gửi email lúc này. Vui lòng thử lại sau.',
             ], 500);
         }
     }
