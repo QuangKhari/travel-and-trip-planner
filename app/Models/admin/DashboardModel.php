@@ -46,9 +46,9 @@ class DashboardModel extends Model
 
     public function getValuePayment()
     {
-        // Không đếm đơn đã hủy
         return DB::table('tbl_checkout')
             ->join('tbl_booking', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
+            ->where('tbl_checkout.paymentStatus', 'y')
             ->where('tbl_booking.bookingStatus', '!=', 'c')
             ->select('tbl_checkout.paymentMethod', DB::raw('COUNT(*) as count'))
             ->groupBy('tbl_checkout.paymentMethod')
