@@ -28,7 +28,7 @@ class TourImage
         }
 
         if (!self::isStem($value)) {
-            return asset('admin/assets/images/gallery-tours/' . $value);   // dạng cũ (chuyển tiếp)
+            return asset('admin/assets/images/gallery-tours/' . basename((string) $value));
         }
 
         return self::publicUrl($value . '-' . self::pickSize($width) . '.webp');
@@ -42,7 +42,7 @@ class TourImage
         }
 
         return implode(', ', array_map(
-            fn (int $w) => self::publicUrl("{$value}-{$w}.webp") . " {$w}w",
+            fn(int $w) => self::publicUrl("{$value}-{$w}.webp") . " {$w}w",
             self::SIZES
         ));
     }
@@ -53,7 +53,8 @@ class TourImage
 
         return is_string($value)
             && str_starts_with($value, $dir . '/')
-            && !str_contains($value, '..');
+            && !str_contains($value, '..')
+            && !str_contains($value, '\\');
     }
 
     private static function isPlaceholder(?string $value): bool
@@ -72,7 +73,7 @@ class TourImage
         return self::SIZES[array_key_last(self::SIZES)];
     }
 
-        /** Disk "public": URL tương đối theo host của request (không cứng 127.0.0.1:8000). */
+    /** Disk "public": URL tương đối theo host của request (không cứng 127.0.0.1:8000). */
     private static function publicUrl(string $path): string
     {
         $disk = config('media.disk', 'public');

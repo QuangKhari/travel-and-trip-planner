@@ -135,44 +135,6 @@ class ToursManagementController extends Controller
         ]);
     }
 
-    public function addImagesTours(Request $request)
-    {
-        [$meta, $error] = $this->storeUploadedImage($request);
-        if ($error) {
-            return $error;
-        }
-
-        $tourId = (int) $request->tourId;
-        try {
-            $ok = DB::table('tbl_images')->insert([
-                'tourId'      => $tourId,
-                'imageURL'    => $meta['stem'],
-                'width'       => $meta['width'],
-                'height'      => $meta['height'],
-                'sizeBytes'   => $meta['sizeBytes'],
-                'sortOrder'   => (int) DB::table('tbl_images')->where('tourId', $tourId)->count(),
-                'description' => pathinfo($request->file('image')->getClientOriginalName(), PATHINFO_FILENAME),
-            ]);
-        } catch (\Throwable $e) {
-            report($e);
-            return response()->json(['success' => false, 'message' => 'Không lưu được thông tin ảnh.'], 500);
-        }
-
-        if (!$ok) {
-            return response()->json(['success' => false, 'message' => 'Không lưu được thông tin ảnh.'], 500);
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Image uploaded successfully',
-            'data'    => [
-                'filename' => $meta['stem'],
-                'url'      => TourImage::url($meta['stem'], 320),
-                'tourId'   => $tourId,
-            ],
-        ], 200);
-    }
-
     public function addTimeline(Request $request)
     {
         $tourId = (int) $request->tourId;

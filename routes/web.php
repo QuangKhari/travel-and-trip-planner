@@ -38,8 +38,8 @@ Route::get('/travel-guides', [TravelGuidesController::class, 'index'])->name('te
 Route::get('/tour-detail/{id}', [TourDetailController::class, 'index'])->whereNumber('id')->name('tour-detail');
 Route::get('/blogs', [BlogController::class, 'index'])->name('blogs');
 Route::get('/blog-detail', [BlogDetailController::class, 'index'])->name('blog-detail');
-Route::get('/search', [SearchController::class, 'index'])->name('search');
-Route::get('/search-voice-text', [SearchController::class, 'searchTours'])->name('search-voice-text');
+Route::get('/search', [SearchController::class, 'index'])->middleware('throttle:60,1,search')->name('search');
+Route::get('/search-voice-text', [SearchController::class, 'searchTours'])->middleware('throttle:30,1,search-voice')->name('search-voice-text');
 
 //Đăng nhập, đăng ký, đăng xuất
 Route::get('/login', [LoginController::class, 'index'])->name('login');
@@ -82,18 +82,6 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::get('/my-tours', [MyTourController::class, 'index'])->name('my-tours');
 });
 
-// /payment-confirm: đã xóa hẳn (không có view nào gọi).
-// Hai route dưới giữ lại tên để view không báo "Route not defined", nhưng luôn trả 410.
-Route::match(['get', 'post'], '/create-momo-payment', fn() => response()->json([
-    'success' => false,
-    'message' => 'Thanh toán MoMo đã ngừng hỗ trợ.',
-], 410))->name('createMomoPayment');
-
-Route::post('/upload-transfer-proof', fn() => response()->json([
-    'success' => false,
-    'message' => 'Chức năng tải biên lai đã tạm ngừng.',
-], 410))->name('booking.upload-transfer-proof');
-
 //admin
 Route::prefix('admin')->group(function () {
     //Đăng nhập, đăng xuất
@@ -127,7 +115,6 @@ Route::prefix('admin')->group(function () {
         Route::post('/update-basic-tour', [ToursManagementController::class, 'updateBasicTour'])->name('admin.update-basic-tour');
         Route::post('/delete-tour', [ToursManagementController::class, 'deleteTour'])->name('admin.delete-tour');
         Route::post('/add-temp-images', [ToursManagementController::class, 'uploadTempImagesTours'])->name('admin.add-temp-images');
-        Route::post('/add-images-tours', [ToursManagementController::class, 'addImagesTours'])->name('admin.add-images-tours');
         Route::post('/add-timeline', [ToursManagementController::class, 'addTimeline'])->name('admin.add-timeline');
 
         //Management User

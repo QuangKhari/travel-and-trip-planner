@@ -126,6 +126,16 @@ class BookingManagementController extends Controller
             if ($booking->bookingStatus === 'y') {
                 return ['ok' => true, 'message' => 'Đơn đã được xác nhận trước đó.'];
             }
+            if (
+                $booking->bookingStatus === 'n'
+                && $booking->holdExpiresAt !== null
+                && \Carbon\Carbon::parse($booking->holdExpiresAt)->isPast()
+            ) {
+                return [
+                    'ok' => false,
+                    'message' => 'Đơn đã hết thời gian giữ chỗ và không thể xác nhận.'
+                ];
+            }
             if ($booking->bookingStatus !== 'n') {
                 return ['ok' => false, 'message' => 'Chỉ xác nhận được đơn đang chờ xử lý.'];
             }

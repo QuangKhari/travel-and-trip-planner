@@ -52,8 +52,7 @@ class BookingController extends Controller
             return redirect()->route('tour-detail', ['id' => $tour->tourId]);
         }
 
-        $transIdMomo = null;
-        return view('clients.booking', compact('title', 'tour', 'transIdMomo'));
+        return view('clients.booking', compact('title', 'tour'));
     }
 
     public function createBooking(Request $req, BookingService $bookings)
