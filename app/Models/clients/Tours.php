@@ -26,12 +26,25 @@ class Tours extends Model
 
         $allTours = $query->get();
 
-        foreach ($allTours as $tour) {
-            // Lấy danh sách hình ảnh thuộc về tour
-            $tour->images = DB::table('tbl_images')
-                ->where('tourId', $tour->tourId)
-                ->pluck('imageURL');
+        if ($allTours->isEmpty()) {
+            return $allTours;
         }
+
+        $tourIds = $allTours->pluck('tourId')->all();
+
+        $imagesByTour = DB::table('tbl_images')
+            ->whereIn('tourId', $tourIds)
+            ->orderBy('sortOrder')
+            ->get(['tourId', 'imageURL'])
+            ->groupBy('tourId');
+
+        foreach ($allTours as $tour) {
+            $tour->images = collect($imagesByTour->get($tour->tourId, []))
+                ->pluck('imageURL')
+                ->values();
+        }
+
+        return $allTours;
 
         return $allTours;
     }
@@ -50,6 +63,7 @@ class Tours extends Model
             // Lấy danh sách hình ảnh thuộc về tour
             $getTourDetail->images = DB::table('tbl_images')
                 ->where('tourId', $getTourDetail->tourId)
+                ->orderBy('sortOrder')
                 ->limit(5)
                 ->pluck('imageURL');
 
