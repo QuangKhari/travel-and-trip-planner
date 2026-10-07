@@ -421,10 +421,10 @@ class ToursManagementController extends Controller
         // Ảnh đang có trước khi sửa (để biết ảnh nào bị gỡ và cần xóa file sau khi lưu thành công)
         $oldStems = $this->tours->getImages($tourId)->pluck('imageURL')->all();
 
-        // Chấp nhận đường dẫn mới (tours/{id}/{hash}) hoặc tên file cũ trơn; loại giá trị lạ.
+        // Chỉ chấp nhận ảnh mới thuộc đúng tour đang sửa hoặc ảnh cũ đã thuộc tour này.
         $images = $request->input('images');
         $images = is_array($images)
-            ? array_values(array_unique(array_filter($images, fn($i) => is_string($i) && $i !== '' && ($this->images->isStem($i) || $i === basename($i)))))
+            ? array_values(array_unique(array_filter($images, fn($i) => is_string($i) && $i !== '' && ($this->images->isStemForTour($i, $tourId) || in_array($i, $oldStems, true)))))
             : [];
         $timelines = $request->input('timeline');
 

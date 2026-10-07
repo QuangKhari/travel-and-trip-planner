@@ -61,10 +61,21 @@ class TourImageService
             && !str_contains($value, '\\');
     }
 
+    public function isStemForTour(?string $value, int $tourId): bool
+    {
+        if (!$this->isStem($value)) {
+            return false;
+        }
+
+        $pattern = '#^' . preg_quote($this->toursDir(), '#') . '/' . $tourId . '/[a-f0-9]{24}$#';
+
+        return preg_match($pattern, $value) === 1;
+    }
+
     /** @return string[] đường dẫn các file của một stem */
     public function variantPaths(string $stem): array
     {
-        return array_map(fn (int $w) => "{$stem}-{$w}.webp", $this->sizes());
+        return array_map(fn(int $w) => "{$stem}-{$w}.webp", $this->sizes());
     }
 
     // ---------------------------------------------------------------------
@@ -135,7 +146,7 @@ class TourImageService
             'stem'      => $stem,
             'width'     => $largest['width'],
             'height'    => $largest['height'],
-            'sizeBytes' => array_sum(array_map(fn ($v) => strlen($v['bytes']), $variants)),
+            'sizeBytes' => array_sum(array_map(fn($v) => strlen($v['bytes']), $variants)),
         ];
     }
 
@@ -208,7 +219,7 @@ class TourImageService
         if (max($w, $h) > $maxSide || ($w * $h) > $maxPixels) {
             throw new InvalidImageException(
                 "Ảnh quá lớn ({$w}×{$h}px). Giới hạn: cạnh dài tối đa {$maxSide}px, tổng tối đa "
-                . number_format($maxPixels / 1000000, 0) . ' megapixel. Hãy giảm kích thước rồi tải lại.'
+                    . number_format($maxPixels / 1000000, 0) . ' megapixel. Hãy giảm kích thước rồi tải lại.'
             );
         }
     }
