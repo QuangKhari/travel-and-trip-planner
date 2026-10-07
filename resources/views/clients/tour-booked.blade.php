@@ -60,12 +60,6 @@
                 Thanh toán tại văn phòng
             </label>
 
-            <label class="payment-option">
-                <input type="radio" value="momo-payment" @if ($tour_booked->paymentMethod == 'momo-payment') checked @endif disabled>
-                <img src="{{ asset('clients/assets/images/booking/thanh-toan-momo.jpg') }}" alt="MoMo">
-                Thanh toán bằng Momo
-            </label>
-
         </div>
 
         <!-- Order Summary -->
@@ -119,12 +113,20 @@
                 <input type="hidden" name="bookingId" value="{{ $bookingId }}">
 
                 @if ($tour_booked->bookingStatus == 'f')
-                    <a href="{{ route('tour-detail', ['id' => $tour_booked->tourId]) }}" class="booking-btn"style="display: inline-block; text-align: center;">
-                       Đánh giá
+                    <a href="{{ route('tour-detail', ['id' => $tour_booked->tourId]) }}"
+                        class="booking-btn"style="display: inline-block; text-align: center;">
+                        Đánh giá
                     </a>
-                @else
+                @elseif ($tour_booked->bookingStatus == 'c')
+                    <p class="text-center" style="color:#c0392b; font-weight:600;">Đơn này đã được hủy.</p>
+                @elseif ($canCancel)
                     <button type="submit" class="booking-btn btn-cancel-booking">Hủy
                         Tour</button>
+                @else
+                    <p class="text-center" style="color:#7f8c8d;">
+                        Không thể hủy trong vòng {{ \App\Support\CancelPolicy::MIN_DAYS }} ngày trước ngày khởi hành.
+                        Vui lòng liên hệ Travela để được hỗ trợ.
+                    </p>
                 @endif
 
             </div>

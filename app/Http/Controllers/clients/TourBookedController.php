@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\clients\Tours;
+use App\Support\CancelPolicy;
 
 class TourBookedController extends Controller
 {
@@ -32,8 +33,10 @@ class TourBookedController extends Controller
             abort(404);
         }
 
-        $hide = ''; // ràng buộc 7 ngày xử lý riêng ở L-B-07
-        return view("clients.tour-booked", compact('title', 'tour_booked', 'hide', 'bookingId'));
+        // Chính sách hủy 7 ngày 
+        $canCancel = CancelPolicy::allows($tour_booked->bookingStatus, $tour_booked->startDate);
+
+        return view("clients.tour-booked", compact('title', 'tour_booked', 'canCancel', 'bookingId'));
     }
 
     public function cancelBooking(Request $req)
@@ -41,9 +44,10 @@ class TourBookedController extends Controller
         $bookingId = (int) $req->input('bookingId');
         $userId    = (int) $this->getUserId();
         $cancelled = false;
+        $refusal   = 'Đơn này không thể hủy.';
 
-        // Chỉ dùng bookingId từ trình duyệt. Tour, số lượng, trạng thái đều lấy từ database (L-B-05)
-        DB::transaction(function () use ($bookingId, $userId, &$cancelled) {
+        // Chỉ dùng bookingId từ trình duyệt. Tour, số lượng, trạng thái đều lấy từ database
+        DB::transaction(function () use ($bookingId, $userId, &$cancelled, &$refusal) {
             $booking = DB::table('tbl_booking')
                 ->where('bookingId', $bookingId)
                 ->where('userId', $userId)           // chỉ chủ đơn
@@ -56,6 +60,13 @@ class TourBookedController extends Controller
 
             // Chỉ hủy được đơn chưa xác nhận (n) hoặc đã xác nhận (y); đã hủy (c) hoặc hoàn tất (f) thì không
             if (!in_array($booking->bookingStatus, ['n', 'y'], true)) {
+                return;
+            }
+
+            // Cùng chính sách với màn hình: gọi thẳng POST /cancel-booking cũng không qua mặt được
+            $startDate = DB::table('tbl_tours')->where('tourId', $booking->tourId)->value('startDate');
+            if (!CancelPolicy::allows($booking->bookingStatus, $startDate)) {
+                $refusal = 'Chỉ hủy được tour trước ngày khởi hành ít nhất ' . CancelPolicy::MIN_DAYS . ' ngày.';
                 return;
             }
 
@@ -74,7 +85,7 @@ class TourBookedController extends Controller
         if ($cancelled) {
             toastr()->success('Hủy thành công!', ['positionClass' => 'toast-top-right']);
         } else {
-            toastr()->error('Đơn này không thể hủy.', ['positionClass' => 'toast-top-right']);
+            toastr()->error($refusal, ['positionClass' => 'toast-top-right']);
         }
 
         return redirect()->route('home');

@@ -511,7 +511,8 @@ $(document).ready(function () {
     /****************************************
      *             PAGE BOOKING             *
      * ***************************************/
-    let discount = 0; // Giảm giá, có thể cập nhật khi áp dụng mã giảm giá
+    let discount = 0; // Số tiền giảm (tính lại mỗi lần đổi số khách)
+    let discountPercent = 0; // % giảm của mã đã áp dụng (server trả về)
     let totalPrice = 0; // Khai báo biến totalPrice để lưu tổng giá trị
 
     function updateSummary() {
@@ -537,8 +538,15 @@ $(document).ready(function () {
             childPrice.toLocaleString() + " VNĐ",
         );
 
+        // Giảm giá luôn tính lại theo % của mã đã áp dụng, nên đổi số khách sau khi áp mã vẫn đúng
+        const subtotal = adultsTotal + childrenTotal;
+        discount = Math.round((subtotal * discountPercent) / 100);
+        $(".summary-item:nth-child(3) .total-price").text(
+            discount.toLocaleString() + " VNĐ",
+        );
+
         // Tính tổng giá trị
-        totalPrice = adultsTotal + childrenTotal - discount;
+        totalPrice = subtotal - discount;
         $(".summary-item.total-price span:last").text(
             totalPrice.toLocaleString() + " VNĐ",
         );
@@ -610,22 +618,20 @@ $(document).ready(function () {
         }
 
         $.ajax({
-            url: applyCouponUrl, // khai báo biến này trong blade (xem bên dưới)
+            url: applyCouponUrl, // khai báo biến này trong blade
             method: "POST",
             data: {
                 _token: $('input[name="_token"]').val(),
                 code: couponCode,
-                totalPrice: totalPrice,
+                // Server tự tính tiền từ tour + số khách, không nhận totalPrice nữa
+                tourId: $("#tourId").val(),
+                numAdults: $("#numAdults").val(),
+                numChildren: $("#numChildren").val(),
             },
             success: function (res) {
                 if (res.success) {
-                    // Cập nhật biến discount để updateSummary dùng
-                    discount = res.discountAmount;
-
-                    // Cập nhật hiển thị dòng giảm giá
-                    $(".summary-item:nth-child(3) .total-price").text(
-                        res.discountAmount.toLocaleString() + " VNĐ",
-                    );
+                    // Nhớ % giảm; updateSummary sẽ tính lại số tiền giảm và dòng hiển thị
+                    discountPercent = Number(res.discount) || 0;
 
                     // Lưu promotionId để gửi khi submit
                     $("#promotionId").val(res.promotionId);
@@ -641,8 +647,14 @@ $(document).ready(function () {
                     toastr.error(res.message);
                 }
             },
-            error: function () {
-                toastr.error("Có lỗi xảy ra, vui lòng thử lại!");
+            error: function (xhr) {
+                if (xhr.status === 429) {
+                    toastr.error(
+                        "Bạn thử quá nhiều lần, vui lòng đợi một phút!",
+                    );
+                } else {
+                    toastr.error("Có lỗi xảy ra, vui lòng thử lại!");
+                }
             },
         });
     });
