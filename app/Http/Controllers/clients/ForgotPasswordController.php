@@ -132,17 +132,41 @@ class ForgotPasswordController extends Controller
             return response()->json($expired);
         }
 
-        $user = DB::table('tbl_users')->where('userId', $reset->userId)->first();
-        if (!$user || in_array($user->status, ['b', 'd'], true)) {
+        $success = DB::transaction(function () use ($reset, $request) {
+            // Khóa tài khoản trước để hai request reset đồng thời không thể cùng đổi mật khẩu.
+            $user = DB::table('tbl_users')
+                ->where('userId', $reset->userId)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$user || in_array($user->status, ['b', 'd'], true)) {
+                return false;
+            }
+
+            // Kiểm tra lại token bên trong transaction sau khi đã khóa user.
+            $currentReset = DB::table('tbl_password_reset')
+                ->where('tokenHash', hash('sha256', $request->token))
+                ->where('userId', $reset->userId)
+                ->where('expiresAt', '>', now())
+                ->first();
+
+            if (!$currentReset) {
+                return false;
+            }
+
+            $this->login->updatePassword($reset->userId, PasswordHasher::make($request->password));
+
+            // Dùng một lần: xóa mọi liên kết của tài khoản này
+            DB::table('tbl_password_reset')
+                ->where('userId', $reset->userId)
+                ->delete();
+
+            return true;
+        });
+
+        if (!$success) {
             return response()->json($expired);
         }
-
-        // Đổi theo userId lấy từ token, KHÔNG theo email hay username do người gửi cung cấp (L-A-05)
-        DB::transaction(function () use ($reset, $request) {
-            $this->login->updatePassword($reset->userId, PasswordHasher::make($request->password));
-            // Dùng một lần: xóa mọi liên kết của tài khoản này
-            DB::table('tbl_password_reset')->where('userId', $reset->userId)->delete();
-        });
 
         return response()->json([
             'success'     => true,
