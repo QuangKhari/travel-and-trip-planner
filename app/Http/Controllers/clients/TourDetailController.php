@@ -87,12 +87,20 @@ class TourDetailController extends Controller
             ], 409);
         }
 
-        $this->tours->createReviews([
-            'tourId' => $tourId,
-            'userId' => $userId,
-            'comment' => trim((string) $req->message),
-            'rating' => (int) $req->rating,
-        ]);
+        try {
+            $this->tours->createReviews([
+                'tourId' => $tourId,
+                'userId' => $userId,
+                'comment' => trim((string) $req->message),
+                'rating' => (int) $req->rating,
+            ]);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            // Hai request cùng lúc: UNIQUE(userId, tourId) chặn bản thứ hai 
+            return response()->json([
+                'success' => false,
+                'message' => 'Bạn đã đánh giá tour này rồi.',
+            ], 409);
+        }
 
         $tourDetail = $this->tours->getTourDetail($tourId);
         $getReviews = $this->tours->getReviews($tourId);
