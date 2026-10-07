@@ -32,10 +32,10 @@ use App\Http\Controllers\clients\ForgotPasswordController;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/about', [AboutController::class, 'index'])->name('about');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
+Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:5,1,contact')->name('contact.send');
 Route::get('/destination', [DestinationController::class, 'index'])->name('destination');
 Route::get('/travel-guides', [TravelGuidesController::class, 'index'])->name('team');
 Route::get('/tour-detail/{id}', [TourDetailController::class, 'index'])->whereNumber('id')->name('tour-detail');
-Route::post('/update-basic-tour', [ToursManagementController::class, 'updateBasicTour'])->name('admin.update-basic-tour');
 Route::get('/blogs', [BlogController::class, 'index'])->name('blogs');
 Route::get('/blog-detail', [BlogDetailController::class, 'index'])->name('blog-detail');
 Route::get('/search', [SearchController::class, 'index'])->name('search');
@@ -70,18 +70,17 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
 
     // đặt tour
     Route::post('/booking/{id?}', [BookingController::class, 'index'])->name('booking');
-    Route::post('/create-booking', [BookingController::class, 'createBooking'])->name('create-booking');
-    Route::post('/apply-coupon', [BookingController::class, 'applyCoupon'])->name('apply-coupon');
+    Route::post('/create-booking', [BookingController::class, 'createBooking'])->middleware('throttle:10,1,create-booking')->name('create-booking');
+    Route::post('/apply-coupon', [BookingController::class, 'applyCoupon'])->middleware('throttle:20,1,apply-coupon')->name('apply-coupon');
     Route::post('/checkBooking', [BookingController::class, 'checkBooking'])->name('checkBooking');
 
     // đơn đã đặt, đánh giá
     Route::get('/tour-booked', [TourBookedController::class, 'index'])->name('tour-booked');
     Route::post('/cancel-booking', [TourBookedController::class, 'cancelBooking'])->name('cancel-booking');
-    Route::post('/reviews', [TourDetailController::class, 'reviews'])->name('reviews');
+    Route::post('/reviews', [TourDetailController::class, 'reviews'])->middleware('throttle:10,1,reviews')->name('reviews');
     Route::get('/my-tours', [MyTourController::class, 'index'])->name('my-tours');
 });
 
-// ===== TẠM TẮT (L-B-06, L-B-14, L-B-15) – thay bằng VNPay ở Tuần 3–4 =====
 // /payment-confirm: đã xóa hẳn (không có view nào gọi).
 // Hai route dưới giữ lại tên để view không báo "Route not defined", nhưng luôn trả 410.
 Route::match(['get', 'post'], '/create-momo-payment', fn() => response()->json([
@@ -124,6 +123,7 @@ Route::prefix('admin')->group(function () {
         Route::post('/edit-tour', [ToursManagementController::class, 'updateTour'])->name('admin.edit-tour');
         Route::get('/page-add-tours', [ToursManagementController::class, 'pageAddTours'])->name('admin.page-add-tours');
         Route::post('/add-tours', [ToursManagementController::class, 'addTours'])->name('admin.add-tours');
+        Route::post('/update-basic-tour', [ToursManagementController::class, 'updateBasicTour'])->name('admin.update-basic-tour');
         Route::post('/delete-tour', [ToursManagementController::class, 'deleteTour'])->name('admin.delete-tour');
         Route::post('/add-temp-images', [ToursManagementController::class, 'uploadTempImagesTours'])->name('admin.add-temp-images');
         Route::post('/add-images-tours', [ToursManagementController::class, 'addImagesTours'])->name('admin.add-images-tours');
@@ -138,7 +138,7 @@ Route::prefix('admin')->group(function () {
         Route::post('/finish-booking', [BookingManagementController::class, 'finishBooking'])->name('admin.finish-booking');
         Route::post('/received-money', [BookingManagementController::class, 'receiviedMoney'])->name('admin.received');
         Route::post('/confirm-payment', [BookingManagementController::class, 'confirmPayment'])->name('admin.confirm-payment');
-        Route::post('/admin/send-pdf', [BookingManagementController::class, 'sendPdf'])->name('admin.send.pdf');
+        Route::post('/send-pdf', [BookingManagementController::class, 'sendPdf'])->middleware('throttle:10,1,send-pdf')->name('admin.send.pdf');
 
         //Promotion
         Route::get('/promotion', [PromotionManagementController::class, 'index'])->name('admin.promotion');

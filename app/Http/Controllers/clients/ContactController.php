@@ -4,63 +4,62 @@ namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Validator;
 
 class ContactController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+
     public function index()
     {
         $title = 'Liên hệ';
         return view('clients.contact', compact('title'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
-    }
+        $validator = Validator::make($request->all(), [
+            'name'         => 'required|string|max:100',
+            'phone_number' => ['required', 'regex:/^[0-9+\s.\-]{8,15}$/'],
+            'email'        => ['required', 'email:filter', 'max:255'],
+            'message'      => 'required|string|max:2000',
+        ], [
+            'name.required'         => 'Vui lòng nhập họ tên.',
+            'phone_number.required' => 'Vui lòng nhập số điện thoại.',
+            'phone_number.regex'    => 'Số điện thoại không hợp lệ.',
+            'email.required'        => 'Vui lòng nhập email.',
+            'email.email'           => 'Email không hợp lệ.',
+            'message.required'      => 'Vui lòng nhập nội dung.',
+            'message.max'           => 'Nội dung tối đa 2000 ký tự.',
+        ]);
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
+        if ($validator->fails()) {
+            toastr()->error($validator->errors()->first());
+            return redirect()->route('contact')->withInput();
+        }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
+        $data = $validator->validated();
+        $name = str_replace(["\r", "\n"], ' ', $data['name']);   // chống chèn header thư
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
+        $body = "Họ tên: {$name}\n"
+            . "Điện thoại: {$data['phone_number']}\n"
+            . "Email: {$data['email']}\n\n"
+            . $data['message'];
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+        try {
+            Mail::raw($body, function ($message) use ($data, $name) {
+                $message->to(config('mail.from.address'))
+                    ->replyTo($data['email'], $name)
+                    ->subject('Liên hệ mới từ ' . $name);
+            });
+        } catch (\Throwable $e) {
+            // Không cho khách thấy lỗi nội bộ; vẫn lưu nội dung vào log để không mất tin nhắn
+            Log::error('Gửi mail liên hệ thất bại: ' . $e->getMessage());
+            Log::info('Liên hệ chưa gửi được: ' . $body);
+        }
+
+        toastr()->success('Cảm ơn bạn, Travela đã nhận được tin nhắn và sẽ phản hồi sớm.');
+        return redirect()->route('contact');
     }
 }
