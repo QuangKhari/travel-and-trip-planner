@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\clients\Tours;
 use App\Support\CancelPolicy;
+use App\Services\BookingService;
 
 class TourBookedController extends Controller
 {
@@ -39,7 +40,7 @@ class TourBookedController extends Controller
         return view("clients.tour-booked", compact('title', 'tour_booked', 'canCancel', 'bookingId'));
     }
 
-    public function cancelBooking(Request $req)
+    public function cancelBooking(Request $req, BookingService $bookings)
     {
         $bookingId = (int) $req->input('bookingId');
         $userId    = (int) $this->getUserId();
@@ -47,7 +48,7 @@ class TourBookedController extends Controller
         $refusal   = 'Đơn này không thể hủy.';
 
         // Chỉ dùng bookingId từ trình duyệt. Tour, số lượng, trạng thái đều lấy từ database
-        DB::transaction(function () use ($bookingId, $userId, &$cancelled, &$refusal) {
+        DB::transaction(function () use ($bookingId, $userId, $bookings, &$cancelled, &$refusal) {
             $booking = DB::table('tbl_booking')
                 ->where('bookingId', $bookingId)
                 ->where('userId', $userId)           // chỉ chủ đơn
@@ -70,14 +71,8 @@ class TourBookedController extends Controller
                 return;
             }
 
-            DB::table('tbl_booking')
-                ->where('bookingId', $bookingId)
-                ->update(['bookingStatus' => 'c']);
-
-            // Trả chỗ đúng số lượng đã đặt, đúng một lần
-            DB::table('tbl_tours')
-                ->where('tourId', $booking->tourId)
-                ->increment('quantity', (int) $booking->numAdults + (int) $booking->numChildren);
+            // Đổi trạng thái, trả chỗ đúng một lần và nhả mã giảm giá
+            $bookings->cancelLocked($booking);
 
             $cancelled = true;
         });

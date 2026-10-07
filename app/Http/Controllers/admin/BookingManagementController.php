@@ -100,9 +100,12 @@ class BookingManagementController extends Controller
                 return ['ok' => true, 'message' => 'Đơn này đã được xác nhận thanh toán trước đó.'];
             }
 
+            // Khách đã trả tiền thì đơn không được tự hủy vì quá hạn giữ chỗ
+            DB::table('tbl_booking')->where('bookingId', $bookingId)->update(['holdExpiresAt' => null]);
+
             DB::table('tbl_checkout')->where('bookingId', $bookingId)->update([
                 'paymentStatus' => 'y',
-                'paymentDate'   => now(),   // trước đây nhờ ON UPDATE tự đổi; nay ghi tường minh
+                'paymentDate'   => now(),
             ]);
 
             return ['ok' => true, 'message' => 'Xác nhận thanh toán thành công.'];
@@ -126,7 +129,8 @@ class BookingManagementController extends Controller
                 return ['ok' => false, 'message' => 'Chỉ xác nhận được đơn đang chờ xử lý.'];
             }
 
-            DB::table('tbl_booking')->where('bookingId', $bookingId)->update(['bookingStatus' => 'y']);
+            // Đã xác nhận thì không còn hạn giữ chỗ 
+            DB::table('tbl_booking')->where('bookingId', $bookingId)->update(['bookingStatus' => 'y', 'holdExpiresAt' => null]);
 
             return ['ok' => true, 'message' => 'Cập nhật trạng thái thành công.'];
         });
