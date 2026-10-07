@@ -13,15 +13,26 @@ class Tours extends Model
     protected $table = 'tbl_tours';
 
     // Lấy tất cả các tour
-    public function getAllTours()
+    public function getAllTours($limit = null)
     {
-        $allTours = DB::table($this->table)->get();
+        $query = DB::table($this->table)
+            ->where('availability', 1)
+            ->where('quantity', '>', 0)
+            ->whereDate('startDate', '>', now()->toDateString());
+
+        if ($limit !== null) {
+            $query->limit((int) $limit);
+        }
+
+        $allTours = $query->get();
+
         foreach ($allTours as $tour) {
             // Lấy danh sách hình ảnh thuộc về tour
             $tour->images = DB::table('tbl_images')
                 ->where('tourId', $tour->tourId)
                 ->pluck('imageURL');
         }
+
         return $allTours;
     }
 
