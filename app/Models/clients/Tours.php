@@ -87,7 +87,10 @@ class Tours extends Model
                 'tbl_tours.destination',
                 'tbl_tours.quantity'
             );
-        $getTours = $getTours->where('availability', 1);
+        $getTours = $getTours
+            ->where('tbl_tours.availability', 1)
+            ->where('tbl_tours.quantity', '>', 0)
+            ->whereDate('tbl_tours.startDate', '>', now()->toDateString());
 
         // Mặc định: tour mới nhất hiển thị đầu tiên
         if (empty($sorting)) {
