@@ -40,7 +40,18 @@ class UserManagementController extends Controller
 
     public function activeUser(Request $request)
     {
-        $userId = $request->userId;
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'userId' => 'required|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $userId = (int) $request->userId;
 
         $updateActive = $this->users->updateActive($userId);
 
