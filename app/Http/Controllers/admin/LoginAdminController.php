@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\admin\LoginModel;
 use App\Support\PasswordHasher;
+use Illuminate\Support\Facades\Validator;
 
 class LoginAdminController extends Controller
 {
@@ -25,6 +26,16 @@ class LoginAdminController extends Controller
 
     public function loginAdmin(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'username' => 'required|string|max:50',
+            'password' => 'required|string|max:72',
+        ]);
+
+        if ($validator->fails()) {
+            toastr()->error('Vui lòng nhập đầy đủ thông tin đăng nhập.');
+            return redirect()->route('admin.login');
+        }
+
         $username = trim((string) $request->username);
         $password = (string) $request->password;
 

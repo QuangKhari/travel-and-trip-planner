@@ -161,7 +161,9 @@ class TourImageService
                     return;
                 }
 
-                $this->assertQuota($tourId, strlen($largest['bytes']));
+                $incomingBytes = array_sum(array_map(fn($v) => strlen($v['bytes']), $variants));
+
+                $this->assertQuota($tourId, $incomingBytes);
                 $this->writeVariants($stem, $variants);
             });
         }
@@ -256,7 +258,7 @@ class TourImageService
         }
 
         $maxBytes = (int) config('media.limits.max_total_mb', 2048) * 1048576;
-        if ($this->totalBytes() + $incomingBytes * 2 > $maxBytes) {
+        if ($this->totalBytes() + $incomingBytes > $maxBytes) {
             throw new InvalidImageException('Kho ảnh đã đầy (vượt quota). Liên hệ quản trị hệ thống.');
         }
     }

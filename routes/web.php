@@ -83,7 +83,7 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
 
     // đặt tour
     // GET để F5 hoặc mở link trực tiếp không bị 405 
-    Route::match(['get', 'post'], '/booking/{id?}', [BookingController::class, 'index'])->name('booking');
+    Route::match(['get', 'post'], '/booking/{id?}', [BookingController::class, 'index'])->whereNumber('id')->name('booking');
     Route::post('/create-booking', [BookingController::class, 'createBooking'])->middleware('throttle:10,1,create-booking')->name('create-booking');
     Route::post('/apply-coupon', [BookingController::class, 'applyCoupon'])->middleware('throttle:20,1,apply-coupon')->name('apply-coupon');
     Route::post('/checkBooking', [BookingController::class, 'checkBooking'])->name('checkBooking');

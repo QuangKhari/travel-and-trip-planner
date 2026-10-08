@@ -54,9 +54,14 @@ class ContactController extends Controller
                     ->subject('Liên hệ mới từ ' . $name);
             });
         } catch (\Throwable $e) {
-            // Không cho khách thấy lỗi nội bộ; vẫn lưu nội dung vào log để không mất tin nhắn
-            Log::error('Gửi mail liên hệ thất bại: ' . $e->getMessage());
-            Log::info('Liên hệ chưa gửi được: ' . $body);
+            Log::error('Gửi mail liên hệ thất bại.', [
+                'email' => $data['email'],
+                'name' => $name,
+                'exception' => $e->getMessage(),
+            ]);
+
+            toastr()->error('Không thể gửi liên hệ lúc này. Vui lòng thử lại sau.');
+            return redirect()->route('contact')->withInput();
         }
 
         toastr()->success('Cảm ơn bạn, Travela đã nhận được tin nhắn và sẽ phản hồi sớm.');

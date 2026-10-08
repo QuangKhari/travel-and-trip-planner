@@ -164,6 +164,18 @@ class LoginController extends Controller
     //xử lý người dùng đăng nhập
     public function login(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'username' => 'required|string|max:50',
+            'password' => 'required|string|max:72',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vui lòng nhập đầy đủ thông tin đăng nhập.',
+            ]);
+        }
+
         $username = trim((string) $request->username);
         $password = (string) $request->password;
 

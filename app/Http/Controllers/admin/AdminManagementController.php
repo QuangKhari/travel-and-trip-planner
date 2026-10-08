@@ -34,8 +34,8 @@ class AdminManagementController extends Controller
     public function updateAdmin(Request $request)
     {
         $request->validate([
-            'fullName' => 'required|string|max:100',
-            'email'    => ['required', 'email:filter', 'max:255', 'regex:/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/'],
+            'fullName' => 'required|string|max:50',
+            'email'    => ['required', 'email:filter', 'max:50', 'regex:/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/'],
             'address'  => 'required|string|max:255',
             'password' => 'nullable|string|min:6|max:72',
         ]);
@@ -108,11 +108,11 @@ class AdminManagementController extends Controller
     public function addManager(Request $request)
     {
         $request->validate([
-            'userName' => 'required',
-            'password' => 'required|min:6|max:72',
-            'email'    => 'required|email',
-            'fullName' => 'required',
-            'address'  => 'required',
+            'userName' => 'required|string|max:50',
+            'password' => 'required|string|min:6|max:72',
+            'email'    => ['required', 'email:filter', 'max:50', 'regex:/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/'],
+            'fullName' => 'required|string|max:50',
+            'address'  => 'required|string|max:255',
         ]);
 
         $data = [
@@ -172,11 +172,11 @@ class AdminManagementController extends Controller
     public function addStaff(Request $request)
     {
         $request->validate([
-            'userName' => 'required',
-            'password' => 'required|min:6|max:72',
-            'email'    => 'required|email',
-            'fullName' => 'required',
-            'address'  => 'required',
+            'userName' => 'required|string|max:50',
+            'password' => 'required|string|min:6|max:72',
+            'email'    => ['required', 'email:filter', 'max:50', 'regex:/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/'],
+            'fullName' => 'required|string|max:50',
+            'address'  => 'required|string|max:255',
         ]);
 
         $data = [

@@ -55,8 +55,8 @@ class ToursManagementController extends Controller
             'destination' => 'required|string|max:255',
             'domain'      => 'required|in:b,t,n',
             'number'      => 'required|integer|min:1|max:100000',
-            'price_adult' => 'required|numeric|min:0',
-            'price_child' => 'required|numeric|min:0',
+            'price_adult' => 'required|numeric|min:0|max:999999999999',
+            'price_child' => 'required|numeric|min:0|max:999999999999',
             'start_date'  => 'required|date_format:d/m/Y',
             'end_date'    => 'required|date_format:d/m/Y',
             'description' => 'nullable|string|max:20000',
@@ -79,6 +79,8 @@ class ToursManagementController extends Controller
             'end_date.required'    => 'Vui lòng chọn ngày kết thúc.',
             'end_date.date_format' => 'Ngày kết thúc phải có dạng ngày/tháng/năm.',
             'description.required' => 'Vui lòng điền mô tả.',
+            'price_adult.max' => 'Giá người lớn vượt quá giới hạn cho phép.',
+            'price_child.max' => 'Giá trẻ em vượt quá giới hạn cho phép.',
         ]);
 
         // HTTP 200 + success=false: JS của wizard chỉ hiện message của server khi nhận 200
@@ -655,6 +657,21 @@ class ToursManagementController extends Controller
                     'success' => false,
                     'status' => 404,
                     'message' => 'Không tìm thấy tour.',
+                ];
+            }
+
+            if (
+                (int) $tour->availability === 1
+                && (int) $dataTours['quantity'] < (int) $tour->quantity
+                && DB::table('tbl_booking')
+                ->where('tourId', $tourId)
+                ->where('bookingStatus', '!=', 'c')
+                ->exists()
+            ) {
+                return [
+                    'success' => false,
+                    'status' => 409,
+                    'message' => 'Tour đã có booking nên không thể giảm số chỗ còn lại.',
                 ];
             }
 

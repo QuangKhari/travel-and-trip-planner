@@ -41,7 +41,7 @@ class UserManagementController extends Controller
     public function activeUser(Request $request)
     {
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'userId' => 'required|integer|min:1',
+            'userId' => 'required|integer|min:1|exists:tbl_users,userId',
         ]);
 
         if ($validator->fails()) {
