@@ -119,10 +119,22 @@ class BookingManagementController extends Controller
         $bookingId = (int) $request->bookingId;
 
         $result = DB::transaction(function () use ($bookingId, $bookings) {
-            $booking = DB::table('tbl_booking')->where('bookingId', $bookingId)->lockForUpdate()->first();
+            $booking = DB::table('tbl_booking')
+                ->where('bookingId', $bookingId)
+                ->lockForUpdate()
+                ->first();
+
+            $checkout = DB::table('tbl_checkout')
+                ->where('bookingId', $bookingId)
+                ->lockForUpdate()
+                ->first();
 
             if (!$booking) {
                 return ['ok' => false, 'message' => 'Không tìm thấy đơn.'];
+            }
+
+            if (!$checkout) {
+                return ['ok' => false, 'message' => 'Đơn chưa có thông tin thanh toán.'];
             }
             if ($booking->bookingStatus === 'y') {
                 return ['ok' => true, 'message' => 'Đơn đã được xác nhận trước đó.'];
@@ -132,12 +144,18 @@ class BookingManagementController extends Controller
                 && $booking->holdExpiresAt !== null
                 && \Carbon\Carbon::parse($booking->holdExpiresAt)->isPast()
             ) {
-                $bookings->cancelLocked($booking);
+                if ($checkout->paymentStatus === 'y') {
+                    DB::table('tbl_booking')
+                        ->where('bookingId', $bookingId)
+                        ->update(['holdExpiresAt' => null]);
+                } else {
+                    $bookings->cancelLocked($booking);
 
-                return [
-                    'ok' => false,
-                    'message' => 'Đơn đã hết thời gian giữ chỗ và đã được hủy.'
-                ];
+                    return [
+                        'ok' => false,
+                        'message' => 'Đơn đã hết thời gian giữ chỗ và đã được hủy.'
+                    ];
+                }
             }
             if ($booking->bookingStatus !== 'n') {
                 return ['ok' => false, 'message' => 'Chỉ xác nhận được đơn đang chờ xử lý.'];
