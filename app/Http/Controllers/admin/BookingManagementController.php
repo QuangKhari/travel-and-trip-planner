@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Services\UserMediaService;
+use App\Services\BookingService;
 
 class BookingManagementController extends Controller
 {
@@ -113,11 +114,11 @@ class BookingManagementController extends Controller
         });
     }
 
-    public function confirmBooking(Request $request)
+    public function confirmBooking(Request $request, BookingService $bookings)
     {
         $bookingId = (int) $request->bookingId;
 
-        $result = DB::transaction(function () use ($bookingId) {
+        $result = DB::transaction(function () use ($bookingId, $bookings) {
             $booking = DB::table('tbl_booking')->where('bookingId', $bookingId)->lockForUpdate()->first();
 
             if (!$booking) {
@@ -131,9 +132,11 @@ class BookingManagementController extends Controller
                 && $booking->holdExpiresAt !== null
                 && \Carbon\Carbon::parse($booking->holdExpiresAt)->isPast()
             ) {
+                $bookings->cancelLocked($booking);
+
                 return [
                     'ok' => false,
-                    'message' => 'Đơn đã hết thời gian giữ chỗ và không thể xác nhận.'
+                    'message' => 'Đơn đã hết thời gian giữ chỗ và đã được hủy.'
                 ];
             }
             if ($booking->bookingStatus !== 'n') {
