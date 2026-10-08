@@ -54,24 +54,43 @@ class ForgotPasswordController extends Controller
         }
         $user = $users[0];
 
-        // Chống gửi dồn dập
-        $recent = DB::table('tbl_password_reset')
-            ->where('userId', $user->userId)
-            ->where('createdAt', '>', now()->subSeconds(self::RESEND_SECONDS))
-            ->exists();
-        if ($recent) {
-            return $generic;
-        }
-
         $token = Str::random(64);
 
-        // Mỗi tài khoản chỉ có một liên kết còn hiệu lực
-        DB::table('tbl_password_reset')->where('userId', $user->userId)->delete();
-        DB::table('tbl_password_reset')->insert([
-            'userId'    => $user->userId,
-            'tokenHash' => hash('sha256', $token),
-            'expiresAt' => now()->addMinutes(self::TOKEN_MINUTES),
-        ]);
+        $created = DB::transaction(function () use ($user, $token) {
+            $lockedUser = DB::table('tbl_users')
+                ->where('userId', $user->userId)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$lockedUser || in_array($lockedUser->status, ['b', 'd'], true)) {
+                return false;
+            }
+
+            $recent = DB::table('tbl_password_reset')
+                ->where('userId', $lockedUser->userId)
+                ->where('createdAt', '>', now()->subSeconds(self::RESEND_SECONDS))
+                ->exists();
+
+            if ($recent) {
+                return false;
+            }
+
+            DB::table('tbl_password_reset')
+                ->where('userId', $lockedUser->userId)
+                ->delete();
+
+            DB::table('tbl_password_reset')->insert([
+                'userId'    => $lockedUser->userId,
+                'tokenHash' => hash('sha256', $token),
+                'expiresAt' => now()->addMinutes(self::TOKEN_MINUTES),
+            ]);
+
+            return true;
+        });
+
+        if (!$created) {
+            return $generic;
+        }
 
         $url = route('password.reset.form', ['token' => $token]);
 

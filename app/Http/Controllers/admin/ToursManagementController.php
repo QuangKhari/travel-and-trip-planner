@@ -59,7 +59,7 @@ class ToursManagementController extends Controller
             'price_child' => 'required|numeric|min:0',
             'start_date'  => 'required|date_format:d/m/Y',
             'end_date'    => 'required|date_format:d/m/Y',
-            'description' => 'required|string',
+            'description' => 'nullable|string|max:20000',
         ], [
             'name.required'        => 'Vui lòng nhập tên tour.',
             'destination.required' => 'Vui lòng nhập điểm đến.',
@@ -166,8 +166,24 @@ class ToursManagementController extends Controller
                     ], 422);
                 }
 
+                $itinerary = $request->input("itinerary-{$matches[1]}");
+
+                if (!is_string($itinerary)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Nội dung lộ trình không hợp lệ.',
+                    ], 422);
+                }
+
+                if (mb_strlen($itinerary) > 20000) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Nội dung lộ trình không được vượt quá 20000 ký tự.',
+                    ], 422);
+                }
+
                 try {
-                    $description = HtmlSanitizer::cleanOrReject($request->input("itinerary-{$matches[1]}"));
+                    $description = HtmlSanitizer::cleanOrReject($itinerary);
                 } catch (UnsafeHtmlException $e) {
                     return response()->json(['success' => false, 'message' => $e->getMessage()]);
                 }
@@ -189,10 +205,20 @@ class ToursManagementController extends Controller
             ], 422);
         }
 
+        $timelineDays = array_keys($timelines);
+
+        foreach ($timelineDays as $index => $day) {
+            if ($day !== $index + 1) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ngày trong lộ trình phải bắt đầu từ ngày 1 và liên tục.'
+                ], 422);
+            }
+        }
+
         try {
             $result = DB::transaction(function () use ($tourId, $timelines) {
-                // Khóa tour trong transaction để chống hai request "Hoàn thành"
-                // cùng lúc.
+                // Khóa tour trong transaction để tránh hai request cùng lúc thêm tour.
                 $tour = DB::table('tbl_tours')
                     ->where('tourId', $tourId)
                     ->lockForUpdate()
@@ -235,11 +261,11 @@ class ToursManagementController extends Controller
                 $end = Carbon::parse($tour->endDate)->startOfDay();
                 $maxTimelineDays = (int) $start->diffInDays($end) + 1;
 
-                if (count($timelines) > $maxTimelineDays) {
+                if (count($timelines) !== $maxTimelineDays || max(array_keys($timelines)) !== $maxTimelineDays) {
                     return [
                         'success' => false,
                         'status'  => 422,
-                        'message' => "Lộ trình không được vượt quá {$maxTimelineDays} ngày.",
+                        'message' => "Lộ trình phải có đúng {$maxTimelineDays} ngày.",
                     ];
                 }
 
@@ -248,7 +274,7 @@ class ToursManagementController extends Controller
                     ->where('tourId', $tourId)
                     ->orderBy('imageId')
                     ->pluck('imageTempURL')
-                    ->filter(fn($i) => is_string($i) && $this->images->isStemForTour($i, $tourId))
+                    ->filter(fn($i) => is_string($i) && $this->images->isStemForTour($i, $tourId) && $this->images->stemExists($i))
                     ->unique()
                     ->values()
                     ->all();
@@ -337,49 +363,96 @@ class ToursManagementController extends Controller
 
     public function uploadTempImagesTours(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'tourId' => 'required|integer|min:1',
+        ], [
+            'tourId.required' => 'Thiếu mã tour.',
+            'tourId.integer'  => 'Mã tour không hợp lệ.',
+            'tourId.min'      => 'Mã tour không hợp lệ.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
         $tourId = (int) $request->input('tourId');
 
-        $tour = DB::table('tbl_tours')
-            ->where('tourId', $tourId)
-            ->first();
-
-        if (!$tour) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Tour không tồn tại.'
-            ], 404);
-        }
-
-        if ((int) $tour->availability === 1) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Tour đã đăng, không thể thêm ảnh tạm.'
-            ], 409);
-        }
-
-        [$meta, $error] = $this->storeUploadedImage($request);
-        if ($error) {
-            return $error;
-        }
         try {
-            $this->tours->uploadTempImages([
-                'tourId'       => $tourId,
-                'imageTempURL' => $meta['stem'],
-            ]);
+            $result = DB::transaction(function () use ($request, $tourId) {
+                $tour = DB::table('tbl_tours')
+                    ->where('tourId', $tourId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$tour) {
+                    return [
+                        'response' => response()->json([
+                            'success' => false,
+                            'message' => 'Tour không tồn tại.'
+                        ], 404),
+                    ];
+                }
+
+                if ((int) $tour->availability === 1) {
+                    return [
+                        'response' => response()->json([
+                            'success' => false,
+                            'message' => 'Tour đã đăng, không thể thêm ảnh tạm.'
+                        ], 409),
+                    ];
+                }
+
+                [$meta, $error] = $this->storeUploadedImage($request);
+
+                if ($error) {
+                    return [
+                        'response' => $error,
+                    ];
+                }
+
+                try {
+                    $this->tours->uploadTempImages([
+                        'tourId'       => $tourId,
+                        'imageTempURL' => $meta['stem'],
+                    ]);
+                } catch (\Throwable $e) {
+                    // DB insert thất bại thì xóa ảnh vật lý vừa tạo,
+                    // tránh ảnh mồ côi trong storage.
+                    $this->images->delete($meta['stem']);
+                    throw $e;
+                }
+
+                return [
+                    'meta' => $meta,
+                ];
+            });
+
+            if (isset($result['response'])) {
+                return $result['response'];
+            }
+
+            $meta = $result['meta'];
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Image uploaded successfully',
+                'data'    => [
+                    'filename' => $meta['stem'],
+                    'url'      => TourImage::url($meta['stem'], 320),
+                    'tourId'   => $tourId,
+                ],
+            ], 200);
         } catch (\Throwable $e) {
             report($e);
-            return response()->json(['success' => false, 'message' => 'Không lưu được thông tin ảnh tạm.'], 500);
-        }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Image uploaded successfully',
-            'data'    => [
-                'filename' => $meta['stem'],
-                'url'      => TourImage::url($meta['stem'], 320),
-                'tourId'   => $tourId,
-            ],
-        ], 200);
+            return response()->json([
+                'success' => false,
+                'message' => 'Không lưu được thông tin ảnh tạm.'
+            ], 500);
+        }
     }
 
     /**
@@ -440,9 +513,11 @@ class ToursManagementController extends Controller
             'destination' => 'required|string|max:255',
             'domain'      => 'required|in:b,t,n',
             'number'      => 'required|integer|min:0|max:100000',
-            'price_adult' => 'required|numeric|min:0',
-            'price_child' => 'required|numeric|min:0',
-            'description' => 'nullable|string',
+            'price_adult' => 'required|numeric|min:0|max:999999999999',
+            'price_child' => 'required|numeric|min:0|max:999999999999',
+            'start_date'  => 'required|date_format:d/m/Y',
+            'end_date'    => 'required|date_format:d/m/Y',
+            'description' => 'nullable|string|max:20000',
             'images'      => 'nullable|array',
             'timeline'    => 'nullable|array',
         ], [
@@ -454,6 +529,12 @@ class ToursManagementController extends Controller
             'number.min'           => 'Số lượng không được âm.',
             'price_adult.min'      => 'Giá người lớn không được âm.',
             'price_child.min'      => 'Giá trẻ em không được âm.',
+            'start_date.required'    => 'Vui lòng chọn ngày bắt đầu.',
+            'start_date.date_format' => 'Ngày bắt đầu phải có dạng ngày/tháng/năm.',
+            'end_date.required'      => 'Vui lòng chọn ngày kết thúc.',
+            'end_date.date_format'   => 'Ngày kết thúc phải có dạng ngày/tháng/năm.',
+            'price_adult.max'      => 'Giá người lớn vượt quá giới hạn cho phép.',
+            'price_child.max'      => 'Giá trẻ em vượt quá giới hạn cho phép.',
         ]);
 
         // HTTP 200 + success=false để JS hiện đúng thông báo
@@ -463,6 +544,19 @@ class ToursManagementController extends Controller
 
         $tourId = (int) $request->tourId;
         $name = $request->input('name');
+
+        $start = Carbon::createFromFormat('d/m/Y', $request->input('start_date'))->startOfDay();
+        $end   = Carbon::createFromFormat('d/m/Y', $request->input('end_date'))->startOfDay();
+
+        if ($end->lt($start)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.',
+            ]);
+        }
+
+        $days = (int) $start->diffInDays($end) + 1;
+        $nights = $days - 1;
 
         try {
             $description = HtmlSanitizer::cleanOrReject($request->input('description'));
@@ -478,28 +572,66 @@ class ToursManagementController extends Controller
             'priceChild'  => $request->input('price_child'),
             'destination' => $request->input('destination'),
             'domain'      => $request->input('domain'),
+            'startDate'   => $start->format('Y-m-d'),
+            'endDate'     => $end->format('Y-m-d'),
+            'time'        => "{$days} ngày {$nights} đêm",
         ];
 
-        // Ảnh đang có trước khi sửa (để biết ảnh nào bị gỡ và cần xóa file sau khi lưu thành công)
-        $oldStems = $this->tours->getImages($tourId)->pluck('imageURL')->all();
-
-        // Chỉ chấp nhận ảnh mới thuộc đúng tour đang sửa hoặc ảnh cũ đã thuộc tour này.
         $images = $request->input('images');
         $images = is_array($images)
-            ? array_values(array_unique(array_filter($images, fn($i) => is_string($i) && $i !== '' && (($this->images->isStemForTour($i, $tourId) && $this->images->stemExists($i)) || in_array($i, $oldStems, true)))))
+            ? array_values(array_unique(array_filter($images, fn($i) => is_string($i) && $i !== '')))
             : [];
         $timelines = $request->input('timeline');
 
-        if (is_array($timelines)) {
-            foreach ($timelines as &$timeline) {
-                try {
-                    $timeline['itinerary'] = HtmlSanitizer::cleanOrReject($timeline['itinerary'] ?? '');
-                } catch (UnsafeHtmlException $e) {
-                    return response()->json(['success' => false, 'message' => $e->getMessage()]);
-                }
-            }
-            unset($timeline);
+        if (!is_array($timelines) || count($timelines) !== $days) {
+            return response()->json([
+                'success' => false,
+                'message' => "Lộ trình phải có đúng {$days} ngày.",
+            ], 422);
         }
+
+        foreach ($timelines as &$timeline) {
+            if (!is_array($timeline)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Dữ liệu lộ trình không hợp lệ.',
+                ], 422);
+            }
+
+            $title = $timeline['title'] ?? '';
+            $itinerary = $timeline['itinerary'] ?? '';
+
+            if (!is_string($title) || mb_strlen($title) > 255) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tiêu đề ngày trong lộ trình không hợp lệ.',
+                ], 422);
+            }
+
+            if (!is_string($itinerary)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Nội dung lộ trình không hợp lệ.',
+                ], 422);
+            }
+
+            if (mb_strlen($itinerary) > 20000) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Nội dung lộ trình không được vượt quá 20000 ký tự.',
+                ], 422);
+            }
+
+            try {
+                $timeline['itinerary'] = HtmlSanitizer::cleanOrReject($itinerary);
+            } catch (UnsafeHtmlException $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        }
+        unset($timeline);
 
         if (count($images) > 0 && count($images) < self::MIN_IMAGES) {
             return response()->json([
@@ -512,11 +644,59 @@ class ToursManagementController extends Controller
         $replaceImages   = count($images) > 0;
         $replaceTimeline = is_array($timelines) && count($timelines) > 0;
 
-        DB::transaction(function () use ($tourId, $dataTours, $images, $name, $timelines, $replaceImages, $replaceTimeline) {
+        $result = DB::transaction(function () use ($tourId, $dataTours, $images, $name, $timelines, $replaceImages, $replaceTimeline) {
+            $tour = DB::table('tbl_tours')
+                ->where('tourId', $tourId)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$tour) {
+                return [
+                    'success' => false,
+                    'status' => 404,
+                    'message' => 'Không tìm thấy tour.',
+                ];
+            }
+
+            $oldStems = $this->tours->getImages($tourId)->pluck('imageURL')->all();
+
+            $validImages = array_values(array_unique(array_filter(
+                $images,
+                fn($i) => is_string($i)
+                    && $i !== ''
+                    && (
+                        ($this->images->isStemForTour($i, $tourId) && $this->images->stemExists($i))
+                        || in_array($i, $oldStems, true)
+                    )
+            )));
+
+            if (count($validImages) !== count($images)) {
+                return [
+                    'success' => false,
+                    'status' => 422,
+                    'message' => 'Danh sách hình ảnh không hợp lệ hoặc ảnh đã không còn tồn tại.',
+                ];
+            }
+
+            $images = $validImages;
+
+            $dateChanged =
+                $tour->startDate !== $dataTours['startDate']
+                || $tour->endDate !== $dataTours['endDate'];
+
+            if ($dateChanged && DB::table('tbl_booking')->where('tourId', $tourId)->exists()) {
+                return [
+                    'success' => false,
+                    'status' => 409,
+                    'message' => 'Tour đã có lịch sử booking nên không thể thay đổi ngày khởi hành.',
+                ];
+            }
+
             $this->tours->updateTour($tourId, $dataTours);
 
             if ($replaceImages) {
                 $this->tours->deleteData($tourId, 'tbl_images');
+
                 foreach ($images as $position => $image) {
                     $this->tours->uploadImages([
                         'tourId'      => $tourId,
@@ -530,6 +710,7 @@ class ToursManagementController extends Controller
 
             if ($replaceTimeline) {
                 $this->tours->deleteData($tourId, 'tbl_timeline');
+
                 foreach ($timelines as $timeline) {
                     $this->tours->addTimeLine([
                         'tourId'      => $tourId,
@@ -538,11 +719,24 @@ class ToursManagementController extends Controller
                     ]);
                 }
             }
+
+            return [
+                'success' => true,
+                'status' => 200,
+                'oldStems' => $oldStems,
+            ];
         });
+
+        if (!$result['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'],
+            ], $result['status']);
+        }
 
         // Chỉ xóa file vật lý SAU KHI transaction thành công, và chỉ khi ảnh được thay
         if ($replaceImages) {
-            $this->images->deleteMany(array_diff($oldStems, $images));
+            $this->images->deleteMany(array_diff($result['oldStems'], $images));
         }
 
         $tours = $this->tours->getAllTours();
@@ -588,32 +782,78 @@ class ToursManagementController extends Controller
      */
     public function updateBasicTour(Request $request)
     {
-        $tourId = (int) $request->input('tourId');
-        $tour   = DB::table('tbl_tours')->where('tourId', $tourId)->first();
+        $validator = Validator::make($request->all(), [
+            'tourId' => 'required|integer|min:1',
+        ], [
+            'tourId.required' => 'Thiếu mã tour.',
+            'tourId.integer'  => 'Mã tour không hợp lệ.',
+            'tourId.min'      => 'Mã tour không hợp lệ.',
+        ]);
 
-        if (!$tour) {
-            return response()->json(['success' => false, 'message' => 'Không tìm thấy tour.'], 404);
-        }
-
-        if ((int) $tour->availability === 1) {
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Tour đã đăng. Hãy dùng nút Sửa trong danh sách tour.',
-            ], 409);
+                'message' => $validator->errors()->first(),
+            ]);
         }
+
+        $tourId = (int) $request->input('tourId');
 
         [$fields, $error] = $this->parseBasicTourInput($request);
         if ($error) {
             return $error;
         }
 
-        // update() trả 0 khi không có gì đổi: đó không phải lỗi, nên không kiểm tra kết quả (cùng lý do L-F-01)
-        $this->tours->updateTour($tourId, $fields);
+        try {
+            $updated = DB::transaction(function () use ($tourId, $fields) {
+                $tour = DB::table('tbl_tours')
+                    ->where('tourId', $tourId)
+                    ->lockForUpdate()
+                    ->first();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Đã lưu thay đổi Bước 1.',
-            'tourId'  => $tourId,
-        ]);
+                if (!$tour) {
+                    return [
+                        'success' => false,
+                        'status' => 404,
+                        'message' => 'Không tìm thấy tour.',
+                    ];
+                }
+
+                if ((int) $tour->availability === 1) {
+                    return [
+                        'success' => false,
+                        'status' => 409,
+                        'message' => 'Tour đã đăng. Hãy dùng nút Sửa trong danh sách tour.',
+                    ];
+                }
+
+                $this->tours->updateTour($tourId, $fields);
+
+                return [
+                    'success' => true,
+                    'status' => 200,
+                ];
+            });
+
+            if (!$updated['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $updated['message'],
+                ], $updated['status']);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Đã lưu thay đổi Bước 1.',
+                'tourId'  => $tourId,
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể lưu thay đổi tour. Vui lòng thử lại.',
+            ], 500);
+        }
     }
 }

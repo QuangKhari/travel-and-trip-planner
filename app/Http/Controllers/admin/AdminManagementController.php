@@ -52,7 +52,27 @@ class AdminManagementController extends Controller
         }
 
         $adminId = (int) session('adminId');
-        $update = $this->admin->updateAdmin($adminId, $dataUpdate);
+
+        try {
+            $update = $this->admin->updateAdmin($adminId, $dataUpdate);
+        } catch (QueryException $e) {
+            $errorCode = $e->errorInfo[1] ?? $e->getCode();
+
+            if ((int) $errorCode === 1062) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Email đã được sử dụng bởi tài khoản khác.',
+                ], 422);
+            }
+
+            report($e);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể cập nhật tài khoản.',
+            ], 500);
+        }
+
         $newinfo = $this->admin->getAdminById($adminId);
 
         if ($update) {
@@ -107,8 +127,13 @@ class AdminManagementController extends Controller
         try {
             $insert = $this->admin->addAdmin($data);
         } catch (QueryException $e) {
-            if ($e->getCode() === '23000') {
-                return redirect()->back()->with('error', 'Tên đăng nhập đã tồn tại.');
+            $errorCode = $e->errorInfo[1] ?? $e->getCode();
+
+            if ((int) $errorCode === 1062) {
+                return redirect()
+                    ->back()
+                    ->withInput()
+                    ->with('error', 'Tên đăng nhập hoặc email đã tồn tại.');
             }
 
             report($e);
@@ -166,8 +191,13 @@ class AdminManagementController extends Controller
         try {
             $insert = $this->admin->addAdmin($data);
         } catch (QueryException $e) {
-            if ($e->getCode() === '23000') {
-                return redirect()->back()->with('error', 'Tên đăng nhập đã tồn tại.');
+            $errorCode = $e->errorInfo[1] ?? $e->getCode();
+
+            if ((int) $errorCode === 1062) {
+                return redirect()
+                    ->back()
+                    ->withInput()
+                    ->with('error', 'Tên đăng nhập hoặc email đã tồn tại.');
             }
 
             report($e);

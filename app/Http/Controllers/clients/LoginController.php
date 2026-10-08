@@ -115,7 +115,14 @@ class LoginController extends Controller
             ]);
         }
 
-        // Tài khoản đã xóa (L-A-08): coi như không tồn tại
+        if ($user->isActive !== 'y') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tài khoản chưa được kích hoạt.',
+            ]);
+        }
+
+        // Tài khoản đã xóa: coi như không tồn tại
         if ($user->status === 'd') {
             return response()->json([
                 'success' => false,

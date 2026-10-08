@@ -291,8 +291,24 @@ $(document).ready(function () {
             });
         });
 
-        if (timelines.length === 0) {
-            toastr.error("Tour phải có ít nhất một ngày trong lộ trình.");
+        const startDate = moment($("#start_date").val(), "DD/MM/YYYY");
+        const endDate = moment($("#end_date").val(), "DD/MM/YYYY");
+
+        if (
+            !startDate.isValid() ||
+            !endDate.isValid() ||
+            endDate.isBefore(startDate)
+        ) {
+            toastr.error("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.");
+            return;
+        }
+
+        const tourDays = endDate.diff(startDate, "days") + 1;
+
+        if (timelines.length !== tourDays) {
+            toastr.error(
+                `Tour ${tourDays} ngày phải có đúng ${tourDays} ngày trong lộ trình.`,
+            );
             return;
         }
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\admin\PromotionModel;
 use Illuminate\Validation\Rule;
+use Illuminate\Database\QueryException;
 
 class PromotionManagementController extends Controller
 {
@@ -57,7 +58,25 @@ class PromotionManagementController extends Controller
             'status' => 'y'
         ];
 
-        $insert = $this->promotion->addPromotion($data);
+        try {
+            $insert = $this->promotion->addPromotion($data);
+        } catch (QueryException $e) {
+            $errorCode = $e->errorInfo[1] ?? $e->getCode();
+
+            if ((int) $errorCode === 1062) {
+                return redirect()
+                    ->back()
+                    ->withInput()
+                    ->with('error', 'Mã giảm giá này đã được sử dụng.');
+            }
+
+            report($e);
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Không thể thêm Promotion lúc này. Vui lòng thử lại sau.');
+        }
 
         if ($insert) {
             return redirect()
@@ -112,18 +131,36 @@ class PromotionManagementController extends Controller
             'code.unique' => 'Mã giảm giá này đã tồn tại.',
         ]);
 
-        $result = $this->promotion->updatePromotion(
-            $request->promotionId,
-            [
-                'code' => strtoupper($request->code),
-                'description' => $request->description,
-                'discount' => $request->discount,
-                'quantity' => $request->quantity,
-                'startDate' => $request->startDate,
-                'endDate' => $request->endDate,
-                'status' => $request->status
-            ]
-        );
+        try {
+            $result = $this->promotion->updatePromotion(
+                $request->promotionId,
+                [
+                    'code' => strtoupper($request->code),
+                    'description' => $request->description,
+                    'discount' => $request->discount,
+                    'quantity' => $request->quantity,
+                    'startDate' => $request->startDate,
+                    'endDate' => $request->endDate,
+                    'status' => $request->status
+                ]
+            );
+        } catch (QueryException $e) {
+            $errorCode = $e->errorInfo[1] ?? $e->getCode();
+
+            if ((int) $errorCode === 1062) {
+                return redirect()
+                    ->back()
+                    ->withInput()
+                    ->with('error', 'Mã giảm giá này đã được sử dụng.');
+            }
+
+            report($e);
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Không thể cập nhật Promotion.');
+        }
 
         return redirect()
             ->route('admin.promotion')

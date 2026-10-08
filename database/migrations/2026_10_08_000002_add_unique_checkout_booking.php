@@ -25,15 +25,19 @@ return new class extends Migration
             );
         }
 
-        Schema::table('tbl_checkout', function (Blueprint $table) {
-            $table->unique('bookingId', 'uniq_checkout_booking');
-        });
+        if (!Schema::hasIndex('tbl_checkout', 'uniq_checkout_booking')) {
+            Schema::table('tbl_checkout', function (Blueprint $table) {
+                $table->unique('bookingId', 'uniq_checkout_booking');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('tbl_checkout', function (Blueprint $table) {
-            $table->dropUnique('uniq_checkout_booking');
-        });
+        if (Schema::hasIndex('tbl_checkout', 'uniq_checkout_booking')) {
+            Schema::table('tbl_checkout', function (Blueprint $table) {
+                $table->dropUnique('uniq_checkout_booking');
+            });
+        }
     }
 };

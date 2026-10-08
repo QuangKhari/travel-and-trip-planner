@@ -7,6 +7,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Format;
 use Intervention\Image\Laravel\Facades\Image;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Lưu ảnh tour NGOÀI source code.
@@ -153,8 +154,16 @@ class TourImageService
         $alreadyStored = $this->disk()->exists($paths[array_key_last($paths)]);
 
         if (!$alreadyStored) {
-            $this->assertQuota($tourId, strlen($largest['bytes']));
-            $this->writeVariants($stem, $variants);
+            Cache::lock('tour-image-global-quota', 60)->block(10, function () use ($tourId, $largest, $stem, $variants) {
+                $paths = $this->variantPaths($stem);
+
+                if ($this->disk()->exists($paths[array_key_last($paths)])) {
+                    return;
+                }
+
+                $this->assertQuota($tourId, strlen($largest['bytes']));
+                $this->writeVariants($stem, $variants);
+            });
         }
 
         return [

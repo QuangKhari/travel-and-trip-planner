@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\clients\Tours;
 use App\Support\CancelPolicy;
 use App\Services\BookingService;
+use Illuminate\Support\Facades\Validator;
 
 class TourBookedController extends Controller
 {
@@ -42,6 +43,15 @@ class TourBookedController extends Controller
 
     public function cancelBooking(Request $req, BookingService $bookings)
     {
+        $validator = Validator::make($req->all(), [
+            'bookingId' => 'required|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            toastr()->error($validator->errors()->first());
+            return redirect()->route('home');
+        }
+
         $bookingId = (int) $req->input('bookingId');
         $userId    = (int) $this->getUserId();
         $cancelled = false;
