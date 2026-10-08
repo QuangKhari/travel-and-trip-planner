@@ -269,12 +269,30 @@ class ToursManagementController extends Controller
 
     public function uploadTempImagesTours(Request $request)
     {
+        $tourId = (int) $request->input('tourId');
+
+        $tour = DB::table('tbl_tours')
+            ->where('tourId', $tourId)
+            ->first();
+
+        if (!$tour) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tour không tồn tại.'
+            ], 404);
+        }
+
+        if ((int) $tour->availability === 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tour đã đăng, không thể thêm ảnh tạm.'
+            ], 409);
+        }
+
         [$meta, $error] = $this->storeUploadedImage($request);
         if ($error) {
             return $error;
         }
-
-        $tourId = (int) $request->tourId;
         try {
             $this->tours->uploadTempImages([
                 'tourId'       => $tourId,
