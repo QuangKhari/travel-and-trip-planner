@@ -45,20 +45,12 @@ $(document).ready(function () {
                 .text("Tên đăng nhập không được chứa ký tự đặc biệt.");
         }
 
-        if (sqlInjectionPattern.test(password)) {
-            isValid = false;
-            $("#validate_password")
-                .show()
-                .text("Mật khẩu không được chứa ký tự đặc biệt.");
-        }
-
         if (isValid) {
             var formData = {
                 username: userName,
                 password: password,
                 _token: $('input[name="_token"]').val(),
             };
-            console.log(formData, $(this).attr("action"));
 
             $.ajax({
                 type: "POST",
@@ -126,13 +118,6 @@ $(document).ready(function () {
                 .text("Mật khẩu phải có ít nhất 6 ký tự.");
         }
 
-        if (sqlInjectionPattern.test(password)) {
-            isValid = false;
-            $("#validate_password_regis")
-                .show()
-                .text("Mật khẩu không được chứa ký tự đặc biệt.");
-        }
-
         // Kiểm tra nhập lại mật khẩu
         if (password !== rePass) {
             isValid = false;
@@ -146,7 +131,6 @@ $(document).ready(function () {
                 password_regis: password,
                 _token: $('input[name="_token"]').val(),
             };
-            console.log(formData, $(this).attr("action"));
 
             $.ajax({
                 type: "POST",
@@ -169,6 +153,38 @@ $(document).ready(function () {
                 },
             });
         }
+    });
+
+    $("#resend-verification-link").on("click", function () {
+        $("#resend-verification-form").slideToggle();
+    });
+
+    $("#resend-verification-button").on("click", function () {
+        var email = $("#resend_verification_email").val().trim();
+
+        if (!email) {
+            toastr.error("Vui lòng nhập email.");
+            return;
+        }
+
+        $.ajax({
+            type: "POST",
+            url: window.emailVerificationResendUrl,
+            data: {
+                email: email,
+                _token: $('input[name="_token"]').first().val(),
+            },
+            success: function (response) {
+                if (response.success) {
+                    toastr.success(response.message, { timeOut: 5000 });
+                } else {
+                    toastr.error(response.message);
+                }
+            },
+            error: function () {
+                toastr.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
+            },
+        });
     });
 
     /****************************************
@@ -417,13 +433,6 @@ $(document).ready(function () {
             $("#validate_password")
                 .show()
                 .text("Mật khẩu phải có ít nhất 6 ký tự.");
-        }
-
-        if (sqlInjectionPattern.test(newPass)) {
-            isValid = false;
-            $("#validate_password")
-                .show()
-                .text("Mật khẩu không được chứa ký tự đặc biệt.");
         }
 
         if (isValid) {

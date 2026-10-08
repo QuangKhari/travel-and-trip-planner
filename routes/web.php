@@ -25,6 +25,7 @@ use App\Http\Controllers\admin\ReviewManagementController;
 use App\Http\Controllers\admin\AdminManagementController;
 use App\Http\Controllers\admin\PromotionManagementController;
 use App\Http\Controllers\clients\ForgotPasswordController;
+use App\Http\Controllers\clients\EmailVerificationController;
 
 
 
@@ -46,6 +47,16 @@ Route::get('/login', [LoginController::class, 'index'])->name('login');
 Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:10,1,user-login')->name('user-login');
 Route::post('/register', [LoginController::class, 'register'])->middleware('throttle:10,1,register')->name('register');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+//xác thực email
+Route::get('/xac-thuc-email/{token}', [EmailVerificationController::class, 'verify'])
+    ->where('token', '[A-Za-z0-9]{64}')
+    ->name('email.verify');
+
+Route::post('/xac-thuc-email/gui-lai', [EmailVerificationController::class, 'resend'])
+    ->middleware('throttle:3,10,email-verification')
+    ->name('email.verification.resend');
+
 //quên mật khẩu 
 Route::get('/quen-mat-khau', [ForgotPasswordController::class, 'index'])->name('password.request');
 Route::post('/quen-mat-khau', [ForgotPasswordController::class, 'sendLink'])->middleware('throttle:5,1,password-email')->name('password.email');

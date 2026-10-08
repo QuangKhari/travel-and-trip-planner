@@ -9,10 +9,12 @@ use Illuminate\Support\Facades\DB;
 class Login extends Model
 {
     protected $table = 'tbl_users';
+
     public function registerAccount($data)
     {
-        return DB::table($this->table)->insert($data);
+        return DB::table($this->table)->insertGetId($data);
     }
+
     public function checkUserExist($username, $email)
     {
         $check = DB::table($this->table)
@@ -21,6 +23,7 @@ class Login extends Model
             ->exists();
         return $check;
     }
+
     // Chỉ tìm theo username; việc so mật khẩu làm bằng PasswordHasher trong controller
     public function findByUsername($username)
     {

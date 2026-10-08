@@ -8,6 +8,10 @@ use App\Models\clients\Login;
 use Illuminate\Support\Facades\Validator;
 use App\Support\PasswordHasher;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class LoginController extends Controller
 {
@@ -67,7 +71,53 @@ class LoginController extends Controller
             'password' => PasswordHasher::make($request->password_regis),
         ];
         try {
-            $this->login->registerAccount($dataInsert);
+            $token = Str::random(64);
+
+            $userId = DB::transaction(function () use ($dataInsert, $token) {
+                $userId = $this->login->registerAccount($dataInsert);
+
+                DB::table('tbl_email_verification')
+                    ->where('userId', $userId)
+                    ->delete();
+
+                DB::table('tbl_email_verification')->insert([
+                    'userId' => $userId,
+                    'tokenHash' => hash('sha256', $token),
+                    'expiresAt' => now()->addMinutes(60),
+                ]);
+
+                return $userId;
+            });
+
+            $user = DB::table('tbl_users')
+                ->where('userId', $userId)
+                ->first();
+
+            $url = route('email.verify', [
+                'token' => $token,
+            ]);
+
+            try {
+                Mail::send(
+                    'clients.emails.verify-email',
+                    [
+                        'user' => $user,
+                        'url' => $url,
+                        'minutes' => 60,
+                    ],
+                    function ($message) use ($user) {
+                        $message
+                            ->to($user->email, $user->fullName)
+                            ->subject('Kích hoạt tài khoản Travela');
+                    }
+                );
+            } catch (\Throwable $e) {
+                Log::error('Gửi email kích hoạt thất bại: ' . $e->getMessage());
+            }
+
+            if (config('mail.default') === 'log') {
+                Log::info("[DEV] Link kich hoat tai khoan cho userId {$user->userId}: {$url}");
+            }
         } catch (QueryException $e) {
             if ((string) $e->getCode() === '23000') {
                 return response()->json([
@@ -82,11 +132,18 @@ class LoginController extends Controller
                 'success' => false,
                 'message' => 'Không thể đăng ký tài khoản. Vui lòng thử lại sau.'
             ], 500);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể đăng ký tài khoản. Vui lòng thử lại sau.'
+            ], 500);
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Đăng ký thành công'
+            'message' => 'Đăng ký thành công. Vui lòng kiểm tra email để kích hoạt tài khoản.'
         ]);
     }
 
