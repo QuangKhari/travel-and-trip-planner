@@ -93,6 +93,7 @@ class BookingService
             DB::table('tbl_checkout')->insert([
                 'bookingId'     => $bookingId,
                 'paymentMethod' => 'office-payment',
+                'paymentDate'   => null,
                 'amount'        => $total,
                 'paymentStatus' => 'n',
             ]);
