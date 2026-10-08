@@ -102,7 +102,6 @@ $(document).ready(function () {
 
     $(document).on("click", ".edit-tour", function (e) {
         e.preventDefault();
-        console.log("edittour-click");
 
         var tourId = $(this).data("tourid");
         var urlEdit = $(this).data("urledit");
@@ -121,8 +120,6 @@ $(document).ready(function () {
             },
             success: function (response) {
                 if (response.success) {
-                    console.log(response);
-
                     const tour = response.tour;
                     const images = response.images;
                     const timeline = response.timeline;
@@ -327,8 +324,6 @@ $(document).ready(function () {
             timeline: timelines,
             _token: $('input[name="_token"]').val(),
         };
-
-        console.log("Dữ liệu Edit Tour:", formDataEdit);
 
         var urlUpdate = $("#timeline-form").attr("action");
 
@@ -678,10 +673,6 @@ $(document).ready(function () {
 
         const urlConfirm = $(this).data("urlconfirm");
 
-        console.log("Booking ID:", bookingId);
-
-        console.log("urlConfirm:", urlConfirm);
-
         // Thực hiện các hành động khác, ví dụ gọi AJAX
         $.ajax({
             url: urlConfirm,
@@ -719,10 +710,6 @@ $(document).ready(function () {
         const bookingId = $(this).data("bookingid");
 
         const urlFinish = $(this).data("urlfinish");
-
-        console.log("Booking ID:", bookingId);
-
-        console.log("urlFinish:", urlFinish);
 
         // Thực hiện các hành động khác, ví dụ gọi AJAX
         $.ajax({
@@ -839,10 +826,6 @@ $(document).ready(function () {
         const bookingId = $(this).data("bookingid");
 
         const urlPaid = $(this).data("urlpaid");
-
-        console.log("Booking ID:", bookingId);
-
-        console.log("url:", urlPaid);
 
         // Thực hiện các hành động khác, ví dụ gọi AJAX
         $.ajax({

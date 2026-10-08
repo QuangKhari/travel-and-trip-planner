@@ -683,7 +683,7 @@ class ToursManagementController extends Controller
                     && $i !== ''
                     && (
                         ($this->images->isStemForTour($i, $tourId) && $this->images->stemExists($i))
-                        || in_array($i, $oldStems, true)
+                        || (!$this->images->isStem($i) && in_array($i, $oldStems, true))
                     )
             )));
 
