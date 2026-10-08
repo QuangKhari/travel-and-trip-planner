@@ -7,7 +7,8 @@
                     <div class="card-header">Ảnh đại diện</div>
                     <div class="card-body text-center">
                         <img id="avatarPreview" class="img-account-profile rounded-circle mb-2"
-                            src="{{ \App\Support\Avatar::url($user->avatar) }}" style="width:160px; height: 160px;" alt="Ảnh đại diện {{ $user->avatar }}">
+                            src="{{ \App\Support\Avatar::url($user->avatar) }}" style="width:160px; height: 160px;"
+                            alt="Ảnh đại diện {{ $user->avatar }}">
 
                         <div class="small font-italic text-muted mb-4">JPG hoặc PNG không lớn hơn 5 MB</div>
                         <input type="file" name="avatar" id="avatar" style="display: none" accept="image/*">
@@ -45,6 +46,16 @@
                                 <label class="small mb-1" for="inputEmailAddress">Email</label>
                                 <input class="form-control" id="inputEmailAddress" type="email" placeholder="Email"
                                     value="{{ $user->email }}" required>
+
+                                <button type="button" class="btn btn-outline-primary btn-sm mt-2"
+                                    id="btnResendEmailVerification" style="display: none;">
+                                    Gửi lại email xác thực
+                                </button>
+
+                                <small class="text-muted d-block mt-1" id="emailVerificationMessage"
+                                    style="display: none;">
+                                    Email mới chưa được xác thực. Vui lòng kiểm tra hộp thư.
+                                </small>
                             </div>
                             <div class="row gx-3 mb-3">
                                 <div class="col-md-6">
@@ -61,27 +72,27 @@
                 <div class="card mb-4 ">
                     <div class="card-body" id="card_change_password">
                         <div class="invalid-feedback" style="margin-top:-15px" id="validate_password"></div>
-                            <form action="{{ route('change-password') }}" method="post" class="change_password_profile">
-                                @csrf
-                                <div class="row gx-3">
-                                    <div class="col-md-4">
-                                        <input class="form-control" id="inputOldPass" type="text"
-                                            placeholder="Nhập mật khẩu cũ" value="" required>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <input class="form-control" id="inputNewPass" type="text"
-                                            placeholder="Nhập mật khẩu mới" value="" required>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <button class="btn btn-primary" type="submit">Thay đổi</button>
-                                    </div>
+                        <form action="{{ route('change-password') }}" method="post" class="change_password_profile">
+                            @csrf
+                            <div class="row gx-3">
+                                <div class="col-md-4">
+                                    <input class="form-control" id="inputOldPass" type="text"
+                                        placeholder="Nhập mật khẩu cũ" value="" required>
                                 </div>
-                            </form>
-                        </div>
+                                <div class="col-md-4">
+                                    <input class="form-control" id="inputNewPass" type="text"
+                                        placeholder="Nhập mật khẩu mới" value="" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <button class="btn btn-primary" type="submit">Thay đổi</button>
+                                </div>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 </div>
 @include('clients.blocks.footer')

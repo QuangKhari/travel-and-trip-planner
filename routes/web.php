@@ -26,6 +26,7 @@ use App\Http\Controllers\admin\AdminManagementController;
 use App\Http\Controllers\admin\PromotionManagementController;
 use App\Http\Controllers\clients\ForgotPasswordController;
 use App\Http\Controllers\clients\EmailVerificationController;
+use App\Http\Controllers\clients\EmailChangeController;
 
 
 
@@ -57,6 +58,10 @@ Route::post('/xac-thuc-email/gui-lai', [EmailVerificationController::class, 'res
     ->middleware('throttle:3,10,email-verification')
     ->name('email.verification.resend');
 
+Route::get('/xac-thuc-email-moi/{token}', [EmailChangeController::class, 'verify'])
+    ->where('token', '[A-Za-z0-9]{64}')
+    ->name('email.change.verify');
+
 //quên mật khẩu 
 Route::get('/quen-mat-khau', [ForgotPasswordController::class, 'index'])->name('password.request');
 Route::post('/quen-mat-khau', [ForgotPasswordController::class, 'sendLink'])->middleware('throttle:5,1,password-email')->name('password.email');
@@ -80,6 +85,10 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::post('/user-profile', [UserProfileController::class, 'update'])->name('update-user-profile');
     Route::post('/change-password-profile', [UserProfileController::class, 'changePassword'])->name('change-password');
     Route::post('/change-avatar-profile', [UserProfileController::class, 'changeAvatar'])->name('change-avatar');
+
+    Route::post('/xac-thuc-email-moi/gui-lai', [EmailChangeController::class, 'resend'])
+        ->middleware('throttle:3,10,email-change-verification')
+        ->name('email.change.resend');
 
     // đặt tour
     // GET để F5 hoặc mở link trực tiếp không bị 405 

@@ -11,6 +11,10 @@ use App\Support\Avatar;
 use Illuminate\Support\Facades\Validator;
 use App\Support\PasswordHasher;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 
 class UserProfileController extends Controller
@@ -55,26 +59,120 @@ class UserProfileController extends Controller
         ]);
 
         if ($validator->fails()) {
-            // Trả 200 + success=false để JS hiện đúng thông báo (JS chỉ đọc message khi HTTP 200)
             return response()->json(['success' => false, 'message' => $validator->errors()->first()]);
         }
 
         $email = trim($req->email);
+        $token = Str::random(64);
+        $emailChanged = false;
+        $mailUser = null;
 
-        if ($this->user->emailTakenByOther($email, $userId)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Email này đã được tài khoản khác sử dụng.',
-            ]);
-        }
-
-        // updateUser trả về 0 khi dữ liệu không thay đổi: đó KHÔNG phải lỗi
         try {
-            $this->user->updateUser($userId, [
-                'fullName'    => trim($req->fullName),
-                'address'     => $req->address,
-                'email'       => $email,
-                'phoneNumber' => $req->phone,
+            $result = DB::transaction(function () use ($userId, $req, $email, $token, &$emailChanged, &$mailUser) {
+                $user = DB::table('tbl_users')
+                    ->where('userId', $userId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$user) {
+                    return [
+                        'success' => false,
+                        'message' => 'Không tìm thấy tài khoản.',
+                    ];
+                }
+
+                if ($email !== trim($user->email)) {
+                    $emailChanged = true;
+
+                    $emailTaken = DB::table('tbl_users')
+                        ->where('email', $email)
+                        ->where('userId', '!=', $userId)
+                        ->exists();
+
+                    if ($emailTaken) {
+                        return [
+                            'success' => false,
+                            'message' => 'Email này đã được tài khoản khác sử dụng.',
+                        ];
+                    }
+
+                    DB::table('tbl_email_verification')
+                        ->where('userId', $userId)
+                        ->delete();
+
+                    DB::table('tbl_email_verification')->insert([
+                        'userId' => $userId,
+                        'tokenHash' => hash('sha256', $token),
+                        'pendingEmail' => $email,
+                        'expiresAt' => now()->addMinutes(60),
+                    ]);
+
+                    $mailUser = (object) [
+                        'userId' => $user->userId,
+                        'fullName' => $req->fullName,
+                    ];
+                }
+
+                DB::table('tbl_users')
+                    ->where('userId', $userId)
+                    ->update([
+                        'fullName' => trim($req->fullName),
+                        'address' => $req->address,
+                        'phoneNumber' => $req->phone,
+                        'updatedDate' => now(),
+                    ]);
+
+                return [
+                    'success' => true,
+                ];
+            });
+
+            if (!$result['success']) {
+                return response()->json($result);
+            }
+
+            if ($emailChanged) {
+                $url = route('email.change.verify', [
+                    'token' => $token,
+                ]);
+
+                try {
+                    Mail::send(
+                        'clients.emails.verify-email-change',
+                        [
+                            'user' => $mailUser,
+                            'url' => $url,
+                            'minutes' => 60,
+                            'newEmail' => $email,
+                        ],
+                        function ($message) use ($email) {
+                            $message
+                                ->to($email)
+                                ->subject('Xác minh email mới - Travela');
+                        }
+                    );
+                } catch (\Throwable $e) {
+                    Log::error('Gửi email xác minh email mới thất bại: ' . $e->getMessage(), [
+                        'userId' => $userId,
+                        'email' => $email,
+                    ]);
+
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Thông tin khác đã được cập nhật nhưng chưa thể gửi email xác minh. Vui lòng thử lại bằng chức năng gửi lại email.',
+                    ]);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'emailVerificationRequired' => true,
+                    'message' => 'Thông tin đã được cập nhật. Vui lòng kiểm tra email mới và bấm liên kết xác minh để hoàn tất việc đổi email.',
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cập nhật thông tin thành công!',
             ]);
         } catch (QueryException $e) {
             if ($e->getCode() === '23000') {
@@ -91,8 +189,6 @@ class UserProfileController extends Controller
                 'message' => 'Không thể cập nhật thông tin tài khoản.',
             ], 500);
         }
-
-        return response()->json(['success' => true, 'message' => 'Cập nhật thông tin thành công!']);
     }
 
     public function changePassword(Request $req)
