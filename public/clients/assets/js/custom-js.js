@@ -139,12 +139,13 @@ $(document).ready(function () {
                 success: function (response) {
                     if (response.success) {
                         toastr.success(response.message, { timeOut: 5000 });
+                        $("#register-form")
+                            .removeClass("hidden-content")
+                            .trigger("reset");
                     } else {
                         toastr.error(response.message);
+                        $("#register-form").removeClass("hidden-content");
                     }
-                    $("#register-form")
-                        .removeClass("hidden-content")
-                        .trigger("reset");
                     $(".loader").hide();
                 },
                 error: function (xhr, textStatus, errorThrown) {

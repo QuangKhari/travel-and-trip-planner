@@ -97,6 +97,8 @@ class LoginController extends Controller
                 'token' => $token,
             ]);
 
+            $mailSent = true;
+
             try {
                 Mail::send(
                     'clients.emails.verify-email',
@@ -112,7 +114,11 @@ class LoginController extends Controller
                     }
                 );
             } catch (\Throwable $e) {
-                Log::error('Gửi email kích hoạt thất bại: ' . $e->getMessage());
+                $mailSent = false;
+                Log::error('Gửi email kích hoạt thất bại: ' . $e->getMessage(), [
+                    'userId' => $user->userId,
+                    'email' => $user->email,
+                ]);
             }
 
             if (config('mail.default') === 'log') {
@@ -139,6 +145,13 @@ class LoginController extends Controller
                 'success' => false,
                 'message' => 'Không thể đăng ký tài khoản. Vui lòng thử lại sau.'
             ], 500);
+        }
+
+        if (!$mailSent) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tài khoản đã được tạo nhưng không thể gửi email kích hoạt. Vui lòng sử dụng chức năng gửi lại email kích hoạt.',
+            ]);
         }
 
         return response()->json([
