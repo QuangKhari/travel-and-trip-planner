@@ -8,6 +8,7 @@ use App\Models\admin\AdminModel;
 use App\Services\InvalidImageException;
 use App\Services\UserMediaService;
 use App\Support\PasswordHasher;
+use Illuminate\Database\QueryException;
 
 class AdminManagementController extends Controller
 {
@@ -103,7 +104,17 @@ class AdminManagementController extends Controller
             'role'     => 'manager'
         ];
 
-        $insert = $this->admin->addAdmin($data);
+        try {
+            $insert = $this->admin->addAdmin($data);
+        } catch (QueryException $e) {
+            if ($e->getCode() === '23000') {
+                return redirect()->back()->with('error', 'Tên đăng nhập đã tồn tại.');
+            }
+
+            report($e);
+            return redirect()->back()->with('error', 'Không thể thêm quản lý.');
+        }
+
         return redirect()->back()->with(
             $insert ? 'success' : 'error',
             $insert ? 'Thêm quản lý thành công' : 'Thêm quản lý thất bại'
@@ -147,7 +158,17 @@ class AdminManagementController extends Controller
             'role'     => 'staff'
         ];
 
-        $insert = $this->admin->addAdmin($data);
+        try {
+            $insert = $this->admin->addAdmin($data);
+        } catch (QueryException $e) {
+            if ($e->getCode() === '23000') {
+                return redirect()->back()->with('error', 'Tên đăng nhập đã tồn tại.');
+            }
+
+            report($e);
+            return redirect()->back()->with('error', 'Không thể thêm nhân viên.');
+        }
+
         return redirect()->back()->with(
             $insert ? 'success' : 'error',
             $insert ? 'Thêm nhân viên thành công' : 'Thêm nhân viên thất bại'
