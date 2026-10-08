@@ -460,16 +460,19 @@ $(document).ready(function () {
             <input type="text" class="form-control" id="day-${timelineCounter_edit}" 
                    name="day-${timelineCounter_edit}" 
                    placeholder="Ngày thứ..." 
-                   value="${title}" 
                    required>
             
             <label for="itinerary-${timelineCounter_edit}" style="margin-top: 10px; display: block;">Lộ trình:</label>
-            <textarea id="itinerary-${timelineCounter_edit}" name="itinerary-${timelineCounter_edit}" required>${description}</textarea>
+            <textarea id="itinerary-${timelineCounter_edit}" name="itinerary-${timelineCounter_edit}" required></textarea>
         </div>
     `;
 
-        // Thêm vào div#step-3
+        // Thêm HTML tĩnh trước, không đưa dữ liệu từ database vào template HTML
         $("#step-3").append(timelineEntry);
+
+        // Gán dữ liệu bằng .val() để dữ liệu không được HTML parser xử lý
+        $(`#day-${timelineCounter_edit}`).val(title);
+        $(`#itinerary-${timelineCounter_edit}`).val(description);
 
         // Khởi tạo CKEditor cho textarea vừa thêm
         if ($(`#itinerary-${timelineCounter_edit}`).length) {
