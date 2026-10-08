@@ -72,6 +72,21 @@ class TourImageService
         return preg_match($pattern, $value) === 1;
     }
 
+    public function stemExists(?string $stem): bool
+    {
+        if (!$this->isStem($stem)) {
+            return false;
+        }
+
+        foreach ($this->variantPaths($stem) as $path) {
+            if (!$this->disk()->exists($path)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     /** @return string[] đường dẫn các file của một stem */
     public function variantPaths(string $stem): array
     {

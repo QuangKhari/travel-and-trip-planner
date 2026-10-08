@@ -486,7 +486,7 @@ class ToursManagementController extends Controller
         // Chỉ chấp nhận ảnh mới thuộc đúng tour đang sửa hoặc ảnh cũ đã thuộc tour này.
         $images = $request->input('images');
         $images = is_array($images)
-            ? array_values(array_unique(array_filter($images, fn($i) => is_string($i) && $i !== '' && ($this->images->isStemForTour($i, $tourId) || in_array($i, $oldStems, true)))))
+            ? array_values(array_unique(array_filter($images, fn($i) => is_string($i) && $i !== '' && (($this->images->isStemForTour($i, $tourId) && $this->images->stemExists($i)) || in_array($i, $oldStems, true)))))
             : [];
         $timelines = $request->input('timeline');
 
