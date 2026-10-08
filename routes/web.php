@@ -55,7 +55,9 @@ Route::post('/doi-mat-khau', [ForgotPasswordController::class, 'reset'])->middle
 
 //tours, filter tours, tour detail
 Route::get('/tours', [ToursController::class, 'index'])->name('tours');
-Route::get('/filter-tours', [ToursController::class, 'filterTours'])->name('filter-tours');
+Route::get('/filter-tours', [ToursController::class, 'filterTours'])
+    ->middleware('throttle:60,1,filter-tours')
+    ->name('filter-tours');
 
 
 

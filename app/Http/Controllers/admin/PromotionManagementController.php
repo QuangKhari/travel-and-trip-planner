@@ -138,8 +138,14 @@ class PromotionManagementController extends Controller
     // Xóa promotion
     public function deletePromotion(Request $request)
     {
+        $request->validate([
+            'promotionId' => 'required|integer|min:1|exists:tbl_promotion,promotionId',
+        ]);
+
+        $promotionId = (int) $request->input('promotionId');
+
         $delete = $this->promotion->deletePromotion(
-            $request->promotionId
+            $promotionId
         );
 
         // Nếu request là AJAX → trả JSON chuẩn

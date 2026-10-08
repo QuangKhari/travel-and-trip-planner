@@ -124,7 +124,12 @@ class AdminManagementController extends Controller
     // Xóa manager
     public function deleteManager(Request $request)
     {
-        $delete = $this->admin->deleteByIdAndRole($request->adminId, 'manager');
+        $request->validate([
+            'adminId' => 'required|integer|min:1|exists:tbl_admin,adminId',
+        ]);
+
+        $adminId = (int) $request->input('adminId');
+        $delete = $this->admin->deleteByIdAndRole($adminId, 'manager');
 
         if ($request->ajax()) {
             return response()->json([
@@ -178,7 +183,13 @@ class AdminManagementController extends Controller
     // Xóa staff
     public function deleteStaff(Request $request)
     {
-        $delete = $this->admin->deleteByIdAndRole($request->adminId, 'staff');
+        $request->validate([
+            'adminId' => 'required|integer|min:1|exists:tbl_admin,adminId',
+        ]);
+
+        $adminId = (int) $request->input('adminId');
+
+        $delete = $this->admin->deleteByIdAndRole($adminId, 'staff');
 
         if ($request->ajax()) {
             return response()->json([

@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Services\UserMediaService;
 use App\Services\BookingService;
+use Illuminate\Support\Facades\Validator;
 
 class BookingManagementController extends Controller
 {
@@ -116,7 +117,15 @@ class BookingManagementController extends Controller
 
     public function confirmBooking(Request $request, BookingService $bookings)
     {
-        $bookingId = (int) $request->bookingId;
+        $validator = Validator::make($request->all(), [
+            'bookingId' => 'required|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->refuse($validator->errors()->first());
+        }
+
+        $bookingId = (int) $request->input('bookingId');
 
         $result = DB::transaction(function () use ($bookingId, $bookings) {
             $booking = DB::table('tbl_booking')
@@ -172,7 +181,15 @@ class BookingManagementController extends Controller
 
     public function finishBooking(Request $request)
     {
-        $bookingId = (int) $request->bookingId;
+        $validator = Validator::make($request->all(), [
+            'bookingId' => 'required|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->refuse($validator->errors()->first());
+        }
+
+        $bookingId = (int) $request->input('bookingId');
         $today = now()->toDateString();
 
         $result = DB::transaction(function () use ($bookingId, $today) {
@@ -211,7 +228,20 @@ class BookingManagementController extends Controller
     // Trang chi tiết đơn gọi hàm này: không cần trả lại bảng
     public function receiviedMoney(Request $request)
     {
-        $result = $this->markPaid((int) $request->bookingId);
+        $validator = Validator::make($request->all(), [
+            'bookingId' => 'required|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+            ]);
+        }
+
+        $bookingId = (int) $request->input('bookingId');
+
+        $result = $this->markPaid($bookingId);
 
         return response()->json(['success' => $result['ok'], 'message' => $result['message']]);
     }
@@ -219,7 +249,17 @@ class BookingManagementController extends Controller
     // Trang danh sách đơn gọi hàm này: trả lại bảng mới
     public function confirmPayment(Request $request)
     {
-        $result = $this->markPaid((int) $request->bookingId);
+        $validator = Validator::make($request->all(), [
+            'bookingId' => 'required|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->refuse($validator->errors()->first());
+        }
+
+        $bookingId = (int) $request->input('bookingId');
+
+        $result = $this->markPaid($bookingId);
 
         return $result['ok']
             ? $this->bookingTableResponse($result['message'])
@@ -250,7 +290,19 @@ class BookingManagementController extends Controller
 
     public function sendPdf(Request $request)
     {
-        $bookingId = $request->input('bookingId');
+        $validator = Validator::make($request->all(), [
+            'bookingId' => 'required|integer|min:1',
+            'email' => 'required|email',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+            ]);
+        }
+
+        $bookingId = (int) $request->input('bookingId');
         $email = $request->input('email');
         $title = 'Hóa đơn';
         $invoice_booking = $this->booking->getInvoiceBooking($bookingId);

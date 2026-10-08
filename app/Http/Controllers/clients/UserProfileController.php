@@ -10,6 +10,7 @@ use App\Services\UserMediaService;
 use App\Support\Avatar;
 use Illuminate\Support\Facades\Validator;
 use App\Support\PasswordHasher;
+use Illuminate\Database\QueryException;
 
 
 class UserProfileController extends Controller
@@ -68,12 +69,28 @@ class UserProfileController extends Controller
         }
 
         // updateUser trả về 0 khi dữ liệu không thay đổi: đó KHÔNG phải lỗi
-        $this->user->updateUser($userId, [
-            'fullName'    => trim($req->fullName),
-            'address'     => $req->address,
-            'email'       => $email,
-            'phoneNumber' => $req->phone,
-        ]);
+        try {
+            $this->user->updateUser($userId, [
+                'fullName'    => trim($req->fullName),
+                'address'     => $req->address,
+                'email'       => $email,
+                'phoneNumber' => $req->phone,
+            ]);
+        } catch (QueryException $e) {
+            if ($e->getCode() === '23000') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Email này đã được tài khoản khác sử dụng.',
+                ]);
+            }
+
+            report($e);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể cập nhật thông tin tài khoản.',
+            ], 500);
+        }
 
         return response()->json(['success' => true, 'message' => 'Cập nhật thông tin thành công!']);
     }

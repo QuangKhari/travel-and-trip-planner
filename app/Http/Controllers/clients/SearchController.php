@@ -91,11 +91,16 @@ class SearchController extends Controller
     {
         $title = 'Kết quả tìm kiếm';
 
-        $keyword = trim($request->input('keyword'));
+        $keyword = trim((string) $request->input('keyword'));
 
         if (empty($keyword)) {
             return redirect()->route('home')
                 ->with('error', 'Vui lòng nhập từ khóa tìm kiếm.');
+        }
+
+        if (mb_strlen($keyword) > 100) {
+            return redirect()->route('home')
+                ->with('error', 'Từ khóa tìm kiếm không được vượt quá 100 ký tự.');
         }
 
         $dataSearch = [

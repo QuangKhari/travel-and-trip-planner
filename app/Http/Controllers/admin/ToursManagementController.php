@@ -556,7 +556,11 @@ class ToursManagementController extends Controller
 
     public function deleteTour(Request $request)
     {
-        $tourId = $request->tourId;
+        $request->validate([
+            'tourId' => 'required|integer|min:1|exists:tbl_tours,tourId',
+        ]);
+
+        $tourId = (int) $request->input('tourId');
 
         $result = $this->tours->deleteTour($tourId);
         $tours = $this->tours->getAllTours();
