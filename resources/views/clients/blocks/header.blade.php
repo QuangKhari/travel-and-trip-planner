@@ -141,7 +141,7 @@
                                 <li class="drop-down">
                                     <button class="dropdown-toggle bg-transparent" id="userDropdown"
                                         style="color: black">
-                                        @if (session()->has('avatar'))
+                                        @if (session()->has('username') && session('avatar'))
                                             @php
                                                 $avatar = session()->get('avatar', 'user_avatar.jpg');
                                             @endphp

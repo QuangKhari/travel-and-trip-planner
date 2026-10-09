@@ -221,6 +221,7 @@ class LoginController extends Controller
         $request->session()->regenerate();
         $request->session()->put('username', $user->username);
         $request->session()->put('userId', $user->userId);
+        $request->session()->put('avatar', $user->avatar);
 
         return response()->json([
             'success' => true,
@@ -232,7 +233,7 @@ class LoginController extends Controller
     public function logout(Request $request)
     {
         // Xóa cả userId (trước đây chỉ xóa username nên người sau thấy hồ sơ người trước)
-        $request->session()->forget(['username', 'userId']);
+        $request->session()->forget(['username', 'userId', 'avatar', 'bookingId']);
         $request->session()->regenerate();
         $request->session()->regenerateToken();
 
