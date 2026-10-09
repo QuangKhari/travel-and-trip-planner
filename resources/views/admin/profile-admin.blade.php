@@ -43,10 +43,10 @@
                                         <h3 id="nameAdmin">{{ $admin->fullName }}</h3>
                                         <ul class="list-unstyled user_data">
                                             <li><i class="fa fa-map-marker user-profile-icon"></i>
-                                                <span id="emailAdmin">{{ $admin->address }}</span>
+                                                <span id="addressAdmin">{{ $admin->address }}</span>
                                             </li>
-                                            <li><i class="fa fa-briefcase user-profile-icon"></i>
-                                                <span id="addressAdmin">{{ $admin->email }}</span>
+                                            <li><i class="fa fa-envelope user-profile-icon"></i>
+                                                <span id="emailAdmin">{{ $admin->email }}</span>
                                             </li>
                                         </ul>
                                     </div>
