@@ -5,6 +5,7 @@ namespace App\Models\admin;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\DB;
+use App\Support\BookingPii;
 
 class DashboardModel extends Model
 {
@@ -70,13 +71,15 @@ class DashboardModel extends Model
 
     public function getNewBooking()
     {
-        return DB::table('tbl_booking')
+        $rows = DB::table('tbl_booking')
             ->join('tbl_tours', 'tbl_booking.tourId', '=', 'tbl_tours.tourId')
-            ->where('tbl_booking.bookingStatus', 'n')   // 'n' = chờ xác nhận; trước đây lọc 'b' không tồn tại (L-F-05)
+            ->where('tbl_booking.bookingStatus', 'n')
             ->orderByDesc('tbl_booking.bookingDate')
-            ->select('tbl_booking.*', 'tbl_tours.title as tour_name') // Chọn tất cả các cột từ tbl_booking và thêm tên tour từ tbl_tours
+            ->select('tbl_booking.*', 'tbl_tours.title as tour_name')
             ->take(5)
             ->get();
+
+        return BookingPii::decryptAll($rows);
     }
 
     /**

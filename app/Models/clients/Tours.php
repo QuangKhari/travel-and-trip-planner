@@ -5,6 +5,7 @@ namespace App\Models\clients;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\DB;
+use App\Support\BookingPii;
 
 class Tours extends Model
 {
@@ -205,7 +206,7 @@ class Tours extends Model
             ->where('tbl_booking.userId', '=', $userId)   // chỉ chủ đơn 
             ->first();
 
-        return $booked;
+        return BookingPii::decrypt($booked);
     }
 
     //Tạo đánh giá về tours

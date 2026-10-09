@@ -6,6 +6,7 @@
 
     <form action="{{ route('create-booking') }}" method="POST" class="booking-container">
         @csrf
+        <input type="hidden" name="requestToken" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
         <!-- Contact Information -->
         <div class="booking-info">
             <h2 class="booking-header">Thông Tin Liên Lạc</h2>

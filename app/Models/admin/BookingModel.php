@@ -5,44 +5,47 @@ namespace App\Models\admin;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\DB;
+use App\Support\BookingPii;
 
 class BookingModel extends Model
 {
-     use HasFactory;
+    use HasFactory;
 
     protected $table = 'tbl_booking';
 
-    public function getBooking(){
-
+    public function getBooking()
+    {
         $list_booking = DB::table($this->table)
-        ->join('tbl_tours', 'tbl_tours.tourId', '=', 'tbl_booking.tourId')
-        ->join('tbl_checkout', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
-        ->orderByDesc('bookingDate')
-        ->get();
+            ->join('tbl_tours', 'tbl_tours.tourId', '=', 'tbl_booking.tourId')
+            ->join('tbl_checkout', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
+            ->orderByDesc('bookingDate')
+            ->get();
 
-        return $list_booking;
+        return BookingPii::decryptAll($list_booking);
     }
 
-    public function updateBooking($bookingId, $data){
+    public function updateBooking($bookingId, $data)
+    {
         return DB::table($this->table)
-        ->where('bookingId',$bookingId)
-        ->update($data);
+            ->where('bookingId', $bookingId)
+            ->update($data);
     }
 
-    public function getInvoiceBooking($bookingId){
-
+    public function getInvoiceBooking($bookingId)
+    {
         $invoice = DB::table($this->table)
-        ->join('tbl_tours', 'tbl_tours.tourId', '=', 'tbl_booking.tourId')
-        ->join('tbl_checkout', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
-        ->where('tbl_booking.bookingId', $bookingId)
-        ->first();
+            ->join('tbl_tours', 'tbl_tours.tourId', '=', 'tbl_booking.tourId')
+            ->join('tbl_checkout', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
+            ->where('tbl_booking.bookingId', $bookingId)
+            ->first();
 
-        return $invoice;
+        return BookingPii::decrypt($invoice);
     }
 
-    public function updateCheckout($bookingId, $data){
+    public function updateCheckout($bookingId, $data)
+    {
         return DB::table('tbl_checkout')
-        ->where('bookingId',$bookingId)
-        ->update($data);
+            ->where('bookingId', $bookingId)
+            ->update($data);
     }
 }

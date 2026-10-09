@@ -58,6 +58,7 @@ class BookingController extends Controller
     public function createBooking(Request $req, BookingService $bookings)
     {
         $validator = Validator::make($req->all(), [
+            'requestToken' => 'nullable|uuid',
             'tourId'      => 'required|integer|min:1',
             'fullName'    => 'required|string|max:255',
             'email'       => ['required', 'email:filter', 'max:50', 'regex:/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/'],
@@ -99,7 +100,11 @@ class BookingController extends Controller
             return redirect()->route('tour-detail', ['id' => $tourId]);
         }
 
-        toastr()->success('Đặt tour thành công! Mã đơn: ' . $result['bookingCode']
+        $prefix = $result['duplicate']
+            ? 'Đơn này đã được ghi nhận trước đó. Mã đơn: '
+            : 'Đặt tour thành công! Mã đơn: ';
+
+        toastr()->success($prefix . $result['bookingCode']
             . '. Chỗ được giữ trong ' . (int) config('travela.hold_hours', 48) . ' giờ, vui lòng đến văn phòng để xác nhận.');
         return redirect()->route('tours');
     }
