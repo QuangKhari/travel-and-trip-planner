@@ -28,6 +28,7 @@ class EmailVerificationController extends Controller
 
         $verification = DB::table('tbl_email_verification')
             ->where('tokenHash', $tokenHash)
+            ->whereNull('pendingEmail')
             ->where('expiresAt', '>', now())
             ->first();
 
@@ -51,6 +52,7 @@ class EmailVerificationController extends Controller
             if ($user->isActive === 'y') {
                 DB::table('tbl_email_verification')
                     ->where('userId', $user->userId)
+                    ->whereNull('pendingEmail')
                     ->delete();
 
                 return true;
@@ -59,6 +61,7 @@ class EmailVerificationController extends Controller
             $currentVerification = DB::table('tbl_email_verification')
                 ->where('userId', $user->userId)
                 ->where('tokenHash', $tokenHash)
+                ->whereNull('pendingEmail')
                 ->where('expiresAt', '>', now())
                 ->first();
 
