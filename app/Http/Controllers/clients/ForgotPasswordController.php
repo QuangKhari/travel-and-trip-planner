@@ -128,13 +128,13 @@ class ForgotPasswordController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'token'       => 'required|string|size:64',
-            'password'    => 'required|string|min:6|max:72',
+            'password'    => 'required|string|min:8|max:72',
             're_password' => 'required|same:password',
         ], [
             'token.required'       => 'Liên kết không hợp lệ.',
             'token.size'           => 'Liên kết không hợp lệ.',
             'password.required'    => 'Vui lòng nhập mật khẩu mới.',
-            'password.min'         => 'Mật khẩu phải có ít nhất 6 ký tự.',
+            'password.min'         => 'Mật khẩu phải có ít nhất 8 ký tự.',
             'password.max'         => 'Mật khẩu tối đa 72 ký tự.',
             're_password.required' => 'Vui lòng nhập lại mật khẩu.',
             're_password.same'     => 'Mật khẩu xác nhận không khớp.',

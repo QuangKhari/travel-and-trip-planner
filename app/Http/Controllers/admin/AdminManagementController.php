@@ -37,7 +37,7 @@ class AdminManagementController extends Controller
             'fullName' => 'required|string|max:50',
             'email'    => ['required', 'email:filter', 'max:50', 'regex:/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/'],
             'address'  => 'required|string|max:255',
-            'password' => 'nullable|string|min:6|max:72',
+            'password' => 'nullable|string|min:8|max:72',
         ]);
 
         $dataUpdate = [
@@ -109,7 +109,7 @@ class AdminManagementController extends Controller
     {
         $request->validate([
             'userName' => 'required|string|max:50',
-            'password' => 'required|string|min:6|max:72',
+            'password' => 'required|string|min:8|max:72',
             'email'    => ['required', 'email:filter', 'max:50', 'regex:/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/'],
             'fullName' => 'required|string|max:50',
             'address'  => 'required|string|max:255',
@@ -173,7 +173,7 @@ class AdminManagementController extends Controller
     {
         $request->validate([
             'userName' => 'required|string|max:50',
-            'password' => 'required|string|min:6|max:72',
+            'password' => 'required|string|min:8|max:72',
             'email'    => ['required', 'email:filter', 'max:50', 'regex:/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/'],
             'fullName' => 'required|string|max:50',
             'address'  => 'required|string|max:255',

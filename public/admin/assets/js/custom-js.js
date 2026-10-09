@@ -1035,9 +1035,9 @@ $(document).ready(function () {
             return false;
         }
 
-        // Đảm bảo mật khẩu có ít nhất 6 ký tự
-        if (password.length < 6) {
-            toastr.error("Mật khẩu phải có ít nhất 6 ký tự!");
+        // Đảm bảo mật khẩu có ít nhất 8 ký tự
+        if (password.length < 8) {
+            toastr.error("Mật khẩu phải có ít nhất 8 ký tự!");
 
             e.preventDefault();
 
@@ -1064,11 +1064,11 @@ $(document).ready(function () {
 
         var isValid = true;
 
-        // Mật khẩu để trống = không đổi; nếu nhập thì phải đủ 6 ký tự
-        if (password !== "" && password.length < 6) {
+        // Mật khẩu để trống = không đổi; nếu nhập thì phải đủ 8 ký tự
+        if (password !== "" && password.length < 8) {
             isValid = false;
 
-            toastr.error("Mật khẩu mới phải có ít nhất 6 ký tự.");
+            toastr.error("Mật khẩu mới phải có ít nhất 8 ký tự.");
         }
 
         var emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;

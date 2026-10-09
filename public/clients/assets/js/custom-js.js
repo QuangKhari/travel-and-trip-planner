@@ -111,11 +111,11 @@ $(document).ready(function () {
             $("#validate_email_regis").show().text("Email không hợp lệ.");
         }
 
-        if (password.length < 6) {
+        if (password.length < 8) {
             isValid = false;
             $("#validate_password_regis")
                 .show()
-                .text("Mật khẩu phải có ít nhất 6 ký tự.");
+                .text("Mật khẩu phải có ít nhất 8 ký tự.");
         }
 
         // Kiểm tra nhập lại mật khẩu
@@ -429,11 +429,11 @@ $(document).ready(function () {
         var isValid = true;
 
         // Kiểm tra độ dài mật khẩu
-        if (oldPass.length < 6 || newPass.length < 6) {
+        if (oldPass.length < 6 || newPass.length < 8) {
             isValid = false;
             $("#validate_password")
                 .show()
-                .text("Mật khẩu phải có ít nhất 6 ký tự.");
+                .text("Mật khẩu phải có ít nhất 8 ký tự.");
         }
 
         if (isValid) {

@@ -34,7 +34,7 @@ class LoginController extends Controller
         $validator = Validator::make($request->all(), [
             'username_regis' => 'required|string|max:50',
             'email'          => ['required', 'email:filter', 'max:255', 'regex:/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/'],
-            'password_regis' => 'required|string|min:6|max:72',
+            'password_regis' => 'required|string|min:8|max:72',
         ], [
             'username_regis.required' => 'Vui lòng nhập tên tài khoản.',
             'username_regis.max'      => 'Tên tài khoản tối đa 50 ký tự.',
@@ -42,7 +42,7 @@ class LoginController extends Controller
             'email.email'             => 'Email không hợp lệ.',
             'email.regex'             => 'Email không hợp lệ (cần có dạng ten@ten-mien.com).',
             'password_regis.required' => 'Vui lòng nhập mật khẩu.',
-            'password_regis.min'      => 'Mật khẩu phải có ít nhất 6 ký tự.',
+            'password_regis.min'      => 'Mật khẩu phải có ít nhất 8 ký tự.',
             'password_regis.max'      => 'Mật khẩu tối đa 72 ký tự.',
         ]);
 

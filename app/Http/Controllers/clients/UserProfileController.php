@@ -195,11 +195,11 @@ class UserProfileController extends Controller
     {
         $validator = Validator::make($req->all(), [
             'oldPass' => 'required|string',
-            'newPass' => 'required|string|min:6|max:72',
+            'newPass' => 'required|string|min:8|max:72',
         ], [
             'oldPass.required' => 'Vui lòng nhập mật khẩu cũ.',
             'newPass.required' => 'Vui lòng nhập mật khẩu mới.',
-            'newPass.min'      => 'Mật khẩu mới phải có ít nhất 6 ký tự.',
+            'newPass.min'      => 'Mật khẩu mới phải có ít nhất 8 ký tự.',
             'newPass.max'      => 'Mật khẩu mới tối đa 72 ký tự.',
         ]);
 
