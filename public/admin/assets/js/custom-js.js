@@ -548,6 +548,33 @@ $(document).ready(function () {
         });
     });
 
+    $(document).on("click", ".toggle-tour", function (e) {
+        e.preventDefault();
+
+        $.ajax({
+            type: "POST",
+            url: $(this).attr("href"),
+            data: {
+                _token: $('meta[name="csrf-token"]').attr("content"),
+                tourId: $(this).data("tourid"),
+            },
+            success: function (response) {
+                if (response.success) {
+                    $("#tbody-listTours").html(response.data);
+                    toastr.success(response.message);
+                } else {
+                    toastr.error(response.message);
+                }
+            },
+            error: function (xhr) {
+                toastr.error(
+                    xhr.responseJSON?.message ||
+                        "Có lỗi xảy ra. Vui lòng thử lại sau.",
+                );
+            },
+        });
+    });
+
     /********************************************
      * ADD TOURS                              *
      ********************************************/

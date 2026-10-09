@@ -804,6 +804,56 @@ class ToursManagementController extends Controller
         ]);
     }
 
+    public function toggleTour(Request $request)
+    {
+        $request->validate([
+            'tourId' => 'required|integer|min:1|exists:tbl_tours,tourId',
+        ]);
+
+        $tourId = (int) $request->input('tourId');
+        $error = null;
+
+        DB::transaction(function () use ($tourId, &$error) {
+            $tour = DB::table('tbl_tours')->where('tourId', $tourId)->lockForUpdate()->first();
+
+            if (!$tour) {
+                $error = 'Không tìm thấy tour.';
+                return;
+            }
+
+            // Đang hiện thì ẩn luôn
+            if ((int) $tour->availability === 1) {
+                DB::table('tbl_tours')->where('tourId', $tourId)->update(['availability' => 0]);
+                return;
+            }
+
+            // Hiện lại: phải đủ điều kiện như khi đăng mới
+            if (DB::table('tbl_images')->where('tourId', $tourId)->count() < self::MIN_IMAGES) {
+                $error = 'Tour cần ít nhất ' . self::MIN_IMAGES . ' ảnh mới hiện được.';
+            } elseif (!DB::table('tbl_timeline')->where('tourId', $tourId)->exists()) {
+                $error = 'Tour chưa có lộ trình nên chưa hiện được.';
+            } elseif ($tour->startDate <= now()->toDateString()) {
+                $error = 'Ngày khởi hành đã qua, hãy sửa ngày trước khi hiện tour.';
+            } elseif ((int) $tour->quantity <= 0) {
+                $error = 'Tour đã hết chỗ, hãy tăng số chỗ trước khi hiện tour.';
+            } else {
+                DB::table('tbl_tours')->where('tourId', $tourId)->update(['availability' => 1]);
+            }
+        });
+
+        if ($error) {
+            return response()->json(['success' => false, 'message' => $error]);
+        }
+
+        $tours = $this->tours->getAllTours();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã cập nhật trạng thái tour.',
+            'data'    => view('admin.partials.list-tours', compact('tours'))->render(),
+        ]);
+    }
+
     public function deleteTour(Request $request)
     {
         $request->validate([

@@ -136,6 +136,7 @@ Route::prefix('admin')->group(function () {
         Route::post('/add-tours', [ToursManagementController::class, 'addTours'])->name('admin.add-tours');
         Route::post('/update-basic-tour', [ToursManagementController::class, 'updateBasicTour'])->name('admin.update-basic-tour');
         Route::post('/delete-tour', [ToursManagementController::class, 'deleteTour'])->name('admin.delete-tour');
+        Route::post('/toggle-tour', [ToursManagementController::class, 'toggleTour'])->name('admin.toggle-tour');
         Route::post('/add-temp-images', [ToursManagementController::class, 'uploadTempImagesTours'])->name('admin.add-temp-images');
         Route::post('/upload-tour-image', [ToursManagementController::class, 'uploadTourImage'])->name('admin.upload-tour-image');
         Route::post('/add-timeline', [ToursManagementController::class, 'addTimeline'])->name('admin.add-timeline');

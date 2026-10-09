@@ -7,7 +7,16 @@
         <td>{{ number_format($tour->priceAdult, 0, ',', '.') }}</td>
         <td>{{ number_format($tour->priceChild, 0, ',', '.') }}</td>
         <td>{{ $tour->destination }}</td>
-        <td>{{ $tour->availability }}</td>
+        <td>
+            <a href="{{ route('admin.toggle-tour') }}" data-tourId="{{ $tour->tourId }}" class="toggle-tour"
+                title="Bấm để đổi trạng thái">
+                @if ($tour->availability == 1)
+                    <span class="badge badge-success">Đang hiện</span>
+                @else
+                    <span class="badge badge-secondary">Đang ẩn</span>
+                @endif
+            </a>
+        </td>
         <td>{{ date('d-m-Y', strtotime($tour->startDate)) }}</td>
         <td>{{ date('d-m-Y', strtotime($tour->endDate)) }}</td>
         <td>
