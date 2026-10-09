@@ -977,14 +977,10 @@ $(document).ready(function () {
         };
 
         recognition.onresult = function (event) {
-            var transcript = event.results[0][0].transcript; // Lấy kết quả nhận diện
-            if (event.results[0].isFinal) {
-                // Kết quả cuối cùng, điền vào ô tìm kiếm
-                $('input[name="keyword"]').val(transcript);
-            } else {
-                // Kết quả tạm thời, có thể cập nhật ô tìm kiếm
-                $('input[name="keyword"]').val(transcript);
-            }
+            var result = event.results[event.resultIndex][0];
+            var transcript = result.transcript.trim();
+
+            $('input[name="keyword"]').val(transcript);
         };
 
         recognition.onerror = function (event) {

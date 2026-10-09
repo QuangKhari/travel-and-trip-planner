@@ -98,6 +98,13 @@ class SearchController extends Controller
                 ->with('error', 'Vui lòng nhập từ khóa tìm kiếm.');
         }
 
+        $keyword = $this->normalizeVoiceKeyword($keyword);
+
+        if (empty($keyword)) {
+            return redirect()->route('home')
+                ->with('error', 'Không thể xác định từ khóa tìm kiếm.');
+        }
+
         if (mb_strlen($keyword) > 100) {
             return redirect()->route('home')
                 ->with('error', 'Từ khóa tìm kiếm không được vượt quá 100 ký tự.');
@@ -110,5 +117,68 @@ class SearchController extends Controller
         $tours = $this->tours->searchTours($dataSearch);
 
         return view('clients.search', compact('title', 'tours', 'keyword'));
+    }
+
+    private function normalizeVoiceKeyword(string $keyword): string
+    {
+        $keyword = trim($keyword);
+        $keyword = preg_replace('/\s+/u', ' ', $keyword);
+        $keyword = trim($keyword, " \t\n\r\0\x0B.,!?;:");
+
+        if ($keyword === '') {
+            return '';
+        }
+
+        $destinations = [
+            'Đà Nẵng',
+            'Hà Nội',
+            'Hồ Chí Minh',
+            'Nha Trang',
+            'Phú Quốc',
+            'Đà Lạt',
+            'Hạ Long',
+            'Côn Đảo',
+            'Huế',
+            'Quy Nhơn',
+            'Vũng Tàu',
+            'Sa Pa',
+            'Mũi Né',
+            'Phan Thiết',
+        ];
+
+        foreach ($destinations as $destination) {
+            if (mb_stripos($keyword, $destination, 0, 'UTF-8') !== false) {
+                return $destination;
+            }
+        }
+
+        $removePhrases = [
+            'cho tôi xem',
+            'cho tôi tìm',
+            'tôi muốn tìm',
+            'tôi muốn xem',
+            'tôi muốn đi',
+            'tìm kiếm',
+            'tìm tour',
+            'tìm',
+            'tour',
+            'có tour',
+            'cho tôi',
+            'hãy tìm',
+            'hãy cho tôi',
+        ];
+
+        foreach ($removePhrases as $phrase) {
+            $keyword = preg_replace(
+                '/\b' . preg_quote($phrase, '/') . '\b/iu',
+                '',
+                $keyword
+            );
+        }
+
+        $keyword = preg_replace('/\s+/u', ' ', $keyword);
+        $keyword = trim($keyword, " \t\n\r\0\x0B.,!?;:");
+
+        return $keyword;
     }
 }
