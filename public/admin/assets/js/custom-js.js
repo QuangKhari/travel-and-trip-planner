@@ -99,6 +99,7 @@ $(document).ready(function () {
     var formDataEdit = {};
     var tourIdSendingImage;
     var originalImageStems = [];
+    var originalQuantity = null;
 
     $(document).on("click", ".edit-tour", function (e) {
         e.preventDefault();
@@ -141,6 +142,7 @@ $(document).ready(function () {
                     $("input[name='destination']").val(tour.destination);
                     $("select[name='domain']").val(tour.domain);
                     $("input[name='number']").val(tour.quantity);
+                    originalQuantity = tour.quantity;
                     $("input[name='price_adult']").val(tour.priceAdult);
                     $("input[name='price_child']").val(tour.priceChild);
                     $("#start_date").val(startDate);
@@ -315,6 +317,7 @@ $(document).ready(function () {
             destination: $("input[name='destination']").val(),
             domain: $("#domain").val(),
             number: $("input[name='number']").val(),
+            original_number: originalQuantity,
             price_adult: $("input[name='price_adult']").val(),
             price_child: $("input[name='price_child']").val(),
             start_date: $("#start_date").val(),

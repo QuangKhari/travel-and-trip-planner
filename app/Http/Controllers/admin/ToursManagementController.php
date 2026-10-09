@@ -538,6 +538,7 @@ class ToursManagementController extends Controller
             'destination' => 'required|string|max:255',
             'domain'      => 'required|in:b,t,n',
             'number'      => 'required|integer|min:0|max:100000',
+            'original_number' => 'nullable|integer|min:0',
             'price_adult' => 'required|numeric|min:0|max:999999999999',
             'price_child' => 'required|numeric|min:0|max:999999999999',
             'start_date'  => 'required|date_format:d/m/Y',
@@ -669,7 +670,7 @@ class ToursManagementController extends Controller
         $replaceImages   = count($images) > 0;
         $replaceTimeline = is_array($timelines) && count($timelines) > 0;
 
-        $result = DB::transaction(function () use ($tourId, $dataTours, $images, $name, $timelines, $replaceImages, $replaceTimeline) {
+        $result = DB::transaction(function () use ($request, $tourId, $dataTours, $images, $name, $timelines, $replaceImages, $replaceTimeline) {
             $tour = DB::table('tbl_tours')
                 ->where('tourId', $tourId)
                 ->lockForUpdate()
@@ -681,6 +682,21 @@ class ToursManagementController extends Controller
                     'status' => 404,
                     'message' => 'Không tìm thấy tour.',
                 ];
+            }
+
+            // Số chỗ có thể đã đổi từ lúc admin mở form (khách vừa đặt/hủy)
+            $originalNumber = $request->input('original_number');
+            if ($originalNumber !== null && $originalNumber !== '' && (int) $originalNumber !== (int) $tour->quantity) {
+                if ((int) $dataTours['quantity'] === (int) $originalNumber) {
+                    // Admin không sửa số chỗ: giữ nguyên số chỗ hiện tại, không ghi đè bằng giá trị cũ
+                    $dataTours['quantity'] = (int) $tour->quantity;
+                } else {
+                    return [
+                        'success' => false,
+                        'status'  => 409,
+                        'message' => 'Số chỗ còn lại đã thay đổi từ khi bạn mở form (có đơn mới hoặc đơn hủy). Hãy mở lại form rồi sửa.',
+                    ];
+                }
             }
 
             if (
