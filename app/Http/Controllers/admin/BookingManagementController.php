@@ -292,7 +292,6 @@ class BookingManagementController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'bookingId' => 'required|integer|min:1',
-            'email' => 'required|email',
         ]);
 
         if ($validator->fails()) {
@@ -303,12 +302,16 @@ class BookingManagementController extends Controller
         }
 
         $bookingId = (int) $request->input('bookingId');
-        $email = $request->input('email');
         $title = 'Hóa đơn';
         $invoice_booking = $this->booking->getInvoiceBooking($bookingId);
 
         if (!$invoice_booking) {
             return response()->json(['success' => false, 'message' => 'Không tìm thấy đơn.']);
+        }
+
+        // Hóa đơn luôn gửi tới email khách đã nhập khi đặt tour (booking.email)
+        if ($invoice_booking->bookingStatus === 'c') {
+            return response()->json(['success' => false, 'message' => 'Đơn đã hủy, không gửi hóa đơn.']);
         }
 
         if ($invoice_booking->transactionId == null) {
