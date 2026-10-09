@@ -40,9 +40,16 @@ return [
 
         'public' => [
             'driver' => 'local',
-            'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            'root' => env('MEDIA_PUBLIC_ROOT', storage_path('app/public')),
+            'url' => rtrim(env('APP_URL', 'http://localhost'), '/') . '/storage',
             'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
+        'proofs' => [
+            'driver' => 'local',
+            'root' => env('MEDIA_PRIVATE_ROOT', storage_path('app/private')),
             'throw' => false,
             'report' => false,
         ],
@@ -74,7 +81,7 @@ return [
     */
 
     'links' => [
-        public_path('storage') => storage_path('app/public'),
+        public_path('storage') => env('MEDIA_PUBLIC_ROOT', storage_path('app/public')),
     ],
 
 ];
