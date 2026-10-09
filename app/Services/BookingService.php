@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\DB;
+use App\Support\BookingPii;
 
 /**
  * Tạo đơn đặt tour: server tự tính giá, kiểm tra tour, trừ chỗ nguyên tử,
@@ -27,9 +28,30 @@ class BookingService
             $children = (int) $in['numChildren'];
             $people   = $adults + $children;
             $today    = now()->toDateString();
+            $token = !empty($in['requestToken']) ? (string) $in['requestToken'] : null;
 
             // 1. Khóa dòng tour trong lúc đặt (hai người đặt cùng lúc sẽ xếp hàng)
             $tour = DB::table('tbl_tours')->where('tourId', $tourId)->lockForUpdate()->first();
+
+            if ($token !== null) {
+                $existing = DB::table('tbl_booking')
+                    ->where('userId', $userId)
+                    ->where('requestToken', $token)
+                    ->first();
+
+                if ($existing) {
+                    if ($existing->bookingStatus === 'c') {
+                        throw new BookingException('Phiên đặt tour này đã hết hiệu lực, vui lòng tải lại trang và đặt lại.');
+                    }
+                    return [
+                        'bookingId'   => (int) $existing->bookingId,
+                        'bookingCode' => $existing->bookingCode,
+                        'totalPrice'  => (int) $existing->totalPrice,
+                        'discount'    => 0,
+                        'duplicate'   => true,
+                    ];
+                }
+            }
 
             if (!$tour || (int) $tour->availability !== 1) {
                 throw new BookingException('Tour không tồn tại hoặc đã ngừng nhận đặt.');
@@ -71,20 +93,20 @@ class BookingService
             // 5. Tạo đơn + thanh toán
             $bookingCode = $this->newBookingCode();
 
-            $bookingId = DB::table('tbl_booking')->insertGetId([
-                'tourId'      => $tourId,
-                'userId'      => $userId,
-                'fullName'    => $in['fullName'],
-                'email'       => $in['email'],
-                'phoneNumber' => $in['tel'],
-                'address'     => $in['address'],
-                'numAdults'   => $adults,
-                'numChildren' => $children,
-                'totalPrice'  => $total,
-                'bookingCode' => $bookingCode,
-                // Giữ chỗ có hạn: quá hạn mà chưa xác nhận thì lệnh bookings:expire-holds tự hủy
+            $bookingId = DB::table('tbl_booking')->insertGetId(BookingPii::encrypt([
+                'tourId'       => $tourId,
+                'userId'       => $userId,
+                'fullName'     => $in['fullName'],
+                'email'        => $in['email'],
+                'phoneNumber'  => $in['tel'],
+                'address'      => $in['address'],
+                'numAdults'    => $adults,
+                'numChildren'  => $children,
+                'totalPrice'   => $total,
+                'bookingCode'  => $bookingCode,
+                'requestToken' => $token,
                 'holdExpiresAt' => now()->addHours((int) config('travela.hold_hours', 48)),
-            ]);
+            ]));
 
             if ($promotionId !== null) {
                 $this->coupons->attach($promotionId, $userId, $bookingId, $discount);
@@ -103,8 +125,9 @@ class BookingService
                 'bookingCode' => $bookingCode,
                 'totalPrice'  => $total,
                 'discount'    => $discount,
+                'duplicate'   => false,
             ];
-        });
+        }, 3);
     }
 
     /**
