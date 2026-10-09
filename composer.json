@@ -14,7 +14,8 @@
         "intervention/image-laravel": "4.1.1",
         "laravel/framework": "13.*",
         "laravel/tinker": "3.*",
-        "php-flasher/flasher-toastr-laravel": "2.6.3"
+        "php-flasher/flasher-toastr-laravel": "2.6.3",
+        "predis/predis": "^3.7"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

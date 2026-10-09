@@ -53,6 +53,7 @@ class User extends Model
             ->select(
                 'tbl_booking.*',
                 'tbl_tours.title',
+                'tbl_tours.description',
                 'tbl_tours.time',
                 'tbl_tours.destination',
                 'tbl_tours.startDate',
