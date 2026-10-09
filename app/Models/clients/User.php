@@ -57,6 +57,7 @@ class User extends Model
                 'tbl_tours.destination',
                 'tbl_tours.startDate',
                 'tbl_tours.endDate',
+                'tbl_checkout.checkoutId',
                 'tbl_checkout.paymentMethod',
                 'tbl_checkout.paymentStatus'
             )
