@@ -15,6 +15,7 @@
         "laravel/framework": "13.*",
         "laravel/tinker": "3.*",
         "php-flasher/flasher-toastr-laravel": "2.6.3",
+        "php-open-source-saver/jwt-auth": "^2.9",
         "predis/predis": "^3.7"
     },
     "require-dev": {

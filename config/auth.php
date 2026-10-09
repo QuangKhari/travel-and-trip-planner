@@ -42,7 +42,13 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        'api' => [
+            'driver' => 'jwt',
+            'provider' => 'accounts',
+        ],
     ],
+
 
     /*
     |--------------------------------------------------------------------------
@@ -71,6 +77,11 @@ return [
         //     'driver' => 'database',
         //     'table' => 'users',
         // ],
+
+        'accounts' => [
+            'driver' => 'eloquent',
+            'model'  => App\Models\Account::class,
+        ],
     ],
 
     /*

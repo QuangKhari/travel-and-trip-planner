@@ -32,5 +32,8 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="JWT_SECRET" value="test-secret-key-test-secret-key-1234567890"/>
+        <env name="JWT_BLACKLIST_ENABLED" value="true"/>
+        <env name="JWT_BLACKLIST_GRACE_PERIOD" value="0"/>
     </php>
 </phpunit>
