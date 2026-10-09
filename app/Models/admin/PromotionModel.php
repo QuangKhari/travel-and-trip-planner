@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class PromotionModel extends Model
 {
-     use HasFactory;
+    use HasFactory;
 
     protected $table = 'tbl_promotion';
 
@@ -56,9 +56,15 @@ class PromotionModel extends Model
      */
     public function deletePromotion($promotionId)
     {
-        return DB::table($this->table)
-            ->where('promotionId', $promotionId)
-            ->delete();
+        // Mã đã có đơn dùng: không xóa (khóa ngoại sẽ xóa luôn lịch sử), chỉ vô hiệu hóa
+        $used = DB::table('tbl_promotion_usage')->where('promotionId', $promotionId)->exists();
+
+        if ($used) {
+            DB::table($this->table)->where('promotionId', $promotionId)->update(['status' => 'n']);
+            return true;
+        }
+
+        return DB::table($this->table)->where('promotionId', $promotionId)->delete() > 0;
     }
 
     /**
@@ -80,5 +86,4 @@ class PromotionModel extends Model
             ->where('promotionId', $promotionId)
             ->decrement('quantity', 1);
     }
-    
 }

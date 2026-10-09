@@ -49,11 +49,4 @@ class LoginModel extends Model
             ->where('role', $role)
             ->delete();
     }
-
-    public function updateAdmin($data)
-    {
-        return DB::table($this->table)
-            ->where('role', 'admin')
-            ->update($data);
-    }
 }
