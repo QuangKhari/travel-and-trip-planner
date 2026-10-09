@@ -702,7 +702,7 @@ $(document).ready(function () {
 
         // Kiểm tra email (phải đúng định dạng email)
         const email = $("#email").val().trim();
-        const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/;
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
         if (email === "") {
             $("#emailError").text("Email không được để trống").show();
             isValid = false;
@@ -887,16 +887,9 @@ $(document).ready(function () {
 
         $(".error").remove();
 
-        if (sqlInjectionPattern.test(name)) {
-            $("#name").after(
-                '<span class="error" style="color: red;">Vui lòng nhập tên hợp lệ và không chứa ký tự đặc biệt.</span>',
-            );
-            return false;
-        }
-
-        if (sqlInjectionPattern.test(phoneNumber)) {
+        if (!/^[0-9+\s.\-]{8,15}$/.test(phoneNumber)) {
             $("#phone_number").after(
-                '<span class="error" style="color: red;">Vui lòng nhập số điện thoại hợp lệ và không chứa ký tự đặc biệt.</span>',
+                '<span class="error" style="color: red;">Số điện thoại không hợp lệ (8–15 ký tự, gồm số, +, khoảng trắng, dấu chấm hoặc gạch ngang).</span>',
             );
             return false;
         }
