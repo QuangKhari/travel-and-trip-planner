@@ -148,6 +148,7 @@ Route::prefix('admin')->group(function () {
 
         //Management Booking - thêm quyền
         Route::post('/finish-booking', [BookingManagementController::class, 'finishBooking'])->name('admin.finish-booking');
+        Route::post('/admin-cancel-booking', [BookingManagementController::class, 'cancelBooking'])->name('admin.cancel-booking');
         Route::post('/received-money', [BookingManagementController::class, 'receiviedMoney'])->name('admin.received');
         Route::post('/confirm-payment', [BookingManagementController::class, 'confirmPayment'])->name('admin.confirm-payment');
         Route::post('/send-pdf', [BookingManagementController::class, 'sendPdf'])->middleware('throttle:10,1,send-pdf')->name('admin.send.pdf');

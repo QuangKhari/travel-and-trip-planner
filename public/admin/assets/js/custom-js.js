@@ -772,6 +772,38 @@ $(document).ready(function () {
         });
     });
 
+    $(document).on("click", ".cancel-booking-admin", function (e) {
+        e.preventDefault();
+
+        if (!confirm("Hủy đơn này và trả lại chỗ?")) {
+            return;
+        }
+
+        $.ajax({
+            url: $(this).data("urlcancel"),
+            method: "POST",
+            data: {
+                bookingId: $(this).data("bookingid"),
+                _token: $('meta[name="csrf-token"]').attr("content"),
+            },
+            success: function (response) {
+                if (response.success) {
+                    if ($.fn.DataTable.isDataTable("#datatable-booking")) {
+                        $("#datatable-booking").DataTable().destroy();
+                    }
+                    $("#tbody-booking").html(response.data);
+                    init_DataTables();
+                    toastr.success(response.message);
+                } else {
+                    toastr.error(response.message);
+                }
+            },
+            error: function () {
+                toastr.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
+            },
+        });
+    });
+
     $(document).on("click", ".confirm-payment", function (e) {
         e.preventDefault();
 

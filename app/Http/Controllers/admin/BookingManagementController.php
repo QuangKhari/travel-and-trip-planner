@@ -225,6 +225,40 @@ class BookingManagementController extends Controller
         return $result['ok'] ? $this->bookingTableResponse($result['message']) : $this->refuse($result['message']);
     }
 
+    public function cancelBooking(Request $request, BookingService $bookings)
+    {
+        $validator = Validator::make($request->all(), [
+            'bookingId' => 'required|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->refuse($validator->errors()->first());
+        }
+
+        $bookingId = (int) $request->input('bookingId');
+
+        $result = DB::transaction(function () use ($bookingId, $bookings) {
+            $booking = DB::table('tbl_booking')->where('bookingId', $bookingId)->lockForUpdate()->first();
+
+            if (!$booking) {
+                return ['ok' => false, 'message' => 'Không tìm thấy đơn.'];
+            }
+            if (!in_array($booking->bookingStatus, ['n', 'y'], true)) {
+                return ['ok' => false, 'message' => 'Chỉ hủy được đơn đang chờ hoặc đã xác nhận.'];
+            }
+            $paid = DB::table('tbl_checkout')->where('bookingId', $bookingId)->value('paymentStatus') === 'y';
+            if ($paid) {
+                return ['ok' => false, 'message' => 'Đơn đã thanh toán: hãy hoàn tiền cho khách trước, không hủy trực tiếp ở đây.'];
+            }
+
+            $bookings->cancelLocked($booking);   // đổi trạng thái, trả chỗ, nhả mã giảm giá
+
+            return ['ok' => true, 'message' => 'Đã hủy đơn và trả lại chỗ.'];
+        });
+
+        return $result['ok'] ? $this->bookingTableResponse($result['message']) : $this->refuse($result['message']);
+    }
+
     // Trang chi tiết đơn gọi hàm này: không cần trả lại bảng
     public function receiviedMoney(Request $request)
     {

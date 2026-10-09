@@ -47,33 +47,39 @@
                     style="position: absolute; will-change: transform; top: 0px; left: 0px; transform: translate3d(71px, 38px, 0px);">
 
                     @if ($booking->bookingStatus == 'n')
-                        <a class="dropdown-item confirm-booking"
-                            href="javascript:void(0)"
+                        <a class="dropdown-item confirm-booking" href="javascript:void(0)"
                             data-bookingId="{{ $booking->bookingId }}"
                             data-urlConfirm="{{ route('admin.confirm-booking') }}">
                             Xác nhận Booking
                         </a>
                     @endif
 
-                    @if ($booking->paymentStatus == 'n')
-                        <a class="dropdown-item confirm-payment"
-                            href="javascript:void(0)"
+                    @if ($booking->paymentStatus == 'n' && $booking->bookingStatus != 'c')
+                        <a class="dropdown-item confirm-payment" href="javascript:void(0)"
                             data-bookingId="{{ $booking->bookingId }}"
                             data-urlPayment="{{ route('admin.confirm-payment') }}">
                             Xác nhận thanh toán
                         </a>
                     @endif
 
-                    <a class="dropdown-item finish-booking {{ $booking->hide }}"
-                        href="javascript:void(0)"
-                        data-bookingId="{{ $booking->bookingId }}"
-                        data-urlfinish="{{ route('admin.finish-booking') }}">
-                        Đã hoàn thành
-                    </a>
+                    @if ($booking->bookingStatus == 'y')
+                        <a class="dropdown-item finish-booking {{ $booking->hide }}" href="javascript:void(0)"
+                            data-bookingId="{{ $booking->bookingId }}"
+                            data-urlfinish="{{ route('admin.finish-booking') }}">
+                            Đã hoàn thành
+                        </a>
+                    @endif
 
-                    <a class="dropdown-item"
-                    href="{{ route('admin.booking-detail',['id' => $booking->bookingId]) }}">
-                    Xem chi tiết
+                    @if (in_array($booking->bookingStatus, ['n', 'y']) && $booking->paymentStatus != 'y')
+                        <a class="dropdown-item cancel-booking-admin" href="javascript:void(0)"
+                            data-bookingId="{{ $booking->bookingId }}"
+                            data-urlcancel="{{ route('admin.cancel-booking') }}">
+                            Hủy đơn
+                        </a>
+                    @endif
+
+                    <a class="dropdown-item" href="{{ route('admin.booking-detail', ['id' => $booking->bookingId]) }}">
+                        Xem chi tiết
                     </a>
 
                 </div>
