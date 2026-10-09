@@ -8,6 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
         if (!Schema::hasTable('tbl_checkout') || !Schema::hasColumn('tbl_checkout', 'paymentDate')) {
             return;
         }
