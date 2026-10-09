@@ -191,7 +191,7 @@
                             </div>
                             <div id="step-2">
                                 <h2 class="StepTitle">Thêm hình ảnh</h2>
-                                <form action="{{ route('admin.add-temp-images') }}" class="dropzone dz-clickable"
+                                <form action="{{ route('admin.upload-tour-image') }}" class="dropzone dz-clickable"
                                     id="myDropzone-listTour" enctype="multipart/form-data">
                                     @csrf
                                     <div class="dz-default dz-message">

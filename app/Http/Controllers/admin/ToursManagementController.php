@@ -463,6 +463,29 @@ class ToursManagementController extends Controller
      * @return array{0:?array,1:?\Illuminate\Http\JsonResponse} [meta, lỗi]
      */
 
+    /**
+     * Upload ảnh từ modal "Sửa tour" (tour đã đăng). Chỉ lưu file, KHÔNG ghi tbl_temp_images:
+     * ảnh chỉ được ghi vào tbl_images khi bấm Lưu (updateTour), ảnh bỏ dở do lệnh media:cleanup-orphans dọn.
+     */
+    public function uploadTourImage(Request $request)
+    {
+        [$meta, $error] = $this->storeUploadedImage($request);
+
+        if ($error) {
+            return $error;
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Image uploaded successfully',
+            'data'    => [
+                'filename' => $meta['stem'],
+                'url'      => TourImage::url($meta['stem'], 320),
+                'tourId'   => (int) $request->input('tourId'),
+            ],
+        ]);
+    }
+
     private function storeUploadedImage(Request $request): array
     {
         // File vượt upload_max_filesize / post_max_size của PHP: báo đúng nguyên nhân thay vì "Chưa chọn ảnh"

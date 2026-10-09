@@ -41,46 +41,42 @@
                                             </ul>
                                         </div>
                                         <div class="right col-md-5 col-sm-5 text-center">
-                                            <img src="{{ \App\Support\Avatar::url($user->avatar) }}"
-                                                alt="" class="img-circle img-fluid">
+                                            <img src="{{ \App\Support\Avatar::url($user->avatar) }}" alt=""
+                                                class="img-circle img-fluid">
                                         </div>
                                     </div>
                                     <div class=" profile-bottom text-center">
                                         <div class=" col-sm-12 emphasis" style="display: flex; justify-content: end">
                                             @if ($user->isActive == 'Chưa kích hoạt')
-                                                <button type="button" class="btn btn-primary btn-sm"
-                                                    data-attr='{"userId": "{{ $user->userId }}", "action": "{{ route('admin.active-user') }}"}'
-                                                    id="btn-active">
+                                                <button type="button" class="btn btn-primary btn-sm btn-active"
+                                                    data-attr='{"userId": "{{ $user->userId }}", "action": "{{ route('admin.active-user') }}"}'>
                                                     <i class="fa fa-check"> </i> Kích hoạt
                                                 </button>
                                             @endif
-                                            <button type="button" class="btn btn-primary btn-warning"
+
+                                            <button type="button" class="btn btn-primary btn-warning btn-ban"
                                                 data-attr='{"userId": "{{ $user->userId }}", "action": "{{ route('admin.status-user') }}", "status": "b"}'
-                                                id="btn-ban"
                                                 style="{{ $user->status === 'b' ? 'display: none;' : '' }}">
                                                 <i class="fa fa-ban"> </i> Chặn
                                             </button>
 
-                                            <button type="button" class="btn btn-primary btn-warning"
-                                                data-attr='{"userId": "{{ $user->userId }}", "action": "{{ route('admin.status-user') }}", "status": ""}'
-                                                id="btn-unban"
+                                            <button type="button" class="btn btn-primary btn-warning btn-unban"
+                                                data-attr='{"userId": "{{ $user->userId }}", "action": "{{ route('admin.status-user') }}", "status": "active"}'
                                                 style="{{ $user->status !== 'b' ? 'display: none;' : '' }}">
                                                 <i class="fa fa-ban"> </i> Bỏ chặn
                                             </button>
 
-                                            <button type="button" class="btn btn-primary btn-danger"
+                                            <button type="button" class="btn btn-primary btn-danger btn-delete"
                                                 data-attr='{"userId": "{{ $user->userId }}", "action": "{{ route('admin.status-user') }}", "status": "d"}'
-                                                id="btn-delete"
                                                 style="{{ $user->status === 'd' ? 'display: none;' : '' }}">
                                                 <i class="fa fa-close"> </i> Xóa
                                             </button>
-                                            <button type="button" class="btn btn-primary btn-danger"
-                                                data-attr='{"userId": "{{ $user->userId }}", "action": "{{ route('admin.status-user') }}", "status": ""}'
-                                                id="btn-restore"
+
+                                            <button type="button" class="btn btn-primary btn-danger btn-restore"
+                                                data-attr='{"userId": "{{ $user->userId }}", "action": "{{ route('admin.status-user') }}", "status": "active"}'
                                                 style="{{ $user->status !== 'd' ? 'display: none;' : '' }}">
                                                 <i class="fa fa-close"> </i> Khôi phục
                                             </button>
-
                                         </div>
                                     </div>
                                 </div>

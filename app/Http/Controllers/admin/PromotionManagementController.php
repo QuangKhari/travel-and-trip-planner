@@ -162,14 +162,10 @@ class PromotionManagementController extends Controller
                 ->with('error', 'Không thể cập nhật Promotion.');
         }
 
+        // promotionId đã được validate 'exists'; 0 dòng đổi nghĩa là không có gì khác, không phải lỗi
         return redirect()
             ->route('admin.promotion')
-            ->with(
-                $result ? 'success' : 'error',
-                $result
-                    ? 'Cập nhật Promotion thành công'
-                    : 'Cập nhật Promotion thất bại'
-            );
+            ->with('success', 'Cập nhật Promotion thành công');
     }
 
     // Xóa promotion

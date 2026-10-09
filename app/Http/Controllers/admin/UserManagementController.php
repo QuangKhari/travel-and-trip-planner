@@ -51,28 +51,21 @@ class UserManagementController extends Controller
             ], 422);
         }
 
-        $userId = (int) $request->userId;
+        // Không dựa vào số dòng bị đổi: kích hoạt lần hai (0 dòng đổi) không phải là lỗi
+        $this->users->updateActive((int) $request->userId);
 
-        $updateActive = $this->users->updateActive($userId);
-
-        if ($updateActive) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Người dùng đã được kích hoạt thành công!'
-            ]);
-        } else {
-            return response()->json([
-                'success' => false,
-                'message' => 'Có lỗi xảy ra khi kích hoạt người dùng!'
-            ], 500); // Trả về mã lỗi HTTP 500 nếu có lỗi
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Người dùng đã được kích hoạt thành công!'
+        ]);
     }
 
     public function changeStatus(Request $request)
     {
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'userId' => 'required|integer|min:1',
-            'status' => 'required|in:b,d',
+            'userId' => 'required|integer|min:1|exists:tbl_users,userId',
+            // 'active' = bỏ chặn / khôi phục (ghi NULL vào cột status)
+            'status' => 'required|in:b,d,active',
         ]);
 
         if ($validator->fails()) {
@@ -83,32 +76,22 @@ class UserManagementController extends Controller
         }
 
         $userId = (int) $request->userId;
-        $status = $request->status;
+        $status = $request->status === 'active' ? null : $request->status;
 
-        $dataUpdate = [
-            'userId' => $userId,
-            'status' => $status
-        ];
+        $this->users->changeStatus($userId, ['status' => $status]);
 
-        $changeStatus = $this->users->changeStatus($userId, $dataUpdate);
-        $statusText = $this->getStatusText($status);
-        if ($changeStatus) {
-            return response()->json([
-                'success' => true,
-                'status' => $statusText,
-                'message' => "Trạng thái người dùng đã được cập nhật thành công!"
-            ]);
-        } else {
-            return response()->json([
-                'success' => false,
-                'message' => "Có lỗi xảy ra khi cập nhật trạng thái người dùng!"
-            ], 500); // Trả về mã lỗi HTTP 500 nếu có lỗi
-        }
+        return response()->json([
+            'success' => true,
+            'status'  => $this->getStatusText($request->status),
+            'message' => 'Trạng thái người dùng đã được cập nhật thành công!'
+        ]);
     }
 
     private function getStatusText($status)
     {
         switch ($status) {
+            case 'active':
+                return 'Bình thường';
             case 'b':
                 return 'Đã chặn';
             case 'd':

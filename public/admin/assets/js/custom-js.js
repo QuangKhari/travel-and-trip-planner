@@ -2,22 +2,18 @@ $(document).ready(function () {
     /********************************************
      * USER MANAGEMENT                          *
      ********************************************/
-    $("#btn-active").click(function () {
+    // Dùng uỷ quyền sự kiện + class: id lặp trong vòng @foreach chỉ bắt được phần tử đầu tiên
+    $(document).on("click", ".btn-active", function () {
         var button = $(this);
         let dataAttr = button.data("attr");
 
-        let userId = dataAttr.userId;
-        let actionUrl = dataAttr.action;
-
-        let formData = {
-            userId: userId,
-            _token: $('meta[name="csrf-token"]').attr("content"),
-        };
-
         $.ajax({
             type: "POST",
-            url: actionUrl,
-            data: formData,
+            url: dataAttr.action,
+            data: {
+                userId: dataAttr.userId,
+                _token: $('meta[name="csrf-token"]').attr("content"),
+            },
             success: function (response) {
                 if (response.success) {
                     button
@@ -30,58 +26,62 @@ $(document).ready(function () {
                     toastr.error(response.message);
                 }
             },
-            error: function (xhr, textStatus, errorThrown) {
-                toastr.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
+            error: function (xhr) {
+                toastr.error(
+                    xhr.responseJSON?.message ||
+                        "Có lỗi xảy ra. Vui lòng thử lại sau.",
+                );
             },
         });
     });
 
-    $("#btn-ban, #btn-delete, #btn-unban, #btn-restore").click(function () {
-        var button = $(this);
-        let dataAttr = button.data("attr");
+    $(document).on(
+        "click",
+        ".btn-ban, .btn-delete, .btn-unban, .btn-restore",
+        function () {
+            var button = $(this);
+            let dataAttr = button.data("attr");
+            let status = dataAttr.status;
 
-        let userId = dataAttr.userId;
-        let status = dataAttr.status;
-        let actionUrl = dataAttr.action;
-
-        let formData = {
-            userId: userId,
-            status: status,
-            _token: $('meta[name="csrf-token"]').attr("content"),
-        };
-        console.log(formData);
-
-        $.ajax({
-            type: "POST",
-            url: actionUrl,
-            data: formData,
-            success: function (response) {
-                if (response.success) {
-                    button
-                        .closest(".profile_view")
-                        .find(".brief i")
-                        .text(response.status);
-                    button.parent().find("button").hide(); // Ẩn tất cả các nút
-                    if (status === "b") {
-                        button.parent().find("#btn-unban").show();
-                    } else if (status === "d") {
-                        button.parent().find("#btn-restore").show();
-                    } else {
+            $.ajax({
+                type: "POST",
+                url: dataAttr.action,
+                data: {
+                    userId: dataAttr.userId,
+                    status: status,
+                    _token: $('meta[name="csrf-token"]').attr("content"),
+                },
+                success: function (response) {
+                    if (response.success) {
                         button
-                            .parent()
-                            .find("#btn-ban, #btn-delete, #btn-active")
-                            .show();
+                            .closest(".profile_view")
+                            .find(".brief i")
+                            .text(response.status);
+                        button.parent().find("button").hide();
+                        if (status === "b") {
+                            button.parent().find(".btn-unban").show();
+                        } else if (status === "d") {
+                            button.parent().find(".btn-restore").show();
+                        } else {
+                            button
+                                .parent()
+                                .find(".btn-ban, .btn-delete, .btn-active")
+                                .show();
+                        }
+                        toastr.success(response.message);
+                    } else {
+                        toastr.error(response.message);
                     }
-                    toastr.success(response.message);
-                } else {
-                    toastr.error(response.message);
-                }
-            },
-            error: function (xhr, textStatus, errorThrown) {
-                toastr.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
-            },
-        });
-    });
+                },
+                error: function (xhr) {
+                    toastr.error(
+                        xhr.responseJSON?.message ||
+                            "Có lỗi xảy ra. Vui lòng thử lại sau.",
+                    );
+                },
+            });
+        },
+    );
 
     /********************************************
      * TOURS MANAGEMENT                          *
