@@ -37,7 +37,7 @@
                     @endfor
 
                 </div>
-                <span class="time">{{ $tourDetail->time }}</span>
+                <span class="time">{{ \Carbon\Carbon::parse($review->timestamp)->format('d/m/Y') }}</span>
                 <p>{{ $review->comment }}</p>
             </div>
         </div>

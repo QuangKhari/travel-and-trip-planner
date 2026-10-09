@@ -221,7 +221,7 @@ class Tours extends Model
             ->join('tbl_users', 'tbl_users.userId', '=', 'tbl_reviews.userId')
             ->where('tourId', $id)
             ->orderBy('tbl_reviews.timestamp', 'desc')
-            ->take(3)
+            ->take(10)
             ->get();
 
         return $getReviews;

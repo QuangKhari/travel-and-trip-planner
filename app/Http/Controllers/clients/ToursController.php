@@ -69,17 +69,9 @@ class ToursController extends Controller
         }
 
         if ($req->filled('time')) {
-
-            $duration = $req->input('time');
-
-            $time = [
-                '3n2d' => '3 ngày 2 đêm',
-                '4n3d' => '4 ngày 3 đêm',
-                '6n5d' => '6 ngày 5 đêm'
-            ];
-
-            if (isset($time[$duration])) {
-                $conditions[] = ['time', '=', $time[$duration]];
+            // Giá trị dạng 3n2d, 4n3d...: lọc theo số ngày ở đầu chuỗi "N ngày M đêm"
+            if (preg_match('/^(\d{1,2})n\d{1,2}d$/', (string) $req->input('time'), $m)) {
+                $conditions[] = ['time', 'like', ((int) $m[1]) . ' ngày %'];
             }
         }
         // Handle orderby filter
