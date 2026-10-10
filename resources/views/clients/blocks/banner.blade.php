@@ -1,15 +1,20 @@
-        <!-- Page Banner Start -->
-        <section class="page-banner-area pt-50 pb-35 rel z-1 bgs-cover" style="background-image: url({{ asset('clients/assets/images/banner/banner.jpg') }});">
-            <div class="container">
-                <div class="banner-inner text-white">
-                    <h2 class="page-title mb-10" data-aos="fade-left" data-aos-duration="1500" data-aos-offset="50">{{ $title ?? '' }}</h2>
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb justify-content-center mb-20" data-aos="fade-right" data-aos-delay="200" data-aos-duration="1500" data-aos-offset="50">
-                            <li class="breadcrumb-item"><a href="index.html">Trang chủ</a></li>
-                            <li class="breadcrumb-item active">{{ $title ?? '' }}</li>
-                        </ol>
-                    </nav>
-                </div>
-            </div>
-        </section>
-        <!-- Page Banner End -->
+<!-- Page Banner (Travel theme v2) -->
+<section class="tv-banner">
+    <div class="tv-banner__bg" style="background-image:url('{{ asset('clients/assets/images/banner/banner.jpg') }}');">
+    </div>
+    <div class="container">
+        <nav class="tv-crumb" aria-label="breadcrumb">
+            <a href="{{ route('home') }}">Trang chủ</a>
+            <i class="fas fa-chevron-right"></i>
+            <span>{{ $title ?? '' }}</span>
+        </nav>
+        <h1 class="tv-banner__title">{{ $title ?? '' }}</h1>
+        @isset($subtitle)
+            <p class="tv-banner__sub">{{ $subtitle }}</p>
+        @endisset
+    </div>
+    <svg class="tv-wave" viewBox="0 0 1440 100" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0 45 Q180 100 380 58 T760 62 T1130 40 T1440 68 V100 H0Z" />
+    </svg>
+</section>
+<!-- Page Banner End -->

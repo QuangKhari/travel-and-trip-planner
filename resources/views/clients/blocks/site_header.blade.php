@@ -1,6 +1,6 @@
-{{-- Header trang chủ (Travel theme v2). Thay cho khối <header class="travel-modern-header"> cũ.
+{{-- Header dùng chung (Travel theme v2). Trang chủ: @include('clients.blocks.site_header'); trang con: @include('clients.blocks.site_header', ['solid' => true]). Thay cho khối <header class="travel-modern-header"> cũ.
      Giữ nguyên: route, logic đăng nhập/avatar, form tìm kiếm giọng nói (#voice-search, name="keyword"). --}}
-<header class="tv-header" id="tvHeader">
+<header class="tv-header {{ !empty($solid) ? 'is-solid is-scrolled' : '' }}" id="tvHeader">
     <div class="tv-header__in">
 
         <a href="{{ route('home') }}" class="tv-logo" aria-label="Trang chủ">

@@ -1,8 +1,3 @@
-/* =====================================================================
-   TRAVEL THEME v2 — theo mockup "Những hành trình đáng nhớ"
-   Nạp CUỐI <head>, sau tất cả CSS cũ. Gỡ link này = quay về giao diện cũ.
-   Chỉnh màu ở khối :root ngay bên dưới.
-   ===================================================================== */
 :root {
     --tv-teal: #0e8f8a;
     --tv-teal-2: #14b8a6;
@@ -1204,5 +1199,270 @@ select:focus,
     }
     .tv-hsearch.is-open .tv-hsearch__form {
         width: min(220px, 46vw);
+    }
+}
+
+/* =====================================================================
+   GIAI ĐOẠN 2 — TRANG CON: header đặc, banner, trang danh sách tour
+   ===================================================================== */
+.tv-header.is-solid {
+    background: linear-gradient(90deg, #0b2e4a, #0f4a5c);
+    padding: 10px 0;
+    box-shadow: 0 8px 28px rgba(11, 46, 74, 0.25);
+}
+.page-wrapper > .tv-banner:first-of-type {
+    margin-top: 0;
+}
+
+/* ---------- Banner trang con ---------- */
+.tv-banner {
+    position: relative;
+    overflow: hidden;
+    color: #fff;
+    padding: 150px 0 110px;
+    background: var(--tv-navy);
+}
+.tv-banner__bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    animation: tvPan 30s ease-in-out infinite alternate;
+}
+.tv-banner::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(
+        100deg,
+        rgba(7, 40, 62, 0.88) 0%,
+        rgba(14, 143, 138, 0.55) 100%
+    );
+}
+.tv-banner::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    width: 360px;
+    height: 360px;
+    right: -60px;
+    top: 40px;
+    border-radius: 50%;
+    background: radial-gradient(
+        circle,
+        rgba(255, 193, 69, 0.5),
+        rgba(255, 122, 0, 0.18) 50%,
+        transparent 70%
+    );
+    animation: tvPulse 8s ease-in-out infinite;
+}
+.tv-banner .container {
+    position: relative;
+    z-index: 2;
+}
+.tv-banner .tv-wave {
+    z-index: 3;
+    height: 70px;
+}
+.tv-crumb {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.85);
+    margin-bottom: 12px;
+}
+.tv-crumb a {
+    color: #fff;
+    opacity: 0.9;
+}
+.tv-crumb a:hover {
+    color: var(--tv-orange);
+    opacity: 1;
+}
+.tv-crumb i {
+    font-size: 10px;
+    opacity: 0.7;
+}
+.tv-banner__title {
+    color: #fff;
+    font-weight: 800;
+    font-size: clamp(32px, 4.4vw, 54px);
+    margin: 0;
+    text-shadow: 0 4px 22px rgba(0, 0, 0, 0.3);
+    animation: tvUp 0.8s ease both;
+}
+.tv-banner__sub {
+    max-width: 560px;
+    margin: 12px 0 0;
+    font-size: 17px;
+    color: rgba(255, 255, 255, 0.92);
+}
+
+/* ---------- Trang danh sách tour ---------- */
+.tour-grid-page {
+    background: var(--tv-bg);
+}
+.shop-sidebar .widget {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: var(--tv-shadow);
+    padding: 22px 24px;
+    margin-bottom: 22px;
+    border: 0;
+}
+.shop-sidebar .widget-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--tv-ink);
+    margin: 0 0 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--tv-line);
+    position: relative;
+}
+.shop-sidebar .widget-title::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 46px;
+    height: 2px;
+    background: var(--tv-orange);
+}
+.shop-sidebar .radio-filter li,
+.shop-sidebar .radio-filter label {
+    cursor: pointer;
+}
+.shop-sidebar .form-check-input:checked {
+    background-color: var(--tv-teal);
+    border-color: var(--tv-teal);
+}
+.shop-sidebar .form-check-label {
+    transition: color 0.2s;
+}
+.shop-sidebar .form-check:hover .form-check-label {
+    color: var(--tv-teal);
+}
+.price-slider-range.ui-widget-content,
+.price-slider-range {
+    height: 6px;
+    border: 0;
+    background: var(--tv-line);
+    border-radius: 6px;
+}
+.price-slider-range .ui-slider-range {
+    background: var(--tv-grad-teal);
+    border-radius: 6px;
+}
+.price-slider-range .ui-slider-handle,
+.ui-slider .ui-slider-handle {
+    width: 20px;
+    height: 20px;
+    top: -8px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    background: var(--tv-orange-2);
+    box-shadow: 0 4px 12px rgba(255, 122, 0, 0.45);
+    outline: 0;
+    cursor: grab;
+}
+.div_filter_clear {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+}
+.clear_filter {
+    border: 0;
+    border-radius: 30px;
+    background: #fff;
+    box-shadow: var(--tv-shadow);
+    padding: 8px 20px;
+    transition:
+        transform 0.25s,
+        box-shadow 0.25s;
+}
+.clear_filter a {
+    color: var(--tv-teal);
+    font-weight: 600;
+    font-size: 14px;
+}
+.clear_filter:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--tv-shadow-lg);
+}
+.shop-shorter {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: var(--tv-shadow);
+    padding: 12px 22px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.shop-shorter .sort-text {
+    font-weight: 600;
+    color: var(--tv-ink);
+    margin-bottom: 0 !important;
+}
+.shop-shorter .nice-select {
+    border: 1px solid var(--tv-line);
+    border-radius: 30px;
+    background: var(--tv-bg);
+    height: 40px;
+    line-height: 38px;
+    padding: 0 38px 0 18px;
+    min-width: 190px;
+}
+.shop-shorter .nice-select .list {
+    border-radius: 14px;
+    box-shadow: var(--tv-shadow-lg);
+    margin-top: 8px;
+}
+.shop-shorter .nice-select .option.selected,
+.shop-shorter .nice-select .option:hover {
+    color: var(--tv-teal);
+    background: #eaf7f6;
+}
+.tour-grid-wrap .tv-card {
+    height: 100%;
+}
+.tour-grid-wrap .tv-card__img {
+    height: 200px;
+}
+.pagination-tours .page-link {
+    border: 0;
+    margin: 0 4px;
+    width: 42px;
+    height: 42px;
+    border-radius: 50% !important;
+    display: grid;
+    place-items: center;
+    color: var(--tv-ink);
+    background: #fff;
+    box-shadow: var(--tv-shadow);
+    font-weight: 600;
+    transition:
+        transform 0.25s,
+        background 0.25s,
+        color 0.25s;
+}
+.pagination-tours .page-link:hover {
+    transform: translateY(-3px);
+    color: var(--tv-teal);
+}
+.pagination-tours .page-item.active .page-link {
+    background: var(--tv-grad-teal);
+    color: #fff;
+    box-shadow: 0 10px 22px rgba(14, 143, 138, 0.35);
+}
+.pagination-tours .page-item.disabled .page-link {
+    opacity: 0.45;
+    box-shadow: none;
+}
+@media (max-width: 991px) {
+    .tv-banner {
+        padding: 125px 0 90px;
     }
 }

@@ -112,7 +112,8 @@
         var syncHeader = function () {
             header.classList.toggle(
                 "is-scrolled",
-                (window.pageYOffset || 0) > 40,
+                header.classList.contains("is-solid") ||
+                    (window.pageYOffset || 0) > 40,
             );
         };
         addEventListener("scroll", syncHeader, { passive: true });
