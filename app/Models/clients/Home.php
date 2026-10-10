@@ -40,7 +40,17 @@ class Home extends Model
             ->get(['tourId', 'title'])
             ->groupBy('tourId');
 
+        $ratingsByTour = DB::table('tbl_reviews')
+            ->whereIn('tourId', $tourIds)
+            ->groupBy('tourId')
+            ->select('tourId', DB::raw('AVG(rating) as avgRating'), DB::raw('COUNT(*) as ratingCount'))
+            ->get()
+            ->keyBy('tourId');
+
         foreach ($tours as $tour) {
+            $tour->rating = optional($ratingsByTour->get($tour->tourId))->avgRating;
+            $tour->ratingCount = optional($ratingsByTour->get($tour->tourId))->ratingCount ?? 0;
+
             $tour->images = collect($imagesByTour->get($tour->tourId, []))
                 ->pluck('imageURL')
                 ->values();

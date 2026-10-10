@@ -1,0 +1,133 @@
+/* Travel Admin Theme 2.0 — override Gentelella. Nạp SAU admin/assets/css/custom-css.css */
+:root {
+    --a-ocean: #0e8f8a;
+    --a-ocean-d: #0a6e6a;
+    --a-sunset: #ff7a00;
+    --a-navy: #0b2a3c;
+    --a-navy2: #123b52;
+    --a-mist: #f2fbfb;
+}
+body,
+.nav-md {
+    font-family: "Be Vietnam Pro", "Segoe UI", Roboto, sans-serif;
+    background: var(--a-mist);
+    color: #3b4c57;
+}
+.nav-md .container.body .col-md-3.left_col,
+.left_col {
+    background: linear-gradient(180deg, var(--a-navy) 0%, var(--a-navy2) 100%);
+}
+.nav_title {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.left_col .nav.side-menu > li > a,
+.nav.side-menu > li > a {
+    color: #c9dce4;
+    border-radius: 12px;
+    margin: 3px 10px;
+    transition: all 0.3s;
+}
+.nav.side-menu > li > a:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    transform: translateX(4px);
+}
+.nav.side-menu > li.active > a,
+.nav.side-menu > li.current-page > a {
+    background: linear-gradient(135deg, var(--a-ocean), var(--a-ocean-d));
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(14, 143, 138, 0.35) !important;
+    border-right: 0;
+}
+.nav.side-menu > li.active,
+.nav.side-menu > li.current-page {
+    border-right: 0;
+}
+.nav.child_menu li:hover,
+.nav.child_menu li.active {
+    background: transparent;
+}
+.nav.child_menu li a:hover {
+    color: var(--a-sunset) !important;
+}
+.nav_menu {
+    background: #fff;
+    box-shadow: 0 4px 18px rgba(11, 42, 60, 0.08);
+    border-bottom: 0;
+}
+.x_panel,
+.tile-stats {
+    border-radius: 18px;
+    border: 0;
+    box-shadow: 0 8px 26px rgba(11, 42, 60, 0.08);
+    transition:
+        transform 0.3s,
+        box-shadow 0.3s;
+}
+.x_panel:hover {
+    box-shadow: 0 14px 34px rgba(11, 42, 60, 0.13);
+}
+.tile-stats:hover {
+    transform: translateY(-4px);
+}
+.x_title {
+    border-bottom: 2px solid #e6f3f5;
+}
+.x_title h2 {
+    font-weight: 700;
+    color: var(--a-navy);
+}
+.btn-primary,
+.btn-success {
+    background: linear-gradient(135deg, #14b8a6, var(--a-ocean-d));
+    border: 0;
+    border-radius: 10px;
+    box-shadow: 0 6px 16px rgba(14, 143, 138, 0.28);
+    transition: transform 0.25s;
+}
+.btn-primary:hover,
+.btn-success:hover {
+    background: linear-gradient(135deg, #14b8a6, var(--a-ocean-d));
+    transform: translateY(-2px);
+}
+.btn-warning,
+.btn-danger {
+    border-radius: 10px;
+    border: 0;
+}
+.btn-warning {
+    background: linear-gradient(135deg, #ff8a4c, #ff5e62);
+}
+.form-control {
+    border-radius: 10px;
+    border-color: #d9e8eb;
+}
+.form-control:focus {
+    border-color: var(--a-ocean);
+    box-shadow: 0 0 0 4px rgba(14, 143, 138, 0.14);
+}
+table.dataTable thead th,
+.table > thead > tr > th {
+    background: #f2fbfb;
+    color: var(--a-navy);
+    border-bottom: 2px solid #d5ecef;
+}
+.table-striped > tbody > tr:nth-of-type(odd) {
+    background: #fafefe;
+}
+.table > tbody > tr:hover {
+    background: #eaf8f9;
+}
+.label-success,
+.badge-success {
+    background: var(--a-ocean);
+}
+.progress-bar-success {
+    background: var(--a-ocean);
+}
+.footer_fixed footer,
+footer {
+    background: transparent;
+    color: #7a8f99;
+}

@@ -52,6 +52,10 @@
     <link href="{{ asset('admin/vendors/dropzone/dist/min/dropzone.min.css') }}" rel="stylesheet" />
     {{-- Custom css by DevDien  --}}
     <link href="{{ asset('admin/assets/css/custom-css.css') }}" rel="stylesheet" />
+
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link href="{{ asset('admin/assets/css/admin-theme.css') }}?v=2" rel="stylesheet" />
 </head>
 
 <body class="nav-md">
