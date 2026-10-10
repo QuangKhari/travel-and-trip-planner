@@ -1,80 +1,51 @@
-@foreach ($tours as $tour)
-    @php
-        $isLow = $tour->quantity <= 5;
-    @endphp
-    <div class="col-xl-4 col-md-6" style="margin-bottom: 30px">
-        <article class="tv-card h-100">
-            <div class="tv-card__img">
-                @if ($isLow)
-                    <span class="tv-badge is-red">Sắp hết chỗ</span>
-                @endif
-                <button type="button" class="tv-heart" aria-label="Yêu thích"><i class="fas fa-heart"></i></button>
-                <a href="{{ route('tour-detail', ['id' => $tour->tourId]) }}">
-                    <img loading="lazy" decoding="async"
-                        src="{{ \App\Support\TourImage::url($tour->images->first() ?? 'default.jpg', 800) }}"
-                        alt="{{ $tour->title }}">
-                </a>
-                @if (!empty($tour->rating))
-                    <span class="tv-rating"><i class="fas fa-star"></i>{{ number_format($tour->rating, 1) }}</span>
-                @endif
-            </div>
-            <div class="tv-card__body">
-                <h3><a href="{{ route('tour-detail', ['id' => $tour->tourId]) }}">{{ $tour->title }}</a></h3>
-                <div class="tv-meta">
-                    <span><i class="fal fa-map-marker-alt"></i>{{ $tour->destination }}</span>
-                    <span><i class="fal fa-clock"></i>{{ $tour->time }}</span>
-                    <span><i class="fal fa-users"></i>Còn {{ $tour->quantity }} chỗ</span>
-                </div>
-                <div class="tv-price">
-                    <div>
-                        <small>Từ</small>
-                        <b>{{ number_format($tour->priceAdult, 0, ',', '.') }}đ <span>/người</span></b>
-                    </div>
-                    <a href="{{ route('tour-detail', ['id' => $tour->tourId]) }}" class="tv-go"
-                        aria-label="Xem chi tiết"><i class="fas fa-arrow-right"></i></a>
-                </div>
-            </div>
-        </article>
+{{-- Kết quả danh sách tour: dùng cho lần tải đầu và cho AJAX (/filter-tours). Biến: $tours (paginator) --}}
+@if ($tours->count() === 0)
+    <div class="tv-empty">
+        <div class="tv-empty__icon"><i class="fal fa-compass"></i></div>
+        <h3>Chưa tìm thấy tour phù hợp</h3>
+        <p>Thử bỏ bớt bộ lọc, mở rộng khoảng giá hoặc tìm bằng từ khóa khác (ví dụ: Đà Nẵng, Phú Quốc, biển).</p>
+        <button type="button" class="tv-btn-solid" data-action="reset">Xóa tất cả bộ lọc</button>
     </div>
-@endforeach
+@else
+    <div class="tv-grid">
+        @foreach ($tours as $tour)
+            @include('clients.partials.tour-card', ['tour' => $tour])
+        @endforeach
+    </div>
 
-{{-- Pagination - chỉ hiện khi là LengthAwarePaginator --}}
-@if ($tours instanceof \Illuminate\Pagination\LengthAwarePaginator)
-    <div class="col-lg-12">
-        <ul class="pagination justify-content-center pt-15 flex-wrap pagination-tours" data-aos="fade-up"
-            data-aos-duration="1500" data-aos-offset="50">
-            @if ($tours->onFirstPage())
-                <li class="page-item disabled">
-                    <span class="page-link"><i class="far fa-chevron-left"></i></span>
-                </li>
-            @else
-                <li class="page-item">
-                    <a class="page-link" href="{{ $tours->previousPageUrl() }}"><i class="far fa-chevron-left"></i></a>
-                </li>
+    @if ($tours->lastPage() > 1)
+        @php
+            $cur = $tours->currentPage();
+            $last = $tours->lastPage();
+            $from = max(1, $cur - 2);
+            $to = min($last, $cur + 2);
+        @endphp
+        <nav class="tv-pager" aria-label="Phân trang">
+            @if ($cur > 1)
+                <a href="{{ $tours->url($cur - 1) }}" data-page="{{ $cur - 1 }}" aria-label="Trang trước"><i
+                        class="far fa-chevron-left"></i></a>
             @endif
-
-            @for ($i = 1; $i <= $tours->lastPage(); $i++)
-                <li class="page-item @if ($i == $tours->currentPage()) active @endif">
-                    <a class="page-link" href="{{ $tours->url($i) }}">{{ $i }}</a>
-                </li>
+            @if ($from > 1)
+                <a href="{{ $tours->url(1) }}" data-page="1">1</a>
+                @if ($from > 2)
+                    <span class="tv-pager__dots">…</span>
+                @endif
+            @endif
+            @for ($p = $from; $p <= $to; $p++)
+                <a href="{{ $tours->url($p) }}" data-page="{{ $p }}"
+                    class="{{ $p === $cur ? 'is-active' : '' }}"
+                    @if ($p === $cur) aria-current="page" @endif>{{ $p }}</a>
             @endfor
-
-            @if ($tours->hasMorePages())
-                <li class="page-item">
-                    <a class="page-link" href="{{ $tours->nextPageUrl() }}"><i class="far fa-chevron-right"></i></a>
-                </li>
-            @else
-                <li class="page-item disabled">
-                    <span class="page-link"><i class="far fa-chevron-right"></i></span>
-                </li>
+            @if ($to < $last)
+                @if ($to < $last - 1)
+                    <span class="tv-pager__dots">…</span>
+                @endif
+                <a href="{{ $tours->url($last) }}" data-page="{{ $last }}">{{ $last }}</a>
             @endif
-        </ul>
-    </div>
+            @if ($cur < $last)
+                <a href="{{ $tours->url($cur + 1) }}" data-page="{{ $cur + 1 }}" aria-label="Trang sau"><i
+                        class="far fa-chevron-right"></i></a>
+            @endif
+        </nav>
+    @endif
 @endif
-<style>
-    .pagination-tours {
-        display: flex !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-    }
-</style>
