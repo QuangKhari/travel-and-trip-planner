@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\clients\Tours;
+use App\Services\TourCatalog;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class TourDetailController extends Controller
 {
@@ -30,23 +33,27 @@ class TourDetailController extends Controller
 
         $getReviews = $this->tours->getReviews($id);
         $reviewStats = $this->tours->reviewStats($id);
-
-        $avgStar = round($reviewStats->averageRating);
-        $countReview = $reviewStats->reviewCount;
+        $breakdown = $this->ratingBreakdown($id);
 
         $checkReviewExist = $this->tours->checkReviewExist($id, $userId);
-        if (!$checkReviewExist) {
-            $checkDisplay = '';
-        } else {
-            $checkDisplay = 'hide';
-        }
-        //dd($tourDetail->timeline);
-        return view('clients.tour-detail', compact('title', 'tourDetail', 'getReviews', 'avgStar', 'countReview', 'checkDisplay'));
+        $checkDisplay = $checkReviewExist ? 'hide' : '';
+
+        $related = $this->relatedTours($tourDetail);
+
+        return view('clients.tour-detail', compact(
+            'title',
+            'tourDetail',
+            'getReviews',
+            'reviewStats',
+            'breakdown',
+            'checkDisplay',
+            'related'
+        ));
     }
 
     public function reviews(Request $req)
     {
-        $validator = \Illuminate\Support\Facades\Validator::make($req->all(), [
+        $validator = Validator::make($req->all(), [
             'tourId' => ['required', 'integer', 'exists:tbl_tours,tourId'],
             'rating' => ['required', 'integer', 'between:1,5'],
             'message' => ['nullable', 'string', 'max:255'],
@@ -62,7 +69,7 @@ class TourDetailController extends Controller
         $userId = (int) $this->getUserId();
         $tourId = (int) $req->tourId;
 
-        $completed = \Illuminate\Support\Facades\DB::table('tbl_booking')
+        $completed = DB::table('tbl_booking')
             ->where('userId', $userId)
             ->where('tourId', $tourId)
             ->where('bookingStatus', 'f')
@@ -75,7 +82,7 @@ class TourDetailController extends Controller
             ], 403);
         }
 
-        $alreadyReviewed = \Illuminate\Support\Facades\DB::table('tbl_reviews')
+        $alreadyReviewed = DB::table('tbl_reviews')
             ->where('userId', $userId)
             ->where('tourId', $tourId)
             ->exists();
@@ -95,7 +102,7 @@ class TourDetailController extends Controller
                 'rating' => (int) $req->rating,
             ]);
         } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
-            // Hai request cùng lúc: UNIQUE(userId, tourId) chặn bản thứ hai 
+            // Hai request cùng lúc: UNIQUE(userId, tourId) chặn bản thứ hai
             return response()->json([
                 'success' => false,
                 'message' => 'Bạn đã đánh giá tour này rồi.',
@@ -105,6 +112,7 @@ class TourDetailController extends Controller
         $tourDetail = $this->tours->getTourDetail($tourId);
         $getReviews = $this->tours->getReviews($tourId);
         $reviewStats = $this->tours->reviewStats($tourId);
+        $breakdown = $this->ratingBreakdown($tourId);
 
         return response()->json([
             'success' => true,
@@ -112,8 +120,48 @@ class TourDetailController extends Controller
             'data' => view('clients.partials.reviews', compact(
                 'tourDetail',
                 'getReviews',
-                'reviewStats'
+                'reviewStats',
+                'breakdown'
             ))->render(),
         ]);
+    }
+
+    /** Số lượt đánh giá theo từng mức sao: [5 => n, 4 => n, ... 1 => n]. */
+    private function ratingBreakdown($tourId): array
+    {
+        $rows = DB::table('tbl_reviews')
+            ->where('tourId', $tourId)
+            ->selectRaw('ROUND(rating) as star, COUNT(*) as total')
+            ->groupBy('star')
+            ->pluck('total', 'star');
+
+        $out = [];
+        for ($s = 5; $s >= 1; $s--) {
+            $out[$s] = (int) ($rows[$s] ?? 0);
+        }
+
+        return $out;
+    }
+
+    /** 3 tour gợi ý: ưu tiên cùng miền, thiếu thì lấy thêm tour mới nhất. */
+    private function relatedTours($tourDetail)
+    {
+        $catalog = new TourCatalog();
+        $exclude = (int) $tourDetail->tourId;
+
+        $same = $catalog->paginate(['domain' => $tourDetail->domain, 'sort' => 'new'], 6)
+            ->getCollection()
+            ->reject(fn($t) => (int) $t->tourId === $exclude)
+            ->values();
+
+        if ($same->count() < 3) {
+            $more = $catalog->paginate(['sort' => 'new'], 8)
+                ->getCollection()
+                ->reject(fn($t) => (int) $t->tourId === $exclude || $same->contains('tourId', $t->tourId))
+                ->values();
+            $same = $same->concat($more);
+        }
+
+        return $same->take(3)->values();
     }
 }
