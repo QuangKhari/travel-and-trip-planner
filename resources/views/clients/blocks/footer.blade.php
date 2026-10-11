@@ -110,7 +110,7 @@
 <script src="{{ asset('clients/assets/js/custom-js.js') }}"></script>
 <script src="{{ asset('clients/assets/js/travel-theme.js') }}?v=4"></script>
 <script src="{{ asset('clients/assets/js/sea-theme.js') }}?v=1"></script>
-<script src="{{ asset('clients/assets/js/user-refresh.js') }}?v=1"></script>
+<script src="{{ asset('clients/assets/js/client-ui-polish.js') }}?v=4"></script>
 <script src="{{ asset('clients/assets/js/travel-chat.js') }}?v=1"></script>
 
 <script src="{{ asset('clients/assets/js/jquery.datetimepicker.full.min.js') }}"></script>

@@ -1,76 +1,235 @@
 @include('clients.blocks.header')
-@include('clients.blocks.banner', [
-    'title' => 'Cẩm nang du lịch',
-    'subtitle' => 'Những gợi ý nhỏ để mỗi chuyến đi trở nên đáng nhớ hơn.',
-])
+@include('clients.blocks.banner')
 
-@php
-    $posts = [
-        [
-            'img' => 'blog-list1.jpg',
-            'tag' => 'Cảm hứng',
-            'title' => '5 cách chọn một hành trình thật sự hợp với bạn',
-            'date' => '12/09/2026',
-            'desc' => 'Từ ngân sách, nhịp độ đến sở thích thiên nhiên — vài tiêu chí giúp bạn chọn tour dễ hơn.',
-        ],
-        [
-            'img' => 'blog-list2.jpg',
-            'tag' => 'Biển & nghỉ dưỡng',
-            'title' => 'Một ngày chậm lại giữa biển xanh và nắng vàng',
-            'date' => '05/09/2026',
-            'desc' => 'Gợi ý cách tận hưởng một chuyến đi ven biển mà không cần lịch trình quá dày.',
-        ],
-        [
-            'img' => 'blog-list3.jpg',
-            'tag' => 'Kinh nghiệm',
-            'title' => 'Checklist trước khi lên đường cho chuyến đi nhiều ngày',
-            'date' => '28/08/2026',
-            'desc' => 'Những thứ nên kiểm tra trước ngày khởi hành để hành trình nhẹ đầu hơn.',
-        ],
-        [
-            'img' => 'blog-list4.jpg',
-            'tag' => 'Điểm đến',
-            'title' => 'Đi đâu khi bạn muốn vừa khám phá vừa thư giãn?',
-            'date' => '19/08/2026',
-            'desc' => 'Một vài kiểu điểm đến cân bằng giữa trải nghiệm thiên nhiên và thời gian nghỉ ngơi.',
-        ],
-        [
-            'img' => 'blog-list5.jpg',
-            'tag' => 'Travel tips',
-            'title' => 'Cách đọc lịch trình tour để biết chuyến đi có hợp mình không',
-            'date' => '11/08/2026',
-            'desc' => 'Đừng chỉ nhìn số ngày — hãy đọc kỹ nhịp di chuyển, thời gian tự do và điểm dừng.',
-        ],
-    ];
-@endphp
-
+<!-- Blog List Area start -->
 <section class="blog-list-page py-100 rel z-1">
     <div class="container">
-        <div class="tv-blog-intro">
-            <span class="tv-tag"><i class="fal fa-compass"></i> Travel journal</span>
-            <h2>Đi để thấy nhiều hơn, chuẩn bị để tận hưởng nhiều hơn.</h2>
-            <p>Khám phá những câu chuyện, kinh nghiệm và gợi ý điểm đến được trình bày ngắn gọn, dễ đọc.</p>
-        </div>
-
-        <div class="tv-blog-grid">
-            @foreach ($posts as $post)
-                <article class="tv-blog-card">
-                    <a class="tv-blog-card__media" href="{{ route('blog-detail') }}">
-                        <img loading="lazy" src="{{ asset('clients/assets/images/blog/' . $post['img']) }}"
-                            alt="{{ $post['title'] }}">
-                        <span>{{ $post['tag'] }}</span>
-                    </a>
-                    <div class="tv-blog-card__body">
-                        <div class="tv-blog-card__meta"><i class="fal fa-calendar-alt"></i> {{ $post['date'] }}</div>
-                        <h3><a href="{{ route('blog-detail') }}">{{ $post['title'] }}</a></h3>
-                        <p>{{ $post['desc'] }}</p>
-                        <a href="{{ route('blog-detail') }}" class="tv-blog-card__more">Đọc bài viết <i
-                                class="fal fa-arrow-right"></i></a>
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="blog-item style-three" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
+                    <div class="image">
+                        <img src="assets/images/blog/blog-list1.jpg" alt="Blog List">
                     </div>
-                </article>
-            @endforeach
+                    <div class="content">
+                        <a href="blog.html" class="category">Travel</a>
+                        <h5><a href="blog-details.html">Ultimate Guide to Planning Your Dream Vacation</a></h5>
+                        <ul class="blog-meta">
+                            <li><i class="far fa-calendar-alt"></i> <a href="#">25 February 2024</a></li>
+                            <li><i class="far fa-comments"></i> <a href="#">Comments (5)</a></li>
+                        </ul>
+                        <p>We specialize in crafting unforgettable city experiences for travelers seeking</p>
+                        <a href="blog-details.html" class="theme-btn style-two style-three">
+                            <span data-hover="Book Now">Read More</span>
+                            <i class="fal fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="blog-item style-three" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
+                    <div class="image">
+                        <img src="assets/images/blog/blog-list2.jpg" alt="Blog List">
+                    </div>
+                    <div class="content">
+                        <a href="blog.html" class="category">Travel</a>
+                        <h5><a href="blog-details.html">Ultimate Guide to Planning Your Dream Vacation</a></h5>
+                        <ul class="blog-meta">
+                            <li><i class="far fa-calendar-alt"></i> <a href="#">25 February 2024</a></li>
+                            <li><i class="far fa-comments"></i> <a href="#">Comments (5)</a></li>
+                        </ul>
+                        <p>We specialize in crafting unforgettable city experiences for travelers seeking</p>
+                        <a href="blog-details.html" class="theme-btn style-two style-three">
+                            <span data-hover="Book Now">Read More</span>
+                            <i class="fal fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="blog-item style-three" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
+                    <div class="image">
+                        <img src="assets/images/blog/blog-list3.jpg" alt="Blog List">
+                    </div>
+                    <div class="content">
+                        <a href="blog.html" class="category">Travel</a>
+                        <h5><a href="blog-details.html">Ultimate Guide to Planning Your Dream Vacation</a></h5>
+                        <ul class="blog-meta">
+                            <li><i class="far fa-calendar-alt"></i> <a href="#">25 February 2024</a></li>
+                            <li><i class="far fa-comments"></i> <a href="#">Comments (5)</a></li>
+                        </ul>
+                        <p>We specialize in crafting unforgettable city experiences for travelers seeking</p>
+                        <a href="blog-details.html" class="theme-btn style-two style-three">
+                            <span data-hover="Book Now">Read More</span>
+                            <i class="fal fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="blog-item style-three" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
+                    <div class="image">
+                        <img src="assets/images/blog/blog-list4.jpg" alt="Blog List">
+                    </div>
+                    <div class="content">
+                        <a href="blog.html" class="category">Travel</a>
+                        <h5><a href="blog-details.html">Ultimate Guide to Planning Your Dream Vacation</a></h5>
+                        <ul class="blog-meta">
+                            <li><i class="far fa-calendar-alt"></i> <a href="#">25 February 2024</a></li>
+                            <li><i class="far fa-comments"></i> <a href="#">Comments (5)</a></li>
+                        </ul>
+                        <p>We specialize in crafting unforgettable city experiences for travelers seeking</p>
+                        <a href="blog-details.html" class="theme-btn style-two style-three">
+                            <span data-hover="Book Now">Read More</span>
+                            <i class="fal fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="blog-item style-three" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
+                    <div class="image">
+                        <img src="assets/images/blog/blog-list5.jpg" alt="Blog List">
+                    </div>
+                    <div class="content">
+                        <a href="blog.html" class="category">Travel</a>
+                        <h5><a href="blog-details.html">Ultimate Guide to Planning Your Dream Vacation</a></h5>
+                        <ul class="blog-meta">
+                            <li><i class="far fa-calendar-alt"></i> <a href="#">25 February 2024</a></li>
+                            <li><i class="far fa-comments"></i> <a href="#">Comments (5)</a></li>
+                        </ul>
+                        <p>We specialize in crafting unforgettable city experiences for travelers seeking</p>
+                        <a href="blog-details.html" class="theme-btn style-two style-three">
+                            <span data-hover="Book Now">Read More</span>
+                            <i class="fal fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <ul class="pagination pt-15 flex-wrap" data-aos="fade-up" data-aos-duration="1500"
+                    data-aos-offset="50">
+                    <li class="page-item disabled">
+                        <span class="page-link"><i class="far fa-chevron-left"></i></span>
+                    </li>
+                    <li class="page-item active">
+                        <span class="page-link">
+                            1
+                            <span class="sr-only">(current)</span>
+                        </span>
+                    </li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item"><a class="page-link" href="#">...</a></li>
+                    <li class="page-item">
+                        <a class="page-link" href="#"><i class="far fa-chevron-right"></i></a>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-lg-4 col-md-8 col-sm-10 rmt-75">
+                <div class="blog-sidebar">
+
+                    <div class="widget widget-search" data-aos="fade-up" data-aos-duration="1500"
+                        data-aos-offset="50">
+                        <form action="#" class="default-search-form">
+                            <input type="text" placeholder="Search" required="">
+                            <button type="submit" class="searchbutton far fa-search"></button>
+                        </form>
+                    </div>
+
+                    <div class="widget widget-category" data-aos="fade-up" data-aos-duration="1500"
+                        data-aos-offset="50">
+                        <h5 class="widget-title">Category</h5>
+                        <ul class="list-style-three">
+                            <li><a href="blog.html">Adventure</a></li>
+                            <li><a href="blog.html">Hiking & Trekking</a></li>
+                            <li><a href="blog.html">Cycling Tours</a></li>
+                            <li><a href="blog.html">Family Tours</a></li>
+                            <li><a href="blog.html">Mountain Hiking</a></li>
+                            <li><a href="blog.html">Rafting Excursion</a></li>
+                            <li><a href="blog.html">Coastal Paragliding</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="widget widget-news" data-aos="fade-up" data-aos-duration="1500"
+                        data-aos-offset="50">
+                        <h5 class="widget-title">Recent News</h5>
+                        <ul>
+                            <li>
+                                <div class="image">
+                                    <img src="assets/images/widgets/news1.jpg" alt="News">
+                                </div>
+                                <div class="content">
+                                    <h6><a href="blog-details.html">Unique Destinations an tolded Stories ways</a></h6>
+                                    <span class="date"><i class="far fa-calendar-alt"></i> 25 Feb 2024</span>
+                                </div>
+                            </li>
+                            <li>
+                                <div class="image">
+                                    <img src="assets/images/widgets/news2.jpg" alt="News">
+                                </div>
+                                <div class="content">
+                                    <h6><a href="blog-details.html">Immersive Experiences from Around Globe</a></h6>
+                                    <span class="date"><i class="far fa-calendar-alt"></i> 25 Feb 2024</span>
+                                </div>
+                            </li>
+                            <li>
+                                <div class="image">
+                                    <img src="assets/images/widgets/news3.jpg" alt="News">
+                                </div>
+                                <div class="content">
+                                    <h6><a href="blog-details.html">Journey to Inspire Your Next Adventure</a></h6>
+                                    <span class="date"><i class="far fa-calendar-alt"></i> 25 Feb 2024</span>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="widget widget-gallery" data-aos="fade-up" data-aos-duration="1500"
+                        data-aos-offset="50">
+                        <h5 class="widget-title">Gallery</h5>
+                        <div class="gallery">
+                            <a href="assets/images/widgets/gallery1.jpg">
+                                <img src="assets/images/widgets/gallery1.jpg" alt="Gallery">
+                            </a>
+                            <a href="assets/images/widgets/gallery2.jpg">
+                                <img src="assets/images/widgets/gallery2.jpg" alt="Gallery">
+                            </a>
+                            <a href="assets/images/widgets/gallery3.jpg">
+                                <img src="assets/images/widgets/gallery3.jpg" alt="Gallery">
+                            </a>
+                            <a href="assets/images/widgets/gallery4.jpg">
+                                <img src="assets/images/widgets/gallery4.jpg" alt="Gallery">
+                            </a>
+                            <a href="assets/images/widgets/gallery5.jpg">
+                                <img src="assets/images/widgets/gallery5.jpg" alt="Gallery">
+                            </a>
+                            <a href="assets/images/widgets/gallery6.jpg">
+                                <img src="assets/images/widgets/gallery6.jpg" alt="Gallery">
+                            </a>
+                            <a href="assets/images/widgets/gallery7.jpg">
+                                <img src="assets/images/widgets/gallery7.jpg" alt="Gallery">
+                            </a>
+                            <a href="assets/images/widgets/gallery8.jpg">
+                                <img src="assets/images/widgets/gallery8.jpg" alt="Gallery">
+                            </a>
+                            <a href="assets/images/widgets/gallery9.jpg">
+                                <img src="assets/images/widgets/gallery9.jpg" alt="Gallery">
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="widget widget-cta" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
+                        <div class="content text-white">
+                            <span class="h6">Explore The World</span>
+                            <h3>Best Tourist Place</h3>
+                            <a href="tour-list.html" class="theme-btn style-two bgc-secondary">
+                                <span data-hover="Explore Now">Explore Now</span>
+                                <i class="fal fa-arrow-right"></i>
+                            </a>
+                        </div>
+                        <div class="image">
+                            <img src="assets/images/widgets/cta-widget.png" alt="CTA">
+                        </div>
+                        <div class="cta-shape"><img src="assets/images/widgets/cta-shape.png" alt="Shape"></div>
+                    </div>
+
+                </div>
+
+            </div>
         </div>
     </div>
 </section>
+<!-- Blog List Area end -->
 
 @include('clients.blocks.footer')

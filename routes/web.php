@@ -45,7 +45,7 @@ Route::get('/search-voice-text', [SearchController::class, 'searchTours'])->midd
 
 //Đăng nhập, đăng ký, đăng xuất
 Route::get('/login', [LoginController::class, 'index'])->name('login');
-Route::get('/register', [LoginController::class, 'registerPage'])->name('register.page');
+Route::get('/register', [LoginController::class, 'registerPage'])->name('register.form');
 Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:10,1,user-login')->name('user-login');
 Route::post('/register', [LoginController::class, 'register'])->middleware('throttle:10,1,register')->name('register');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');

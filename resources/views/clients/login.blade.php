@@ -1,18 +1,21 @@
 @include('clients.blocks.header')
 
-<main class="tv-auth tv-auth--split">
+<main class="tv-auth">
     <div class="container">
         <div class="tv-auth__card">
-            @include('clients.partials.auth-aside')
+            @include('clients.partials.auth-aside', [
+                'asideTitle' => 'Chào mừng bạn trở lại',
+                'asideText' =>
+                    'Đăng nhập để quản lý tour đã đặt, theo dõi hành trình và nhận thông tin xác nhận nhanh hơn.',
+            ])
 
             <div class="tv-auth__body">
-                <div class="tv-auth__eyebrow"><i class="fal fa-compass"></i> TRAVEL &amp; DISCOVER</div>
+                {{-- ĐĂNG NHẬP (jQuery cũ bật/tắt .sign-in / .signup — giữ nguyên tên lớp và id) --}}
                 <section class="sign-in">
-                    <h1 class="tv-auth__title">Chào mừng bạn trở lại</h1>
-                    <p class="tv-auth__sub">Đăng nhập để tiếp tục lên kế hoạch cho hành trình tiếp theo.</p>
+                    <h1 class="tv-auth__title">Đăng nhập</h1>
+                    <p class="tv-auth__sub">Chào mừng bạn quay lại.</p>
 
-                    <form action="{{ route('user-login') }}" method="POST" class="login-form" id="login-form"
-                        novalidate>
+                    <form action="{{ route('user-login') }}" method="POST" class="login-form" id="login-form" novalidate>
                         @csrf
                         <div class="tv-fieldrow">
                             <label for="username_login">Tên đăng nhập</label>
@@ -30,32 +33,23 @@
                                 <input type="password" name="password_login" id="password_login"
                                     autocomplete="current-password" placeholder="Nhập mật khẩu">
                                 <button type="button" class="tv-pass__eye" data-toggle-pass
-                                    aria-label="Hiện/ẩn mật khẩu">
-                                    <i class="fal fa-eye"></i>
-                                </button>
+                                    aria-label="Hiện/ẩn mật khẩu"><i class="fal fa-eye"></i></button>
                             </div>
                             <div class="invalid-feedback" id="validate_password"></div>
                         </div>
 
-                        <button type="submit" name="signin" id="signin" class="tv-auth__submit">
-                            <span>Đăng nhập</span><i class="fal fa-arrow-right"></i>
-                        </button>
+                        <button type="submit" name="signin" id="signin" class="tv-auth__submit">Đăng nhập</button>
                     </form>
 
-                    <div class="tv-auth__divider"><span>hoặc</span></div>
-                    <p class="tv-auth__switch">Chưa có tài khoản?
-                        <a href="{{ route('register.page') }}">Tạo tài khoản miễn phí</a>
-                    </p>
+                    <p class="tv-auth__switch">Chưa có tài khoản? <a href="{{ route('register.form') }}">Tạo tài
+                            khoản</a></p>
                     <p class="tv-auth__admin"><a href="{{ route('admin.login') }}">Đăng nhập dành cho quản trị viên</a>
                     </p>
                 </section>
+
             </div>
         </div>
     </div>
 </main>
-
-<script>
-    window.emailVerificationResendUrl = @json(route('email.verification.resend'));
-</script>
 
 @include('clients.blocks.footer')

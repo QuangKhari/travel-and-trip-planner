@@ -62,11 +62,10 @@
     <link rel="stylesheet" href="{{ asset('clients/assets/css/travel-theme.css') }}?v=2">
     {{-- SEA THEME: giao diện biển cho các trang con. Phải nằm SAU travel-theme.css --}}
     <link rel="stylesheet" href="{{ asset('clients/assets/css/sea-theme.css') }}?v=1">
-    {{-- Client UI refresh: chỉ áp dụng cho các trang con, Home giữ nguyên --}}
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/user-refresh.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/client-ui-polish.css') }}?v=4">
 </head>
 
-<body class="tv-sea">
+<body class="tv-sea page-{{ str_replace('.', '-', request()->route()?->getName() ?? 'page') }}">
     <div class="page-wrapper">
 
         <!-- Preloader -->

@@ -12,9 +12,15 @@
 
 <main class="tc-contact">
     <div class="container">
-        <header class="tv-pagehead">
-            <h1>Liên hệ</h1>
-            <p>Nhắn trực tiếp cho chúng tôi, hoặc chọn câu hỏi thường gặp để có câu trả lời ngay.</p>
+        <header class="tc-contact__hero">
+            <div class="tc-contact__hero-bg" aria-hidden="true"></div>
+            <div class="tc-contact__hero-content">
+                <span class="tc-contact__eyebrow"><i class="fal fa-circle"></i> Hỗ trợ trực tuyến</span>
+                <h1>Trò chuyện với TravelTrip</h1>
+                <p>Nhắn trực tiếp cho chúng tôi như một cuộc trò chuyện. Bạn cũng có thể chọn câu hỏi nhanh để nhận câu
+                    trả lời ngay.</p>
+            </div>
+            <div class="tc-contact__hero-badge"><i class="fal fa-comment-alt-dots"></i><span>Phản hồi nhanh</span></div>
         </header>
 
         <div class="tc-contact__shell">

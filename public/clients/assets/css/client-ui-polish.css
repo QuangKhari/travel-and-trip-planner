@@ -1,0 +1,529 @@
+body.tv-sea {
+    --ui-tq: #0b9ea2;
+    --ui-tq-deep: #087b80;
+    --ui-sand: #efc45b;
+    --ui-ink: #123f44;
+    --ui-soft: #f4fbfa;
+    --ui-line: rgba(8, 123, 128, 0.14);
+    --ui-shadow: 0 14px 36px rgba(8, 74, 79, 0.09);
+    --ui-shadow-hover: 0 18px 42px rgba(8, 74, 79, 0.14);
+}
+
+body.tv-sea .tv-pagehead {
+    position: relative;
+    max-width: 780px;
+    margin: 0 auto 34px;
+    padding: 12px 0 4px 22px;
+}
+body.tv-sea .tv-pagehead::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 12px;
+    width: 4px;
+    height: 58px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, var(--ui-tq), var(--ui-sand));
+}
+body.tv-sea .tv-pagehead h1 {
+    margin-bottom: 7px;
+    letter-spacing: -0.025em;
+}
+body.tv-sea .tv-pagehead p {
+    max-width: 680px;
+}
+
+/* Buttons: preserve the existing classes, only make their interaction softer. */
+body.tv-sea .tv-btn-solid,
+body.tv-sea .tv-btn-orange,
+body.tv-sea .tv-auth__submit,
+body.tv-sea .booking-btn {
+    transition:
+        transform 0.22s ease,
+        box-shadow 0.22s ease,
+        background 0.22s ease;
+}
+body.tv-sea .tv-btn-solid:hover,
+body.tv-sea .tv-btn-orange:hover,
+body.tv-sea .tv-auth__submit:hover,
+body.tv-sea .booking-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(8, 123, 128, 0.18);
+}
+
+/* Tour detail: strengthen the existing gallery and booking card, do not replace them. */
+body.tv-sea .td-gallery__item {
+    box-shadow: 0 8px 22px rgba(8, 74, 79, 0.07);
+}
+body.tv-sea .td-gallery__item img {
+    transition:
+        transform 0.65s cubic-bezier(0.2, 0.75, 0.2, 1),
+        filter 0.35s ease;
+}
+body.tv-sea .td-gallery__item:hover img {
+    transform: scale(1.035);
+    filter: saturate(1.04);
+}
+body.tv-sea .td-book {
+    position: sticky;
+    top: 96px;
+    border-color: var(--ui-line);
+    box-shadow: var(--ui-shadow);
+    overflow: hidden;
+}
+body.tv-sea .td-book::before {
+    content: "";
+    display: block;
+    height: 4px;
+    margin: -24px -24px 20px;
+    background: linear-gradient(90deg, var(--ui-tq), var(--ui-sand));
+}
+body.tv-sea .td-book__price b {
+    color: var(--ui-tq-deep);
+}
+body.tv-sea .td-tabs {
+    position: sticky;
+    top: 78px;
+    z-index: 8;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.9);
+}
+body.tv-sea .td-section {
+    scroll-margin-top: 130px;
+}
+body.tv-sea .td-day {
+    transition:
+        border-color 0.25s ease,
+        box-shadow 0.25s ease,
+        transform 0.25s ease;
+}
+body.tv-sea .td-day:hover {
+    border-color: rgba(11, 158, 162, 0.28);
+    box-shadow: 0 10px 28px rgba(8, 74, 79, 0.06);
+}
+
+/* Booking / booked detail: stronger hierarchy without changing form names or IDs. */
+body.tv-sea .tv-booking {
+    padding-top: 42px;
+}
+body.tv-sea .tv-booking .booking-info,
+body.tv-sea .tv-booking .booking-summary {
+    box-shadow: var(--ui-shadow);
+}
+body.tv-sea .tv-booking .booking-info {
+    position: relative;
+    overflow: hidden;
+}
+body.tv-sea .tv-booking .booking-info::before,
+body.tv-sea .tv-booking .booking-summary::before {
+    content: "";
+    display: block;
+    height: 3px;
+    margin: -30px -30px 24px;
+    background: linear-gradient(90deg, var(--ui-tq), var(--ui-sand));
+}
+body.tv-sea .tv-booking .booking-summary {
+    border-color: var(--ui-line);
+}
+body.tv-sea .tv-booking .summary-item.total-price,
+body.tv-sea .tv-booking .summary-item.total-price-booked {
+    background: var(--ui-soft);
+    margin: 8px -10px -2px;
+    padding: 13px 10px;
+    border-radius: 12px;
+}
+body.tv-sea .tv-booking .summary-item.total-price span:last-child,
+body.tv-sea .tv-booking .summary-item.total-price-booked span:last-child {
+    color: var(--ui-tq-deep);
+    font-size: 18px;
+}
+body.tv-sea .tv-booking .form-group input:focus,
+body.tv-sea .tv-booking .quantity-input:focus {
+    border-color: rgba(11, 158, 162, 0.55);
+    box-shadow: 0 0 0 4px rgba(11, 158, 162, 0.09);
+    outline: 0;
+}
+
+/* My tours: image-led cards and quieter status pills. */
+body.tv-sea .tv-order {
+    border-color: var(--ui-line);
+    box-shadow: 0 4px 16px rgba(8, 74, 79, 0.035);
+    transition:
+        transform 0.28s ease,
+        box-shadow 0.28s ease,
+        border-color 0.28s ease;
+}
+body.tv-sea .tv-order:hover {
+    transform: translateY(-3px);
+    border-color: rgba(11, 158, 162, 0.22);
+    box-shadow: var(--ui-shadow-hover);
+}
+body.tv-sea .tv-order__img {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+body.tv-sea .tv-order__img img {
+    transition: transform 0.55s ease;
+}
+body.tv-sea .tv-order:hover .tv-order__img img {
+    transform: scale(1.035);
+}
+
+/* Profile: calm two-column account workspace. */
+body.tv-sea .tv-profile__grid > aside {
+    position: sticky;
+    top: 96px;
+}
+body.tv-sea .tv-profile .tv-panel {
+    border-color: var(--ui-line);
+    box-shadow: 0 8px 24px rgba(8, 74, 79, 0.055);
+}
+body.tv-sea .tv-profile .tv-panel--links a,
+body.tv-sea .tv-profile .tv-panel--links button {
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease,
+        color 0.2s ease;
+}
+body.tv-sea .tv-profile .tv-panel--links a:hover,
+body.tv-sea .tv-profile .tv-panel--links button:hover {
+    transform: translateX(2px);
+    background: var(--ui-soft);
+    color: var(--ui-tq-deep);
+}
+body.tv-sea .tv-avatar {
+    box-shadow:
+        0 0 0 5px rgba(11, 158, 162, 0.08),
+        0 12px 28px rgba(8, 74, 79, 0.12);
+}
+
+/* Contact: make the existing chat feel like a messaging product. */
+body.tv-sea .tc-contact__shell {
+    border-color: var(--ui-line);
+    box-shadow: 0 20px 52px rgba(8, 74, 79, 0.11);
+}
+body.tv-sea .tc-contact__side {
+    background: linear-gradient(180deg, #f7fcfb, #eef8f7);
+}
+body.tv-sea .tc-contact__side h2 {
+    color: var(--ui-ink);
+}
+body.tv-sea .tc-contact__side section:first-child::before {
+    content: "ONLINE SUPPORT";
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 4px 9px;
+    margin-bottom: 10px;
+    border-radius: 999px;
+    background: var(--ui-soft);
+    color: var(--ui-tq-deep);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+body.tv-sea .tc-contact__chat {
+    background:
+        radial-gradient(
+                circle at 15% 20%,
+                rgba(11, 158, 162, 0.055) 0 2px,
+                transparent 2.5px
+            )
+            0 0 / 26px 26px,
+        #fff;
+}
+body.tv-sea .tc-head {
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 1px 0 var(--ui-line);
+}
+body.tv-sea .tc-bubble {
+    box-shadow: 0 5px 16px rgba(8, 74, 79, 0.06);
+}
+body.tv-sea .tc-row--user .tc-bubble {
+    background: var(--ui-tq-deep);
+}
+body.tv-sea .tc-input:focus {
+    box-shadow: 0 0 0 4px rgba(11, 158, 162, 0.08);
+}
+body.tv-sea .tc-fab {
+    box-shadow: 0 12px 32px rgba(8, 123, 128, 0.24);
+}
+
+/* Legacy blog template: visual refresh only, no content/route rewrite. */
+body.tv-sea .blog-list-page .blog-item.style-three {
+    overflow: hidden;
+    border: 1px solid var(--ui-line);
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(8, 74, 79, 0.055);
+    transition:
+        transform 0.28s ease,
+        box-shadow 0.28s ease;
+}
+body.tv-sea .blog-list-page .blog-item.style-three:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--ui-shadow-hover);
+}
+body.tv-sea .blog-list-page .blog-item.style-three .image {
+    overflow: hidden;
+}
+body.tv-sea .blog-list-page .blog-item.style-three .image img {
+    width: 100%;
+    transition: transform 0.6s ease;
+}
+body.tv-sea .blog-list-page .blog-item.style-three:hover .image img {
+    transform: scale(1.035);
+}
+body.tv-sea .blog-list-page .blog-item.style-three .content {
+    padding: 24px 26px 26px;
+}
+body.tv-sea .blog-list-page .blog-item.style-three .category {
+    color: var(--ui-tq-deep);
+}
+body.tv-sea .blog-list-page .blog-item.style-three h5 a:hover {
+    color: var(--ui-tq-deep);
+}
+body.tv-sea .blog-detaisl-page .blog-details-content {
+    background: #fff;
+    border: 1px solid var(--ui-line);
+    border-radius: 22px;
+    padding: clamp(24px, 4vw, 46px);
+    box-shadow: var(--ui-shadow);
+}
+body.tv-sea .blog-detaisl-page .blog-details-content .image {
+    overflow: hidden;
+    border-radius: 18px;
+}
+body.tv-sea .blog-detaisl-page .blog-details-content .image img {
+    width: 100%;
+    transition: transform 0.6s ease;
+}
+body.tv-sea .blog-detaisl-page .blog-details-content .image:hover img {
+    transform: scale(1.02);
+}
+
+/* Auth: preserve the split-image design, just make the form surface cleaner. */
+body.tv-sea.page-login .tv-auth,
+body.tv-sea.page-register-form .tv-auth {
+    background:
+        radial-gradient(
+            circle at 12% 20%,
+            rgba(11, 158, 162, 0.07),
+            transparent 34%
+        ),
+        linear-gradient(180deg, #fbfefd, #f5fbfa);
+}
+body.tv-sea .tv-auth__card {
+    overflow: hidden;
+    border-color: var(--ui-line);
+    box-shadow: 0 22px 58px rgba(8, 74, 79, 0.12);
+}
+body.tv-sea .tv-auth__aside {
+    background-position: center;
+}
+body.tv-sea .tv-auth__aside::after {
+    background: linear-gradient(
+        180deg,
+        rgba(6, 50, 60, 0.08),
+        rgba(6, 50, 60, 0.68)
+    );
+}
+body.tv-sea .tv-auth__body {
+    background: rgba(255, 255, 255, 0.96);
+}
+body.tv-sea .tv-auth__submit {
+    box-shadow: 0 8px 20px rgba(8, 123, 128, 0.16);
+}
+
+/* Reduced motion: the visual layer must remain comfortable. */
+@media (prefers-reduced-motion: reduce) {
+    body.tv-sea *,
+    body.tv-sea *::before,
+    body.tv-sea *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}
+
+@media (max-width: 991px) {
+    body.tv-sea .td-book,
+    body.tv-sea .tv-profile__grid > aside {
+        position: static;
+    }
+    body.tv-sea .td-tabs {
+        top: 68px;
+    }
+}
+
+@media (max-width: 767px) {
+    body.tv-sea .tv-pagehead {
+        padding-left: 16px;
+        margin-bottom: 24px;
+    }
+    body.tv-sea .tv-pagehead::before {
+        height: 46px;
+    }
+    body.tv-sea .td-book::before,
+    body.tv-sea .tv-booking .booking-info::before,
+    body.tv-sea .tv-booking .booking-summary::before {
+        margin-left: -20px;
+        margin-right: -20px;
+    }
+    body.tv-sea .tc-contact__shell {
+        height: auto;
+        min-height: 0;
+        grid-template-columns: 1fr;
+    }
+    body.tv-sea .tc-contact__chat {
+        min-height: 560px;
+    }
+    body.tv-sea .tc-contact__side {
+        border-left: 0;
+        border-top: 1px solid var(--ui-line);
+    }
+    body.tv-sea .blog-detaisl-page .blog-details-content {
+        padding: 22px 18px;
+        border-radius: 18px;
+    }
+}
+body.tv-sea .ui-polish-reveal {
+    opacity: 0;
+    transform: translateY(12px);
+    transition:
+        opacity 0.55s ease,
+        transform 0.55s ease;
+}
+body.tv-sea .ui-polish-reveal.ui-polish-in {
+    opacity: 1;
+    transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+    body.tv-sea .ui-polish-reveal {
+        opacity: 1;
+        transform: none;
+    }
+}
+body.tv-sea.page-my-tours .tv-pagehead,
+body.tv-sea.page-user-profile .tv-pagehead {
+    max-width: none;
+    padding: 26px 30px;
+    border-radius: 20px;
+    background:
+        linear-gradient(100deg, rgba(6, 50, 60, 0.9), rgba(8, 123, 128, 0.74)),
+        url("../images/banner/banner-tours.jpg") center/cover;
+    box-shadow: var(--ui-shadow);
+}
+body.tv-sea.page-my-tours .tv-pagehead h1,
+body.tv-sea.page-my-tours .tv-pagehead p,
+body.tv-sea.page-user-profile .tv-pagehead h1,
+body.tv-sea.page-user-profile .tv-pagehead p {
+    color: #fff;
+}
+body.tv-sea.page-my-tours .tv-pagehead::before,
+body.tv-sea.page-user-profile .tv-pagehead::before {
+    background: var(--ui-sand);
+}
+
+/* Contact hero: one visual transition from travel imagery into the message UI. */
+body.tv-sea .tc-contact__hero {
+    position: relative;
+    min-height: 230px;
+    margin: 28px 0 24px;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    border-radius: 24px;
+    isolation: isolate;
+    box-shadow: var(--ui-shadow);
+    background: var(--ui-ink);
+}
+body.tv-sea .tc-contact__hero-bg {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background: url("../images/banner/banner-contact.jpg") center/cover;
+    transform: scale(1.025);
+}
+body.tv-sea .tc-contact__hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(
+        100deg,
+        rgba(6, 50, 60, 0.88),
+        rgba(8, 123, 128, 0.48) 58%,
+        rgba(6, 50, 60, 0.18)
+    );
+}
+body.tv-sea .tc-contact__hero-content {
+    max-width: 720px;
+    padding: 32px 34px;
+}
+body.tv-sea .tc-contact__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 10px;
+    padding: 6px 11px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    backdrop-filter: blur(8px);
+}
+body.tv-sea .tc-contact__eyebrow i {
+    color: var(--ui-sand);
+    font-size: 8px;
+}
+body.tv-sea .tc-contact__hero h1 {
+    margin: 0 0 8px;
+    color: #fff;
+    font-size: clamp(28px, 4vw, 42px);
+    letter-spacing: -0.03em;
+}
+body.tv-sea .tc-contact__hero p {
+    margin: 0;
+    max-width: 660px;
+    color: rgba(255, 255, 255, 0.86);
+    line-height: 1.7;
+}
+body.tv-sea .tc-contact__hero-badge {
+    position: absolute;
+    right: 28px;
+    bottom: 28px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 13px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.94);
+    color: var(--ui-tq-deep);
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+}
+body.tv-sea .tc-contact__hero-badge i {
+    color: var(--ui-sand);
+}
+@media (max-width: 767px) {
+    body.tv-sea .tc-contact__hero {
+        min-height: 250px;
+        margin-top: 18px;
+        border-radius: 18px;
+    }
+    body.tv-sea .tc-contact__hero-content {
+        padding: 26px 22px;
+    }
+    body.tv-sea .tc-contact__hero-badge {
+        right: 18px;
+        top: 18px;
+        bottom: auto;
+    }
+}
