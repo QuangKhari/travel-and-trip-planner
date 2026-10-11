@@ -1,4 +1,4 @@
-/* Travel Admin Theme 2.0 — override Gentelella. Nạp SAU admin/assets/css/custom-css.css */
+/* Travel Admin Theme 2.0 — override Gentelella. */
 :root {
     --a-ocean: #0e8f8a;
     --a-ocean-d: #0a6e6a;
@@ -130,4 +130,229 @@ table.dataTable thead th,
 footer {
     background: transparent;
     color: #7a8f99;
+}
+
+/* =====================================================================
+   GIAI ĐOẠN 13 — hoàn thiện giao diện admin
+   Nạp SAU admin/build/css/custom.min.css (và sau custom-css của admin nếu có)
+   ===================================================================== */
+:root {
+    --a-line: #e3edef;
+    --a-ink: #16324a;
+    --a-mute: #6b7f8f;
+}
+body.nav-md,
+.nav-md .container.body .right_col {
+    background: var(--a-mist);
+}
+.right_col {
+    padding-top: 14px;
+}
+.page-title .title_left h3 {
+    font-weight: 700;
+    color: var(--a-ink);
+    font-size: 24px;
+}
+
+/* thanh trên cùng + menu trái */
+.top_nav .nav_menu {
+    background: #fff;
+    border-bottom: 1px solid var(--a-line);
+}
+.nav.side-menu > li > a {
+    font-size: 14px;
+    padding: 12px 16px;
+}
+.nav.side-menu > li > a i {
+    color: #7fd6dd;
+    margin-right: 8px;
+}
+.nav.side-menu > li.active > a i {
+    color: #fff;
+}
+.profile_info h2,
+.profile_info span {
+    color: #fff;
+}
+
+/* khung nội dung */
+.x_panel {
+    padding: 18px 22px;
+}
+.x_title h2 small {
+    color: var(--a-mute);
+}
+
+/* bảng */
+.table > thead > tr > th {
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--a-mute);
+    border-bottom: 2px solid var(--a-line);
+}
+.table > tbody > tr > td {
+    vertical-align: middle;
+    border-top: 1px solid var(--a-line);
+}
+.table-bordered {
+    border: 0;
+}
+.table-bordered > thead > tr > th,
+.table-bordered > tbody > tr > td {
+    border-left: 0;
+    border-right: 0;
+}
+tr[hidden] {
+    display: none !important;
+}
+
+/* thanh công cụ + phân trang (admin-paginate.js) */
+.tv-admin-tools {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+.tv-admin-tools input[type="search"] {
+    max-width: 320px;
+}
+.tv-admin-tools label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-weight: 500;
+    color: var(--a-mute);
+    font-size: 13px;
+}
+.tv-admin-tools select {
+    width: auto;
+    display: inline-block;
+    height: 34px;
+    padding: 2px 8px;
+}
+.tv-admin-pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+.tv-admin-pager__info {
+    font-size: 13px;
+    color: var(--a-mute);
+}
+.tv-admin-pager__btns,
+.tv-admin-pager > div {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.tv-admin-pager button,
+.tv-admin-pager a {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--a-line);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--a-ink);
+    display: inline-grid;
+    place-items: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+.tv-admin-pager button:hover,
+.tv-admin-pager a:hover {
+    border-color: var(--a-ocean);
+    color: var(--a-ocean);
+    text-decoration: none;
+}
+.tv-admin-pager .is-active {
+    background: var(--a-ocean);
+    border-color: var(--a-ocean);
+    color: #fff;
+}
+.tv-admin-pager--static {
+    padding: 0 22px 18px;
+}
+
+/* thẻ người dùng */
+.profile_view {
+    border-radius: 16px;
+    border: 1px solid var(--a-line);
+    box-shadow: none;
+    background: #fff;
+    transition: box-shadow 0.25s;
+}
+.profile_view:hover {
+    box-shadow: 0 10px 28px rgba(11, 42, 60, 0.1);
+}
+.profile_view .brief i {
+    font-style: normal;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: #e8f7f1;
+    color: #0b7a55;
+}
+.top_search .input-group .form-control {
+    border-radius: 10px 0 0 10px;
+}
+.top_search .btn {
+    border-radius: 0 10px 10px 0;
+}
+
+/* chỉ số ở dashboard */
+.tile_count .tile_stats_count {
+    border-radius: 14px;
+    background: #fff;
+    border: 1px solid var(--a-line);
+    padding: 14px 16px;
+    margin-bottom: 12px;
+}
+.tile_count .tile_stats_count .count {
+    font-weight: 700;
+    font-size: 30px;
+}
+.tile_count .tile_stats_count .count_top {
+    color: var(--a-mute);
+    font-size: 12px;
+}
+.tile_count .tile_stats_count:before {
+    display: none;
+}
+
+/* trang đăng nhập admin */
+body.login {
+    background: linear-gradient(160deg, #0b2a3c, #134e6b);
+}
+.login-admin-card {
+    border-radius: 20px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
+    border: 0;
+}
+.login-admin-card .form-control {
+    border-radius: 12px;
+    height: 46px;
+}
+.btn-login-admin {
+    background: var(--a-ocean) !important;
+    border: 0;
+    border-radius: 12px;
+    font-weight: 700;
+    height: 46px;
+}
+.btn-login-admin:hover {
+    background: var(--a-ocean-d) !important;
+}
+.login-admin-back {
+    color: #7fd6dd;
 }

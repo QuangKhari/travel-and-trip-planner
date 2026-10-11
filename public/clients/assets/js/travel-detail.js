@@ -154,4 +154,57 @@
             mbar.classList.toggle("is-hidden", e[0].isIntersecting);
         }).observe(book);
     }
+
+    /* ---------- 6. Đánh giá: hiện 5 nhận xét, bấm "Xem thêm" để mở tiếp (cũng chạy lại sau khi gửi đánh giá bằng AJAX) ---------- */
+    var STEP = 5;
+    var collapseReviews = function () {
+        var list = $(".td-rlist");
+        if (!list) return;
+        var items = $$(".td-review", list);
+        var old = $(".td-more-reviews");
+        if (old) old.remove();
+        if (items.length <= STEP) return;
+        items.forEach(function (r, i) {
+            r.hidden = i >= STEP;
+        });
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "td-link td-more-reviews";
+        btn.textContent = "Xem thêm " + (items.length - STEP) + " đánh giá";
+        btn.addEventListener("click", function () {
+            var hidden = items.filter(function (r) {
+                return r.hidden;
+            });
+            hidden.slice(0, STEP).forEach(function (r) {
+                r.hidden = false;
+            });
+            var left = items.filter(function (r) {
+                return r.hidden;
+            }).length;
+            if (left) btn.textContent = "Xem thêm " + left + " đánh giá";
+            else btn.remove();
+        });
+        list.parentNode.insertBefore(btn, list.nextSibling);
+    };
+    collapseReviews();
+    var rv = document.getElementById("partials_reviews");
+    if (rv && "MutationObserver" in window) {
+        var isOwn = function (n) {
+            return n.nodeType === 1 && n.classList.contains("td-more-reviews");
+        };
+        new MutationObserver(function (muts) {
+            // chỉ chạy lại khi nội dung đánh giá bị thay (không phải do chính nút "Xem thêm" thêm/xóa)
+            var external = muts.some(function (m) {
+                return (
+                    Array.prototype.some.call(m.addedNodes, function (n) {
+                        return !isOwn(n);
+                    }) ||
+                    Array.prototype.some.call(m.removedNodes, function (n) {
+                        return !isOwn(n);
+                    })
+                );
+            });
+            if (external) collapseReviews();
+        }).observe(rv, { childList: true });
+    }
 })();

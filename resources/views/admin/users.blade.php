@@ -12,14 +12,16 @@
                     </div>
 
                     <div class="title_right">
-                        <div class="col-md-5 col-sm-5  form-group pull-right top_search">
+                        <form method="GET" action="{{ route('admin.users') }}"
+                            class="col-md-5 col-sm-5  form-group pull-right top_search">
                             <div class="input-group">
-                                <input type="text" class="form-control" placeholder="Search for...">
+                                <input type="text" name="q" value="{{ $q ?? '' }}" class="form-control"
+                                    placeholder="Tìm theo tên, email, số điện thoại...">
                                 <span class="input-group-btn">
-                                    <button class="btn btn-default" type="button">Go!</button>
+                                    <button class="btn btn-default" type="submit">Tìm</button>
                                 </span>
                             </div>
-                        </div>
+                        </form>
                     </div>
                 </div>
 
@@ -83,7 +85,30 @@
                             </div>
                         @endforeach
 
+                        @if ($users->count() === 0)
+                            <p class="text-center text-muted" style="padding:30px 0">Không tìm thấy người dùng
+                                nào{{ !empty($q) ? ' cho “' . $q . '”' : '' }}.</p>
+                        @endif
                     </div>
+
+                    @if ($users->lastPage() > 1)
+                        <div class="tv-admin-pager tv-admin-pager--static">
+                            <span class="tv-admin-pager__info">Trang {{ $users->currentPage() }} /
+                                {{ $users->lastPage() }} · {{ $users->total() }} người dùng</span>
+                            <div>
+                                @if ($users->currentPage() > 1)
+                                    <a href="{{ $users->previousPageUrl() }}">‹</a>
+                                @endif
+                                @for ($p = max(1, $users->currentPage() - 2); $p <= min($users->lastPage(), $users->currentPage() + 2); $p++)
+                                    <a href="{{ $users->url($p) }}"
+                                        class="{{ $p === $users->currentPage() ? 'is-active' : '' }}">{{ $p }}</a>
+                                @endfor
+                                @if ($users->hasMorePages())
+                                    <a href="{{ $users->nextPageUrl() }}">›</a>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>

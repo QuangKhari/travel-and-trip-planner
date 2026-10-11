@@ -15,11 +15,36 @@ class UserManagementController extends Controller
         parent::__construct();
         $this->users = new UserModel();
     }
-    public function index()
+    public function index(\Illuminate\Http\Request $request)
     {
         $title = 'Quản lý người dùng';
 
-        $users = $this->users->getAllUsers();
+        $all = collect($this->users->getAllUsers());
+
+        // Tìm nhanh theo tên, tên đăng nhập, email, số điện thoại (?q=)
+        $q = trim((string) $request->query('q', ''));
+        if ($q !== '') {
+            $needle = mb_strtolower($q);
+            $all = $all->filter(function ($u) use ($needle) {
+                foreach (['fullName', 'username', 'email', 'phoneNumber'] as $field) {
+                    if (isset($u->$field) && mb_strpos(mb_strtolower((string) $u->$field), $needle) !== false) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+        }
+
+        // Phân trang 12 người dùng / trang (?page=)
+        $perPage = 12;
+        $page = max(1, (int) $request->query('page', 1));
+        $users = new \Illuminate\Pagination\LengthAwarePaginator(
+            $all->forPage($page, $perPage)->values(),
+            $all->count(),
+            $perPage,
+            $page,
+            ['path' => route('admin.users'), 'query' => $q !== '' ? ['q' => $q] : []]
+        );
 
         foreach ($users as $user) {
             if (!$user->fullName) {
@@ -33,9 +58,8 @@ class UserManagementController extends Controller
             else
                 $user->isActive = 'Chưa kích hoạt';
         }
-        // dd($users);
 
-        return view('admin.users', compact('title', 'users'));
+        return view('admin.users', compact('title', 'users', 'q'));
     }
 
     public function activeUser(Request $request)

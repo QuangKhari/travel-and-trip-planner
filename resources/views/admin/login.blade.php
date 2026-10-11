@@ -25,8 +25,11 @@
     {{-- Custom css by DevDien  --}}
     <link href="{{ asset('admin/assets/css/custom-css.css') }}" rel="stylesheet" />
 
+    <link href="{{ asset('admin/assets/css/admin-theme.css') }}?v=3" rel="stylesheet" />
+
     <style>
-        html, body {
+        html,
+        body {
             height: 100%;
             margin: 0;
         }
@@ -197,14 +200,14 @@
 
             <div class="form-group-custom">
                 <i class="fa fa-user"></i>
-                <input type="text" class="form-control" name="username" id="username"
-                    placeholder="Tài khoản" required />
+                <input type="text" class="form-control" name="username" id="username" placeholder="Tài khoản"
+                    required />
             </div>
 
             <div class="form-group-custom">
                 <i class="fa fa-lock"></i>
-                <input type="password" class="form-control" name="password" id="password"
-                    placeholder="Mật khẩu" required />
+                <input type="password" class="form-control" name="password" id="password" placeholder="Mật khẩu"
+                    required />
             </div>
 
             <button class="btn-login-admin" type="submit">Đăng nhập</button>

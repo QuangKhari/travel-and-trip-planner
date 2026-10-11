@@ -16,7 +16,7 @@
             <p>Theo dõi trạng thái, xem chi tiết hoặc hủy đơn khi còn trong thời hạn cho phép.</p>
         </header>
 
-        @if ($myTours->isEmpty())
+        @if ($totalAll === 0)
             <div class="tv-empty">
                 <div class="tv-empty__icon"><i class="fal fa-suitcase-rolling"></i></div>
                 <h3>Bạn chưa đặt tour nào</h3>
@@ -24,14 +24,14 @@
                 <a href="{{ route('tours') }}" class="tv-btn-solid">Khám phá tour</a>
             </div>
         @else
-            <div class="tv-chiprow" role="group" aria-label="Lọc theo trạng thái" id="tvStatusFilter">
-                <button type="button" class="tv-chipbtn is-on" data-status="all">Tất cả
-                    <span>{{ $myTours->count() }}</span></button>
+            <div class="tv-chiprow" role="group" aria-label="Lọc theo trạng thái">
+                <a href="{{ route('my-tours') }}" class="tv-chipbtn {{ $status === '' ? 'is-on' : '' }}">Tất cả
+                    <span>{{ $totalAll }}</span></a>
                 @foreach ($statusMap as $key => $info)
-                    @php $n = $myTours->where('bookingStatus', $key)->count(); @endphp
-                    @if ($n)
-                        <button type="button" class="tv-chipbtn" data-status="{{ $key }}">{{ $info[0] }}
-                            <span>{{ $n }}</span></button>
+                    @if (($statusCounts[$key] ?? 0) > 0)
+                        <a href="{{ route('my-tours', ['status' => $key]) }}"
+                            class="tv-chipbtn {{ $status === $key ? 'is-on' : '' }}">{{ $info[0] }}
+                            <span>{{ $statusCounts[$key] }}</span></a>
                     @endif
                 @endforeach
             </div>
@@ -75,6 +75,23 @@
                     </article>
                 @endforeach
             </div>
+
+            @if ($myTours->lastPage() > 1)
+                <nav class="tv-pager" aria-label="Phân trang">
+                    @if ($myTours->currentPage() > 1)
+                        <a href="{{ $myTours->previousPageUrl() }}" aria-label="Trang trước"><i
+                                class="far fa-chevron-left"></i></a>
+                    @endif
+                    @for ($p = 1; $p <= $myTours->lastPage(); $p++)
+                        <a href="{{ $myTours->url($p) }}"
+                            class="{{ $p === $myTours->currentPage() ? 'is-active' : '' }}">{{ $p }}</a>
+                    @endfor
+                    @if ($myTours->hasMorePages())
+                        <a href="{{ $myTours->nextPageUrl() }}" aria-label="Trang sau"><i
+                                class="far fa-chevron-right"></i></a>
+                    @endif
+                </nav>
+            @endif
         @endif
 
         @if (isset($toursPopular) && !$toursPopular->isEmpty())

@@ -82,9 +82,12 @@ class SearchController extends Controller
             'endDate' => $formattedEndDate,
         ];
 
-        $tours = $this->tours->searchTours($dataSearch);
-
-        return view('clients.search', compact('title', 'tours'));
+        // Chuyển sang trang /tours: có sẵn bộ lọc, sắp xếp và phân trang
+        return redirect()->route('tours', array_filter([
+            'keyword' => $destinationName,
+            'from' => $formattedStartDate,
+            'to' => $formattedEndDate,
+        ]));
     }
 
     public function searchTours(Request $request)
@@ -114,9 +117,7 @@ class SearchController extends Controller
             'keyword' => $keyword
         ];
 
-        $tours = $this->tours->searchTours($dataSearch);
-
-        return view('clients.search', compact('title', 'tours', 'keyword'));
+        return redirect()->route('tours', ['keyword' => $keyword]);
     }
 
     private function normalizeVoiceKeyword(string $keyword): string

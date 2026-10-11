@@ -35,6 +35,9 @@ class ContactController extends Controller
         ]);
 
         if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+            }
             toastr()->error($validator->errors()->first());
             return redirect()->route('contact')->withInput();
         }
@@ -60,11 +63,18 @@ class ContactController extends Controller
                 'exception' => $e->getMessage(),
             ]);
 
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Không thể gửi liên hệ lúc này. Vui lòng thử lại sau.'], 500);
+            }
             toastr()->error('Không thể gửi liên hệ lúc này. Vui lòng thử lại sau.');
             return redirect()->route('contact')->withInput();
         }
 
-        toastr()->success('Cảm ơn bạn, Travela đã nhận được tin nhắn và sẽ phản hồi sớm.');
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Đã nhận tin nhắn của bạn.']);
+        }
+
+        toastr()->success('Cảm ơn bạn, Travel đã nhận được tin nhắn và sẽ phản hồi sớm.');
         return redirect()->route('contact');
     }
 }

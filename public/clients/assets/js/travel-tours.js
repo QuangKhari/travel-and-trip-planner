@@ -28,6 +28,8 @@
         overlay = $("#tvOverlay");
 
     var DEFAULT = {
+        from: "",
+        to: "",
         keyword: "",
         domain: "",
         days: "",
@@ -47,6 +49,10 @@
         domain: { b: "Miền Bắc", t: "Miền Trung", n: "Miền Nam" },
         days: { short: "1–3 ngày", mid: "4–5 ngày", long: "6 ngày trở lên" },
     };
+    var fmt = function (iso) {
+        var p = String(iso).split("-");
+        return p.length === 3 ? p[2] + "/" + p[1] + "/" + p[0] : iso;
+    };
     var money = function (n) {
         return Number(n).toLocaleString("vi-VN") + "đ";
     };
@@ -55,6 +61,8 @@
     function toQuery(withPage) {
         var p = new URLSearchParams();
         if (state.keyword) p.set("keyword", state.keyword);
+        if (state.from) p.set("from", state.from);
+        if (state.to) p.set("to", state.to);
         if (state.domain) p.set("domain", state.domain);
         if (state.days) p.set("days", state.days);
         if (state.rating) p.set("rating", state.rating);
@@ -94,6 +102,14 @@
         // thẻ bộ lọc đang áp dụng
         var tags = [];
         if (state.keyword) tags.push(["keyword", "Từ khóa: " + state.keyword]);
+        if (state.from || state.to)
+            tags.push([
+                "dates",
+                "Ngày: " +
+                    (state.from ? fmt(state.from) : "…") +
+                    " → " +
+                    (state.to ? fmt(state.to) : "…"),
+            ]);
         if (state.domain) tags.push(["domain", LABELS.domain[state.domain]]);
         if (state.days) tags.push(["days", LABELS.days[state.days]]);
         if (state.rating) tags.push(["rating", "Từ " + state.rating + " sao"]);
@@ -222,6 +238,9 @@
             if (k === "price") {
                 state.min = cfg.min;
                 state.max = cfg.max;
+            } else if (k === "dates") {
+                state.from = "";
+                state.to = "";
             } else if (k === "rating") state.rating = 0;
             else state[k] = "";
             apply();

@@ -47,23 +47,24 @@
                     <div class="form-group quantity-selector">
                         <label>Người lớn <small>từ 12 tuổi</small></label>
                         <div class="input__quanlity">
-                            <button type="button" class="quantity-btn">-</button>
+                            <button type="button" class="quantity-btn" data-step="-1" aria-label="Giảm">-</button>
                             <input type="number" class="quantity-input" value="1" min="1" id="numAdults"
                                 name="numAdults" data-price-adults="{{ $tour->priceAdult }}" readonly>
-                            <button type="button" class="quantity-btn">+</button>
+                            <button type="button" class="quantity-btn" data-step="1" aria-label="Tăng">+</button>
                         </div>
                     </div>
 
                     <div class="form-group quantity-selector">
                         <label>Trẻ em <small>dưới 12 tuổi</small></label>
                         <div class="input__quanlity">
-                            <button type="button" class="quantity-btn">-</button>
+                            <button type="button" class="quantity-btn" data-step="-1" aria-label="Giảm">-</button>
                             <input type="number" class="quantity-input" value="0" min="0" id="numChildren"
                                 name="numChildren" data-price-children="{{ $tour->priceChild }}" readonly>
-                            <button type="button" class="quantity-btn">+</button>
+                            <button type="button" class="quantity-btn" data-step="1" aria-label="Tăng">+</button>
                         </div>
                     </div>
                 </div>
+                <p class="tv-guest-note" id="tvGuestNote" aria-live="polite"></p>
                 <!-- Privacy Agreement Section -->
                 <div class="privacy-section">
                     <p>Khi đặt tour, bạn đồng ý với điều kiện đặt chỗ và chính sách hủy tour của Travel. Vui lòng kiểm

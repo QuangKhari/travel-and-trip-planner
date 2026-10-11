@@ -13,15 +13,12 @@
     <div class="container">
         <div class="tv-footer__grid">
             <div class="tv-footer__brand">
-                <a href="{{ route('home') }}" class="tv-footer__logo"><img
-                        src="{{ asset('clients/assets/images/logos/logo.png') }}" alt="{{ config('site.name') }}"></a>
-                <p>Chọn tour, xem lịch trình từng ngày và đặt chỗ trong vài bước. Mọi thông tin về giá và chỗ trống đều
-                    lấy trực tiếp từ hệ thống.</p>
+                <a href="{{ route('home') }}" class="tv-footer__logo"><img src="{{ asset('clients/assets/images/logos/logo.png') }}" alt="{{ config('site.name') }}"></a>
+                <p>Chọn tour, xem lịch trình từng ngày và đặt chỗ trong vài bước. Mọi thông tin về giá và chỗ trống đều lấy trực tiếp từ hệ thống.</p>
                 @if (count($social))
                     <div class="tv-footer__social">
                         @foreach ($social as $icon => $url)
-                            <a href="{{ $url }}" target="_blank" rel="noopener"
-                                aria-label="{{ $icon }}"><i class="fab {{ $icon }}"></i></a>
+                            <a href="{{ $url }}" target="_blank" rel="noopener" aria-label="{{ $icon }}"><i class="fab {{ $icon }}"></i></a>
                         @endforeach
                     </div>
                 @endif
@@ -53,20 +50,11 @@
             <div class="tv-footer__col">
                 <h5>Liên hệ</h5>
                 <ul class="tv-footer__contact">
-                    @if ($siteAddress)
-                        <li><i class="fal fa-map-marker-alt"></i><span>{{ $siteAddress }}</span></li>
-                    @endif
-                    @if ($siteEmail)
-                        <li><i class="fal fa-envelope"></i><a
-                                href="mailto:{{ $siteEmail }}">{{ $siteEmail }}</a></li>
-                    @endif
-                    @if ($sitePhone)
-                        <li><i class="fal fa-phone"></i><a
-                                href="tel:{{ preg_replace('/\s+/', '', $sitePhone) }}">{{ $sitePhone }}</a></li>
-                    @endif
+                    @if ($siteAddress)<li><i class="fal fa-map-marker-alt"></i><span>{{ $siteAddress }}</span></li>@endif
+                    @if ($siteEmail)<li><i class="fal fa-envelope"></i><a href="mailto:{{ $siteEmail }}">{{ $siteEmail }}</a></li>@endif
+                    @if ($sitePhone)<li><i class="fal fa-phone"></i><a href="tel:{{ preg_replace('/\s+/', '', $sitePhone) }}">{{ $sitePhone }}</a></li>@endif
                     @if (!$siteAddress && !$siteEmail && !$sitePhone)
-                        <li><i class="fal fa-comment-alt-lines"></i><a href="{{ route('contact') }}">Gửi tin nhắn cho
-                                chúng tôi</a></li>
+                        <li><i class="fal fa-comment-alt-lines"></i><a href="{{ route('contact') }}">Gửi tin nhắn cho chúng tôi</a></li>
                     @endif
                 </ul>
             </div>
@@ -77,6 +65,8 @@
         </div>
     </div>
 </footer>
+
+@include('clients.blocks.chat_widget')
 
 </div>
 <!--End pagewrapper-->
@@ -106,7 +96,8 @@
 <script src="{{ asset('clients/assets/js/script.js') }}"></script>
 
 <script src="{{ asset('clients/assets/js/custom-js.js') }}"></script>
-<script src="{{ asset('clients/assets/js/travel-theme.js') }}?v=3"></script>
+<script src="{{ asset('clients/assets/js/travel-theme.js') }}?v=4"></script>
+<script src="{{ asset('clients/assets/js/travel-chat.js') }}?v=1"></script>
 
 <script src="{{ asset('clients/assets/js/jquery.datetimepicker.full.min.js') }}"></script>
 

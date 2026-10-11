@@ -69,6 +69,8 @@
 <!-- Custom Scripts By DevDien -->
 <script src="{{ asset('admin/assets/js/custom-js.js') }}"></script>
 
+<script src="{{ asset('admin/assets/js/admin-paginate.js') }}?v=1"></script>
+
 </body>
 
 </html>

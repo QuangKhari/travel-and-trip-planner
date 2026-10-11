@@ -564,53 +564,80 @@ $(document).ready(function () {
         $(".totalPrice").val(totalPrice);
     }
 
+    const MAX_GUESTS_PER_BOOKING = 50; // khớp với validate phía server
+
+    // Số khách tối đa cho đơn này = min(số chỗ còn nhận, 50)
+    function guestLimit() {
+        const m = $(".quantityAvailable").text().match(/\d+/);
+        const available = m ? parseInt(m[0], 10) : 0;
+        return Math.min(available, MAX_GUESTS_PER_BOOKING);
+    }
+
+    // Bật/tắt nút +/- đúng lúc và cập nhật dòng "Tổng khách"
+    function syncQuantityState() {
+        const adults = parseInt($("#numAdults").val(), 10) || 0;
+        const children = parseInt($("#numChildren").val(), 10) || 0;
+        const total = adults + children;
+        const limit = guestLimit();
+
+        $(".quantity-selector").each(function () {
+            const input = $(this).find(".quantity-input");
+            const min = parseInt(input.attr("min"), 10) || 0;
+            const value = parseInt(input.val(), 10) || 0;
+            $(this)
+                .find(".quantity-btn[data-step='-1']")
+                .prop("disabled", value <= min);
+            $(this)
+                .find(".quantity-btn[data-step='1']")
+                .prop("disabled", total >= limit);
+        });
+
+        $("#tvGuestNote").text(
+            total +
+                " khách" +
+                (limit ? " · tối đa " + limit + " khách cho đơn này" : ""),
+        );
+    }
+
     // Sự kiện tăng/giảm số lượng người lớn và trẻ em
     $(".quantity-selector").on("click", ".quantity-btn", function () {
-        const input = $(this).siblings("input");
-        const min = parseInt(input.attr("min"));
-        let value = parseInt(input.val());
-        const quantityAvailable = parseInt(
-            $(".quantityAvailable").text().match(/\d+/)[0],
-        ); // Lấy số chỗ còn nhận từ nội dung của .quantityAvailable
+        const input = $(this)
+            .closest(".quantity-selector")
+            .find(".quantity-input");
+        const min = parseInt(input.attr("min"), 10) || 0;
+        let value = parseInt(input.val(), 10) || 0;
+        const step =
+            parseInt($(this).attr("data-step"), 10) ||
+            ($(this).text().trim() === "+" ? 1 : -1);
+        const total =
+            (parseInt($("#numAdults").val(), 10) || 0) +
+            (parseInt($("#numChildren").val(), 10) || 0);
+        const limit = guestLimit();
 
-        // Lấy tổng số lượng người lớn và trẻ em
-        const totalAdults = parseInt($("#numAdults").val());
-        const totalChildren = parseInt($("#numChildren").val());
-
-        // Kiểm tra nút tăng hay giảm
-        if ($(this).text() === "+") {
-            // Kiểm tra nếu đang tăng số lượng người lớn
-            if (input.attr("id") === "numAdults") {
-                // Kiểm tra nếu tổng số người lớn và trẻ em không vượt quá số chỗ còn nhận
-                if (totalAdults + totalChildren < quantityAvailable) {
-                    value++;
-                } else {
-                    toastr.error(
-                        "Không thể thêm số người lớn vượt quá số chỗ còn nhận!",
-                    ); // Thông báo nếu vượt quá
-                }
+        if (step > 0) {
+            if (total >= limit) {
+                toastr.error(
+                    "Đơn này chỉ đặt được tối đa " +
+                        limit +
+                        " khách (theo số chỗ còn nhận).",
+                );
+                return;
             }
-            // Kiểm tra nếu đang tăng số lượng trẻ em
-            else if (input.attr("id") === "numChildren") {
-                // Kiểm tra nếu tổng số người lớn và trẻ em không vượt quá số chỗ còn nhận
-                if (totalAdults + totalChildren < quantityAvailable) {
-                    value++;
-                } else {
-                    toastr.error(
-                        "Không thể thêm số trẻ em vượt quá số chỗ còn nhận!",
-                    ); // Thông báo nếu vượt quá
-                }
-            }
+            value++;
         } else if (value > min) {
             value--;
         }
 
-        // Cập nhật số lượng vào input
         input.val(value);
-
-        // Cập nhật lại tổng giá
         updateSummary();
+        syncQuantityState();
     });
+
+    // Tính sẵn tiền và trạng thái nút ngay khi mở trang (trước đây phải bấm +/- thì tiền mới hiện)
+    if ($("#numAdults").length) {
+        updateSummary();
+        syncQuantityState();
+    }
 
     // Áp dụng mã giảm giá
     $(".btn-coupon").on("click", function (e) {

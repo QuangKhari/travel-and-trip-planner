@@ -37,6 +37,8 @@
             @endforeach
         </div>
         <p class="tv-muted tv-dest__none" id="tvDestNone" hidden>Chưa có điểm đến nào ở khu vực này.</p>
+        <div class="tv-more"><button type="button" class="tv-btn-ghost" id="tvDestMore" hidden>Xem thêm điểm
+                đến</button></div>
     </div>
 </section>
 
