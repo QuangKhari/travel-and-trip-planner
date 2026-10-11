@@ -20,8 +20,8 @@
             place-items: center;
             padding: 28px;
             font-family: 'Be Vietnam Pro', system-ui, sans-serif;
-            color: #16324A;
-            background: #FFFDF8
+            color: #0F172A;
+            background: #F8FAFC
         }
 
         .box {
@@ -34,7 +34,7 @@
             font-weight: 700;
             line-height: 1;
             letter-spacing: -.04em;
-            color: #0E8F8A
+            color: #0D9488
         }
 
         h1 {
@@ -44,7 +44,7 @@
         }
 
         p {
-            color: #6B7F8F;
+            color: #64748B;
             line-height: 1.7;
             margin-bottom: 26px
         }
@@ -66,23 +66,23 @@
         }
 
         a.primary {
-            background: #FF7A00;
-            color: #fff
+            background: #F4C95D;
+            color: #0F172A
         }
 
         a.primary:hover {
-            background: #E86E00
+            background: #E8B93E
         }
 
         a.ghost {
             background: #fff;
-            color: #16324A;
-            box-shadow: inset 0 0 0 1.5px #E8EEF0
+            color: #0F172A;
+            box-shadow: inset 0 0 0 1.5px #E2E8F0
         }
 
         a.ghost:hover {
-            box-shadow: inset 0 0 0 1.5px #0E8F8A;
-            color: #0E8F8A
+            box-shadow: inset 0 0 0 1.5px #0D9488;
+            color: #0D9488
         }
 
         .brand {

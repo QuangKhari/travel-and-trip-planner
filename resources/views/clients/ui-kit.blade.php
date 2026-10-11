@@ -10,10 +10,11 @@
 
         <section>
             <h2>Màu</h2>
-            <p class="kit-note">Quy tắc: xanh đậm cho chữ, xanh ngọc cho điểm nhấn, <b>cam chỉ cho một hành động chính
-                    trên mỗi màn hình</b>.</p>
+            <p class="kit-note">Quy tắc: navy cho chữ, turquoise cho thương hiệu và nút phụ, <b>vàng cát chỉ cho một hành
+                    động chính trên mỗi màn hình</b> (chữ trên nền cát luôn màu navy). Xanh lá cho thiên nhiên/thành
+                công, xanh công nghệ chỉ dùng rất ít (liên kết, vòng focus).</p>
             <div class="kit-row">
-                @foreach ([['--tv-teal', 'Xanh ngọc'], ['--tv-teal-dark', 'Xanh ngọc đậm'], ['--tv-orange-2', 'Cam (hành động chính)'], ['--tv-navy', 'Navy (nền tối)'], ['--tv-ink', 'Chữ'], ['--tv-mute', 'Chữ phụ'], ['--tv-line', 'Viền'], ['--tv-bg', 'Nền trang']] as $c)
+                @foreach ([['--tv-teal', 'Turquoise (thương hiệu)'], ['--tv-teal-2', 'Turquoise nhạt'], ['--tv-teal-dark', 'Turquoise đậm'], ['--tv-sand', 'Vàng cát (hành động chính)'], ['--tv-sand-light', 'Kem cát'], ['--tv-nature', 'Xanh lá'], ['--tv-forest', 'Xanh rừng'], ['--tv-tech', 'Xanh công nghệ'], ['--tv-navy', 'Navy (nền tối)'], ['--tv-ink', 'Chữ chính'], ['--tv-mute', 'Chữ phụ'], ['--tv-line', 'Viền'], ['--tv-bg', 'Nền trang']] as $c)
                     <div class="kit-swatch"><i
                             style="background:var({{ $c[0] }})"></i><span>{{ $c[1] }}<br><code>{{ $c[0] }}</code></span>
                     </div>
@@ -34,7 +35,7 @@
 
         <section>
             <h2>Nút</h2>
-            <p class="kit-note">Một màn hình chỉ nên có một nút cam. Nút phụ dùng viền (ghost).</p>
+            <p class="kit-note">Một màn hình chỉ nên có một nút vàng cát. Nút phụ dùng viền (ghost).</p>
             <div class="kit-row">
                 <button class="td-btn td-btn--cta" style="width:auto">Hành động chính</button>
                 <button class="tv-btn-solid">Nút xanh</button>

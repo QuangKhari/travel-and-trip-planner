@@ -1,17 +1,17 @@
-/* Travel Admin Theme 2.0 — override Gentelella. */
+/* Travel Admin Theme 2.0 — override Gentelella. Nạp SAU admin/assets/css/custom-css.css */
 :root {
-    --a-ocean: #0e8f8a;
-    --a-ocean-d: #0a6e6a;
-    --a-sunset: #ff7a00;
-    --a-navy: #0b2a3c;
-    --a-navy2: #123b52;
-    --a-mist: #f2fbfb;
+    --a-ocean: #0d9488;
+    --a-ocean-d: #0f766e;
+    --a-sunset: #f4c95d;
+    --a-navy: #0f172a;
+    --a-navy2: #1e293b;
+    --a-mist: #f8fafc;
 }
 body,
 .nav-md {
     font-family: "Be Vietnam Pro", "Segoe UI", Roboto, sans-serif;
     background: var(--a-mist);
-    color: #3b4c57;
+    color: #334155;
 }
 .nav-md .container.body .col-md-3.left_col,
 .left_col {
@@ -37,7 +37,7 @@ body,
 .nav.side-menu > li.current-page > a {
     background: linear-gradient(135deg, var(--a-ocean), var(--a-ocean-d));
     color: #fff;
-    box-shadow: 0 8px 20px rgba(14, 143, 138, 0.35) !important;
+    box-shadow: 0 8px 20px rgba(13, 148, 136, 0.35) !important;
     border-right: 0;
 }
 .nav.side-menu > li.active,
@@ -53,26 +53,26 @@ body,
 }
 .nav_menu {
     background: #fff;
-    box-shadow: 0 4px 18px rgba(11, 42, 60, 0.08);
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08);
     border-bottom: 0;
 }
 .x_panel,
 .tile-stats {
     border-radius: 18px;
     border: 0;
-    box-shadow: 0 8px 26px rgba(11, 42, 60, 0.08);
+    box-shadow: 0 8px 26px rgba(15, 23, 42, 0.08);
     transition:
         transform 0.3s,
         box-shadow 0.3s;
 }
 .x_panel:hover {
-    box-shadow: 0 14px 34px rgba(11, 42, 60, 0.13);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.13);
 }
 .tile-stats:hover {
     transform: translateY(-4px);
 }
 .x_title {
-    border-bottom: 2px solid #e6f3f5;
+    border-bottom: 2px solid #e2e8f0;
 }
 .x_title h2 {
     font-weight: 700;
@@ -80,15 +80,15 @@ body,
 }
 .btn-primary,
 .btn-success {
-    background: linear-gradient(135deg, #14b8a6, var(--a-ocean-d));
+    background: linear-gradient(135deg, #2dd4bf, var(--a-ocean-d));
     border: 0;
     border-radius: 10px;
-    box-shadow: 0 6px 16px rgba(14, 143, 138, 0.28);
+    box-shadow: 0 6px 16px rgba(13, 148, 136, 0.28);
     transition: transform 0.25s;
 }
 .btn-primary:hover,
 .btn-success:hover {
-    background: linear-gradient(135deg, #14b8a6, var(--a-ocean-d));
+    background: linear-gradient(135deg, #2dd4bf, var(--a-ocean-d));
     transform: translateY(-2px);
 }
 .btn-warning,
@@ -97,7 +97,7 @@ body,
     border: 0;
 }
 .btn-warning {
-    background: linear-gradient(135deg, #ff8a4c, #ff5e62);
+    background: linear-gradient(135deg, #f4c95d, #e8b93e);
 }
 .form-control {
     border-radius: 10px;
@@ -105,19 +105,19 @@ body,
 }
 .form-control:focus {
     border-color: var(--a-ocean);
-    box-shadow: 0 0 0 4px rgba(14, 143, 138, 0.14);
+    box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.14);
 }
 table.dataTable thead th,
 .table > thead > tr > th {
-    background: #f2fbfb;
+    background: #f8fafc;
     color: var(--a-navy);
-    border-bottom: 2px solid #d5ecef;
+    border-bottom: 2px solid #e2e8f0;
 }
 .table-striped > tbody > tr:nth-of-type(odd) {
-    background: #fafefe;
+    background: #f8fafc;
 }
 .table > tbody > tr:hover {
-    background: #eaf8f9;
+    background: #f0fdfa;
 }
 .label-success,
 .badge-success {
@@ -137,9 +137,9 @@ footer {
    Nạp SAU admin/build/css/custom.min.css (và sau custom-css của admin nếu có)
    ===================================================================== */
 :root {
-    --a-line: #e3edef;
-    --a-ink: #16324a;
-    --a-mute: #6b7f8f;
+    --a-line: #e2e8f0;
+    --a-ink: #0f172a;
+    --a-mute: #64748b;
 }
 body.nav-md,
 .nav-md .container.body .right_col {
@@ -164,7 +164,7 @@ body.nav-md,
     padding: 12px 16px;
 }
 .nav.side-menu > li > a i {
-    color: #7fd6dd;
+    color: #2dd4bf;
     margin-right: 8px;
 }
 .nav.side-menu > li.active > a i {
@@ -292,7 +292,7 @@ tr[hidden] {
     transition: box-shadow 0.25s;
 }
 .profile_view:hover {
-    box-shadow: 0 10px 28px rgba(11, 42, 60, 0.1);
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.1);
 }
 .profile_view .brief i {
     font-style: normal;
@@ -300,8 +300,8 @@ tr[hidden] {
     font-weight: 700;
     padding: 3px 10px;
     border-radius: 20px;
-    background: #e8f7f1;
-    color: #0b7a55;
+    background: #dcfce7;
+    color: #166534;
 }
 .top_search .input-group .form-control {
     border-radius: 10px 0 0 10px;
@@ -332,7 +332,7 @@ tr[hidden] {
 
 /* trang đăng nhập admin */
 body.login {
-    background: linear-gradient(160deg, #0b2a3c, #134e6b);
+    background: linear-gradient(160deg, #0f172a, #134e6b);
 }
 .login-admin-card {
     border-radius: 20px;
@@ -354,5 +354,31 @@ body.login {
     background: var(--a-ocean-d) !important;
 }
 .login-admin-back {
-    color: #7fd6dd;
+    color: #2dd4bf;
+}
+
+/* Bảng màu v3: nút cảnh báo/hành động phụ dùng vàng cát, chữ navy */
+.btn-warning {
+    background: #f4c95d !important;
+    color: #0f172a !important;
+    border: 0;
+}
+.btn-warning:hover {
+    background: #e8b93e !important;
+}
+.label-warning,
+.badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+.label-success,
+.badge-success {
+    background: #dcfce7;
+    color: #166534;
+}
+a {
+    color: #0d9488;
+}
+a:hover {
+    color: #0f766e;
 }

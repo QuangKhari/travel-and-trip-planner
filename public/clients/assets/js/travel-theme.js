@@ -31,53 +31,52 @@
     addEventListener("scroll", onScroll, { passive: true });
     onScroll();
 
-    /* 3. Nghiêng 3D theo chuột (chỉ desktop) */
-    if (fine && !reduce) {
-        var SEL = ".tv-card, .tv-chip";
-        document.addEventListener("pointermove", function (e) {
-            var c = e.target.closest && e.target.closest(SEL);
-            if (!c) return;
-            var r = c.getBoundingClientRect();
-            var x = (e.clientX - r.left) / r.width - 0.5,
-                y = (e.clientY - r.top) / r.height - 0.5;
-            c.style.transform =
-                "perspective(900px) rotateX(" +
-                (-y * 6).toFixed(2) +
-                "deg) rotateY(" +
-                (x * 8).toFixed(2) +
-                "deg) translateY(-8px)";
+    /* 3. Hiện dần nhẹ khi cuộn tới (một lần, chỉ cho phần tử nằm dưới màn hình đầu tiên).
+        Bỏ qua phần tử đã có AOS (data-aos) để không chạy hai hiệu ứng chồng nhau. */
+    if (!reduce && "IntersectionObserver" in window) {
+        var revealSel =
+            ".tv-card, .tv-dest__item, .tv-steps li, .tv-order, .tv-mini--card, .tv-contact__list li, .tc-faq details";
+        var items = [].slice
+            .call(document.querySelectorAll(revealSel))
+            .filter(function (n) {
+                return (
+                    !n.closest("[data-aos]") &&
+                    n.getBoundingClientRect().top > window.innerHeight * 0.92
+                );
+            });
+        var rio = new IntersectionObserver(
+            function (entries) {
+                entries.forEach(function (en) {
+                    if (!en.isIntersecting) return;
+                    var t = en.target;
+                    t.classList.add("is-in");
+                    rio.unobserve(t);
+                    setTimeout(function () {
+                        t.classList.remove("tv-reveal", "is-in");
+                        t.style.transitionDelay = "";
+                    }, 900);
+                });
+            },
+            { rootMargin: "0px 0px -8% 0px" },
+        );
+        items.forEach(function (n, i) {
+            n.classList.add("tv-reveal");
+            n.style.transitionDelay = (i % 3) * 70 + "ms";
+            rio.observe(n);
         });
-        document.addEventListener("pointerout", function (e) {
-            var c = e.target.closest && e.target.closest(SEL);
-            if (c && !c.contains(e.relatedTarget)) c.style.transform = "";
-        });
+        // phòng hờ: sau 6 giây phần tử nào chưa hiện thì hiện luôn (tránh bị ẩn mãi)
+        setTimeout(function () {
+            items.forEach(function (n) {
+                if (
+                    n.classList.contains("tv-reveal") &&
+                    !n.classList.contains("is-in")
+                )
+                    n.classList.add("is-in");
+            });
+        }, 6000);
     }
 
-    /* 4. Ripple khi bấm nút */
-    document.addEventListener("click", function (e) {
-        var b = e.target.closest && e.target.closest(".theme-btn");
-        if (!b || reduce) return;
-        var r = b.getBoundingClientRect(),
-            s = Math.max(r.width, r.height);
-        var d = document.createElement("span");
-        d.className = "tv-ripple";
-        d.style.cssText =
-            "width:" +
-            s +
-            "px;height:" +
-            s +
-            "px;left:" +
-            (e.clientX - r.left - s / 2) +
-            "px;top:" +
-            (e.clientY - r.top - s / 2) +
-            "px";
-        b.appendChild(d);
-        setTimeout(function () {
-            d.remove();
-        }, 700);
-    });
-
-    /* 5. Nút tim (hiện chỉ đổi màu, chưa lưu DB) */
+    /* 4. Nút tim (hiện chỉ đổi màu, chưa lưu DB) */
     document.addEventListener("click", function (e) {
         var h = e.target.closest && e.target.closest(".tv-heart");
         if (!h) return;
