@@ -1,17 +1,16 @@
 @include('clients.blocks.header')
 
-<div class="container py-5">
-    <div class="text-center">
-        @if ($success)
-            <h2>Xác minh email thành công</h2>
+<main class="tv-status">
+    <div class="container">
+        <div class="tv-status__card">
+            <div class="tv-status__icon {{ $success ? 'is-ok' : 'is-fail' }}">
+                <i class="fal {{ $success ? 'fa-check' : 'fa-times' }}"></i>
+            </div>
+            <h1>{{ $success ? 'Xác minh email thành công' : 'Không thể xác minh email' }}</h1>
             <p>{{ $message }}</p>
-            <a href="{{ route('user-profile') }}" class="btn btn-primary">Quay lại hồ sơ</a>
-        @else
-            <h2>Không thể xác minh email</h2>
-            <p>{{ $message }}</p>
-            <a href="{{ route('user-profile') }}" class="btn btn-primary">Quay lại hồ sơ</a>
-        @endif
+            <a href="{{ route('user-profile') }}" class="tv-btn-solid">Quay lại hồ sơ</a>
+        </div>
     </div>
-</div>
+</main>
 
 @include('clients.blocks.footer')

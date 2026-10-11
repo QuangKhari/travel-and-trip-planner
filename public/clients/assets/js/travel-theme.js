@@ -159,4 +159,79 @@
             if (hs) hs.classList.remove("is-open");
         });
     }
+
+    /* 8. Hiện/ẩn mật khẩu (nút có data-toggle-pass nằm cạnh ô nhập) */
+    document.addEventListener("click", function (e) {
+        var b = e.target.closest && e.target.closest("[data-toggle-pass]");
+        if (!b) return;
+        var input = b.parentNode.querySelector("input");
+        if (!input) return;
+        var show = input.type === "password";
+        input.type = show ? "text" : "password";
+        var ic = b.querySelector("i");
+        if (ic) {
+            ic.classList.toggle("fa-eye", !show);
+            ic.classList.toggle("fa-eye-slash", show);
+        }
+    });
+
+    /* 9. Trang "Tour đã đặt": lọc theo trạng thái (không tải lại trang) */
+    var statusBar = document.getElementById("tvStatusFilter");
+    if (statusBar) {
+        statusBar.addEventListener("click", function (e) {
+            var b = e.target.closest("[data-status]");
+            if (!b) return;
+            statusBar.querySelectorAll("[data-status]").forEach(function (x) {
+                x.classList.toggle("is-on", x === b);
+            });
+            document
+                .querySelectorAll("#tvOrders .tv-order")
+                .forEach(function (o) {
+                    o.classList.toggle(
+                        "is-hidden",
+                        b.dataset.status !== "all" &&
+                            o.dataset.status !== b.dataset.status,
+                    );
+                });
+        });
+    }
+
+    /* 10. Trang "Điểm đến": lọc theo miền */
+    var domBar = document.getElementById("tvDomainFilter");
+    if (domBar) {
+        domBar.addEventListener("click", function (e) {
+            var b = e.target.closest("[data-domain]");
+            if (!b) return;
+            domBar.querySelectorAll("[data-domain]").forEach(function (x) {
+                x.classList.toggle("is-on", x === b);
+            });
+            var shown = 0;
+            document
+                .querySelectorAll("#tvDestGrid .tv-dest__item")
+                .forEach(function (i) {
+                    var hide =
+                        b.dataset.domain !== "all" &&
+                        i.dataset.domain !== b.dataset.domain;
+                    i.classList.toggle("is-hidden", hide);
+                    if (!hide) shown++;
+                });
+            var none = document.getElementById("tvDestNone");
+            if (none) none.hidden = shown !== 0;
+        });
+    }
+
+    /* 11. Hộp thoại mẫu: [data-modal-open="id"] / [data-modal-close] (thẻ <dialog>) */
+    document.addEventListener("click", function (e) {
+        var o = e.target.closest && e.target.closest("[data-modal-open]");
+        if (o) {
+            var d = document.getElementById(o.dataset.modalOpen);
+            if (d && d.showModal) d.showModal();
+            return;
+        }
+        var c = e.target.closest && e.target.closest("[data-modal-close]");
+        if (c) {
+            var dlg = c.closest("dialog");
+            if (dlg) dlg.close();
+        }
+    });
 })();
