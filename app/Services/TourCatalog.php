@@ -27,6 +27,7 @@ class TourCatalog
             'tbl_tours.destination',
             'tbl_tours.quantity',
             'tbl_tours.startDate',
+            'tbl_tours.endDate',
             'tbl_tours.domain',
         ];
 
@@ -48,6 +49,13 @@ class TourCatalog
                     ->orWhere('tbl_tours.destination', 'like', $like)
                     ->orWhere('tbl_tours.time', 'like', $like);
             });
+        }
+        // Khoảng ngày (Y-m-d): tour khởi hành từ ngày `from` và kết thúc trước hoặc đúng ngày `to`
+        if (!empty($f['from'])) {
+            $q->whereDate('tbl_tours.startDate', '>=', $f['from']);
+        }
+        if (!empty($f['to'])) {
+            $q->whereDate('tbl_tours.endDate', '<=', $f['to']);
         }
         if (!empty($f['domain'])) {
             $q->where('tbl_tours.domain', $f['domain']);

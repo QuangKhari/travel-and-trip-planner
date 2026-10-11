@@ -63,6 +63,26 @@ class ToursController extends Controller
         return response($html);
     }
 
+    /** Nhận ngày dạng Y-m-d (hoặc d/m/Y), trả về Y-m-d hoặc chuỗi rỗng nếu không hợp lệ. */
+    private function readDate($value): string
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return '';
+        }
+        foreach (['Y-m-d', 'd/m/Y'] as $format) {
+            try {
+                $d = \Carbon\Carbon::createFromFormat($format, $value);
+                if ($d && $d->format($format) === $value) {
+                    return $d->format('Y-m-d');
+                }
+            } catch (\Throwable $e) {
+            }
+        }
+
+        return '';
+    }
+
     /** Đọc + làm sạch tham số lọc từ URL. */
     private function readState(Request $r, int $minBound, int $maxBound): array
     {
@@ -79,7 +99,12 @@ class ToursController extends Controller
             [$min, $max] = [$max, $min];
         }
 
+        $from = $this->readDate($r->input('from'));
+        $to = $this->readDate($r->input('to'));
+
         return [
+            'from' => $from,
+            'to' => $to,
             'keyword' => $keyword,
             'domain' => $domain,
             'days' => $days,
