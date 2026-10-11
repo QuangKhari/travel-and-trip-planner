@@ -1,0 +1,839 @@
+/* =====================================================================
+   SEA THEME — giao diện biển / nghỉ dưỡng cho CÁC TRANG CON của client
+   Turquoise + vàng cát + trắng, chút công nghệ nhẹ, chuyển động tiết chế.
+
+   CÁCH HOẠT ĐỘNG
+   - Mọi luật đều bắt đầu bằng  body.tv-sea  → chỉ trang nào có <body class="tv-sea">
+     mới đổi. Trang chủ dùng header_home.blade.php (body không có lớp này) nên GIỮ NGUYÊN.
+   - Muốn tắt toàn bộ giao diện mới: bỏ class "tv-sea" khỏi <body>.
+
+   BẢNG MÀU (sửa ở khối :root bên dưới là đổi cả site con)
+     Turquoise   --sea-tq / --sea-tq-deep / --sea-tq-soft : thương hiệu, liên kết, trạng thái chọn
+     Vàng cát    --sea-sand / --sea-sand-deep / --sea-sand-soft : MỘT hành động chính mỗi màn hình
+     Biển sâu    --sea-ink : chữ tiêu đề, nền footer
+     Trắng bọt   --sea-foam : nền thẻ
+   ===================================================================== */
+
+body.tv-sea {
+    /* --- bảng màu mới --- */
+    --sea-tq: #19b9b4;
+    --sea-tq-2: #5fd8cf;
+    --sea-tq-deep: #0a8f95;
+    --sea-tq-dark: #066b73;
+    --sea-tq-soft: #e4f7f5;
+    --sea-tq-mist: #f3fbfa;
+    --sea-ink: #06323c;
+    --sea-ink-2: #0b4551;
+    --sea-sand: #f4c95d;
+    --sea-sand-deep: #e0b244;
+    --sea-sand-soft: #fbf3de;
+    --sea-paper: #fdf9ef;
+    --sea-line: #d9ebe9;
+    --sea-mute: #56737a;
+    --sea-coral: #e5654b;
+    --sea-tech: #0e7490; /* điểm nhấn "công nghệ": cyan-xanh, dùng cho link nội dung + vòng focus */
+
+    /* --- ghi đè biến cũ của travel-theme.css → mọi thành phần cũ tự đổi màu --- */
+    --tv-teal: var(--sea-tq-deep);
+    --tv-teal-2: var(--sea-tq-2);
+    --tv-teal-dark: var(--sea-tq-dark);
+    --tv-navy: var(--sea-ink);
+    --tv-ink: #0b2f38;
+    --tv-mute: var(--sea-mute);
+    --tv-line: var(--sea-line);
+    --tv-bg: #fbfdfc;
+    --tv-sand: var(--sea-sand);
+    --tv-sand-dark: var(--sea-sand-deep);
+    --tv-sand-light: var(--sea-sand-soft);
+    --tv-tech: var(--sea-tech);
+    --tv-grad-teal: linear-gradient(135deg, var(--sea-tq), var(--sea-tq-deep));
+    --tv-shadow: 0 8px 26px rgba(6, 50, 60, 0.08);
+    --tv-shadow-lg: 0 22px 48px rgba(6, 50, 60, 0.18);
+    --primary-color: var(--sea-tq-deep);
+    --heading-color: var(--sea-ink);
+    --lighter-color: var(--sea-tq-mist);
+    --primary-rgb: 10, 143, 149;
+
+    background: var(--tv-bg);
+}
+body.tv-sea ::selection {
+    background: var(--sea-sand);
+    color: var(--sea-ink);
+}
+:where(body.tv-sea) :where(h1, h2, h3, h4) {
+    color: var(
+        --sea-ink
+    ); /* độ ưu tiên = 0 → không đè chữ trắng của banner, spotlight, footer... */
+}
+
+/* ---------- Thanh tiến trình cuộn (do travel-theme.js tạo ra) ---------- */
+body.tv-sea .tv-progress {
+    background: linear-gradient(90deg, var(--sea-tq-2), var(--sea-sand));
+}
+
+/* =====================================================================
+   1. HEADER (trang con luôn là kiểu "đặc")
+   ===================================================================== */
+body.tv-sea .tv-header.is-solid,
+body.tv-sea .tv-header.is-scrolled {
+    background: rgba(6, 50, 60, 0.86);
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    box-shadow:
+        0 1px 0 rgba(244, 201, 93, 0.35),
+        0 10px 30px rgba(6, 50, 60, 0.25);
+}
+body.tv-sea .tv-nav > a:hover,
+body.tv-sea .tv-dd > a:hover {
+    background: rgba(95, 216, 207, 0.18);
+}
+body.tv-sea .tv-nav > a::after,
+body.tv-sea .tv-dd > a::after {
+    background: var(--sea-sand);
+}
+body.tv-sea .tv-dd__menu {
+    border-top: 3px solid var(--sea-sand);
+}
+body.tv-sea .tv-dd__menu a:hover {
+    background: var(--sea-tq-mist);
+    color: var(--sea-tq-dark);
+}
+
+/* =====================================================================
+   2. BANNER TRANG CON
+   ===================================================================== */
+body.tv-sea .tv-banner {
+    background: var(--sea-ink);
+    padding: 150px 0 120px;
+}
+/* ảnh nền dư ra phía trên để parallax không lộ khe hở */
+body.tv-sea .tv-banner__bg {
+    inset: -50px 0 0 0;
+}
+/* lớp phủ: biển sâu ở trên/dưới, turquoise ở bên trái, lưới chấm rất nhạt (chạm công nghệ) */
+body.tv-sea .tv-banner::before {
+    background:
+        radial-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1.3px) 0 0 /
+            24px 24px,
+        linear-gradient(
+            180deg,
+            rgba(6, 50, 60, 0.6) 0%,
+            rgba(6, 50, 60, 0.18) 52%,
+            rgba(6, 50, 60, 0.55) 100%
+        ),
+        linear-gradient(
+            100deg,
+            rgba(10, 143, 149, 0.62) 0%,
+            rgba(10, 143, 149, 0) 68%
+        );
+}
+/* "mặt trời" vàng cát ở góc: tĩnh, rất nhạt */
+body.tv-sea .tv-banner::after {
+    background: radial-gradient(
+        circle,
+        rgba(244, 201, 93, 0.38),
+        rgba(244, 201, 93, 0.1) 52%,
+        transparent 70%
+    );
+    animation: none;
+}
+/* breadcrumb dạng viên kính mờ */
+body.tv-sea .tv-crumb {
+    width: fit-content;
+    padding: 6px 14px;
+    border-radius: 30px;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    animation: tvUp 0.7s ease both;
+}
+body.tv-sea .tv-crumb a:hover {
+    color: var(--sea-sand);
+}
+body.tv-sea .tv-banner__title {
+    position: relative;
+    padding-bottom: 18px;
+    animation-delay: 0.08s;
+}
+/* gạch vàng cát dưới tiêu đề — vẽ dần ra khi vào trang */
+body.tv-sea .tv-banner__title::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 4px;
+    width: 64px;
+    border-radius: 4px;
+    background: var(--sea-sand);
+    transform-origin: left;
+    animation: seaBar 0.9s 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes seaBar {
+    from {
+        transform: scaleX(0);
+    }
+    to {
+        transform: scaleX(1);
+    }
+}
+body.tv-sea .tv-banner__sub {
+    margin-top: 6px;
+    animation: tvUp 0.8s 0.2s ease both;
+}
+
+/* hai lớp sóng: lớp sau màu cát (trôi chậm), lớp trước màu nền trang */
+body.tv-sea .tv-wave path {
+    fill: var(--tv-bg);
+}
+body.tv-sea .tv-wave--sand {
+    z-index: 2;
+    width: 108%;
+    left: -4%;
+    right: auto;
+    bottom: 6px;
+    opacity: 0.95;
+    animation: seaDrift 14s ease-in-out infinite alternate;
+}
+body.tv-sea .tv-wave--sand path {
+    fill: var(--sea-sand);
+}
+@keyframes seaDrift {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-3.5%);
+    }
+}
+
+/* ô tìm kiếm trong banner trang Tours */
+body.tv-sea .tv-tsearch {
+    box-shadow: 0 18px 44px rgba(6, 50, 60, 0.35);
+    transition:
+        box-shadow 0.3s,
+        transform 0.3s;
+}
+body.tv-sea .tv-tsearch:focus-within {
+    box-shadow:
+        0 0 0 4px rgba(95, 216, 207, 0.45),
+        0 18px 44px rgba(6, 50, 60, 0.35);
+}
+body.tv-sea .tv-tsearch > i {
+    color: var(--sea-tq-deep);
+}
+body.tv-sea .tv-qchip {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+body.tv-sea .tv-qchip:hover {
+    background: var(--sea-sand);
+    border-color: var(--sea-sand);
+    color: var(--sea-ink);
+}
+
+/* =====================================================================
+   3. NÚT — vàng cát = hành động chính, turquoise = phụ. Hiệu ứng "vệt sáng" khi rê chuột
+   ===================================================================== */
+body.tv-sea .tv-btn-orange,
+body.tv-sea .td-btn--cta,
+body.tv-sea .tv-auth__submit,
+body.tv-sea .tv-book {
+    position: relative;
+    overflow: hidden;
+    background: var(--sea-sand);
+    color: var(--sea-ink);
+    box-shadow: 0 6px 16px rgba(224, 178, 68, 0.38);
+}
+body.tv-sea .tv-btn-orange:hover,
+body.tv-sea .td-btn--cta:hover,
+body.tv-sea .tv-auth__submit:hover,
+body.tv-sea .tv-book:hover {
+    background: var(--sea-sand-deep);
+    color: var(--sea-ink);
+}
+body.tv-sea .tv-btn-solid {
+    position: relative;
+    overflow: hidden;
+    background: var(--sea-tq-deep);
+    box-shadow: 0 8px 18px rgba(10, 143, 149, 0.28);
+}
+body.tv-sea .tv-btn-solid:hover {
+    background: var(--sea-tq-dark);
+}
+body.tv-sea .tv-btn-ghost:hover {
+    box-shadow: inset 0 0 0 1.5px var(--sea-tq-deep);
+    color: var(--sea-tq-deep);
+}
+body.tv-sea .tv-btn-orange::after,
+body.tv-sea .td-btn--cta::after,
+body.tv-sea .tv-auth__submit::after,
+body.tv-sea .tv-btn-solid::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -70%;
+    width: 45%;
+    height: 100%;
+    background: linear-gradient(
+        100deg,
+        transparent,
+        rgba(255, 255, 255, 0.38),
+        transparent
+    );
+    transform: skewX(-20deg);
+    pointer-events: none;
+}
+body.tv-sea .tv-btn-orange:hover::after,
+body.tv-sea .td-btn--cta:hover::after,
+body.tv-sea .tv-auth__submit:hover::after,
+body.tv-sea .tv-btn-solid:hover::after {
+    left: 130%;
+    transition: left 0.7s ease;
+}
+body.tv-sea .tv-btn-orange:active,
+body.tv-sea .td-btn--cta:active,
+body.tv-sea .tv-auth__submit:active,
+body.tv-sea .tv-btn-solid:active {
+    transform: translateY(0) scale(0.98);
+}
+
+/* vòng focus: turquoise sáng (dễ thấy, đồng bộ thương hiệu) */
+body.tv-sea :where(a, button, input, select, textarea, summary):focus-visible {
+    outline: 2px solid var(--sea-tq);
+    outline-offset: 2px;
+}
+body.tv-sea .tv-fieldrow input:focus,
+body.tv-sea .tv-fieldrow select:focus,
+body.tv-sea .tv-fieldrow textarea:focus {
+    border-color: var(--sea-tq);
+    box-shadow: 0 0 0 4px rgba(25, 185, 180, 0.18);
+    outline: 0;
+}
+
+/* =====================================================================
+   4. THẺ TOUR + BỘ LỌC + PHÂN TRANG
+   ===================================================================== */
+body.tv-sea .tv-card {
+    border: 1px solid var(--sea-line);
+    border-radius: 20px;
+    box-shadow: var(--tv-shadow);
+}
+body.tv-sea .tv-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(25, 185, 180, 0.55);
+    box-shadow: 0 22px 44px rgba(6, 50, 60, 0.16);
+}
+body.tv-sea .tv-card__img::after {
+    background: linear-gradient(transparent, rgba(6, 50, 60, 0.6));
+}
+body.tv-sea .tv-card:hover .tv-card__img img {
+    transform: scale(1.08);
+}
+body.tv-sea .tv-badge {
+    background: var(--sea-sand);
+    color: var(--sea-ink);
+}
+body.tv-sea .tv-badge.is-red {
+    background: var(--sea-coral);
+    color: #fff;
+}
+body.tv-sea .tv-meta i {
+    color: var(--sea-tq-deep);
+}
+body.tv-sea .tv-price b {
+    color: var(--sea-tq-dark);
+}
+body.tv-sea .tv-go {
+    background: var(--sea-tq-soft);
+    color: var(--sea-tq-dark) !important;
+}
+body.tv-sea .tv-card:hover .tv-go {
+    background: var(--sea-sand);
+    color: var(--sea-ink) !important;
+}
+body.tv-sea .tv-card__body h3 a:hover {
+    color: var(--sea-tq-deep);
+}
+
+body.tv-sea .tv-filter {
+    border: 1px solid var(--sea-line);
+    border-radius: 22px;
+}
+body.tv-sea .tv-fgroup h4 {
+    color: var(--sea-ink);
+}
+body.tv-sea .tv-chipbtn {
+    border-color: var(--sea-line);
+    background: #fff;
+}
+body.tv-sea .tv-chipbtn:hover {
+    border-color: var(--sea-tq);
+    background: var(--sea-tq-mist);
+    color: var(--sea-tq-dark);
+}
+body.tv-sea .tv-chipbtn.is-on {
+    background: var(--sea-tq-deep);
+    border-color: var(--sea-tq-deep);
+    color: #fff;
+    box-shadow: 0 6px 14px rgba(10, 143, 149, 0.28);
+}
+body.tv-sea .tv-pager a.is-active,
+body.tv-sea .pagination-tours .page-item.active .page-link {
+    background: var(--sea-tq-deep);
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(10, 143, 149, 0.32);
+}
+body.tv-sea .tv-pager a:hover,
+body.tv-sea .pagination-tours .page-link:hover {
+    color: var(--sea-tq-deep);
+}
+
+/* tiêu đề mục: gạch vàng cát ngắn bên dưới */
+body.tv-sea .tv-head h2,
+body.tv-sea .td-h2 {
+    position: relative;
+    padding-bottom: 12px;
+}
+body.tv-sea .tv-head h2::after,
+body.tv-sea .td-h2::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 44px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--sea-sand);
+}
+body.tv-sea .tv-tag {
+    color: var(--sea-tq-deep);
+}
+body.tv-sea .tv-tag i {
+    background: var(--sea-tq-deep);
+}
+
+/* =====================================================================
+   5. CHI TIẾT TOUR, ĐẶT TOUR, TOUR ĐÃ ĐẶT
+   ===================================================================== */
+body.tv-sea .td-book {
+    border: 1px solid var(--sea-line);
+    border-top: 4px solid var(--sea-sand);
+    box-shadow: 0 16px 40px rgba(6, 50, 60, 0.1);
+}
+body.tv-sea .td-book__price b {
+    color: var(--sea-tq-dark);
+}
+body.tv-sea .td-book__soon {
+    background: var(--sea-sand-soft);
+    color: #8a5a0b;
+}
+body.tv-sea .td-day__no {
+    background: var(--sea-tq-deep);
+}
+body.tv-sea .td-gallery__item {
+    border-radius: 14px;
+}
+body.tv-sea .td-prose a,
+body.tv-sea .tv-prose a {
+    color: var(--sea-tech);
+}
+body.tv-sea .tv-panel {
+    border-color: var(--sea-line);
+    border-radius: 20px;
+    box-shadow: 0 6px 20px rgba(6, 50, 60, 0.05);
+}
+body.tv-sea .tv-order {
+    border-color: var(--sea-line);
+    border-left: 4px solid var(--sea-tq);
+    border-radius: 18px;
+}
+body.tv-sea .tv-order:hover {
+    box-shadow: 0 14px 32px rgba(6, 50, 60, 0.12);
+}
+body.tv-sea .tv-order__price b {
+    color: var(--sea-tq-dark);
+}
+body.tv-sea .tv-status-pill.is-go {
+    background: var(--sea-tq-soft);
+    color: var(--sea-tq-dark);
+}
+body.tv-sea .tv-status-pill.is-wait {
+    background: var(--sea-sand-soft);
+    color: #8a5a0b;
+}
+
+/* =====================================================================
+   6. ĐĂNG NHẬP / TÀI KHOẢN
+   ===================================================================== */
+body.tv-sea .tv-auth {
+    background:
+        radial-gradient(
+            circle at 12% 8%,
+            rgba(95, 216, 207, 0.22),
+            transparent 38%
+        ),
+        radial-gradient(
+            circle at 92% 92%,
+            rgba(244, 201, 93, 0.22),
+            transparent 40%
+        ),
+        var(--sea-paper);
+}
+body.tv-sea .tv-auth__card {
+    border-color: var(--sea-line);
+    border-radius: 26px;
+    box-shadow: 0 30px 70px rgba(6, 50, 60, 0.16);
+}
+body.tv-sea .tv-auth__aside::before {
+    background: linear-gradient(
+        180deg,
+        rgba(6, 50, 60, 0.35) 0%,
+        rgba(6, 50, 60, 0.82) 100%
+    );
+}
+body.tv-sea .tv-auth__aside h2 {
+    color: #fff;
+}
+body.tv-sea .tv-auth__aside h2::after {
+    content: "";
+    display: block;
+    width: 44px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--sea-sand);
+    margin-top: 12px;
+}
+body.tv-sea .tv-auth__switch a,
+body.tv-sea .tv-fieldrow__top a {
+    color: var(--sea-tq-deep);
+}
+
+/* =====================================================================
+   7. ĐIỂM ĐẾN
+   ===================================================================== */
+body.tv-sea .tv-dest {
+    background: var(--tv-bg);
+}
+body.tv-sea .tv-dest__item {
+    border-radius: 20px;
+    box-shadow: var(--tv-shadow);
+    transition:
+        transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+        box-shadow 0.4s;
+}
+body.tv-sea .tv-dest__item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(6, 50, 60, 0.2);
+}
+body.tv-sea .tv-dest__item::after {
+    background: linear-gradient(transparent 40%, rgba(6, 50, 60, 0.88));
+}
+body.tv-sea .tv-dest__label small {
+    color: var(--sea-sand);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+/* --- Spotlight điểm đến (khối mới, xem hướng dẫn) --- */
+.tv-spot {
+    position: relative;
+    margin-bottom: 56px;
+    border-radius: 28px;
+    overflow: hidden;
+    color: #fff;
+    background: var(--sea-ink, #06323c);
+    isolation: isolate;
+}
+.tv-spot__bg {
+    position: absolute;
+    inset: -20px;
+    z-index: -2;
+    background-size: cover;
+    background-position: center;
+    filter: blur(22px) saturate(1.1);
+    transform: scale(1.1);
+    opacity: 0.55;
+    transition: background-image 0.4s;
+}
+.tv-spot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(
+        100deg,
+        rgba(6, 50, 60, 0.92) 0%,
+        rgba(6, 50, 60, 0.7) 45%,
+        rgba(10, 143, 149, 0.35) 100%
+    );
+}
+.tv-spot__in {
+    padding: 34px 36px 30px;
+}
+.tv-spot__head h2 {
+    color: #fff;
+    font-size: clamp(22px, 2.6vw, 30px);
+    font-weight: 800;
+    margin: 0 0 4px;
+}
+.tv-spot__head p {
+    margin: 0 0 16px;
+    color: rgba(255, 255, 255, 0.82);
+}
+.tv-spot__tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 26px;
+}
+.tv-spot__tab {
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 16px;
+    border-radius: 30px;
+    cursor: pointer;
+    transition:
+        background 0.25s,
+        color 0.25s,
+        transform 0.25s;
+}
+.tv-spot__tab:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.24);
+}
+.tv-spot__tab.is-on {
+    background: var(--sea-sand, #f4c95d);
+    border-color: var(--sea-sand, #f4c95d);
+    color: #06323c;
+}
+.tv-spot__stage {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: 34px;
+    align-items: center;
+}
+.tv-spot__kicker {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--sea-sand, #f4c95d);
+    margin: 0 0 8px;
+}
+.tv-spot__title {
+    color: #fff;
+    font-size: clamp(30px, 4.6vw, 54px);
+    font-weight: 800;
+    line-height: 1.08;
+    margin: 0 0 14px;
+    text-shadow: 0 4px 22px rgba(0, 0, 0, 0.25);
+}
+.tv-spot__meta {
+    margin: 0 0 22px;
+    padding-left: 14px;
+    border-left: 3px solid var(--sea-sand, #f4c95d);
+    color: rgba(255, 255, 255, 0.92);
+    line-height: 1.7;
+    max-width: 440px;
+}
+.tv-spot__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--sea-sand, #f4c95d);
+    color: #06323c;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 12px 26px;
+    border-radius: 40px;
+    transition:
+        transform 0.25s,
+        background 0.25s;
+}
+.tv-spot__cta:hover {
+    color: #06323c;
+    background: var(--sea-sand-deep, #e0b244);
+    transform: translateY(-2px);
+}
+.tv-spot__media {
+    min-width: 0;
+}
+.tv-spot__img {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #0b4551;
+    box-shadow: 0 24px 50px rgba(0, 0, 0, 0.35);
+}
+.tv-spot__img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition:
+        opacity 0.35s ease,
+        transform 0.9s ease;
+}
+.tv-spot__img img.is-swap {
+    opacity: 0;
+    transform: scale(1.04);
+}
+.tv-spot__thumbs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+}
+.tv-spot__thumb {
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #0b4551;
+    cursor: pointer;
+    aspect-ratio: 16 / 10;
+    opacity: 0.72;
+    transition:
+        opacity 0.25s,
+        border-color 0.25s,
+        transform 0.25s;
+}
+.tv-spot__thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.tv-spot__thumb:hover {
+    opacity: 1;
+    transform: translateY(-2px);
+}
+.tv-spot__thumb.is-on {
+    opacity: 1;
+    border-color: #fff;
+}
+.tv-spot__thumb[hidden] {
+    display: none;
+}
+@media (max-width: 991px) {
+    .tv-spot__in {
+        padding: 26px 20px 22px;
+    }
+    .tv-spot__stage {
+        grid-template-columns: 1fr;
+        gap: 22px;
+    }
+}
+
+/* =====================================================================
+   8. DẢI KÊU GỌI + FOOTER
+   ===================================================================== */
+body.tv-sea .tv-cta {
+    background: linear-gradient(180deg, var(--tv-bg), var(--sea-sand-soft));
+}
+body.tv-sea .tv-cta__box {
+    background:
+        linear-gradient(
+            100deg,
+            rgba(6, 50, 60, 0.9) 0%,
+            rgba(10, 143, 149, 0.72) 100%
+        ),
+        url("../images/banner/banner-contact.jpg") center / cover;
+    border-radius: 26px;
+    box-shadow: 0 24px 50px rgba(6, 50, 60, 0.22);
+}
+body.tv-sea .tv-cta__link:hover {
+    color: var(--sea-sand);
+}
+
+body.tv-sea .tv-footer {
+    position: relative;
+    background: #063a44;
+    margin-top: 70px;
+}
+/* sóng nhô lên phía trên footer */
+body.tv-sea .tv-footer::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -59px;
+    height: 60px;
+    background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'><path d='M0 34 Q200 0 420 26 T860 24 T1240 14 T1440 28 V60 H0Z' fill='%23063a44'/></svg>")
+        center bottom / 100% 100% no-repeat;
+    pointer-events: none;
+}
+body.tv-sea .tv-footer a:hover {
+    color: var(--sea-sand);
+}
+body.tv-sea .tv-footer__col h5 {
+    position: relative;
+    padding-bottom: 10px;
+}
+body.tv-sea .tv-footer__col h5::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 26px;
+    height: 2px;
+    background: var(--sea-sand);
+}
+body.tv-sea .tv-footer__contact i {
+    color: var(--sea-tq-2);
+}
+body.tv-sea .tv-footer__social a:hover {
+    background: var(--sea-sand);
+    color: var(--sea-ink);
+    transform: translateY(-3px);
+}
+body.tv-sea .tv-footer__social a {
+    transition:
+        background 0.25s,
+        transform 0.25s;
+}
+body.tv-sea .tv-footer__bottom {
+    border-top-color: rgba(244, 201, 93, 0.22);
+}
+
+/* =====================================================================
+   9. HIỆN DẦN KHI CUỘN (cho khối mới — do sea-theme.js gắn lớp .sea-reveal)
+   ===================================================================== */
+body.tv-sea .sea-reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+        opacity 0.65s ease,
+        transform 0.65s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+body.tv-sea .sea-reveal.is-in {
+    opacity: 1;
+    transform: none;
+}
+
+/* =====================================================================
+   10. TÔN TRỌNG NGƯỜI DÙNG TẮT HIỆU ỨNG
+   ===================================================================== */
+@media (prefers-reduced-motion: reduce) {
+    body.tv-sea .tv-wave--sand,
+    body.tv-sea .tv-banner__title::after,
+    body.tv-sea .tv-crumb,
+    body.tv-sea .tv-banner__sub {
+        animation: none;
+    }
+    body.tv-sea .sea-reveal {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+    body.tv-sea .tv-card:hover,
+    body.tv-sea .tv-dest__item:hover {
+        transform: none;
+    }
+}

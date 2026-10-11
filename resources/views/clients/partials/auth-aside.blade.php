@@ -1,5 +1,5 @@
 {{-- Cột ảnh bên trái của các trang tài khoản. Biến: $asideTitle, $asideText --}}
-<aside class="tv-auth__aside" style="background-image:url('{{ asset('clients/assets/images/hero/hero.jpg') }}')">
+<aside class="tv-auth__aside" style="background-image:url('{{ asset('clients/assets/images/hero/auth-aside.jpg') }}')">
     <div class="tv-auth__aside-in">
         <a href="{{ route('home') }}" class="tv-auth__logo"><img src="{{ asset('clients/assets/images/logos/logo.png') }}"
                 alt="{{ config('site.name') }}"></a>

@@ -6,7 +6,8 @@
 
 <!-- Banner + ô tìm kiếm -->
 <section class="tv-banner tv-banner--tours">
-    <div class="tv-banner__bg" style="background-image:url('{{ asset('clients/assets/images/banner/banner.jpg') }}');">
+    <div class="tv-banner__bg"
+        style="background-image:url('{{ asset('clients/assets/images/banner/banner-tours.jpg') }}');">
     </div>
     <div class="container">
         <nav class="tv-crumb" aria-label="breadcrumb">

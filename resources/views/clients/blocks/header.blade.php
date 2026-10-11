@@ -60,9 +60,11 @@
         href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Caveat:wght@600;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/travel-theme.css') }}?v=2">
+    {{-- SEA THEME: giao diện biển cho các trang con. Phải nằm SAU travel-theme.css --}}
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/sea-theme.css') }}?v=1">
 </head>
 
-<body>
+<body class="tv-sea">
     <div class="page-wrapper">
 
         <!-- Preloader -->
