@@ -26,7 +26,17 @@ class LoginController extends Controller
     public function index()
     {
         $title = 'Đăng nhập';
-        return view('clients.login', compact('title'));
+        $asideTitle = 'Mở khóa hành trình của riêng bạn';
+        $asideText = 'Đăng nhập để đặt tour nhanh hơn, theo dõi đơn và lưu lại những chuyến đi bạn yêu thích.';
+        return view('clients.login', compact('title', 'asideTitle', 'asideText'));
+    }
+
+    public function registerPage()
+    {
+        $title = 'Đăng ký';
+        $asideTitle = 'Bắt đầu chuyến đi đầu tiên';
+        $asideText = 'Tạo tài khoản miễn phí để đặt tour, theo dõi hành trình và nhận thông tin xác nhận thuận tiện hơn.';
+        return view('clients.register', compact('title', 'asideTitle', 'asideText'));
     }
 
     public function register(Request $request)

@@ -9,8 +9,8 @@
         'search' => 'banner-tours.jpg',
         'booking' => 'banner-booking.jpg',
         'tour-booked' => 'banner-booking.jpg',
-        'blogs' => 'banner-about.jpg',
-        'blog-detail' => 'banner-about.jpg',
+        'blogs' => 'banner-destination.jpg',
+        'blog-detail' => 'banner-contact.jpg',
         'team' => 'banner-destination.jpg',
     ];
     $bannerFile = $bannerImage ?? ($bannerMap[request()->route()?->getName()] ?? 'banner.jpg');
@@ -26,6 +26,7 @@
             <i class="fas fa-chevron-right"></i>
             <span>{{ $title ?? '' }}</span>
         </nav>
+        <div class="tv-banner__kicker"><span></span> TRAVEL • NATURE • ESCAPE</div>
         <h1 class="tv-banner__title">{{ $title ?? '' }}</h1>
         @isset($subtitle)
             <p class="tv-banner__sub">{{ $subtitle }}</p>
