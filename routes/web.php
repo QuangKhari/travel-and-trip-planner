@@ -180,3 +180,7 @@ Route::prefix('admin')->group(function () {
         Route::post('/delete-manager', [AdminManagementController::class, 'deleteManager'])->name('admin.delete-manager');
     });
 });
+
+if (app()->environment('local')) {
+    Route::view('/ui-kit', 'clients.ui-kit')->name('ui-kit');
+}
