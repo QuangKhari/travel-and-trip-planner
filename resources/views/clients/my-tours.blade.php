@@ -1,110 +1,104 @@
 @include('clients.blocks.header')
-@include('clients.blocks.banner')
-<!-- Tour List Area start -->
-<section class="tour-list-page py-100 rel z-1">
+
+@php
+    $statusMap = [
+        'n' => ['Chờ xác nhận', 'is-wait'],
+        'y' => ['Sắp khởi hành', 'is-go'],
+        'f' => ['Hoàn thành', 'is-done'],
+        'c' => ['Đã hủy', 'is-cancel'],
+    ];
+@endphp
+
+<main class="tv-mytours">
     <div class="container">
-        <div class="row">
-            <div class="col-lg-3 col-md-6 col-sm-10 rmb-75">
-                <div class="shop-sidebar mb-30">
-                    @if (!$toursPopular->isEmpty())
-                        <div class="widget widget-tour" data-aos="fade-up" data-aos-duration="1500"
-                            data-aos-offset="50">
-                            <h6 class="widget-title">Phổ biến Tours</h6>
-                            @foreach ($toursPopular as $tour)
-                                <div class="destination-item tour-grid style-three bgc-lighter">
-                                    <div class="image">
-                                        <img loading="lazy" decoding="async" src="{{ \App\Support\TourImage::url(($tour->images->first() ?? 'default.jpg'), 800) }}"
-                                            alt="Tour">
-                                    </div>
-                                    <div class="content">
-                                        <div class="destination-header">
-                                            <span class="location"><i class="fal fa-map-marker-alt"></i>
-                                                {{ $tour->destination }}</span>
-                                            <div class="ratting">
-                                                <i class="fas fa-star"></i>
-                                                @if (isset($tour->rating) && $tour->rating)
-                                                    <span>{{ number_format($tour->rating, 1) }}</span>
-                                                @else
-                                                    <span>Chưa đánh giá</span>
-                                                @endif
-                                            </div>
-                                        </div>
-                                        <h6><a
-                                                href="{{ route('tour-detail', ['id' => $tour->tourId]) }}">{{ $tour->title }}</a>
-                                        </h6>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @endif
-                </div>
+        <header class="tv-pagehead">
+            <h1>Tour đã đặt</h1>
+            <p>Theo dõi trạng thái, xem chi tiết hoặc hủy đơn khi còn trong thời hạn cho phép.</p>
+        </header>
 
+        @if ($myTours->isEmpty())
+            <div class="tv-empty">
+                <div class="tv-empty__icon"><i class="fal fa-suitcase-rolling"></i></div>
+                <h3>Bạn chưa đặt tour nào</h3>
+                <p>Khi đặt tour, đơn của bạn sẽ hiện ở đây để dễ theo dõi.</p>
+                <a href="{{ route('tours') }}" class="tv-btn-solid">Khám phá tour</a>
             </div>
-            <div class="col-lg-9">
+        @else
+            <div class="tv-chiprow" role="group" aria-label="Lọc theo trạng thái" id="tvStatusFilter">
+                <button type="button" class="tv-chipbtn is-on" data-status="all">Tất cả
+                    <span>{{ $myTours->count() }}</span></button>
+                @foreach ($statusMap as $key => $info)
+                    @php $n = $myTours->where('bookingStatus', $key)->count(); @endphp
+                    @if ($n)
+                        <button type="button" class="tv-chipbtn" data-status="{{ $key }}">{{ $info[0] }}
+                            <span>{{ $n }}</span></button>
+                    @endif
+                @endforeach
+            </div>
+
+            <div class="tv-orders" id="tvOrders">
                 @foreach ($myTours as $tour)
-                    <div class="destination-item style-three bgc-lighter" data-aos="fade-up" data-aos-duration="1500"
-                        data-aos-offset="50">
-                        <div class="image">
-                            @if ($tour->bookingStatus == 'n')
-                                <span class="badge">Đợi xác nhận</span>
-                            @elseif ($tour->bookingStatus == 'y')
-                                <span class="badge bgc-pink">Sắp khởi hành</span>
-                            @elseif ($tour->bookingStatus == 'f')
-                                <span class="badge bgc-primary">Hoàn thành</span>
-                            @elseif ($tour->bookingStatus == 'c')
-                                <span class="badge" style="background-color: red">Đã hủy</span>
-                            @endif
-
-
-                            <img loading="lazy" decoding="async" src="{{ \App\Support\TourImage::url((isset($tour->images) && $tour->images->isNotEmpty() ? $tour->images[0] : 'default.jpg'), 800) }}"
-                                alt="Tour List">
-                        </div>
-                        <div class="content">
-                            <div class="destination-header">
-                                <span class="location"><i
-                                        class="fal fa-map-marker-alt"></i>{{ $tour->destination }}</span>
-                                <div class="ratting">
-                                    @for ($i = 0; $i < 5; $i++)
-                                        @if ($tour->rating && $i < $tour->rating)
-                                            <i class="fas fa-star"></i>
-                                        @else
-                                            <i class="far fa-star"></i>
-                                        @endif
-                                    @endfor
-
-                                </div>
+                    @php $info = $statusMap[$tour->bookingStatus] ?? ['Không xác định', '']; @endphp
+                    <article class="tv-order" data-status="{{ $tour->bookingStatus }}">
+                        <a class="tv-order__img"
+                            href="{{ route('tour-booked', ['bookingId' => $tour->bookingId, 'checkoutId' => $tour->checkoutId]) }}">
+                            <img loading="lazy" decoding="async"
+                                src="{{ \App\Support\TourImage::url(isset($tour->images) && $tour->images->isNotEmpty() ? $tour->images->first() : 'default.jpg', 600) }}"
+                                alt="{{ $tour->title }}">
+                        </a>
+                        <div class="tv-order__body">
+                            <div class="tv-order__top">
+                                <span class="tv-status-pill {{ $info[1] }}">{{ $info[0] }}</span>
+                                <span class="tv-muted-sm"><i class="fal fa-map-marker-alt"></i>
+                                    {{ $tour->destination }}</span>
                             </div>
-                            <h5><a
+                            <h2><a
                                     href="{{ route('tour-booked', ['bookingId' => $tour->bookingId, 'checkoutId' => $tour->checkoutId]) }}">{{ $tour->title }}</a>
-                            </h5>
-                            <div class="truncate-3-lines">
-                                {!! $tour->description !!}
-                            </div>
-
-                            <ul class="blog-meta">
-                                <li><i class="far fa-clock"></i>{{ $tour->time }}</li>
-                                <li><i class="far fa-user"></i> {{ $tour->numAdults + $tour->numChildren }} người</li>
+                            </h2>
+                            <ul class="tv-order__meta">
+                                <li><i class="fal fa-clock"></i>{{ $tour->time }}</li>
+                                <li><i class="fal fa-user"></i>{{ $tour->numAdults + $tour->numChildren }} người</li>
                             </ul>
-                            <div class="destination-footer">
-                                <span class="price"><span>{{ number_format($tour->totalPrice, 0) }}</span>/vnđ</span>
+                        </div>
+                        <div class="tv-order__side">
+                            <div class="tv-order__price"><small>Tổng
+                                    cộng</small><b>{{ number_format($tour->totalPrice, 0, ',', '.') }}đ</b></div>
+                            <div class="tv-order__actions">
+                                <a href="{{ route('tour-booked', ['bookingId' => $tour->bookingId, 'checkoutId' => $tour->checkoutId]) }}"
+                                    class="tv-btn-ghost tv-btn-sm">Chi tiết đơn</a>
                                 @if ($tour->bookingStatus == 'f')
-                                    <a href="{{ route('tour-detail', ['id' => $tour->tourId]) }}"
-                                        class="theme-btn style-two style-three">
-                                        @if ($tour->rating)
-                                            <span data-hover="Đã đánh giá">Đã đánh giá</span>
-                                        @else
-                                            <span data-hover="Đánh giá">Đánh giá</span>
-                                        @endif
-                                        <i class="fal fa-arrow-right"></i>
-                                    </a>
+                                    <a href="{{ route('tour-detail', ['id' => $tour->tourId]) }}#danh-gia"
+                                        class="tv-btn-solid tv-btn-sm">{{ $tour->rating ? 'Đã đánh giá' : 'Viết đánh giá' }}</a>
                                 @endif
                             </div>
                         </div>
-                    </div>
+                    </article>
                 @endforeach
             </div>
-        </div>
+        @endif
+
+        @if (isset($toursPopular) && !$toursPopular->isEmpty())
+            <section class="tv-suggest">
+                <h2 class="td-h2">Gợi ý cho chuyến đi tiếp theo</h2>
+                <div class="tv-suggest__row">
+                    @foreach ($toursPopular as $tour)
+                        <a class="tv-mini tv-mini--card" href="{{ route('tour-detail', ['id' => $tour->tourId]) }}">
+                            <img loading="lazy"
+                                src="{{ \App\Support\TourImage::url($tour->images->first() ?? 'default.jpg', 400) }}"
+                                alt="{{ $tour->title }}">
+                            <span>
+                                <b>{{ \Illuminate\Support\Str::limit($tour->title, 46) }}</b>
+                                <small>{{ $tour->destination }}@if (!empty($tour->rating))
+                                        · <i class="fas fa-star"></i> {{ number_format($tour->rating, 1) }}
+                                    @endif
+                                </small>
+                            </span>
+                        </a>
+                    @endforeach
+                </div>
+            </section>
+        @endif
     </div>
-</section>
-<!-- Tour List Area end -->
+</main>
+
 @include('clients.blocks.footer')
