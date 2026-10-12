@@ -1,14 +1,14 @@
         <footer class="main-footer bgs-cover overlay rel z-1 pb-25"
-            style="background-image: url({{ asset('clients/assets/images/backgrounds/footer.jpg') }});">
+            style="background-image: url('{{ asset('clients/assets/images/backgrounds/footer.jpg') }}'); background-image: image-set(url('{{ asset('clients/assets/images/backgrounds/footer.webp') }}') type('image/webp'), url('{{ asset('clients/assets/images/backgrounds/footer.jpg') }}') type('image/jpeg'));">
             <div class="container">
                 <div class="footer-top pt-100 pb-30">
                     <div class="row justify-content-between">
-                        <div class="col-xl-5 col-lg-6" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
+                        <div class="col-xl-5 col-lg-6">
                             <div class="footer-widget footer-text">
                                 <div class="footer-logo mb-25">
                                     <a href="{{ route('home') }}"><img
-                                            src="{{ asset('clients/assets/images/logos/logo.png') }}"
-                                            alt="Logo"></a>
+                                            src="{{ asset('clients/assets/images/logos/logo.png') }}" alt="Logo"
+                                            width="155" height="40" decoding="async"></a>
                                 </div>
                                 <p>We curate bespoke itineraries tailored to your preferences, ensuring every trip is
                                     seamless and enriching hidden gems beaten</p>
@@ -20,8 +20,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-xl-5 col-lg-6" data-aos="fade-up" data-aos-delay="50" data-aos-duration="1500"
-                            data-aos-offset="50">
+                        <div class="col-xl-5 col-lg-6">
                             <div class="section-title counter-text-wrap mb-35">
                                 <h2>Subscribe Newsletter</h2>
                                 <p>One site <span class="count-text plus" data-speed="3000" data-stop="34500">0</span>
@@ -41,7 +40,7 @@
             <div class="widget-area pt-95 pb-45">
                 <div class="container">
                     <div class="row row-cols-xl-5 row-cols-lg-4 row-cols-md-3 row-cols-2">
-                        <div class="col col-small" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
+                        <div class="col col-small">
                             <div class="footer-widget footer-links">
                                 <div class="footer-title">
                                     <h5>Services</h5>
@@ -55,8 +54,7 @@
                                 </ul>
                             </div>
                         </div>
-                        <div class="col col-small" data-aos="fade-up" data-aos-delay="50" data-aos-duration="1500"
-                            data-aos-offset="50">
+                        <div class="col col-small">
                             <div class="footer-widget footer-links">
                                 <div class="footer-title">
                                     <h5>Company</h5>
@@ -70,8 +68,7 @@
                                 </ul>
                             </div>
                         </div>
-                        <div class="col col-small" data-aos="fade-up" data-aos-delay="100" data-aos-duration="1500"
-                            data-aos-offset="50">
+                        <div class="col col-small">
                             <div class="footer-widget footer-links">
                                 <div class="footer-title">
                                     <h5>Destinations</h5>
@@ -85,8 +82,7 @@
                                 </ul>
                             </div>
                         </div>
-                        <div class="col col-small" data-aos="fade-up" data-aos-delay="150" data-aos-duration="1500"
-                            data-aos-offset="50">
+                        <div class="col col-small">
                             <div class="footer-widget footer-links">
                                 <div class="footer-title">
                                     <h5>Categories</h5>
@@ -100,8 +96,7 @@
                                 </ul>
                             </div>
                         </div>
-                        <div class="col col-md-6 col-10 col-small" data-aos="fade-up" data-aos-delay="200"
-                            data-aos-duration="1500" data-aos-offset="50">
+                        <div class="col col-md-6 col-10 col-small">
                             <div class="footer-widget footer-contact">
                                 <div class="footer-title">
                                     <h5>Get In Touch</h5>

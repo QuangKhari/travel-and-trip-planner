@@ -16,29 +16,29 @@
 
 body.tv-sea {
     /* --- bảng màu mới --- */
-    --sea-tq: #19b9b4;
-    --sea-tq-2: #5fd8cf;
-    --sea-tq-deep: #0a8f95;
-    --sea-tq-dark: #066b73;
+    --sea-tq: #25c7b5;
+    --sea-tq-2: #25c7b5;
+    --sea-tq-deep: #0b9488;
+    --sea-tq-dark: #086b66;
     --sea-tq-soft: #e4f7f5;
     --sea-tq-mist: #f3fbfa;
-    --sea-ink: #06323c;
-    --sea-ink-2: #0b4551;
-    --sea-sand: #f4c95d;
-    --sea-sand-deep: #e0b244;
-    --sea-sand-soft: #fbf3de;
-    --sea-paper: #fdf9ef;
+    --sea-ink: #102f3a;
+    --sea-ink-2: #154553;
+    --sea-sand: #ddaf32;
+    --sea-sand-deep: #ddaf32;
+    --sea-sand-soft: #fff4d8;
+    --sea-paper: #fff4d8;
     --sea-line: #d9ebe9;
     --sea-mute: #56737a;
-    --sea-coral: #e5654b;
-    --sea-tech: #0e7490; /* điểm nhấn "công nghệ": cyan-xanh, dùng cho link nội dung + vòng focus */
+    --sea-coral: #e8795b;
+    --sea-tech: #086b66; /* điểm nhấn "công nghệ": cyan-xanh, dùng cho link nội dung + vòng focus */
 
     /* --- ghi đè biến cũ của travel-theme.css → mọi thành phần cũ tự đổi màu --- */
     --tv-teal: var(--sea-tq-deep);
     --tv-teal-2: var(--sea-tq-2);
     --tv-teal-dark: var(--sea-tq-dark);
     --tv-navy: var(--sea-ink);
-    --tv-ink: #0b2f38;
+    --tv-ink: #102f3a;
     --tv-mute: var(--sea-mute);
     --tv-line: var(--sea-line);
     --tv-bg: #fbfdfc;
@@ -47,8 +47,8 @@ body.tv-sea {
     --tv-sand-light: var(--sea-sand-soft);
     --tv-tech: var(--sea-tech);
     --tv-grad-teal: linear-gradient(135deg, var(--sea-tq), var(--sea-tq-deep));
-    --tv-shadow: 0 8px 26px rgba(6, 50, 60, 0.08);
-    --tv-shadow-lg: 0 22px 48px rgba(6, 50, 60, 0.18);
+    --tv-shadow: 0 8px 26px rgba(16, 47, 58, 0.08);
+    --tv-shadow-lg: 0 22px 48px rgba(16, 47, 58, 0.18);
     --primary-color: var(--sea-tq-deep);
     --heading-color: var(--sea-ink);
     --lighter-color: var(--sea-tq-mist);
@@ -76,16 +76,16 @@ body.tv-sea .tv-progress {
    ===================================================================== */
 body.tv-sea .tv-header.is-solid,
 body.tv-sea .tv-header.is-scrolled {
-    background: rgba(6, 50, 60, 0.86);
+    background: rgba(16, 47, 58, 0.86);
     backdrop-filter: blur(14px) saturate(1.2);
     -webkit-backdrop-filter: blur(14px) saturate(1.2);
     box-shadow:
-        0 1px 0 rgba(244, 201, 93, 0.35),
-        0 10px 30px rgba(6, 50, 60, 0.25);
+        0 1px 0 rgba(221, 175, 50, 0.35),
+        0 10px 30px rgba(16, 47, 58, 0.25);
 }
 body.tv-sea .tv-nav > a:hover,
 body.tv-sea .tv-dd > a:hover {
-    background: rgba(95, 216, 207, 0.18);
+    background: rgba(37, 199, 181, 0.18);
 }
 body.tv-sea .tv-nav > a::after,
 body.tv-sea .tv-dd > a::after {
@@ -117,22 +117,22 @@ body.tv-sea .tv-banner::before {
             24px 24px,
         linear-gradient(
             180deg,
-            rgba(6, 50, 60, 0.6) 0%,
-            rgba(6, 50, 60, 0.18) 52%,
-            rgba(6, 50, 60, 0.55) 100%
+            rgba(16, 47, 58, 0.6) 0%,
+            rgba(16, 47, 58, 0.18) 52%,
+            rgba(16, 47, 58, 0.55) 100%
         ),
         linear-gradient(
             100deg,
-            rgba(10, 143, 149, 0.62) 0%,
-            rgba(10, 143, 149, 0) 68%
+            rgba(11, 148, 136, 0.62) 0%,
+            rgba(11, 148, 136, 0) 68%
         );
 }
 /* "mặt trời" vàng cát ở góc: tĩnh, rất nhạt */
 body.tv-sea .tv-banner::after {
     background: radial-gradient(
         circle,
-        rgba(244, 201, 93, 0.38),
-        rgba(244, 201, 93, 0.1) 52%,
+        rgba(221, 175, 50, 0.38),
+        rgba(221, 175, 50, 0.1) 52%,
         transparent 70%
     );
     animation: none;
@@ -209,15 +209,15 @@ body.tv-sea .tv-wave--sand path {
 
 /* ô tìm kiếm trong banner trang Tours */
 body.tv-sea .tv-tsearch {
-    box-shadow: 0 18px 44px rgba(6, 50, 60, 0.35);
+    box-shadow: 0 18px 44px rgba(16, 47, 58, 0.35);
     transition:
         box-shadow 0.3s,
         transform 0.3s;
 }
 body.tv-sea .tv-tsearch:focus-within {
     box-shadow:
-        0 0 0 4px rgba(95, 216, 207, 0.45),
-        0 18px 44px rgba(6, 50, 60, 0.35);
+        0 0 0 4px rgba(37, 199, 181, 0.45),
+        0 18px 44px rgba(16, 47, 58, 0.35);
 }
 body.tv-sea .tv-tsearch > i {
     color: var(--sea-tq-deep);
@@ -256,7 +256,7 @@ body.tv-sea .tv-btn-solid {
     position: relative;
     overflow: hidden;
     background: var(--sea-tq-deep);
-    box-shadow: 0 8px 18px rgba(10, 143, 149, 0.28);
+    box-shadow: 0 8px 18px rgba(11, 148, 136, 0.28);
 }
 body.tv-sea .tv-btn-solid:hover {
     background: var(--sea-tq-dark);
@@ -307,7 +307,7 @@ body.tv-sea .tv-fieldrow input:focus,
 body.tv-sea .tv-fieldrow select:focus,
 body.tv-sea .tv-fieldrow textarea:focus {
     border-color: var(--sea-tq);
-    box-shadow: 0 0 0 4px rgba(25, 185, 180, 0.18);
+    box-shadow: 0 0 0 4px rgba(37, 199, 181, 0.18);
     outline: 0;
 }
 
@@ -321,11 +321,11 @@ body.tv-sea .tv-card {
 }
 body.tv-sea .tv-card:hover {
     transform: translateY(-6px);
-    border-color: rgba(25, 185, 180, 0.55);
-    box-shadow: 0 22px 44px rgba(6, 50, 60, 0.16);
+    border-color: rgba(37, 199, 181, 0.55);
+    box-shadow: 0 22px 44px rgba(16, 47, 58, 0.16);
 }
 body.tv-sea .tv-card__img::after {
-    background: linear-gradient(transparent, rgba(6, 50, 60, 0.6));
+    background: linear-gradient(transparent, rgba(16, 47, 58, 0.6));
 }
 body.tv-sea .tv-card:hover .tv-card__img img {
     transform: scale(1.08);
@@ -376,13 +376,13 @@ body.tv-sea .tv-chipbtn.is-on {
     background: var(--sea-tq-deep);
     border-color: var(--sea-tq-deep);
     color: #fff;
-    box-shadow: 0 6px 14px rgba(10, 143, 149, 0.28);
+    box-shadow: 0 6px 14px rgba(11, 148, 136, 0.28);
 }
 body.tv-sea .tv-pager a.is-active,
 body.tv-sea .pagination-tours .page-item.active .page-link {
     background: var(--sea-tq-deep);
     color: #fff;
-    box-shadow: 0 8px 18px rgba(10, 143, 149, 0.32);
+    box-shadow: 0 8px 18px rgba(11, 148, 136, 0.32);
 }
 body.tv-sea .tv-pager a:hover,
 body.tv-sea .pagination-tours .page-link:hover {
@@ -419,7 +419,7 @@ body.tv-sea .tv-tag i {
 body.tv-sea .td-book {
     border: 1px solid var(--sea-line);
     border-top: 4px solid var(--sea-sand);
-    box-shadow: 0 16px 40px rgba(6, 50, 60, 0.1);
+    box-shadow: 0 16px 40px rgba(16, 47, 58, 0.1);
 }
 body.tv-sea .td-book__price b {
     color: var(--sea-tq-dark);
@@ -441,7 +441,7 @@ body.tv-sea .tv-prose a {
 body.tv-sea .tv-panel {
     border-color: var(--sea-line);
     border-radius: 20px;
-    box-shadow: 0 6px 20px rgba(6, 50, 60, 0.05);
+    box-shadow: 0 6px 20px rgba(16, 47, 58, 0.05);
 }
 body.tv-sea .tv-order {
     border-color: var(--sea-line);
@@ -449,7 +449,7 @@ body.tv-sea .tv-order {
     border-radius: 18px;
 }
 body.tv-sea .tv-order:hover {
-    box-shadow: 0 14px 32px rgba(6, 50, 60, 0.12);
+    box-shadow: 0 14px 32px rgba(16, 47, 58, 0.12);
 }
 body.tv-sea .tv-order__price b {
     color: var(--sea-tq-dark);
@@ -470,12 +470,12 @@ body.tv-sea .tv-auth {
     background:
         radial-gradient(
             circle at 12% 8%,
-            rgba(95, 216, 207, 0.22),
+            rgba(37, 199, 181, 0.22),
             transparent 38%
         ),
         radial-gradient(
             circle at 92% 92%,
-            rgba(244, 201, 93, 0.22),
+            rgba(221, 175, 50, 0.22),
             transparent 40%
         ),
         var(--sea-paper);
@@ -483,13 +483,13 @@ body.tv-sea .tv-auth {
 body.tv-sea .tv-auth__card {
     border-color: var(--sea-line);
     border-radius: 26px;
-    box-shadow: 0 30px 70px rgba(6, 50, 60, 0.16);
+    box-shadow: 0 30px 70px rgba(16, 47, 58, 0.16);
 }
 body.tv-sea .tv-auth__aside::before {
     background: linear-gradient(
         180deg,
-        rgba(6, 50, 60, 0.35) 0%,
-        rgba(6, 50, 60, 0.82) 100%
+        rgba(16, 47, 58, 0.35) 0%,
+        rgba(16, 47, 58, 0.82) 100%
     );
 }
 body.tv-sea .tv-auth__aside h2 {
@@ -524,10 +524,10 @@ body.tv-sea .tv-dest__item {
 }
 body.tv-sea .tv-dest__item:hover {
     transform: translateY(-5px);
-    box-shadow: 0 20px 40px rgba(6, 50, 60, 0.2);
+    box-shadow: 0 20px 40px rgba(16, 47, 58, 0.2);
 }
 body.tv-sea .tv-dest__item::after {
-    background: linear-gradient(transparent 40%, rgba(6, 50, 60, 0.88));
+    background: linear-gradient(transparent 40%, rgba(16, 47, 58, 0.88));
 }
 body.tv-sea .tv-dest__label small {
     color: var(--sea-sand);
@@ -542,7 +542,7 @@ body.tv-sea .tv-dest__label small {
     border-radius: 28px;
     overflow: hidden;
     color: #fff;
-    background: var(--sea-ink, #06323c);
+    background: var(--sea-ink, #102f3a);
     isolation: isolate;
 }
 .tv-spot__bg {
@@ -563,9 +563,9 @@ body.tv-sea .tv-dest__label small {
     z-index: -1;
     background: linear-gradient(
         100deg,
-        rgba(6, 50, 60, 0.92) 0%,
-        rgba(6, 50, 60, 0.7) 45%,
-        rgba(10, 143, 149, 0.35) 100%
+        rgba(16, 47, 58, 0.92) 0%,
+        rgba(16, 47, 58, 0.7) 45%,
+        rgba(11, 148, 136, 0.35) 100%
     );
 }
 .tv-spot__in {
@@ -607,9 +607,9 @@ body.tv-sea .tv-dest__label small {
     background: rgba(255, 255, 255, 0.24);
 }
 .tv-spot__tab.is-on {
-    background: var(--sea-sand, #f4c95d);
-    border-color: var(--sea-sand, #f4c95d);
-    color: #06323c;
+    background: var(--sea-sand, #ddaf32);
+    border-color: var(--sea-sand, #ddaf32);
+    color: #102f3a;
 }
 .tv-spot__stage {
     display: grid;
@@ -622,7 +622,7 @@ body.tv-sea .tv-dest__label small {
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--sea-sand, #f4c95d);
+    color: var(--sea-sand, #ddaf32);
     margin: 0 0 8px;
 }
 .tv-spot__title {
@@ -636,7 +636,7 @@ body.tv-sea .tv-dest__label small {
 .tv-spot__meta {
     margin: 0 0 22px;
     padding-left: 14px;
-    border-left: 3px solid var(--sea-sand, #f4c95d);
+    border-left: 3px solid var(--sea-sand, #ddaf32);
     color: rgba(255, 255, 255, 0.92);
     line-height: 1.7;
     max-width: 440px;
@@ -645,8 +645,8 @@ body.tv-sea .tv-dest__label small {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: var(--sea-sand, #f4c95d);
-    color: #06323c;
+    background: var(--sea-sand, #ddaf32);
+    color: #102f3a;
     font-weight: 700;
     font-size: 14px;
     padding: 12px 26px;
@@ -656,8 +656,8 @@ body.tv-sea .tv-dest__label small {
         background 0.25s;
 }
 .tv-spot__cta:hover {
-    color: #06323c;
-    background: var(--sea-sand-deep, #e0b244);
+    color: #102f3a;
+    background: var(--sea-sand-deep, #ddaf32);
     transform: translateY(-2px);
 }
 .tv-spot__media {
@@ -668,7 +668,7 @@ body.tv-sea .tv-dest__label small {
     aspect-ratio: 16 / 10;
     border-radius: 18px;
     overflow: hidden;
-    background: #0b4551;
+    background: #154553;
     box-shadow: 0 24px 50px rgba(0, 0, 0, 0.35);
 }
 .tv-spot__img img {
@@ -695,7 +695,7 @@ body.tv-sea .tv-dest__label small {
     border: 2px solid transparent;
     border-radius: 12px;
     overflow: hidden;
-    background: #0b4551;
+    background: #154553;
     cursor: pointer;
     aspect-ratio: 16 / 10;
     opacity: 0.72;
@@ -741,12 +741,12 @@ body.tv-sea .tv-cta__box {
     background:
         linear-gradient(
             100deg,
-            rgba(6, 50, 60, 0.9) 0%,
-            rgba(10, 143, 149, 0.72) 100%
+            rgba(16, 47, 58, 0.9) 0%,
+            rgba(11, 148, 136, 0.72) 100%
         ),
         url("../images/banner/banner-contact.jpg") center / cover;
     border-radius: 26px;
-    box-shadow: 0 24px 50px rgba(6, 50, 60, 0.22);
+    box-shadow: 0 24px 50px rgba(16, 47, 58, 0.22);
 }
 body.tv-sea .tv-cta__link:hover {
     color: var(--sea-sand);
@@ -754,7 +754,7 @@ body.tv-sea .tv-cta__link:hover {
 
 body.tv-sea .tv-footer {
     position: relative;
-    background: #063a44;
+    background: #102f3a;
     margin-top: 70px;
 }
 /* sóng nhô lên phía trên footer */
@@ -799,7 +799,7 @@ body.tv-sea .tv-footer__social a {
         transform 0.25s;
 }
 body.tv-sea .tv-footer__bottom {
-    border-top-color: rgba(244, 201, 93, 0.22);
+    border-top-color: rgba(221, 175, 50, 0.22);
 }
 
 /* =====================================================================

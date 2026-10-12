@@ -7,16 +7,16 @@
     <title>@yield('title', config('site.name', 'Travel'))</title>
 </head>
 
-<body style="margin:0;padding:0;background:#F1F5F9;font-family:Arial,Helvetica,sans-serif;color:#0F172A;">
+<body style="margin:0;padding:0;background:#F1F5F9;font-family:Arial,Helvetica,sans-serif;color:#102F3A;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F1F5F9;padding:28px 12px;">
         <tr>
             <td align="center">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
                     style="max-width:560px;background:#ffffff;border-radius:14px;overflow:hidden;">
                     <tr>
-                        <td style="padding:22px 32px;border-bottom:3px solid #0D9488;">
+                        <td style="padding:22px 32px;border-bottom:3px solid #0B9488;">
                             <span
-                                style="font-size:22px;font-weight:700;letter-spacing:.04em;color:#0F172A;">{{ strtoupper(config('site.name', 'Travel')) }}</span>
+                                style="font-size:22px;font-weight:700;letter-spacing:.04em;color:#102F3A;">{{ strtoupper(config('site.name', 'Travel')) }}</span>
                         </td>
                     </tr>
                     <tr>

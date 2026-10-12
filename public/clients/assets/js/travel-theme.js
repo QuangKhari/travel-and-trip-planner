@@ -23,8 +23,7 @@
             var h = document.documentElement.scrollHeight - innerHeight;
             bar.style.width = (h > 0 ? (y / h) * 100 : 0) + "%";
             if (heroBg && !reduce && y < 1000)
-                heroBg.style.transform =
-                    "translate3d(0," + (y * 0.22).toFixed(1) + "px,0)";
+                heroBg.style.translate = "0 " + (y * 0.22).toFixed(1) + "px";
             busy = false;
         });
     }

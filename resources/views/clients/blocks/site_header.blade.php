@@ -8,12 +8,12 @@
             <svg class="px-brand__mark" viewBox="0 0 40 40" aria-hidden="true">
                 <defs>
                     <linearGradient id="pxBrandG" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0" stop-color="#2dd4bf" />
-                        <stop offset="1" stop-color="#0d9488" />
+                        <stop offset="0" stop-color="#25C7B5" />
+                        <stop offset="1" stop-color="#0B9488" />
                     </linearGradient>
                 </defs>
                 <rect width="40" height="40" rx="13" fill="url(#pxBrandG)" />
-                <circle cx="26" cy="14" r="5" fill="#f4c95d" />
+                <circle cx="26" cy="14" r="5" fill="#DDAF32" />
                 <path d="M6 25c4-4 7-4 11 0s7 4 11 0 5-3 6-2v5c-1-1-2-1-6 2s-7 3-11 0-7-4-11 0z" fill="#fff"
                     opacity=".95" />
                 <path d="M6 32c4-4 7-4 11 0s7 4 11 0 5-3 6-2v3c-1-1-2-1-6 2s-7 3-11 0-7-4-11 0z" fill="#fff"

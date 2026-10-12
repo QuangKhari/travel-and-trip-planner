@@ -4,13 +4,13 @@
    client sub-pages through body.tv-sea. Home is untouched.
    ================================================================ */
 body.tv-sea {
-    --ux-tq: #11aaa7;
-    --ux-tq-deep: #087f86;
-    --ux-tq-dark: #05616a;
+    --ux-tq: #0b9488;
+    --ux-tq-deep: #086b66;
+    --ux-tq-dark: #086b66;
     --ux-tq-soft: #e9f8f6;
-    --ux-sand: #f3c95d;
-    --ux-sand-soft: #fff7df;
-    --ux-ink: #07343d;
+    --ux-sand: #ddaf32;
+    --ux-sand-soft: #fff4d8;
+    --ux-ink: #102f3a;
     --ux-muted: #637d83;
     --ux-line: #dcebea;
     --ux-paper: #f7fbfa;
@@ -41,7 +41,7 @@ body.tv-sea .tv-booking {
 }
 body.tv-sea .tv-progress {
     height: 3px;
-    box-shadow: 0 0 10px rgba(17, 170, 167, 0.35);
+    box-shadow: 0 0 10px rgba(11, 148, 136, 0.35);
 }
 
 /* ---------- page banner ---------- */
@@ -64,13 +64,13 @@ body.tv-sea .tv-banner::before {
     background:
         radial-gradient(
             circle at 78% 24%,
-            rgba(243, 201, 93, 0.2),
+            rgba(221, 175, 50, 0.2),
             transparent 24%
         ),
         linear-gradient(
             105deg,
-            rgba(4, 55, 63, 0.86),
-            rgba(4, 55, 63, 0.38) 54%,
+            rgba(16, 47, 58, 0.86),
+            rgba(16, 47, 58, 0.38) 54%,
             rgba(5, 97, 106, 0.56)
         );
 }
@@ -119,13 +119,13 @@ body.tv-sea .td-book,
 body.tv-sea .td-facts,
 body.tv-sea .tv-steps li,
 body.tv-sea .tc-contact__shell {
-    box-shadow: 0 10px 32px rgba(7, 52, 61, 0.07);
+    box-shadow: 0 10px 32px rgba(16, 47, 58, 0.07);
 }
 body.tv-sea .tv-panel:hover,
 body.tv-sea .tv-order:hover,
 body.tv-sea .tv-steps li:hover {
-    border-color: rgba(17, 170, 167, 0.35);
-    box-shadow: 0 18px 42px rgba(7, 52, 61, 0.11);
+    border-color: rgba(11, 148, 136, 0.35);
+    box-shadow: 0 18px 42px rgba(16, 47, 58, 0.11);
 }
 body.tv-sea .tv-btn-solid,
 body.tv-sea .tv-btn-orange,
@@ -149,7 +149,7 @@ body.tv-sea .td-page {
     background:
         radial-gradient(
             circle at 94% 7%,
-            rgba(95, 216, 207, 0.13),
+            rgba(37, 199, 181, 0.13),
             transparent 22%
         ),
         var(--tv-bg);
@@ -161,7 +161,7 @@ body.tv-sea .td-crumb {
     border-radius: 30px;
     background: #fff;
     border: 1px solid var(--ux-line);
-    box-shadow: 0 5px 18px rgba(7, 52, 61, 0.05);
+    box-shadow: 0 5px 18px rgba(16, 47, 58, 0.05);
 }
 body.tv-sea .td-head {
     padding: 22px 0 8px;
@@ -181,7 +181,7 @@ body.tv-sea .td-meta li {
     padding: 7px 12px;
 }
 body.tv-sea .td-share {
-    box-shadow: 0 7px 20px rgba(7, 52, 61, 0.06);
+    box-shadow: 0 7px 20px rgba(16, 47, 58, 0.06);
     transition:
         transform 0.22s,
         border-color 0.22s;
@@ -193,7 +193,7 @@ body.tv-sea .td-gallery {
     height: clamp(320px, 42vw, 520px);
     gap: 10px;
     border-radius: 26px;
-    box-shadow: 0 24px 55px rgba(7, 52, 61, 0.14);
+    box-shadow: 0 24px 55px rgba(16, 47, 58, 0.14);
 }
 body.tv-sea .td-gallery::after {
     content: "";
@@ -221,7 +221,7 @@ body.tv-sea .td-gallery__count {
     bottom: 18px;
     border-radius: 30px;
     padding: 8px 14px;
-    background: rgba(4, 55, 63, 0.74);
+    background: rgba(16, 47, 58, 0.74);
     backdrop-filter: blur(10px);
     color: #fff;
 }
@@ -241,7 +241,7 @@ body.tv-sea .td-tabs a:hover {
 }
 body.tv-sea .td-tabs a.is-on {
     background: var(--ux-ink);
-    box-shadow: 0 6px 18px rgba(7, 52, 61, 0.18);
+    box-shadow: 0 6px 18px rgba(16, 47, 58, 0.18);
 }
 body.tv-sea .td-section {
     padding: 42px 0;
@@ -297,14 +297,14 @@ body.tv-sea .td-day {
     border: 1px solid var(--ux-line) !important;
     border-radius: 18px !important;
     background: #fff;
-    box-shadow: 0 8px 24px rgba(7, 52, 61, 0.05);
+    box-shadow: 0 8px 24px rgba(16, 47, 58, 0.05);
     transition:
         transform 0.25s,
         box-shadow 0.25s;
 }
 body.tv-sea .td-day:hover {
     transform: translateX(4px);
-    box-shadow: 0 14px 32px rgba(7, 52, 61, 0.09);
+    box-shadow: 0 14px 32px rgba(16, 47, 58, 0.09);
 }
 
 /* ---------- booking / checkout ---------- */
@@ -318,7 +318,7 @@ body.tv-sea .tv-booking .booking-container {
 body.tv-sea .tv-booking .booking-info {
     border-radius: 24px;
     padding: 32px;
-    box-shadow: 0 16px 42px rgba(7, 52, 61, 0.07);
+    box-shadow: 0 16px 42px rgba(16, 47, 58, 0.07);
 }
 body.tv-sea .tv-booking .booking-header {
     position: relative;
@@ -345,11 +345,11 @@ body.tv-sea .tv-step {
 body.tv-sea .tv-booking .form-group input:focus,
 body.tv-sea .tv-booking textarea:focus {
     border-color: var(--ux-tq);
-    box-shadow: 0 0 0 4px rgba(17, 170, 167, 0.12);
+    box-shadow: 0 0 0 4px rgba(11, 148, 136, 0.12);
     outline: 0;
 }
 body.tv-sea .tv-booking .input__quanlity {
-    box-shadow: inset 0 0 0 1px rgba(7, 52, 61, 0.02);
+    box-shadow: inset 0 0 0 1px rgba(16, 47, 58, 0.02);
 }
 body.tv-sea .tv-booking .quantity-btn:hover {
     background: var(--ux-tq-soft);
@@ -360,7 +360,7 @@ body.tv-sea .booking-summary {
     top: 96px;
     border-radius: 24px !important;
     border: 1px solid var(--ux-line) !important;
-    box-shadow: 0 20px 46px rgba(7, 52, 61, 0.11) !important;
+    box-shadow: 0 20px 46px rgba(16, 47, 58, 0.11) !important;
     overflow: hidden;
 }
 body.tv-sea .booking-summary::before {
@@ -438,7 +438,7 @@ body.tv-sea .tv-order__price b {
     font-size: 22px;
 }
 body.tv-sea .tv-status-pill {
-    box-shadow: 0 0 0 1px rgba(7, 52, 61, 0.05);
+    box-shadow: 0 0 0 1px rgba(16, 47, 58, 0.05);
 }
 
 /* ---------- profile ---------- */
@@ -461,7 +461,7 @@ body.tv-sea .tv-profile__name {
 }
 body.tv-sea .tv-avatar {
     border: 5px solid #fff;
-    box-shadow: 0 10px 28px rgba(7, 52, 61, 0.16);
+    box-shadow: 0 10px 28px rgba(16, 47, 58, 0.16);
 }
 body.tv-sea .tv-panel--links a,
 body.tv-sea .tv-panel--links button {
@@ -492,12 +492,12 @@ body.tv-sea .tv-auth {
     background:
         radial-gradient(
             circle at 12% 15%,
-            rgba(95, 216, 207, 0.18),
+            rgba(37, 199, 181, 0.18),
             transparent 27%
         ),
         radial-gradient(
             circle at 90% 82%,
-            rgba(243, 201, 93, 0.17),
+            rgba(221, 175, 50, 0.17),
             transparent 28%
         ),
         var(--ux-paper);
@@ -508,7 +508,7 @@ body.tv-sea .tv-auth__card {
     border-radius: 30px;
     overflow: hidden;
     border: 1px solid rgba(220, 235, 234, 0.95);
-    box-shadow: 0 28px 70px rgba(7, 52, 61, 0.14);
+    box-shadow: 0 28px 70px rgba(16, 47, 58, 0.14);
 }
 body.tv-sea .tv-auth__aside {
     min-height: 620px;
@@ -522,8 +522,8 @@ body.tv-sea .tv-auth__aside::after {
     z-index: 0;
     background: linear-gradient(
         155deg,
-        rgba(4, 55, 63, 0.18),
-        rgba(4, 55, 63, 0.84)
+        rgba(16, 47, 58, 0.18),
+        rgba(16, 47, 58, 0.84)
     );
 }
 body.tv-sea .tv-auth__aside-in {
@@ -643,7 +643,7 @@ body.tv-sea .tc-contact {
     background:
         radial-gradient(
             circle at 8% 25%,
-            rgba(95, 216, 207, 0.1),
+            rgba(37, 199, 181, 0.1),
             transparent 25%
         ),
         var(--tv-bg);
@@ -698,16 +698,16 @@ body.tv-sea .tc-faq details {
     border-color: var(--ux-line);
 }
 body.tv-sea .tc-head {
-    background: linear-gradient(105deg, var(--ux-ink), #0b6670);
+    background: linear-gradient(105deg, var(--ux-ink), #086b66);
     padding: 16px 18px;
 }
 body.tv-sea .tc-avatar {
-    background: rgba(95, 216, 207, 0.18);
-    box-shadow: 0 0 0 4px rgba(95, 216, 207, 0.08);
+    background: rgba(37, 199, 181, 0.18);
+    box-shadow: 0 0 0 4px rgba(37, 199, 181, 0.08);
 }
 body.tv-sea .tc-list {
     background:
-        radial-gradient(rgba(17, 170, 167, 0.08) 1px, transparent 1.2px) 0
+        radial-gradient(rgba(11, 148, 136, 0.08) 1px, transparent 1.2px) 0
             0/22px 22px,
         #f3f9f8;
     padding: 22px;
@@ -720,12 +720,12 @@ body.tv-sea .tc-bubble {
     border-radius: 18px;
 }
 body.tv-sea .tc-row--bot .tc-bubble {
-    box-shadow: 0 5px 15px rgba(7, 52, 61, 0.06);
+    box-shadow: 0 5px 15px rgba(16, 47, 58, 0.06);
     border-color: #e1eeec;
 }
 body.tv-sea .tc-row--user .tc-bubble {
     background: linear-gradient(135deg, var(--ux-tq), var(--ux-tq-deep));
-    box-shadow: 0 7px 18px rgba(8, 127, 134, 0.2);
+    box-shadow: 0 7px 18px rgba(8, 107, 102, 0.2);
 }
 body.tv-sea .tc-chips {
     padding: 10px 14px;
@@ -758,7 +758,7 @@ body.tv-sea .tc-input {
 }
 body.tv-sea .tc-input:focus {
     border-color: var(--ux-tq) !important;
-    box-shadow: 0 0 0 4px rgba(17, 170, 167, 0.11) !important;
+    box-shadow: 0 0 0 4px rgba(11, 148, 136, 0.11) !important;
 }
 body.tv-sea .tc-send {
     background: var(--ux-tq-deep);
@@ -781,7 +781,7 @@ body.tv-sea .tc-fab {
     width: 58px;
     height: 58px;
     background: linear-gradient(135deg, var(--ux-tq), var(--ux-tq-deep));
-    box-shadow: 0 13px 30px rgba(8, 127, 134, 0.32);
+    box-shadow: 0 13px 30px rgba(8, 107, 102, 0.32);
     border: 3px solid #fff;
 }
 body.tv-sea .tc-fab::after {
@@ -799,7 +799,7 @@ body.tv-sea .tc-panel {
     border: 1px solid var(--ux-line);
     border-radius: 22px;
     overflow: hidden;
-    box-shadow: 0 25px 60px rgba(7, 52, 61, 0.2);
+    box-shadow: 0 25px 60px rgba(16, 47, 58, 0.2);
 }
 
 /* ---------- about ---------- */
@@ -814,7 +814,7 @@ body.tv-sea .tv-about__intro {
     border: 1px solid var(--ux-line);
     border-radius: 24px;
     background: #fff;
-    box-shadow: 0 12px 32px rgba(7, 52, 61, 0.06);
+    box-shadow: 0 12px 32px rgba(16, 47, 58, 0.06);
 }
 body.tv-sea .tv-about__intro::before {
     content: "";
@@ -875,14 +875,14 @@ body.tv-sea .blog-item.style-three {
     border: 1px solid var(--ux-line);
     border-radius: 22px;
     background: #fff;
-    box-shadow: 0 10px 28px rgba(7, 52, 61, 0.06);
+    box-shadow: 0 10px 28px rgba(16, 47, 58, 0.06);
     transition:
         transform 0.28s,
         box-shadow 0.28s;
 }
 body.tv-sea .blog-item.style-three:hover {
     transform: translateY(-5px);
-    box-shadow: 0 18px 42px rgba(7, 52, 61, 0.11);
+    box-shadow: 0 18px 42px rgba(16, 47, 58, 0.11);
 }
 body.tv-sea .blog-item.style-three .image {
     overflow: hidden;
@@ -916,7 +916,7 @@ body.tv-sea .blog-details-content {
     border: 1px solid var(--ux-line);
     border-radius: 24px;
     background: #fff;
-    box-shadow: 0 12px 34px rgba(7, 52, 61, 0.06);
+    box-shadow: 0 12px 34px rgba(16, 47, 58, 0.06);
 }
 body.tv-sea .blog-details-content .image img {
     border-radius: 18px;
@@ -1107,14 +1107,14 @@ body.tv-sea .tv-blog-card {
     border: 1px solid var(--ux-line);
     border-radius: 22px;
     background: #fff;
-    box-shadow: 0 10px 28px rgba(7, 52, 61, 0.06);
+    box-shadow: 0 10px 28px rgba(16, 47, 58, 0.06);
     transition:
         transform 0.3s,
         box-shadow 0.3s;
 }
 body.tv-sea .tv-blog-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 20px 44px rgba(7, 52, 61, 0.11);
+    box-shadow: 0 20px 44px rgba(16, 47, 58, 0.11);
 }
 body.tv-sea .tv-blog-card:nth-child(1) {
     grid-column: span 2;
@@ -1144,7 +1144,11 @@ body.tv-sea .tv-blog-card__media::after {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, transparent 55%, rgba(4, 55, 63, 0.28));
+    background: linear-gradient(
+        180deg,
+        transparent 55%,
+        rgba(16, 47, 58, 0.28)
+    );
 }
 body.tv-sea .tv-blog-card__media > span {
     position: absolute;
@@ -1199,7 +1203,7 @@ body.tv-sea .tv-blog-detail {
     border: 1px solid var(--ux-line);
     border-radius: 28px;
     background: #fff;
-    box-shadow: 0 14px 40px rgba(7, 52, 61, 0.07);
+    box-shadow: 0 14px 40px rgba(16, 47, 58, 0.07);
 }
 body.tv-sea .tv-blog-detail__head {
     text-align: center;
@@ -1364,7 +1368,7 @@ body.tv-sea .tv-about__hero-media img {
     object-fit: cover;
     border-radius: 24px;
     display: block;
-    box-shadow: 0 22px 48px rgba(7, 52, 61, 0.15);
+    box-shadow: 0 22px 48px rgba(16, 47, 58, 0.15);
 }
 body.tv-sea .tv-about__hero-media figcaption {
     position: absolute;
@@ -1376,7 +1380,7 @@ body.tv-sea .tv-about__hero-media figcaption {
     color: #fff;
     font-size: 12px;
     font-weight: 700;
-    box-shadow: 0 12px 25px rgba(7, 52, 61, 0.18);
+    box-shadow: 0 12px 25px rgba(16, 47, 58, 0.18);
 }
 @media (max-width: 991px) {
     body.tv-sea .tv-about__hero {

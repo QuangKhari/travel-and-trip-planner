@@ -1,39 +1,41 @@
 :root {
-    --tv-teal: #0d9488;
-    --tv-teal-2: #2dd4bf;
-    --tv-teal-dark: #0f766e;
-    --tv-orange: #f4c95d;
-    --tv-orange-2: #f4c95d;
-    --tv-navy: #0f172a;
-    --tv-bg: #f8fafc;
+    /* ===== Vietnamese Tropical Discovery ===== */
+    --tv-teal: #0b9488; /* Vietnam Turquoise: thương hiệu, nút chính, link */
+    --tv-teal-2: #25c7b5; /* Aqua Breeze: hover, highlight */
+    --tv-teal-dark: #086b66; /* Deep Teal: active, hover nút */
+    --tv-orange: #ddaf32; /* Rice Gold: vàng hương lúa — rating, badge, chữ nhấn */
+    --tv-orange-2: #f3d878; /* Rice Light: highlight nhẹ */
+    --tv-navy: #102f3a; /* Travel Navy: chữ, footer, công nghệ */
+    --tv-bg: #f8fbf9; /* Cloud White */
     --tv-card: #fff;
-    --tv-ink: #0f172a;
+    --tv-ink: #102f3a;
     --tv-mute: #64748b;
     --tv-line: #e2e8f0;
-    --tv-grad-teal: linear-gradient(135deg, #2dd4bf, #0d9488);
-    --tv-grad-orange: linear-gradient(135deg, #f4c95d, #f4c95d);
-    --tv-shadow: 0 10px 30px rgba(15, 23, 42, 0.1);
-    --tv-shadow-lg: 0 24px 50px rgba(15, 23, 42, 0.2);
+    --tv-grad-teal: linear-gradient(135deg, #25c7b5, #0b9488);
+    --tv-grad-orange: linear-gradient(135deg, #f3d878, #ddaf32);
+    --tv-shadow: 0 10px 30px rgba(16, 47, 58, 0.1);
+    --tv-shadow-lg: 0 24px 50px rgba(16, 47, 58, 0.2);
     --tv-hand: "Caveat", cursive;
-    --tv-sand: #f4c95d;
-    --tv-sand-dark: #e8b93e;
-    --tv-sand-light: #fef3c7;
-    --tv-on-sand: #0f172a;
-    --tv-nature: #16a34a;
-    --tv-forest: #166534;
-    --tv-tech: #2563eb;
+    --tv-sand: #f3d39a; /* Warm Sand: nền section, badge, hình trang trí */
+    --tv-sand-dark: #c99a22;
+    --tv-sand-light: #fff4d8; /* Cream Sand: nền phụ */
+    --tv-on-sand: #102f3a;
+    --tv-nature: #3f8058; /* Vietnam Green */
+    --tv-forest: #24553c; /* Forest Deep */
+    --tv-tech: #3b82f6; /* Tech Blue: chỉ cho trạng thái hệ thống */
+    --tv-coral: #e8795b; /* Sunset Coral: ≤1% giao diện (hot, thông báo mới) */
 }
 body {
     --base-font: "Be Vietnam Pro", "Outfit", sans-serif;
     --heading-font: "Be Vietnam Pro", "Outfit", sans-serif;
-    --primary-color: #0d9488;
-    --secondary-color: #f4c95d;
-    --heading-color: #0f172a;
+    --primary-color: #0b9488;
+    --secondary-color: #ddaf32;
+    --heading-color: #102f3a;
     --base-color: #334155;
     --lighter-color: #f0fdfa;
     --border-color: #e2e8f0;
-    --primary-rgb: 13, 148, 136;
-    --secondary-rgb: 244, 201, 93;
+    --primary-rgb: 11, 148, 136;
+    --secondary-rgb: 221, 175, 50;
     font-family: var(--base-font);
     background: var(--tv-bg);
 }
@@ -58,14 +60,14 @@ html {
 .theme-btn,
 a.theme-btn {
     background: var(--tv-grad-teal);
-    box-shadow: 0 10px 24px rgba(13, 148, 136, 0.28);
+    box-shadow: 0 10px 24px rgba(11, 148, 136, 0.28);
     padding: 13px 32px;
     position: relative;
 }
 .theme-btn.bgc-secondary,
 a.theme-btn.bgc-secondary {
     background: var(--tv-grad-orange);
-    box-shadow: 0 10px 24px rgba(244, 201, 93, 0.35);
+    box-shadow: 0 10px 24px rgba(221, 175, 50, 0.35);
 }
 .theme-btn:hover,
 a.theme-btn:hover {
@@ -112,7 +114,7 @@ a.theme-btn:hover {
     width: 60%;
 }
 .main-header.fixed-header .header-upper {
-    background: rgba(15, 23, 42, 0.8) !important;
+    background: rgba(16, 47, 58, 0.8) !important;
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.22);
@@ -166,19 +168,21 @@ a.theme-btn:hover {
     background: var(--tv-navy);
 }
 .tv-hero__bg {
+    /* Ảnh dựng bằng transform (chạy trên GPU) thay vì animate background-position
+       (mỗi khung hình phải vẽ lại ảnh 2400px -> giật). Không scale để ảnh không bị nở/mờ. */
     position: absolute;
-    inset: -6% 0 -6% 0;
+    inset: -6% -3% -6% -3%;
     background-size: cover;
     background-position: center;
-    will-change: transform;
-    animation: tvPan 30s ease-in-out infinite alternate;
+    background-color: var(--tv-navy);
+    animation: tvPan 40s ease-in-out infinite alternate;
 }
 @keyframes tvPan {
     from {
-        background-position: 40% 45%;
+        transform: translate3d(-1.5%, 0, 0);
     }
     to {
-        background-position: 60% 55%;
+        transform: translate3d(1.5%, 0, 0);
     }
 }
 .tv-hero__shade {
@@ -187,11 +191,11 @@ a.theme-btn:hover {
     background:
         linear-gradient(
             90deg,
-            rgba(15, 23, 42, 0.68) 0%,
-            rgba(15, 23, 42, 0.28) 48%,
-            rgba(15, 23, 42, 0) 78%
+            rgba(16, 47, 58, 0.68) 0%,
+            rgba(16, 47, 58, 0.28) 48%,
+            rgba(16, 47, 58, 0) 78%
         ),
-        linear-gradient(180deg, rgba(15, 23, 42, 0.45) 0%, transparent 28%);
+        linear-gradient(180deg, rgba(16, 47, 58, 0.45) 0%, transparent 28%);
 }
 .tv-hero .container {
     position: relative;
@@ -202,7 +206,7 @@ a.theme-btn:hover {
     font-weight: 700;
     letter-spacing: 0.22em;
     font-size: 13px;
-    color: #fef3c7;
+    color: #fff4d8;
     margin-bottom: 12px;
     text-transform: uppercase;
 }
@@ -373,7 +377,7 @@ a.theme-btn:hover {
     border-radius: 50px;
     padding: 17px 34px;
     background: var(--tv-grad-orange);
-    box-shadow: 0 10px 24px rgba(244, 201, 93, 0.4);
+    box-shadow: 0 10px 24px rgba(221, 175, 50, 0.4);
     flex: none;
 }
 @media (max-width: 991px) {
@@ -483,8 +487,8 @@ a.theme-btn:hover {
     justify-content: space-between;
     padding: 14px 18px;
     background:
-        linear-gradient(120deg, rgba(15, 23, 42, 0.1), rgba(15, 23, 42, 0.55)),
-        linear-gradient(135deg, #2dd4bf, #0d9488 60%, #115e59);
+        linear-gradient(120deg, rgba(16, 47, 58, 0.1), rgba(16, 47, 58, 0.55)),
+        linear-gradient(135deg, #25c7b5, #0b9488 60%, #115e59);
 }
 .tv-promo::before {
     content: "";
@@ -492,7 +496,7 @@ a.theme-btn:hover {
     width: 120px;
     height: 120px;
     border-radius: 50%;
-    background: rgba(244, 201, 93, 0.5);
+    background: rgba(221, 175, 50, 0.5);
     right: 30px;
     top: -44px;
     animation: tvPulse 5s ease-in-out infinite;
@@ -621,7 +625,7 @@ a.theme-btn:hover {
     position: absolute;
     inset: auto 0 0 0;
     height: 55%;
-    background: linear-gradient(transparent, rgba(15, 23, 42, 0.55));
+    background: linear-gradient(transparent, rgba(16, 47, 58, 0.55));
     pointer-events: none;
 }
 .tv-badge {
@@ -640,7 +644,7 @@ a.theme-btn:hover {
     background: #ef4466;
 }
 .tv-badge.is-green {
-    background: #166534;
+    background: #24553c;
 }
 .tv-heart {
     position: absolute;
@@ -683,7 +687,7 @@ a.theme-btn:hover {
     font-weight: 600;
 }
 .tv-rating i {
-    color: #f4c95d;
+    color: #ddaf32;
     margin-right: 4px;
 }
 .tv-card__body {
@@ -779,14 +783,14 @@ a.theme-btn:hover {
 }
 .scroll-top {
     background: var(--tv-grad-orange) !important;
-    box-shadow: 0 10px 24px rgba(244, 201, 93, 0.4);
+    box-shadow: 0 10px 24px rgba(221, 175, 50, 0.4);
 }
 input:focus,
 textarea:focus,
 select:focus,
 .form-control:focus {
     border-color: var(--tv-teal) !important;
-    box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.15) !important;
+    box-shadow: 0 0 0 4px rgba(11, 148, 136, 0.15) !important;
 }
 .form-control,
 .nice-select {
@@ -796,8 +800,8 @@ select:focus,
     opacity: 1;
     background: linear-gradient(
         180deg,
-        rgba(15, 23, 42, 0.92),
-        rgba(2, 6, 23, 0.98)
+        rgba(16, 47, 58, 0.92),
+        rgba(10, 31, 39, 0.98)
     );
 }
 .main-footer a:hover {
@@ -814,7 +818,7 @@ select:focus,
         90deg,
         var(--tv-teal-2),
         var(--tv-orange),
-        #e8b93e
+        #ddaf32
     );
     transition: width 0.1s linear;
 }
@@ -846,7 +850,7 @@ select:focus,
         box-shadow 0.35s;
 }
 .tv-header.is-scrolled {
-    background: rgba(15, 23, 42, 0.84);
+    background: rgba(16, 47, 58, 0.84);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     padding: 8px 0;
@@ -1008,7 +1012,7 @@ select:focus,
     padding: 10px 20px;
     border-radius: 30px;
     white-space: nowrap;
-    box-shadow: 0 8px 20px rgba(244, 201, 93, 0.35);
+    box-shadow: 0 8px 20px rgba(221, 175, 50, 0.35);
     transition:
         transform 0.3s,
         box-shadow 0.3s;
@@ -1016,7 +1020,7 @@ select:focus,
 .tv-book:hover {
     color: #fff;
     transform: translateY(-2px);
-    box-shadow: 0 12px 26px rgba(244, 201, 93, 0.45);
+    box-shadow: 0 12px 26px rgba(221, 175, 50, 0.45);
 }
 .tv-book i {
     margin-left: 6px;
@@ -1171,7 +1175,7 @@ select:focus,
         gap: 2px;
         margin: 0;
         padding: 12px;
-        background: rgba(15, 23, 42, 0.96);
+        background: rgba(16, 47, 58, 0.96);
         border-radius: 20px;
         box-shadow: var(--tv-shadow-lg);
         opacity: 0;
@@ -1213,9 +1217,9 @@ select:focus,
    GIAI ĐOẠN 2 — TRANG CON: header đặc, banner, trang danh sách tour
    ===================================================================== */
 .tv-header.is-solid {
-    background: linear-gradient(90deg, #0f172a, #115e59);
+    background: linear-gradient(90deg, #102f3a, #115e59);
     padding: 10px 0;
-    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.25);
+    box-shadow: 0 8px 28px rgba(16, 47, 58, 0.25);
 }
 .page-wrapper > .tv-banner:first-of-type {
     margin-top: 0;
@@ -1243,8 +1247,8 @@ select:focus,
     z-index: 1;
     background: linear-gradient(
         100deg,
-        rgba(15, 23, 42, 0.88) 0%,
-        rgba(13, 148, 136, 0.55) 100%
+        rgba(16, 47, 58, 0.88) 0%,
+        rgba(11, 148, 136, 0.55) 100%
     );
 }
 .tv-banner::after {
@@ -1258,8 +1262,8 @@ select:focus,
     border-radius: 50%;
     background: radial-gradient(
         circle,
-        rgba(244, 201, 93, 0.5),
-        rgba(244, 201, 93, 0.18) 50%,
+        rgba(221, 175, 50, 0.5),
+        rgba(221, 175, 50, 0.18) 50%,
         transparent 70%
     );
     animation: tvPulse 8s ease-in-out infinite;
@@ -1370,7 +1374,7 @@ select:focus,
     border-radius: 50%;
     border: 3px solid #fff;
     background: var(--tv-orange-2);
-    box-shadow: 0 4px 12px rgba(244, 201, 93, 0.45);
+    box-shadow: 0 4px 12px rgba(221, 175, 50, 0.45);
     outline: 0;
     cursor: grab;
 }
@@ -1462,7 +1466,7 @@ select:focus,
 .pagination-tours .page-item.active .page-link {
     background: var(--tv-grad-teal);
     color: #fff;
-    box-shadow: 0 10px 22px rgba(13, 148, 136, 0.35);
+    box-shadow: 0 10px 22px rgba(11, 148, 136, 0.35);
 }
 .pagination-tours .page-item.disabled .page-link {
     opacity: 0.45;
@@ -1518,12 +1522,12 @@ select:focus,
 .tv-btn-solid {
     background: var(--tv-grad-teal);
     color: #fff;
-    box-shadow: 0 10px 22px rgba(13, 148, 136, 0.3);
+    box-shadow: 0 10px 22px rgba(11, 148, 136, 0.3);
 }
 .tv-btn-orange {
     background: var(--tv-grad-orange);
     color: var(--tv-on-sand);
-    box-shadow: 0 10px 22px rgba(244, 201, 93, 0.38);
+    box-shadow: 0 10px 22px rgba(221, 175, 50, 0.38);
 }
 .tv-btn-ghost {
     background: #fff;
@@ -1717,7 +1721,7 @@ select:focus,
     opacity: 0.6;
 }
 .tv-chipbtn i {
-    color: #e0a82e;
+    color: #c99a22;
     font-size: 11px;
 }
 .tv-chipbtn:hover {
@@ -1728,7 +1732,7 @@ select:focus,
     background: var(--tv-grad-teal);
     border-color: transparent;
     color: #fff;
-    box-shadow: 0 6px 16px rgba(13, 148, 136, 0.3);
+    box-shadow: 0 6px 16px rgba(11, 148, 136, 0.3);
 }
 .tv-chipbtn.is-on i {
     color: #fff;
@@ -1775,7 +1779,7 @@ select:focus,
     border-radius: 50%;
     background: var(--tv-orange-2);
     border: 3px solid #fff;
-    box-shadow: 0 4px 12px rgba(244, 201, 93, 0.5);
+    box-shadow: 0 4px 12px rgba(221, 175, 50, 0.5);
     cursor: grab;
 }
 .tv-range input[type="range"]::-moz-range-thumb {
@@ -1785,7 +1789,7 @@ select:focus,
     border-radius: 50%;
     background: var(--tv-orange-2);
     border: 3px solid #fff;
-    box-shadow: 0 4px 12px rgba(244, 201, 93, 0.5);
+    box-shadow: 0 4px 12px rgba(221, 175, 50, 0.5);
     cursor: grab;
 }
 .tv-range input[type="range"]::-webkit-slider-runnable-track {
@@ -1827,7 +1831,7 @@ select:focus,
     font-size: 12px;
 }
 .tv-mini small i {
-    color: #e0a82e;
+    color: #c99a22;
 }
 .tv-mini:hover b {
     color: var(--tv-teal);
@@ -1918,7 +1922,7 @@ select:focus,
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: #fef3c7;
+    background: #fff4d8;
     color: #92400e;
     border-radius: 30px;
     padding: 5px 6px 5px 14px;
@@ -2039,7 +2043,7 @@ select:focus,
 .tv-pager a.is-active {
     background: var(--tv-grad-teal);
     color: #fff;
-    box-shadow: 0 10px 22px rgba(13, 148, 136, 0.35);
+    box-shadow: 0 10px 22px rgba(11, 148, 136, 0.35);
 }
 .tv-pager__dots {
     color: var(--tv-mute);
@@ -2068,7 +2072,7 @@ select:focus,
     position: fixed;
     inset: 0;
     z-index: 1090;
-    background: rgba(15, 23, 42, 0.55);
+    background: rgba(16, 47, 58, 0.55);
     opacity: 0;
     visibility: hidden;
     transition: 0.3s;
@@ -2215,7 +2219,7 @@ select:focus,
     color: var(--tv-teal);
 }
 .td-star {
-    color: #f2a516 !important;
+    color: #ddaf32 !important;
 }
 .td-share {
     flex: none;
@@ -2608,7 +2612,7 @@ select:focus,
     margin-top: 6px;
 }
 .td-stars-static {
-    color: #f2a516;
+    color: #ddaf32;
     font-size: 14px;
     margin: 8px 0 0;
     letter-spacing: 2px;
@@ -2637,7 +2641,7 @@ select:focus,
 }
 .td-bar__fill {
     height: 100%;
-    background: #f2a516;
+    background: #ddaf32;
     border-radius: 6px;
 }
 .td-bar em {
@@ -2739,7 +2743,7 @@ select:focus,
 }
 .td-stars i.fas,
 .td-stars i.active {
-    color: #f2a516;
+    color: #ddaf32;
 }
 .td-stars i:hover {
     transform: scale(1.12);
@@ -2767,7 +2771,7 @@ select:focus,
     border: 1px solid var(--tv-line);
     border-radius: 18px;
     padding: 24px;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.07);
+    box-shadow: 0 10px 30px rgba(16, 47, 58, 0.07);
 }
 .td-book__price small {
     display: block;
@@ -2863,7 +2867,7 @@ select:focus,
     color: var(--tv-on-sand);
 }
 .td-btn--cta:hover {
-    background: #e8b93e;
+    background: #ddaf32;
     color: var(--tv-on-sand);
 }
 .td-btn--primary {
@@ -2905,7 +2909,7 @@ select:focus,
     position: fixed;
     inset: 0;
     z-index: 2000;
-    background: rgba(2, 6, 23, 0.94);
+    background: rgba(10, 31, 39, 0.94);
     display: none;
     align-items: center;
     justify-content: center;
@@ -2982,7 +2986,7 @@ select:focus,
         padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px));
         background: #fff;
         border-top: 1px solid var(--tv-line);
-        box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.08);
+        box-shadow: 0 -8px 24px rgba(16, 47, 58, 0.08);
         transition: transform 0.3s;
     }
     .td-mbar.is-hidden {
@@ -3079,7 +3083,7 @@ select:focus,
     margin: 12px 0;
 }
 .tv-alert--warn {
-    background: #fef3c7;
+    background: #fff4d8;
     color: #92400e;
 }
 .tv-alert--bad {
@@ -3095,7 +3099,7 @@ select:focus,
 }
 .tv-alert--ok {
     background: #dcfce7;
-    color: #166534;
+    color: #24553c;
 }
 .tv-status-pill {
     display: inline-block;
@@ -3107,16 +3111,16 @@ select:focus,
     color: #334155;
 }
 .tv-status-pill.is-wait {
-    background: #fef3c7;
+    background: #fff4d8;
     color: #92400e;
 }
 .tv-status-pill.is-go {
     background: #ccfbf1;
-    color: #0f766e;
+    color: #086b66;
 }
 .tv-status-pill.is-done {
     background: #dcfce7;
-    color: #166534;
+    color: #24553c;
 }
 .tv-status-pill.is-cancel {
     background: #fdecec;
@@ -3229,7 +3233,7 @@ select:focus,
 
 /* ---------- Footer ---------- */
 .tv-footer {
-    background: #0f172a;
+    background: #102f3a;
     color: #cbd5e1;
     padding: 64px 0 0;
     margin-top: 0;
@@ -3370,7 +3374,7 @@ select:focus,
     border: 1px solid var(--tv-line);
     border-radius: 24px;
     overflow: hidden;
-    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+    box-shadow: 0 20px 50px rgba(16, 47, 58, 0.08);
 }
 .tv-auth__aside {
     position: relative;
@@ -3385,8 +3389,8 @@ select:focus,
     inset: 0;
     background: linear-gradient(
         180deg,
-        rgba(15, 23, 42, 0.55),
-        rgba(15, 23, 42, 0.85)
+        rgba(16, 47, 58, 0.55),
+        rgba(16, 47, 58, 0.85)
     );
 }
 .tv-auth__aside-in {
@@ -3447,7 +3451,7 @@ select:focus,
     transition: background 0.2s;
 }
 .tv-auth__submit:hover {
-    background: #e8b93e;
+    background: #ddaf32;
     color: var(--tv-on-sand);
 }
 .tv-auth__submit:disabled {
@@ -3476,7 +3480,7 @@ select:focus,
     color: #94a3b8;
 }
 .tv-auth__ok {
-    color: #166534;
+    color: #24553c;
     font-size: 14px;
     font-weight: 600;
     margin: 0 0 14px;
@@ -3544,7 +3548,7 @@ select:focus,
 }
 .tv-status__icon.is-ok {
     background: #dcfce7;
-    color: #166534;
+    color: #24553c;
 }
 .tv-status__icon.is-fail {
     background: #fdecec;
@@ -3765,7 +3769,7 @@ select:focus,
     border: 1px solid var(--tv-line);
     border-radius: 20px;
     padding: 26px;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.07);
+    box-shadow: 0 10px 30px rgba(16, 47, 58, 0.07);
     width: auto !important;
     margin: 0;
 }
@@ -3868,7 +3872,7 @@ select:focus,
 }
 .tv-booking .booking-btn.btn-submit-booking:hover,
 .tv-booking a.booking-btn:hover {
-    background: #e8b93e;
+    background: #ddaf32;
     color: var(--tv-on-sand);
 }
 .tv-booking .booking-btn.btn-cancel-booking {
@@ -3918,7 +3922,7 @@ select:focus,
     border: 4px solid #fff;
     box-shadow:
         0 0 0 1px var(--tv-line),
-        0 8px 20px rgba(15, 23, 42, 0.1);
+        0 8px 20px rgba(16, 47, 58, 0.1);
     margin-bottom: 14px;
 }
 .tv-profile__name {
@@ -3992,7 +3996,7 @@ select:focus,
     transition: box-shadow 0.3s;
 }
 .tv-order:hover {
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.09);
+    box-shadow: 0 12px 30px rgba(16, 47, 58, 0.09);
 }
 .tv-order.is-hidden {
     display: none;
@@ -4116,7 +4120,7 @@ select:focus,
     font-size: 12px;
 }
 .tv-mini--card small i {
-    color: #f2a516;
+    color: #ddaf32;
 }
 .tv-mini--card:hover {
     border-color: var(--tv-teal);
@@ -4229,7 +4233,7 @@ select:focus,
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(transparent 45%, rgba(15, 23, 42, 0.82));
+    background: linear-gradient(transparent 45%, rgba(16, 47, 58, 0.82));
 }
 .tv-dest__label {
     position: absolute;
@@ -4400,10 +4404,10 @@ select:focus,
     padding: 0;
     max-width: 440px;
     width: calc(100% - 32px);
-    box-shadow: 0 30px 80px rgba(15, 23, 42, 0.35);
+    box-shadow: 0 30px 80px rgba(16, 47, 58, 0.35);
 }
 .tv-modal::backdrop {
-    background: rgba(15, 23, 42, 0.55);
+    background: rgba(16, 47, 58, 0.55);
 }
 .tv-modal__in {
     padding: 28px;
@@ -4531,7 +4535,7 @@ a.tv-chipbtn {
     display: grid;
     place-items: center;
     cursor: pointer;
-    box-shadow: 0 10px 28px rgba(13, 148, 136, 0.45);
+    box-shadow: 0 10px 28px rgba(11, 148, 136, 0.45);
     transition:
         transform 0.25s,
         background 0.25s;
@@ -4579,7 +4583,7 @@ a.tv-chipbtn {
     color: var(--tv-ink);
     border-radius: 30px;
     padding: 6px 18px 6px 6px;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+    box-shadow: 0 8px 24px rgba(16, 47, 58, 0.18);
     font: inherit;
     font-size: 14px;
     font-weight: 600;
@@ -4606,7 +4610,7 @@ a.tv-chipbtn {
     background: var(--tv-teal);
 }
 .tc-dial__ic.is-phone {
-    background: #16a34a;
+    background: #3f8058;
 }
 .tc-dial__ic.is-mess {
     background: #0084ff;
@@ -4636,7 +4640,7 @@ body:has(.td-mbar) .tc-widget {
     height: min(580px, calc(100vh - 120px));
     background: #fff;
     border-radius: 20px;
-    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.32);
+    box-shadow: 0 24px 70px rgba(16, 47, 58, 0.32);
     overflow: hidden;
     opacity: 0;
     transform: translateY(14px) scale(0.98);
@@ -4943,7 +4947,7 @@ body:has(.td-mbar) .tc-widget {
     border: 1px solid var(--tv-line);
     border-radius: 22px;
     overflow: hidden;
-    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+    box-shadow: 0 20px 50px rgba(16, 47, 58, 0.08);
 }
 .tc-contact__chat {
     height: 100%;
@@ -5061,14 +5065,13 @@ body:has(.td-mbar) .tc-widget {
      Vàng cát   --tv-sand / --tv-sand-dark / --tv-sand-light : MỘT hành động chính mỗi màn hình (chữ trên nền cát luôn là navy)
      Xanh lá    --tv-nature / --tv-forest : thiên nhiên, thành công, "đã hoàn tất"
      Xanh blue  --tv-tech : điểm nhấn công nghệ rất nhỏ (liên kết trong nội dung, vòng focus, thông tin)
-     Nền        --tv-bg #F8FAFC, thẻ trắng, chữ slate, viền #E2E8F0
+     Nền        --tv-bg #F8FBF9, thẻ trắng, chữ slate, viền #E2E8F0
    (Tên cũ --tv-orange / --tv-orange-2 được giữ để không vỡ giao diện; nay đều là vàng cát.)
    ===================================================================== */
 
 /* chữ trên nền vàng cát phải đậm để đọc rõ */
 .theme-btn.bgc-secondary,
 a.theme-btn.bgc-secondary,
-.tv-search .theme-btn,
 .scroll-top,
 .tv-qchip:hover,
 .tv-footer__social a:hover {
@@ -5085,26 +5088,34 @@ a.theme-btn.bgc-secondary,
     color: var(--tv-on-sand);
 }
 .tv-hero h1 em path {
-    stroke: var(--tv-sand);
+    stroke: var(--tv-orange-2);
 }
 .tv-eyebrow {
     color: var(--tv-sand-light);
 }
 
-/* nút chính: vàng cát phẳng, bóng nhẹ */
-.tv-btn-orange,
+/* nút chính: Vietnam Turquoise (hành động chính luôn là turquoise);
+   vàng lúa chỉ cho CTA phụ (.tv-btn-orange) */
 .td-btn--cta,
 .tv-auth__submit,
 .tv-book,
 .tv-search .theme-btn {
-    background: var(--tv-sand);
-    box-shadow: 0 6px 16px rgba(232, 185, 62, 0.35);
+    background: var(--tv-teal);
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(11, 148, 136, 0.32);
 }
-.tv-btn-orange:hover,
 .td-btn--cta:hover,
 .tv-auth__submit:hover,
 .tv-book:hover,
 .tv-search .theme-btn:hover {
+    background: var(--tv-teal-dark);
+    color: #fff;
+}
+.tv-btn-orange {
+    background: var(--tv-orange);
+    box-shadow: 0 6px 16px rgba(221, 175, 50, 0.35);
+}
+.tv-btn-orange:hover {
     background: var(--tv-sand-dark);
 }
 
@@ -5151,7 +5162,7 @@ a.theme-btn.bgc-secondary,
 }
 .tv-pager a.is-active,
 .tv-chipbtn.is-on {
-    box-shadow: 0 6px 14px rgba(13, 148, 136, 0.28);
+    box-shadow: 0 6px 14px rgba(11, 148, 136, 0.28);
 }
 
 /* vàng cát nhạt làm nền ấm cho các khối nhấn */
@@ -5195,8 +5206,8 @@ a.theme-btn.bgc-secondary,
 .tv-banner::after {
     background: radial-gradient(
         circle,
-        rgba(244, 201, 93, 0.35),
-        rgba(244, 201, 93, 0.1) 50%,
+        rgba(221, 175, 50, 0.35),
+        rgba(221, 175, 50, 0.1) 50%,
         transparent 70%
     );
 }
@@ -5219,4 +5230,61 @@ a.theme-btn.bgc-secondary,
         transform: none;
         transition: none;
     }
+}
+
+/* =====================================================================
+   FOOTER TRANG CHỦ — hết giật khi tải lần đầu (Vietnamese Tropical Discovery)
+   ===================================================================== */
+.main-footer {
+    background-color: var(--tv-navy);
+    background-size: cover;
+    background-position: center;
+    min-height: 640px; /* giữ chỗ: ảnh/font tải xong không đẩy trang */
+    contain: layout paint; /* nội dung footer không làm trang phía trên tính lại */
+    overflow: hidden;
+}
+.main-footer.overlay::before {
+    opacity: 1;
+    background:
+        radial-gradient(
+            120% 80% at 85% 0%,
+            rgba(11, 148, 136, 0.28),
+            transparent 60%
+        ),
+        linear-gradient(180deg, rgba(16, 47, 58, 0.9), rgba(10, 31, 39, 0.97));
+}
+.main-footer .section-title p span,
+.main-footer .section-title p span.count-text {
+    background: transparent;
+    padding: 0;
+    font-weight: 700;
+}
+.main-footer .count-text {
+    display: inline-block;
+    min-width: 5.2ch; /* số đếm 0 -> 34500 không còn làm đổi độ rộng dòng */
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    color: var(--tv-orange-2);
+}
+.main-footer .footer-title h5,
+.main-footer .section-title h2 {
+    color: #fff;
+}
+.main-footer a {
+    color: rgba(255, 255, 255, 0.78);
+}
+.main-footer a:hover {
+    color: var(--tv-orange-2);
+    text-decoration: none;
+}
+.main-footer .social-style-one a:hover {
+    background: var(--tv-orange);
+    color: var(--tv-navy);
+}
+.main-footer .footer-bottom {
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.main-footer .newsletter-form .theme-btn {
+    background: var(--tv-grad-orange);
+    color: var(--tv-navy);
 }

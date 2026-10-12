@@ -7,7 +7,7 @@
 
 :root {
     --px-radius: 20px;
-    --px-ring: 0 0 0 4px rgba(13, 148, 136, 0.14);
+    --px-ring: 0 0 0 4px rgba(11, 148, 136, 0.14);
     --px-teal-50: #f0fdfa;
     --px-teal-100: #ccfbf1;
     --px-sand-ink: #7c5a00;
@@ -50,7 +50,7 @@
 .px-btn--sand {
     background: var(--tv-sand);
     color: var(--tv-navy);
-    box-shadow: 0 10px 24px rgba(244, 201, 93, 0.35);
+    box-shadow: 0 10px 24px rgba(221, 175, 50, 0.35);
 }
 .px-btn--sand:hover {
     background: var(--tv-sand-dark);
@@ -73,7 +73,7 @@
     border-radius: 14px;
     padding: 15px 22px;
     font-size: 16px;
-    box-shadow: 0 12px 26px rgba(232, 185, 62, 0.35);
+    box-shadow: 0 12px 26px rgba(221, 175, 50, 0.35);
 }
 .px-btn--cta:hover:not(:disabled) {
     background: var(--tv-sand-dark);
@@ -196,9 +196,9 @@
     z-index: -1;
     background: linear-gradient(
         180deg,
-        rgba(7, 89, 95, 0.5) 0%,
-        rgba(15, 23, 42, 0.08) 36%,
-        rgba(15, 23, 42, 0.8) 100%
+        rgba(8, 107, 102, 0.5) 0%,
+        rgba(16, 47, 58, 0.08) 36%,
+        rgba(16, 47, 58, 0.8) 100%
     );
 }
 .px-hero__in {
@@ -285,7 +285,7 @@
     background: #e2e8f0;
     overflow: hidden;
     aspect-ratio: 16 / 11;
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.2);
+    box-shadow: 0 12px 28px rgba(16, 47, 58, 0.2);
     cursor: zoom-in;
     transition:
         transform 0.2s ease,
@@ -296,7 +296,7 @@
 }
 .px-thumb.td-gallery__item:hover {
     transform: translateY(-4px);
-    box-shadow: 0 18px 34px rgba(15, 23, 42, 0.26);
+    box-shadow: 0 18px 34px rgba(16, 47, 58, 0.26);
 }
 .px-thumb img {
     display: block;
@@ -336,7 +336,7 @@
     border: 1px solid var(--tv-line);
     border-radius: 14px;
     overflow-x: auto;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+    box-shadow: 0 6px 18px rgba(16, 47, 58, 0.05);
 }
 .px-tabs a {
     padding: 10px 20px;
@@ -450,7 +450,7 @@
     color: #fff;
     cursor: pointer;
     text-align: left;
-    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.2);
+    box-shadow: 0 16px 34px rgba(16, 47, 58, 0.2);
 }
 .px-video img {
     position: absolute;
@@ -469,8 +469,8 @@
     inset: 0;
     background: linear-gradient(
         180deg,
-        rgba(15, 23, 42, 0.05) 40%,
-        rgba(15, 23, 42, 0.78) 100%
+        rgba(16, 47, 58, 0.05) 40%,
+        rgba(16, 47, 58, 0.78) 100%
     );
 }
 .px-video__play {
@@ -567,7 +567,7 @@
 }
 .px-days > li > .px-day.td-day[open] {
     border-color: var(--px-teal-100);
-    box-shadow: 0 10px 26px rgba(13, 148, 136, 0.09);
+    box-shadow: 0 10px 26px rgba(11, 148, 136, 0.09);
 }
 .px-day summary {
     display: flex;
@@ -672,7 +672,7 @@
     width: 120px;
     height: 120px;
     border-radius: 50%;
-    background: rgba(244, 201, 93, 0.28);
+    background: rgba(221, 175, 50, 0.28);
 }
 .px-book__head h2 {
     position: relative;
@@ -803,7 +803,7 @@
     align-items: center;
     justify-content: center;
     padding: 20px;
-    background: rgba(2, 6, 23, 0.9);
+    background: rgba(10, 31, 39, 0.9);
 }
 .px-vid.is-open {
     display: flex;
@@ -919,10 +919,10 @@ body.tv-sea .tv-auth {
         ),
         radial-gradient(
             circle at 88% 92%,
-            rgba(244, 201, 93, 0.2),
+            rgba(221, 175, 50, 0.2),
             transparent 36%
         ),
-        linear-gradient(160deg, #0f766e 0%, #0d9488 58%, #115e59 100%);
+        linear-gradient(160deg, #086b66 0%, #0b9488 58%, #115e59 100%);
 }
 body.tv-sea .tv-auth .tv-auth__card {
     display: grid;
@@ -936,7 +936,7 @@ body.tv-sea .tv-auth .tv-auth__card {
     border: 0;
     border-radius: 32px;
     overflow: visible;
-    box-shadow: 0 34px 80px rgba(2, 44, 50, 0.38);
+    box-shadow: 0 34px 80px rgba(16, 47, 58, 0.38);
 }
 body.tv-sea .tv-auth .tv-auth__body {
     display: flex;
@@ -1119,8 +1119,8 @@ body.tv-sea .tv-auth .tv-auth__aside::before {
     inset: 0;
     background: linear-gradient(
         180deg,
-        rgba(8, 47, 73, 0.05) 35%,
-        rgba(7, 54, 58, 0.78) 100%
+        rgba(16, 47, 58, 0.05) 35%,
+        rgba(16, 47, 58, 0.78) 100%
     );
 }
 .px-aside__tip {
@@ -1133,7 +1133,7 @@ body.tv-sea .tv-auth .tv-auth__aside::before {
     border-radius: 18px;
     background: rgba(255, 255, 255, 0.88);
     backdrop-filter: blur(10px);
-    box-shadow: 0 14px 30px rgba(2, 44, 50, 0.25);
+    box-shadow: 0 14px 30px rgba(16, 47, 58, 0.25);
 }
 .px-aside__heart {
     position: absolute;
@@ -1579,8 +1579,8 @@ body.tv-sea .tv-auth .tv-auth__aside::before {
     inset: 0;
     background: linear-gradient(
         180deg,
-        rgba(7, 89, 95, 0.55),
-        rgba(15, 23, 42, 0.25)
+        rgba(8, 107, 102, 0.55),
+        rgba(16, 47, 58, 0.25)
     );
 }
 .px-post {
@@ -1614,7 +1614,7 @@ body.tv-sea .tv-auth .tv-auth__aside::before {
     position: relative;
     margin: 26px 0;
     padding: 22px 26px 22px 64px;
-    background: #fffbeb;
+    background: #fff4d8;
     border-left: 5px solid var(--tv-sand);
     border-radius: 0 16px 16px 0;
 }
@@ -1736,7 +1736,7 @@ body.tv-sea .tv-auth .tv-auth__aside::before {
     background: linear-gradient(
         180deg,
         transparent 45%,
-        rgba(15, 23, 42, 0.82)
+        rgba(16, 47, 58, 0.82)
     );
 }
 .px-side-img span {
@@ -1799,8 +1799,8 @@ body.tv-sea .tv-auth .tv-auth__aside::before {
     z-index: -1;
     background: linear-gradient(
         180deg,
-        rgba(7, 89, 95, 0.78),
-        rgba(15, 23, 42, 0.62)
+        rgba(8, 107, 102, 0.78),
+        rgba(16, 47, 58, 0.62)
     );
 }
 .px-eyebrow {
@@ -1856,7 +1856,7 @@ body.tv-sea .tv-auth .tv-auth__aside::before {
     border: 1px solid var(--tv-line);
     border-radius: 28px;
     overflow: hidden;
-    box-shadow: 0 26px 60px rgba(15, 23, 42, 0.16);
+    box-shadow: 0 26px 60px rgba(16, 47, 58, 0.16);
 }
 .px-contact__side {
     display: grid;
@@ -1967,7 +1967,7 @@ body.tv-sea :is(.px-contact, .tc-widget) .tc-row--bot .tc-bubble {
     border-bottom-left-radius: 6px;
 }
 body.tv-sea :is(.px-contact, .tc-widget) .tc-row--user .tc-bubble {
-    background: linear-gradient(135deg, var(--tv-teal), #0ea5a0);
+    background: linear-gradient(135deg, var(--tv-teal), #0b9488);
     color: #fff;
     border-bottom-right-radius: 6px;
 }
@@ -2082,8 +2082,8 @@ body.tv-sea :is(.px-contact, .tc-widget) .tc-input {
 body.tv-sea :is(.px-contact, .tc-widget) .tc-send {
     width: 40px;
     height: 40px;
-    background: linear-gradient(135deg, var(--tv-teal), #0ea5a0);
-    box-shadow: 0 6px 14px rgba(13, 148, 136, 0.35);
+    background: linear-gradient(135deg, var(--tv-teal), #0b9488);
+    box-shadow: 0 6px 14px rgba(11, 148, 136, 0.35);
 }
 body.tv-sea :is(.px-contact, .tc-widget) .tc-send:hover {
     background: var(--tv-teal-dark);
@@ -2163,8 +2163,8 @@ body.tv-sea .tv-auth .sign-in {
     backdrop-filter: blur(18px) saturate(1.5);
     -webkit-backdrop-filter: blur(18px) saturate(1.5);
     box-shadow:
-        0 1px 0 rgba(13, 148, 136, 0.14),
-        0 14px 36px rgba(8, 74, 79, 0.08);
+        0 1px 0 rgba(11, 148, 136, 0.14),
+        0 14px 36px rgba(16, 47, 58, 0.08);
 }
 
 /* Logo chữ */
@@ -2178,7 +2178,7 @@ body.tv-sea .tv-auth .sign-in {
     width: 38px;
     height: 38px;
     flex: none;
-    filter: drop-shadow(0 4px 10px rgba(13, 148, 136, 0.35));
+    filter: drop-shadow(0 4px 10px rgba(11, 148, 136, 0.35));
     transition: transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 .px-brand:hover .px-brand__mark {
@@ -2207,7 +2207,7 @@ body.tv-sea .tv-auth .sign-in {
     .tv-header:is(.is-solid, .is-scrolled)
     .tv-dd
     > a {
-    color: #0f3d3e;
+    color: #102f3a;
     font-weight: 600;
 }
 :is(body.tv-sea, body.tv-home)
@@ -2218,7 +2218,7 @@ body.tv-sea .tv-auth .sign-in {
     .tv-header:is(.is-solid, .is-scrolled)
     .tv-dd
     > a:hover {
-    background: rgba(13, 148, 136, 0.09);
+    background: rgba(11, 148, 136, 0.09);
     color: var(--tv-teal-dark);
 }
 :is(body.tv-sea, body.tv-home)
@@ -2241,7 +2241,7 @@ body.tv-sea .tv-auth .sign-in {
 :is(body.tv-sea, body.tv-home) .tv-dd__menu {
     border: 1px solid var(--tv-line);
     border-radius: 18px;
-    box-shadow: 0 20px 44px rgba(8, 74, 79, 0.16);
+    box-shadow: 0 20px 44px rgba(16, 47, 58, 0.16);
 }
 
 /* Nút / ô tìm / tài khoản */
@@ -2253,12 +2253,12 @@ body.tv-sea .tv-auth .sign-in {
 :is(body.tv-sea, body.tv-home)
     .tv-header:is(.is-solid, .is-scrolled)
     .tv-icon-btn:hover {
-    background: rgba(13, 148, 136, 0.1);
+    background: rgba(11, 148, 136, 0.1);
 }
 :is(body.tv-sea, body.tv-home)
     .tv-header:is(.is-solid, .is-scrolled)
     .tv-hsearch {
-    background: rgba(13, 148, 136, 0.08);
+    background: rgba(11, 148, 136, 0.08);
 }
 :is(body.tv-sea, body.tv-home)
     .tv-header:is(.is-solid, .is-scrolled)
@@ -2287,7 +2287,7 @@ body.tv-sea .tv-auth .sign-in {
 :is(body.tv-sea, body.tv-home)
     .tv-header:is(.is-solid, .is-scrolled)
     .tv-burger {
-    background: rgba(13, 148, 136, 0.1);
+    background: rgba(11, 148, 136, 0.1);
 }
 :is(body.tv-sea, body.tv-home)
     .tv-header:is(.is-solid, .is-scrolled)
@@ -2314,11 +2314,11 @@ body.tv-sea .tv-auth .sign-in {
     :is(body.tv-sea, body.tv-home) .tv-nav {
         background: rgba(255, 255, 255, 0.97);
         border: 1px solid var(--tv-line);
-        box-shadow: 0 20px 44px rgba(8, 74, 79, 0.16);
+        box-shadow: 0 20px 44px rgba(16, 47, 58, 0.16);
     }
     :is(body.tv-sea, body.tv-home) .tv-nav a,
     :is(body.tv-sea, body.tv-home) .tv-dd__menu a {
-        color: #0f3d3e;
+        color: #102f3a;
     }
     :is(body.tv-sea, body.tv-home) .tv-nav > a:hover,
     :is(body.tv-sea, body.tv-home) .tv-dd__menu a:hover {
@@ -2404,12 +2404,12 @@ body.tv-sea .tv-auth .sign-in {
     background:
         radial-gradient(
             900px 420px at 100% 0,
-            rgba(45, 212, 191, 0.12),
+            rgba(37, 199, 181, 0.12),
             transparent 62%
         ),
         radial-gradient(
             760px 420px at 0 38%,
-            rgba(244, 201, 93, 0.14),
+            rgba(221, 175, 50, 0.14),
             transparent 62%
         ),
         var(--tv-bg);
@@ -2436,14 +2436,14 @@ body.tv-sea .tv-auth .sign-in {
     background:
         radial-gradient(
             70% 60% at 85% 10%,
-            rgba(244, 201, 93, 0.22),
+            rgba(221, 175, 50, 0.22),
             transparent 60%
         ),
         linear-gradient(
             180deg,
-            rgba(7, 89, 95, 0.55) 0%,
-            rgba(8, 47, 73, 0.08) 38%,
-            rgba(8, 47, 73, 0.82) 100%
+            rgba(8, 107, 102, 0.55) 0%,
+            rgba(16, 47, 58, 0.08) 38%,
+            rgba(16, 47, 58, 0.82) 100%
         );
 }
 .px-hero__title {
@@ -2463,7 +2463,7 @@ body.tv-sea .tv-auth .sign-in {
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.8);
     border-radius: 26px;
-    box-shadow: 0 28px 64px rgba(8, 74, 79, 0.2);
+    box-shadow: 0 28px 64px rgba(16, 47, 58, 0.2);
 }
 .px-infobar__cell {
     display: flex;
@@ -2491,7 +2491,7 @@ body.tv-sea .tv-auth .sign-in {
     background: linear-gradient(135deg, var(--tv-teal-2), var(--tv-teal));
     color: #fff;
     font-size: 19px;
-    box-shadow: 0 8px 18px rgba(13, 148, 136, 0.3);
+    box-shadow: 0 8px 18px rgba(11, 148, 136, 0.3);
 }
 .px-infobar__cell small {
     display: block;
@@ -2532,7 +2532,7 @@ body.tv-sea .tv-auth .sign-in {
     align-items: center;
     gap: 14px;
     padding: 14px 16px;
-    background: linear-gradient(135deg, #f0fdfa, #fffbeb);
+    background: linear-gradient(135deg, #f0fdfa, #fff4d8);
     border: 1px solid var(--px-teal-100);
     border-radius: 16px;
     text-decoration: none;
@@ -2544,7 +2544,7 @@ body.tv-sea .tv-auth .sign-in {
 .px-hl__item:hover {
     transform: translateY(-3px);
     border-color: var(--tv-teal-2);
-    box-shadow: 0 14px 28px rgba(13, 148, 136, 0.14);
+    box-shadow: 0 14px 28px rgba(11, 148, 136, 0.14);
 }
 .px-hl__ico {
     flex: none;
@@ -2578,7 +2578,7 @@ body.tv-sea .tv-auth .sign-in {
     border: 0;
     border-radius: 28px;
     padding: 32px;
-    box-shadow: 0 12px 44px rgba(8, 74, 79, 0.07);
+    box-shadow: 0 12px 44px rgba(16, 47, 58, 0.07);
 }
 .px-h2::before {
     width: 6px;
@@ -2587,7 +2587,7 @@ body.tv-sea .tv-auth .sign-in {
 .px-book {
     border: 0;
     border-radius: 26px;
-    box-shadow: 0 24px 60px rgba(8, 74, 79, 0.16);
+    box-shadow: 0 24px 60px rgba(16, 47, 58, 0.16);
 }
 .px-book__head {
     padding: 24px 26px 28px;
@@ -2603,7 +2603,7 @@ body.tv-sea .tv-auth .sign-in {
     background: rgba(255, 255, 255, 0.1);
 }
 .px-day__no {
-    background: linear-gradient(135deg, #fde68a, var(--tv-sand));
+    background: linear-gradient(135deg, #f3d878, var(--tv-sand));
 }
 .px-days__dot {
     transition:
@@ -2677,12 +2677,12 @@ body.tv-sea .tv-auth .sign-in {
     background:
         radial-gradient(
             800px 380px at 0 0,
-            rgba(45, 212, 191, 0.1),
+            rgba(37, 199, 181, 0.1),
             transparent 62%
         ),
         radial-gradient(
             700px 380px at 100% 55%,
-            rgba(244, 201, 93, 0.12),
+            rgba(221, 175, 50, 0.12),
             transparent 62%
         ),
         var(--tv-bg);
@@ -2719,12 +2719,12 @@ body.tv-sea .tv-auth .sign-in {
     background: var(--tv-teal);
     border-color: var(--tv-teal);
     color: #fff;
-    box-shadow: 0 8px 18px rgba(13, 148, 136, 0.28);
+    box-shadow: 0 8px 18px rgba(11, 148, 136, 0.28);
 }
 .px-feature {
     border: 0;
     border-radius: 30px;
-    box-shadow: 0 24px 60px rgba(8, 74, 79, 0.14);
+    box-shadow: 0 24px 60px rgba(16, 47, 58, 0.14);
 }
 .px-feature__img img {
     transition: transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
@@ -2738,18 +2738,18 @@ body.tv-sea .tv-auth .sign-in {
     inset: 0;
     background: linear-gradient(
         120deg,
-        rgba(13, 148, 136, 0.18),
+        rgba(11, 148, 136, 0.18),
         transparent 55%
     );
 }
 .px-card {
     border: 0;
     border-radius: 22px;
-    box-shadow: 0 10px 34px rgba(8, 74, 79, 0.07);
+    box-shadow: 0 10px 34px rgba(16, 47, 58, 0.07);
 }
 .px-card:hover {
     transform: translateY(-6px);
-    box-shadow: 0 22px 48px rgba(8, 74, 79, 0.16);
+    box-shadow: 0 22px 48px rgba(16, 47, 58, 0.16);
 }
 .px-card__body h3 a {
     background: linear-gradient(var(--tv-sand), var(--tv-sand)) 0 100% / 0 3px
@@ -2762,7 +2762,7 @@ body.tv-sea .tv-auth .sign-in {
 .px-box {
     border: 0;
     border-radius: 22px;
-    box-shadow: 0 10px 34px rgba(8, 74, 79, 0.06);
+    box-shadow: 0 10px 34px rgba(16, 47, 58, 0.06);
 }
 .px-bhero {
     height: 340px;
@@ -2770,8 +2770,8 @@ body.tv-sea .tv-auth .sign-in {
 .px-bhero::before {
     background: linear-gradient(
         180deg,
-        rgba(7, 89, 95, 0.6),
-        rgba(8, 47, 73, 0.3)
+        rgba(8, 107, 102, 0.6),
+        rgba(16, 47, 58, 0.3)
     );
 }
 .px-post {
@@ -2780,7 +2780,7 @@ body.tv-sea .tv-auth .sign-in {
 .px-article {
     border: 0;
     border-radius: 30px;
-    box-shadow: 0 28px 64px rgba(8, 74, 79, 0.14);
+    box-shadow: 0 28px 64px rgba(16, 47, 58, 0.14);
 }
 .px-article__intro::first-letter {
     float: left;
@@ -2844,14 +2844,14 @@ body.tv-sea .tv-auth .sign-in {
     background:
         radial-gradient(
             60% 70% at 85% 15%,
-            rgba(244, 201, 93, 0.3),
+            rgba(221, 175, 50, 0.3),
             transparent 62%
         ),
         linear-gradient(
             115deg,
-            rgba(7, 89, 95, 0.88) 0%,
-            rgba(13, 148, 136, 0.55) 48%,
-            rgba(8, 47, 73, 0.42) 100%
+            rgba(8, 107, 102, 0.88) 0%,
+            rgba(11, 148, 136, 0.55) 48%,
+            rgba(16, 47, 58, 0.42) 100%
         );
 }
 .px-bubble {
@@ -2873,7 +2873,7 @@ body.tv-sea .tv-auth .sign-in {
     right: 24%;
     bottom: 20%;
     animation-delay: -4s;
-    background: rgba(244, 201, 93, 0.14);
+    background: rgba(221, 175, 50, 0.14);
 }
 @keyframes px-float {
     0%,
@@ -2919,7 +2919,7 @@ body.tv-sea .tv-auth .sign-in {
 .px-asec--tint {
     margin-top: 64px;
     padding: 72px 0 80px;
-    background: linear-gradient(180deg, #ecfeff 0%, #f0fdfa 60%, #fffbeb 100%);
+    background: linear-gradient(180deg, #ecfeff 0%, #f0fdfa 60%, #fff4d8 100%);
 }
 .px-asec--last {
     padding: 64px 0 90px;
@@ -2960,7 +2960,7 @@ body.tv-sea .tv-auth .sign-in {
 .px-collage img {
     display: block;
     object-fit: cover;
-    box-shadow: 0 26px 56px rgba(8, 74, 79, 0.2);
+    box-shadow: 0 26px 56px rgba(16, 47, 58, 0.2);
 }
 .px-collage__a {
     width: 78%;
@@ -2998,7 +2998,7 @@ body.tv-sea .tv-auth .sign-in {
     background: rgba(255, 255, 255, 0.94);
     backdrop-filter: blur(10px);
     border-radius: 18px;
-    box-shadow: 0 16px 36px rgba(8, 74, 79, 0.18);
+    box-shadow: 0 16px 36px rgba(16, 47, 58, 0.18);
 }
 .px-collage__badge i {
     display: grid;
@@ -3033,14 +3033,14 @@ body.tv-sea .tv-auth .sign-in {
     padding: 18px 20px;
     background: #fff;
     border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(8, 74, 79, 0.07);
+    box-shadow: 0 10px 30px rgba(16, 47, 58, 0.07);
     transition:
         transform 0.25s ease,
         box-shadow 0.25s ease;
 }
 .px-stat:hover {
     transform: translateY(-4px);
-    box-shadow: 0 18px 40px rgba(8, 74, 79, 0.13);
+    box-shadow: 0 18px 40px rgba(16, 47, 58, 0.13);
 }
 .px-stat i {
     font-size: 20px;
@@ -3072,7 +3072,7 @@ body.tv-sea .tv-auth .sign-in {
     padding: 28px 24px;
     background: #fff;
     border-radius: 24px;
-    box-shadow: 0 12px 38px rgba(8, 74, 79, 0.08);
+    box-shadow: 0 12px 38px rgba(16, 47, 58, 0.08);
     overflow: hidden;
     transition:
         transform 0.3s ease,
@@ -3091,7 +3091,7 @@ body.tv-sea .tv-auth .sign-in {
 }
 .px-why__card:hover {
     transform: translateY(-8px);
-    box-shadow: 0 26px 54px rgba(8, 74, 79, 0.16);
+    box-shadow: 0 26px 54px rgba(16, 47, 58, 0.16);
 }
 .px-why__card:hover::before {
     transform: scale(2.4);
@@ -3107,7 +3107,7 @@ body.tv-sea .tv-auth .sign-in {
     background: linear-gradient(135deg, var(--tv-teal-2), var(--tv-teal));
     color: #fff;
     font-size: 23px;
-    box-shadow: 0 10px 22px rgba(13, 148, 136, 0.3);
+    box-shadow: 0 10px 22px rgba(11, 148, 136, 0.3);
 }
 .px-why__card h3 {
     position: relative;
@@ -3171,7 +3171,7 @@ body.tv-sea .tv-auth .sign-in {
     border: 3px solid var(--tv-teal-2);
     color: var(--tv-teal);
     font-size: 24px;
-    box-shadow: 0 12px 28px rgba(13, 148, 136, 0.18);
+    box-shadow: 0 12px 28px rgba(11, 148, 136, 0.18);
     position: relative;
     z-index: 1;
     transition:
@@ -3209,7 +3209,7 @@ body.tv-sea .tv-auth .sign-in {
     border-radius: 26px;
     overflow: hidden;
     text-decoration: none;
-    box-shadow: 0 16px 40px rgba(8, 74, 79, 0.16);
+    box-shadow: 0 16px 40px rgba(16, 47, 58, 0.16);
 }
 .px-dest__card img {
     position: absolute;
@@ -3226,7 +3226,11 @@ body.tv-sea .tv-auth .sign-in {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, transparent 45%, rgba(7, 54, 58, 0.85));
+    background: linear-gradient(
+        180deg,
+        transparent 45%,
+        rgba(16, 47, 58, 0.85)
+    );
 }
 .px-dest__txt {
     position: absolute;
@@ -3260,10 +3264,10 @@ body.tv-sea .tv-auth .sign-in {
     gap: 22px;
     padding: 46px 52px;
     border-radius: 34px;
-    background: linear-gradient(120deg, #0f766e 0%, #0d9488 55%, #2dd4bf 130%);
+    background: linear-gradient(120deg, #086b66 0%, #0b9488 55%, #25c7b5 130%);
     color: #fff;
     overflow: hidden;
-    box-shadow: 0 30px 70px rgba(13, 148, 136, 0.32);
+    box-shadow: 0 30px 70px rgba(11, 148, 136, 0.32);
 }
 .px-cta__sun {
     position: absolute;
@@ -3272,7 +3276,7 @@ body.tv-sea .tv-auth .sign-in {
     width: 220px;
     height: 220px;
     border-radius: 50%;
-    background: rgba(244, 201, 93, 0.32);
+    background: rgba(221, 175, 50, 0.32);
     animation: px-float 9s ease-in-out infinite;
 }
 .px-cta > div {

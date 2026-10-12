@@ -1,6 +1,8 @@
 <!-- Hero (Travel theme v2) -->
 <section class="tv-hero">
-    <div class="tv-hero__bg" style="background-image:url('{{ asset('clients/assets/images/hero/hero.jpg') }}');"></div>
+    <div class="tv-hero__bg"
+        style="background-image: url('{{ asset('clients/assets/images/hero/hero.jpg') }}'); background-image: image-set(url('{{ asset('clients/assets/images/hero/hero.webp') }}') type('image/webp'), url('{{ asset('clients/assets/images/hero/hero.jpg') }}') type('image/jpeg'));">
+    </div>
     <div class="tv-hero__shade"></div>
 
     <div class="container">
@@ -9,7 +11,7 @@
             Những hành trình
             <em>đáng nhớ
                 <svg viewBox="0 0 200 14" preserveAspectRatio="none" aria-hidden="true">
-                    <path d="M2 9 Q50 1 100 8 T198 6" stroke="#FF9F1C" stroke-width="4" fill="none"
+                    <path d="M2 9 Q50 1 100 8 T198 6" stroke="#F3D878" stroke-width="4" fill="none"
                         stroke-linecap="round" />
                 </svg>
             </em>
