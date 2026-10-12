@@ -10,25 +10,28 @@
     $holdHours = (int) config('travela.hold_hours', 48);
 @endphp
 
-<main class="tc-contact">
+<main class="px-contact">
+    <section class="px-contact__top"
+        style="background-image:url('{{ asset('clients/assets/images/banner/banner-contact.jpg') }}')">
+        <div class="container">
+            <span class="px-eyebrow"><i class="fas fa-circle" aria-hidden="true"></i> Hỗ trợ trực tuyến</span>
+            <h1>Trò chuyện với {{ config('site.name') }}</h1>
+            <p>Nhắn trực tiếp như một cuộc trò chuyện. Chọn câu hỏi nhanh bên dưới tin nhắn để nhận câu trả lời ngay.
+            </p>
+        </div>
+        <svg class="px-wave" viewBox="0 0 1440 80" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0 40 Q180 80 380 48 T760 44 T1130 28 T1440 48 V80 H0Z" />
+        </svg>
+    </section>
+
     <div class="container">
-        <header class="tc-contact__hero">
-            <div class="tc-contact__hero-bg" aria-hidden="true"></div>
-            <div class="tc-contact__hero-content">
-                <span class="tc-contact__eyebrow"><i class="fal fa-circle"></i> Hỗ trợ trực tuyến</span>
-                <h1>Trò chuyện với TravelTrip</h1>
-                <p>Nhắn trực tiếp cho chúng tôi như một cuộc trò chuyện. Bạn cũng có thể chọn câu hỏi nhanh để nhận câu
-                    trả lời ngay.</p>
+        <div class="px-contact__shell">
+            {{-- Khung chat kiểu Messenger (dùng chung bộ máy travel-chat.js với bong bóng nổi) --}}
+            <div class="px-contact__chatwrap">
+                <div class="px-contact__chat" data-travel-chat="page" aria-label="Khung chat hỗ trợ"></div>
             </div>
-            <div class="tc-contact__hero-badge"><i class="fal fa-comment-alt-dots"></i><span>Phản hồi nhanh</span></div>
-        </header>
 
-        <div class="tc-contact__shell">
-            {{-- Khung chat kiểu Messenger (dùng chung bộ máy với bong bóng nổi) --}}
-            <div class="tc-contact__chat" data-travel-chat="page" aria-label="Khung chat hỗ trợ"></div>
-
-            {{-- Cột thông tin bên phải --}}
-            <aside class="tc-contact__side">
+            <aside class="px-contact__side">
                 <section>
                     <h2>Cách khác để liên hệ</h2>
                     <ul class="tc-ways">

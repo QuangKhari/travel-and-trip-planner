@@ -5,61 +5,46 @@ namespace App\Http\Controllers\clients;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
+/**
+ * Danh sách blog. Nguồn dữ liệu: config/blog.php (nội dung mẫu).
+ * Hỗ trợ lọc ?cat=Tên danh mục và tìm ?q=từ khóa.
+ */
 class BlogController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Request $request)
     {
-        return view('clients.blogs');
-    }
+        $title = 'Blog';
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
+        $all = collect(config('blog.posts', []));
+        $cat = trim((string) $request->query('cat', ''));
+        $q = trim((string) $request->query('q', ''));
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
+        $categories = collect(config('blog.categories', []))
+            ->mapWithKeys(fn($name) => [$name => $all->where('category', $name)->count()]);
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
+        $posts = $all
+            ->when($cat !== '', fn($c) => $c->where('category', $cat))
+            ->when($q !== '', fn($c) => $c->filter(
+                fn($p) => mb_stripos($p['title'] . ' ' . $p['excerpt'], $q) !== false
+            ))
+            ->values();
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
+        $featured = $posts->firstWhere('featured', true) ?? $posts->first();
+        $rest = $posts
+            ->reject(fn($p) => $featured && $p['slug'] === $featured['slug'])
+            ->values();
+        $latest = $all->sortByDesc('date')->take(4)->values();
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+        return view('clients.blogs', compact(
+            'title',
+            'all',
+            'posts',
+            'featured',
+            'rest',
+            'latest',
+            'categories',
+            'cat',
+            'q'
+        ));
     }
 }

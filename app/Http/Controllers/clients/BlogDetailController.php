@@ -3,63 +3,36 @@
 namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 
+/**
+ * Chi tiết blog theo slug. Không truyền slug thì mở bài nổi bật (giữ tương thích route cũ).
+ */
 class BlogDetailController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index($slug = null)
     {
-        return view('clients.blog-detail');
-    }
+        $all = collect(config('blog.posts', []))->values();
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
+        $post = $slug
+            ? $all->firstWhere('slug', $slug)
+            : ($all->firstWhere('featured', true) ?? $all->first());
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
+        if (!$post) {
+            abort(404);
+        }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
+        $idx = $all->search(fn($p) => $p['slug'] === $post['slug']);
+        $prev = $idx > 0 ? $all[$idx - 1] : null;
+        $next = $idx < $all->count() - 1 ? $all[$idx + 1] : null;
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
+        $related = $all
+            ->filter(fn($p) => $p['slug'] !== $post['slug'])
+            ->sortByDesc(fn($p) => $p['category'] === $post['category'] ? 1 : 0)
+            ->take(3)
+            ->values();
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
+        $title = $post['title'];
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+        return view('clients.blog-detail', compact('title', 'post', 'prev', 'next', 'related'));
     }
 }
