@@ -1,17 +1,21 @@
 @include('clients.blocks.header')
 
-<main class="tv-auth">
+<main class="tv-auth px-auth">
     <div class="container">
-        <div class="tv-auth__card">
-            @include('clients.partials.auth-aside', [
-                'asideTitle' => 'Bắt đầu hành trình của bạn',
-                'asideText' =>
-                    'Tạo tài khoản để lưu thông tin, theo dõi đơn đặt tour và nhận email xác nhận ngay sau khi đặt.',
-            ])
+        <div class="tv-auth__card px-auth__card">
+            <div class="tv-auth__body px-auth__body">
+                <a href="{{ route('home') }}" class="px-auth__brand">
+                    <span>{{ config('site.name') }}</span>
+                    <small>Khám phá thêm. Sống trọn từng chuyến đi.</small>
+                </a>
 
-            <div class="tv-auth__body">
+                <div class="px-tabsw" role="tablist">
+                    <a href="{{ route('register.form') }}" role="tab" aria-selected="true" class="is-on">Đăng ký</a>
+                    <a href="{{ route('login') }}" role="tab" aria-selected="false">Đăng nhập</a>
+                </div>
+
                 <section class="signup">
-                    <h1 class="tv-auth__title">Tạo tài khoản</h1>
+                    <h1 class="tv-auth__title">Bắt đầu hành trình của bạn</h1>
                     <p class="tv-auth__sub">Chỉ mất một phút. Chúng tôi sẽ gửi email để kích hoạt tài khoản.</p>
 
                     <form action="{{ route('register') }}" method="POST" class="register-form" id="register-form"
@@ -46,11 +50,11 @@
                             <div class="invalid-feedback" id="validate_repass"></div>
                         </div>
 
-                        <button type="submit" name="signup" id="signup" class="tv-auth__submit">Đăng ký</button>
+                        <button type="submit" name="signup" id="signup" class="tv-auth__submit">Tạo tài
+                            khoản</button>
                     </form>
 
-                    <p class="tv-auth__switch">Đã có tài khoản? <a href="{{ route('login') }}">Đăng
-                            nhập</a></p>
+                    <p class="tv-auth__switch">Đã có tài khoản? <a href="{{ route('login') }}">Đăng nhập</a></p>
 
                     <p class="tv-auth__switch"><a href="javascript:void(0)" id="resend-verification-link">Chưa nhận
                             được email kích hoạt?</a></p>
@@ -61,6 +65,12 @@
                     </div>
                 </section>
             </div>
+
+            @include('clients.partials.auth-aside', [
+                'asideTitle' => 'Mỗi chuyến đi bắt đầu từ đây',
+                'asideText' =>
+                    'Tạo tài khoản để lưu thông tin, theo dõi đơn đặt tour và nhận email xác nhận ngay sau khi đặt.',
+            ])
         </div>
     </div>
 </main>
@@ -68,5 +78,4 @@
 <script>
     window.emailVerificationResendUrl = @json(route('email.verification.resend'));
 </script>
-
 @include('clients.blocks.footer')
