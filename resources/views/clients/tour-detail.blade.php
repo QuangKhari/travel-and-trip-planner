@@ -24,6 +24,10 @@
     $video = \App\Support\TourVideo::parse($tourDetail->video_url ?? null);
     $videoPoster = \App\Support\TourImage::url($images->get(1) ?? $images->first(), 1200);
     $heroImg = \App\Support\TourImage::url($images->first(), 1600);
+
+    // Điểm nhấn: lấy từ tiêu đề lịch trình thật của tour (tối đa 4 ngày đầu)
+    $highlights = $tourDetail->timeline->take(4);
+    $hlIcons = ['fa-umbrella-beach', 'fa-utensils', 'fa-camera-retro', 'fa-ship'];
 @endphp
 
 <main class="px-detail">
@@ -54,11 +58,13 @@
                         </a>
                     </li>
                 @else
-                    <li class="px-rate px-rate--none"><i class="far fa-star" aria-hidden="true"></i> Chưa có đánh giá</li>
+                    <li class="px-rate px-rate--none"><i class="far fa-star" aria-hidden="true"></i> Chưa có đánh giá
+                    </li>
                 @endif
                 <li><i class="fal fa-clock" aria-hidden="true"></i>{{ $tourDetail->time }}</li>
                 <li><i class="fal fa-map-marker-alt" aria-hidden="true"></i>{{ $tourDetail->destination }}</li>
-                <li><i class="fal fa-plane-departure" aria-hidden="true"></i>Khởi hành {{ $start->format('d/m/Y') }}</li>
+                <li><i class="fal fa-plane-departure" aria-hidden="true"></i>Khởi hành {{ $start->format('d/m/Y') }}
+                </li>
             </ul>
 
             <div class="px-hero__bottom">
@@ -91,6 +97,39 @@
 
     <div class="container">
 
+        {{-- ===== THANH THÔNG TIN NỔI (kính mờ, chồng lên hero) ===== --}}
+        <div class="px-infobar">
+            <div class="px-infobar__cell">
+                <i class="fal fa-calendar-alt" aria-hidden="true"></i>
+                <div><small>Khởi
+                        hành</small><b>{{ $start->format('d/m/Y') }}</b><em>{{ $weekdays[$start->dayOfWeek] }}</em>
+                </div>
+            </div>
+            <div class="px-infobar__cell">
+                <i class="fal fa-flag-checkered" aria-hidden="true"></i>
+                <div><small>Kết
+                        thúc</small><b>{{ $end->format('d/m/Y') }}</b><em>{{ $weekdays[$end->dayOfWeek] }}</em></div>
+            </div>
+            <div class="px-infobar__cell">
+                <i class="fal fa-clock" aria-hidden="true"></i>
+                <div><small>Thời gian</small><b>{{ $tourDetail->time }}</b></div>
+            </div>
+            <div class="px-infobar__cell">
+                <i class="fal fa-users" aria-hidden="true"></i>
+                <div><small>Số chỗ</small>
+                    <b class="{{ $tourDetail->quantity <= 10 ? 'is-low' : '' }}">
+                        @if ($tourDetail->quantity <= 0)
+                            Đã hết
+                        @elseif ($tourDetail->quantity <= 10)
+                            Chỉ còn {{ $tourDetail->quantity }}
+                        @else
+                            Còn chỗ
+                        @endif
+                    </b>
+                </div>
+            </div>
+        </div>
+
         {{-- ===== DẢI ẢNH NHỎ (bấm để xem ảnh lớn) ===== --}}
         @if ($imgCount > 1)
             <div class="px-strip" data-gallery style="--n: {{ $stripImages->count() }}">
@@ -118,26 +157,19 @@
                 {{-- Tổng quan --}}
                 <section class="px-sec" id="tong-quan">
                     <h2 class="px-h2">Về hành trình này</h2>
-                    <div class="px-facts">
-                        <div class="px-fact">
-                            <i class="fal fa-calendar-alt" aria-hidden="true"></i>
-                            <div><small>Khởi hành</small><b>{{ $start->format('d/m/Y') }}</b>
-                                <em>{{ $weekdays[$start->dayOfWeek] }}</em></div>
+                    @if ($highlights->count())
+                        <div class="px-hl">
+                            @foreach ($highlights as $i => $h)
+                                <a class="px-hl__item" href="#ngay-{{ $i + 1 }}"
+                                    data-open-day="{{ $i + 1 }}">
+                                    <span class="px-hl__ico"><i class="fal {{ $hlIcons[$i % 4] }}"
+                                            aria-hidden="true"></i></span>
+                                    <span class="px-hl__txt"><small>Ngày
+                                            {{ $i + 1 }}</small><b>{{ $h->title }}</b></span>
+                                </a>
+                            @endforeach
                         </div>
-                        <div class="px-fact">
-                            <i class="fal fa-flag-checkered" aria-hidden="true"></i>
-                            <div><small>Kết thúc</small><b>{{ $end->format('d/m/Y') }}</b>
-                                <em>{{ $weekdays[$end->dayOfWeek] }}</em></div>
-                        </div>
-                        <div class="px-fact">
-                            <i class="fal fa-clock" aria-hidden="true"></i>
-                            <div><small>Thời gian</small><b>{{ $tourDetail->time }}</b></div>
-                        </div>
-                        <div class="px-fact">
-                            <i class="fal fa-map-marker-alt" aria-hidden="true"></i>
-                            <div><small>Điểm đến</small><b>{{ $tourDetail->destination }}</b></div>
-                        </div>
-                    </div>
+                    @endif
                     <div class="td-prose px-prose">{!! $tourDetail->description !!}</div>
                 </section>
 
@@ -146,7 +178,8 @@
                     <div class="px-sec__head">
                         <h2 class="px-h2">Lịch trình chi tiết</h2>
                         @if ($timelineCount > 1)
-                            <button type="button" class="px-link" id="tdToggleAll" data-open="false">Mở tất cả</button>
+                            <button type="button" class="px-link" id="tdToggleAll" data-open="false">Mở tất
+                                cả</button>
                         @endif
                     </div>
 
@@ -183,7 +216,8 @@
                                     data-vsrc="{{ $video['src'] }}" data-vtitle="{{ $tourDetail->title }}"
                                     aria-label="Phát video giới thiệu {{ $tourDetail->title }}">
                                     <img src="{{ $videoPoster }}" alt="" loading="lazy" decoding="async">
-                                    <span class="px-video__play" aria-hidden="true"><i class="fas fa-play"></i></span>
+                                    <span class="px-video__play" aria-hidden="true"><i
+                                            class="fas fa-play"></i></span>
                                     <span class="px-video__cap">
                                         <b>Xem video hành trình</b>
                                         <small>Cảm nhận không khí chuyến đi trước khi đặt</small>
@@ -328,9 +362,11 @@
                 <div class="px-promise">
                     <h3>Cam kết của chúng tôi</h3>
                     <ul>
-                        <li><i class="fal fa-calendar-check" aria-hidden="true"></i>Giữ chỗ {{ $holdHours }} giờ để bạn
+                        <li><i class="fal fa-calendar-check" aria-hidden="true"></i>Giữ chỗ {{ $holdHours }} giờ
+                            để bạn
                             hoàn tất thanh toán</li>
-                        <li><i class="fal fa-undo" aria-hidden="true"></i>Tự hủy được khi còn hơn {{ $cancelDays }} ngày
+                        <li><i class="fal fa-undo" aria-hidden="true"></i>Tự hủy được khi còn hơn {{ $cancelDays }}
+                            ngày
                             trước ngày khởi hành</li>
                         <li><i class="fal fa-headset" aria-hidden="true"></i>Hỗ trợ ngay trên website, không cần chờ
                             email</li>

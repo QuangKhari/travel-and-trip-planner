@@ -3,9 +3,23 @@
 <header class="tv-header {{ !empty($solid) ? 'is-solid is-scrolled' : '' }}" id="tvHeader">
     <div class="tv-header__in">
 
-        <a href="{{ route('home') }}" class="tv-logo" aria-label="Trang chủ">
-            {{-- Logo tạm giữ nguyên ảnh cũ (bản trắng). Khi có logo mới: thay file logo.png cùng tên. --}}
-            <img src="{{ asset('clients/assets/images/logos/logo.png') }}" alt="Travel">
+        <a href="{{ route('home') }}" class="tv-logo px-brand" aria-label="Trang chủ {{ config('site.name') }}">
+            {{-- Logo chữ + biểu tượng sóng/mặt trời (dùng màu theo trạng thái header). Khi có logo riêng: thay khối này bằng thẻ <img>. --}}
+            <svg class="px-brand__mark" viewBox="0 0 40 40" aria-hidden="true">
+                <defs>
+                    <linearGradient id="pxBrandG" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0" stop-color="#2dd4bf" />
+                        <stop offset="1" stop-color="#0d9488" />
+                    </linearGradient>
+                </defs>
+                <rect width="40" height="40" rx="13" fill="url(#pxBrandG)" />
+                <circle cx="26" cy="14" r="5" fill="#f4c95d" />
+                <path d="M6 25c4-4 7-4 11 0s7 4 11 0 5-3 6-2v5c-1-1-2-1-6 2s-7 3-11 0-7-4-11 0z" fill="#fff"
+                    opacity=".95" />
+                <path d="M6 32c4-4 7-4 11 0s7 4 11 0 5-3 6-2v3c-1-1-2-1-6 2s-7 3-11 0-7-4-11 0z" fill="#fff"
+                    opacity=".55" />
+            </svg>
+            <span class="px-brand__name">{{ config('site.name', 'Travel') }}</span>
         </a>
 
         <nav class="tv-nav" id="tvNav" aria-label="Menu chính">

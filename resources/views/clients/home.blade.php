@@ -258,7 +258,7 @@
             <div class="col-xl-4 col-md-6" data-aos="zoom-in-down" data-aos-duration="1500" data-aos-offset="50">
                 <div class="cta-item"
                     style="background-image: url({{ asset('clients/assets/images/cta/cta1.jpg') }});">
-                    <span class="category">Cắm trại bằng lều</span>
+                    <span class="category">Thiên nhiên</span>
                     <h2>Khám phá du lịch tốt nhất Việt Nam</h2>
                     <a href="{{ route('tours') }}" class="theme-btn style-two bgc-secondary">
                         <span data-hover="Khám phá ">Khám phá </span>
@@ -270,8 +270,8 @@
                 data-aos-offset="50">
                 <div class="cta-item"
                     style="background-image: url({{ asset('clients/assets/images/cta/cta2.jpg') }});">
-                    <span class="category">Sea Beach</span>
-                    <h2>World largest Sea Beach in Thailand</h2>
+                    <span class="category">Biển đảo</span>
+                    <h2>Những bãi biển trong xanh của Việt Nam</h2>
                     <a href="{{ route('tours') }}" class="theme-btn style-two">
                         <span data-hover="Khám phá ">Khám phá </span>
                         <i class="fal fa-arrow-right"></i>
@@ -282,8 +282,8 @@
                 data-aos-offset="50">
                 <div class="cta-item"
                     style="background-image: url({{ asset('clients/assets/images/cta/cta3.jpg') }});">
-                    <span class="category">Water Falls</span>
-                    <h2>Largest Water falls Bali, Indonesia</h2>
+                    <span class="category">Thác nước</span>
+                    <h2>Những thác nước đẹp nhất Việt Nam</h2>
                     <a href="{{ route('tours') }}" class="theme-btn style-two bgc-secondary">
                         <span data-hover="Khám phá ">Khám phá </span>
                         <i class="fal fa-arrow-right"></i>

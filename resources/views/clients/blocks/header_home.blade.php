@@ -4,6 +4,9 @@
 <head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
+    <script>
+        document.documentElement.classList.add('px-js')
+    </script>
     <meta name="description" content="">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -55,7 +58,7 @@
     <link rel="stylesheet" href="{{ asset('clients/assets/css/travel-theme.css') }}?v=2">
 </head>
 
-<body>
+<body class="tv-home">
     <div class="page-wrapper">
 
         @include('clients.blocks.site_header')

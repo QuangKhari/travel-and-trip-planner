@@ -26,7 +26,9 @@
         font-weight: 300;
         src: url("../fonts/poppins/poppins-v5-latin-300.eot");
         /* IE9 Compat Modes */
-        src: local("Poppins Light"), local("Poppins-Light"),
+        src:
+            local("Poppins Light"),
+            local("Poppins-Light"),
             url("../fonts/poppins/poppins-v5-latin-300.eot?#iefix")
                 format("embedded-opentype"),
             url("../fonts/poppins/poppins-v5-latin-300.woff2") format("woff2"),
@@ -43,7 +45,9 @@
         font-weight: 300;
         src: url("../fonts/poppins/poppins-v5-latin-300italic.eot");
         /* IE9 Compat Modes */
-        src: local("Poppins Light Italic"), local("Poppins-LightItalic"),
+        src:
+            local("Poppins Light Italic"),
+            local("Poppins-LightItalic"),
             url("../fonts/poppins/poppins-v5-latin-300italic.eot?#iefix")
                 format("embedded-opentype"),
             url("../fonts/poppins/poppins-v5-latin-300italic.woff2")
@@ -63,7 +67,9 @@
         font-weight: 400;
         src: url("../fonts/poppins/poppins-v5-latin-regular.eot");
         /* IE9 Compat Modes */
-        src: local("Poppins Regular"), local("Poppins-Regular"),
+        src:
+            local("Poppins Regular"),
+            local("Poppins-Regular"),
             url("../fonts/poppins/poppins-v5-latin-regular.eot?#iefix")
                 format("embedded-opentype"),
             url("../fonts/poppins/poppins-v5-latin-regular.woff2")
@@ -82,7 +88,9 @@
         font-weight: 400;
         src: url("../fonts/poppins/poppins-v5-latin-italic.eot");
         /* IE9 Compat Modes */
-        src: local("Poppins Italic"), local("Poppins-Italic"),
+        src:
+            local("Poppins Italic"),
+            local("Poppins-Italic"),
             url("../fonts/poppins/poppins-v5-latin-italic.eot?#iefix")
                 format("embedded-opentype"),
             url("../fonts/poppins/poppins-v5-latin-italic.woff2")
@@ -101,7 +109,9 @@
         font-weight: 500;
         src: url("../fonts/poppins/poppins-v5-latin-500.eot");
         /* IE9 Compat Modes */
-        src: local("Poppins Medium"), local("Poppins-Medium"),
+        src:
+            local("Poppins Medium"),
+            local("Poppins-Medium"),
             url("../fonts/poppins/poppins-v5-latin-500.eot?#iefix")
                 format("embedded-opentype"),
             url("../fonts/poppins/poppins-v5-latin-500.woff2") format("woff2"),
@@ -118,7 +128,9 @@
         font-weight: 500;
         src: url("../fonts/poppins/poppins-v5-latin-500italic.eot");
         /* IE9 Compat Modes */
-        src: local("Poppins Medium Italic"), local("Poppins-MediumItalic"),
+        src:
+            local("Poppins Medium Italic"),
+            local("Poppins-MediumItalic"),
             url("../fonts/poppins/poppins-v5-latin-500italic.eot?#iefix")
                 format("embedded-opentype"),
             url("../fonts/poppins/poppins-v5-latin-500italic.woff2")
@@ -138,7 +150,9 @@
         font-weight: 600;
         src: url("../fonts/poppins/poppins-v5-latin-600.eot");
         /* IE9 Compat Modes */
-        src: local("Poppins SemiBold"), local("Poppins-SemiBold"),
+        src:
+            local("Poppins SemiBold"),
+            local("Poppins-SemiBold"),
             url("../fonts/poppins/poppins-v5-latin-600.eot?#iefix")
                 format("embedded-opentype"),
             url("../fonts/poppins/poppins-v5-latin-600.woff2") format("woff2"),
@@ -155,7 +169,9 @@
         font-weight: 700;
         src: url("../fonts/poppins/poppins-v5-latin-700.eot");
         /* IE9 Compat Modes */
-        src: local("Poppins Bold"), local("Poppins-Bold"),
+        src:
+            local("Poppins Bold"),
+            local("Poppins-Bold"),
             url("../fonts/poppins/poppins-v5-latin-700.eot?#iefix")
                 format("embedded-opentype"),
             url("../fonts/poppins/poppins-v5-latin-700.woff2") format("woff2"),
@@ -172,7 +188,9 @@
         font-weight: 700;
         src: url("../fonts/poppins/poppins-v5-latin-700italic.eot");
         /* IE9 Compat Modes */
-        src: local("Poppins Bold Italic"), local("Poppins-BoldItalic"),
+        src:
+            local("Poppins Bold Italic"),
+            local("Poppins-BoldItalic"),
             url("../fonts/poppins/poppins-v5-latin-700italic.eot?#iefix")
                 format("embedded-opentype"),
             url("../fonts/poppins/poppins-v5-latin-700italic.woff2")
@@ -192,7 +210,9 @@
         font-weight: 800;
         src: url("../fonts/poppins/poppins-v5-latin-800.eot");
         /* IE9 Compat Modes */
-        src: local("Poppins ExtraBold"), local("Poppins-ExtraBold"),
+        src:
+            local("Poppins ExtraBold"),
+            local("Poppins-ExtraBold"),
             url("../fonts/poppins/poppins-v5-latin-800.eot?#iefix")
                 format("embedded-opentype"),
             url("../fonts/poppins/poppins-v5-latin-800.woff2") format("woff2"),
@@ -209,7 +229,9 @@
         font-weight: 800;
         src: url("../fonts/poppins/poppins-v5-latin-800italic.eot");
         /* IE9 Compat Modes */
-        src: local("Poppins ExtraBold Italic"), local("Poppins-ExtraBoldItalic"),
+        src:
+            local("Poppins ExtraBold Italic"),
+            local("Poppins-ExtraBoldItalic"),
             url("../fonts/poppins/poppins-v5-latin-800italic.eot?#iefix")
                 format("embedded-opentype"),
             url("../fonts/poppins/poppins-v5-latin-800italic.woff2")
@@ -229,7 +251,9 @@
         font-weight: 900;
         src: url("../fonts/poppins/poppins-v5-latin-900.eot");
         /* IE9 Compat Modes */
-        src: local("Poppins Black"), local("Poppins-Black"),
+        src:
+            local("Poppins Black"),
+            local("Poppins-Black"),
             url("../fonts/poppins/poppins-v5-latin-900.eot?#iefix")
                 format("embedded-opentype"),
             url("../fonts/poppins/poppins-v5-latin-900.woff2") format("woff2"),
@@ -425,7 +449,7 @@
 
     .form-submit {
         display: inline-block;
-        background: #63AB45;
+        background: #3f8058;
         color: #fff;
         border-bottom: none;
         width: auto;
@@ -718,7 +742,7 @@
     /*# sourceMappingURL=style.css.map */
 }
 .login-template {
-    .signup{
+    .signup {
         display: none;
     }
     label {

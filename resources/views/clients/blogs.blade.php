@@ -32,6 +32,14 @@
                     </p>
                 @endif
 
+                <div class="px-chips" role="navigation" aria-label="Danh mục bài viết">
+                    <a href="{{ route('blogs') }}" class="{{ $cat === '' ? 'is-on' : '' }}">Tất cả</a>
+                    @foreach ($categories as $name => $count)
+                        <a href="{{ route('blogs', ['cat' => $name]) }}"
+                            class="{{ $cat === $name ? 'is-on' : '' }}">{{ $name }}</a>
+                    @endforeach
+                </div>
+
                 @if ($featured)
                     <article class="px-feature">
                         <a class="px-feature__img" href="{{ route('blog-detail', ['slug' => $featured['slug']]) }}">

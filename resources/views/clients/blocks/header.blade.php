@@ -4,6 +4,9 @@
 <head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
+    <script>
+        document.documentElement.classList.add('px-js')
+    </script>
     <meta name="description" content="">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -63,7 +66,8 @@
     {{-- SEA THEME: giao diện biển cho các trang con. Phải nằm SAU travel-theme.css --}}
     <link rel="stylesheet" href="{{ asset('clients/assets/css/sea-theme.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/client-ui-polish.css') }}?v=4">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/travel-pages.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/travel-pages.css') }}?v=2">
+    <script src="{{ asset('clients/assets/js/travel-motion.js') }}?v=1" defer></script>
 </head>
 
 <body class="tv-sea page-{{ str_replace('.', '-', request()->route()?->getName() ?? 'page') }}">
