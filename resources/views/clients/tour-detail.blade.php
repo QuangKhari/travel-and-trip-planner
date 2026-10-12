@@ -3,6 +3,8 @@
 @php
     $images = $tourDetail->images->isEmpty() ? collect(['default.jpg']) : $tourDetail->images;
     $imgCount = $images->count();
+    $stripImages = $images->take(5);
+    $moreImages = $images->slice(5)->values();
 
     $start = \Carbon\Carbon::parse($tourDetail->startDate);
     $end = \Carbon\Carbon::parse($tourDetail->endDate);
@@ -16,59 +18,97 @@
     $reviewCount = (int) ($reviewStats->reviewCount ?? 0);
     $timelineCount = $tourDetail->timeline->count();
     $holdHours = (int) config('travela.hold_hours', 48);
+    $cancelDays = \App\Support\CancelPolicy::MIN_DAYS;
+
+    // Video giới thiệu (cột video_url; để trống thì ẩn mọi thứ liên quan)
+    $video = \App\Support\TourVideo::parse($tourDetail->video_url ?? null);
+    $videoPoster = \App\Support\TourImage::url($images->get(1) ?? $images->first(), 1200);
+    $heroImg = \App\Support\TourImage::url($images->first(), 1600);
 @endphp
 
-<main class="td-page">
-    <div class="container">
+<main class="px-detail">
 
-        {{-- Đầu trang: đường dẫn, tiêu đề, thông tin nhanh --}}
-        <nav class="td-crumb" aria-label="breadcrumb">
-            <a href="{{ route('home') }}">Trang chủ</a>
-            <span>/</span>
-            <a href="{{ route('tours') }}">Tours</a>
-            <span>/</span>
-            <span aria-current="page">{{ $tourDetail->destination }}</span>
-        </nav>
+    {{-- ===== HERO ===== --}}
+    <section class="px-hero">
+        <img class="px-hero__img" src="{{ $heroImg }}" alt="{{ $tourDetail->title }}" fetchpriority="high">
+        <div class="px-hero__shade" aria-hidden="true"></div>
 
-        <header class="td-head">
-            <div>
-                <h1>{{ $tourDetail->title }}</h1>
-                <ul class="td-meta">
-                    <li><i class="fal fa-map-marker-alt"></i>{{ $tourDetail->destination }}</li>
-                    <li><i class="fal fa-clock"></i>{{ $tourDetail->time }}</li>
-                    @if ($reviewCount > 0)
-                        <li><a href="#danh-gia"><i class="fas fa-star td-star"></i><b>{{ number_format($avg, 1) }}</b>
-                                ({{ $reviewCount }} đánh giá)</a></li>
-                    @else
-                        <li class="td-muted">Chưa có đánh giá</li>
+        <div class="container px-hero__in">
+            <nav class="px-crumb" aria-label="breadcrumb">
+                <a href="{{ route('home') }}">Trang chủ</a>
+                <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                <a href="{{ route('tours') }}">Tours</a>
+                <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                <span aria-current="page">{{ $tourDetail->destination }}</span>
+            </nav>
+
+            <h1 class="px-hero__title">{{ $tourDetail->title }}</h1>
+
+            <ul class="px-hero__meta">
+                @if ($reviewCount > 0)
+                    <li>
+                        <a href="#danh-gia" class="px-rate">
+                            <i class="fas fa-star" aria-hidden="true"></i>
+                            <b>{{ number_format($avg, 1) }}</b>
+                            <span>({{ $reviewCount }} đánh giá)</span>
+                        </a>
+                    </li>
+                @else
+                    <li class="px-rate px-rate--none"><i class="far fa-star" aria-hidden="true"></i> Chưa có đánh giá</li>
+                @endif
+                <li><i class="fal fa-clock" aria-hidden="true"></i>{{ $tourDetail->time }}</li>
+                <li><i class="fal fa-map-marker-alt" aria-hidden="true"></i>{{ $tourDetail->destination }}</li>
+                <li><i class="fal fa-plane-departure" aria-hidden="true"></i>Khởi hành {{ $start->format('d/m/Y') }}</li>
+            </ul>
+
+            <div class="px-hero__bottom">
+                <div class="px-hero__price">
+                    <small>Chỉ từ</small>
+                    <b>{{ number_format($tourDetail->priceAdult, 0, ',', '.') }}đ</b>
+                    <span>/ khách</span>
+                </div>
+
+                <div class="px-hero__cta">
+                    @if ($video)
+                        <button type="button" class="px-btn px-btn--sand" data-video data-vtype="{{ $video['type'] }}"
+                            data-vsrc="{{ $video['src'] }}" data-vtitle="{{ $tourDetail->title }}">
+                            <i class="fas fa-play" aria-hidden="true"></i> Xem video
+                        </button>
                     @endif
-                </ul>
+                    <a href="#tdBook" class="px-btn px-btn--glass">Đặt tour ngay</a>
+                    <button type="button" class="px-iconbtn" data-share data-title="{{ $tourDetail->title }}"
+                        aria-label="Chia sẻ tour này">
+                        <i class="fal fa-share-alt" aria-hidden="true"></i><span>Chia sẻ</span>
+                    </button>
+                </div>
             </div>
-            <button type="button" class="td-share" data-share data-title="{{ $tourDetail->title }}">
-                <i class="fal fa-share-alt"></i><span>Chia sẻ</span>
-            </button>
-        </header>
-
-        {{-- Thư viện ảnh --}}
-        <div class="td-gallery td-gallery--{{ min($imgCount, 5) }}" data-gallery>
-            @foreach ($images->take(5) as $i => $img)
-                <button type="button" class="td-gallery__item" data-index="{{ $i }}"
-                    data-full="{{ \App\Support\TourImage::url($img, 1600) }}"
-                    aria-label="Xem ảnh {{ $i + 1 }} / {{ $imgCount }}">
-                    <img src="{{ \App\Support\TourImage::url($img, $i === 0 ? 1200 : 800) }}"
-                        alt="{{ $tourDetail->title }} – ảnh {{ $i + 1 }}"
-                        @if ($i > 0) loading="lazy" decoding="async" @endif>
-                </button>
-            @endforeach
-            @if ($imgCount > 1)
-                <span class="td-gallery__count"><i class="fal fa-images"></i> Xem {{ $imgCount }} ảnh</span>
-            @endif
         </div>
 
-        <div class="td-layout">
-            <div class="td-main">
+        <svg class="px-wave" viewBox="0 0 1440 80" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0 40 Q180 80 380 48 T760 44 T1130 28 T1440 48 V80 H0Z" />
+        </svg>
+    </section>
 
-                <nav class="td-tabs" id="tdTabs" aria-label="Các phần của trang">
+    <div class="container">
+
+        {{-- ===== DẢI ẢNH NHỎ (bấm để xem ảnh lớn) ===== --}}
+        @if ($imgCount > 1)
+            <div class="px-strip" data-gallery style="--n: {{ $stripImages->count() }}">
+                @foreach ($stripImages as $i => $img)
+                    <button type="button" class="px-thumb td-gallery__item {{ $i === 0 ? 'is-first' : '' }}"
+                        data-index="{{ $i }}" data-full="{{ \App\Support\TourImage::url($img, 1600) }}"
+                        aria-label="Xem ảnh {{ $i + 1 }} / {{ $imgCount }}">
+                        <img src="{{ \App\Support\TourImage::url($img, 600) }}"
+                            alt="{{ $tourDetail->title }} – ảnh {{ $i + 1 }}" loading="lazy" decoding="async">
+                    </button>
+                @endforeach
+            </div>
+        @endif
+
+        <div class="px-layout">
+            <div class="px-main">
+
+                <nav class="px-tabs" id="tdTabs" aria-label="Các phần của trang">
                     <a href="#tong-quan" class="is-on">Tổng quan</a>
                     <a href="#lich-trinh">Lịch trình</a>
                     <a href="#ban-do">Bản đồ</a>
@@ -76,75 +116,117 @@
                 </nav>
 
                 {{-- Tổng quan --}}
-                <section class="td-section" id="tong-quan">
-                    <h2 class="td-h2">Về hành trình này</h2>
-                    <dl class="td-facts">
-                        <div>
-                            <dt>Khởi hành</dt>
-                            <dd>{{ $start->format('d/m/Y') }} <small>{{ $weekdays[$start->dayOfWeek] }}</small></dd>
+                <section class="px-sec" id="tong-quan">
+                    <h2 class="px-h2">Về hành trình này</h2>
+                    <div class="px-facts">
+                        <div class="px-fact">
+                            <i class="fal fa-calendar-alt" aria-hidden="true"></i>
+                            <div><small>Khởi hành</small><b>{{ $start->format('d/m/Y') }}</b>
+                                <em>{{ $weekdays[$start->dayOfWeek] }}</em></div>
                         </div>
-                        <div>
-                            <dt>Kết thúc</dt>
-                            <dd>{{ $end->format('d/m/Y') }} <small>{{ $weekdays[$end->dayOfWeek] }}</small></dd>
+                        <div class="px-fact">
+                            <i class="fal fa-flag-checkered" aria-hidden="true"></i>
+                            <div><small>Kết thúc</small><b>{{ $end->format('d/m/Y') }}</b>
+                                <em>{{ $weekdays[$end->dayOfWeek] }}</em></div>
                         </div>
-                        <div>
-                            <dt>Thời gian</dt>
-                            <dd>{{ $tourDetail->time }}</dd>
+                        <div class="px-fact">
+                            <i class="fal fa-clock" aria-hidden="true"></i>
+                            <div><small>Thời gian</small><b>{{ $tourDetail->time }}</b></div>
                         </div>
-                        <div>
-                            <dt>Điểm đến</dt>
-                            <dd>{{ $tourDetail->destination }}</dd>
+                        <div class="px-fact">
+                            <i class="fal fa-map-marker-alt" aria-hidden="true"></i>
+                            <div><small>Điểm đến</small><b>{{ $tourDetail->destination }}</b></div>
                         </div>
-                    </dl>
-                    <div class="td-prose">{!! $tourDetail->description !!}</div>
+                    </div>
+                    <div class="td-prose px-prose">{!! $tourDetail->description !!}</div>
                 </section>
 
-                {{-- Lịch trình --}}
-                <section class="td-section" id="lich-trinh">
-                    <div class="td-section__head">
-                        <h2 class="td-h2">Lịch trình từng ngày</h2>
+                {{-- Lịch trình + video --}}
+                <section class="px-sec" id="lich-trinh">
+                    <div class="px-sec__head">
+                        <h2 class="px-h2">Lịch trình chi tiết</h2>
                         @if ($timelineCount > 1)
-                            <button type="button" class="td-link" id="tdToggleAll" data-open="false">Mở tất cả</button>
+                            <button type="button" class="px-link" id="tdToggleAll" data-open="false">Mở tất cả</button>
                         @endif
                     </div>
 
-                    @if ($timelineCount > 0)
-                        <ol class="td-days">
-                            @foreach ($tourDetail->timeline as $i => $timeline)
-                                <li>
-                                    <details class="td-day" id="ngay-{{ $i + 1 }}"
-                                        @if ($i === 0) open @endif>
-                                        <summary>
-                                            <span class="td-day__no">Ngày {{ $i + 1 }}</span>
-                                            <span class="td-day__title">{{ $timeline->title }}</span>
-                                            <i class="fal fa-chevron-down" aria-hidden="true"></i>
-                                        </summary>
-                                        <div class="td-prose td-day__body">{!! $timeline->description !!}</div>
-                                    </details>
-                                </li>
-                            @endforeach
-                        </ol>
-                    @else
-                        <p class="td-muted">Lịch trình chi tiết đang được cập nhật. Bạn có thể <a
-                                href="{{ route('contact') }}">liên hệ</a> để được tư vấn trước khi đặt.</p>
-                    @endif
+                    <div class="px-plan {{ $video ? 'has-video' : '' }}">
+                        <div class="px-plan__list">
+                            @if ($timelineCount > 0)
+                                <ol class="px-days">
+                                    @foreach ($tourDetail->timeline as $i => $timeline)
+                                        <li>
+                                            <span class="px-days__dot" aria-hidden="true"></span>
+                                            <details class="px-day td-day" id="ngay-{{ $i + 1 }}"
+                                                @if ($i === 0) open @endif>
+                                                <summary>
+                                                    <span class="px-day__no">Ngày {{ $i + 1 }}</span>
+                                                    <span class="px-day__title">{{ $timeline->title }}</span>
+                                                    <i class="fal fa-chevron-down" aria-hidden="true"></i>
+                                                </summary>
+                                                <div class="td-prose px-prose px-day__body">{!! $timeline->description !!}
+                                                </div>
+                                            </details>
+                                        </li>
+                                    @endforeach
+                                </ol>
+                            @else
+                                <p class="px-muted">Lịch trình chi tiết đang được cập nhật. Bạn có thể <a
+                                        href="{{ route('contact') }}">nhắn cho chúng tôi</a> để được tư vấn trước khi
+                                    đặt.</p>
+                            @endif
+                        </div>
+
+                        @if ($video)
+                            <aside class="px-plan__video">
+                                <button type="button" class="px-video" data-video data-vtype="{{ $video['type'] }}"
+                                    data-vsrc="{{ $video['src'] }}" data-vtitle="{{ $tourDetail->title }}"
+                                    aria-label="Phát video giới thiệu {{ $tourDetail->title }}">
+                                    <img src="{{ $videoPoster }}" alt="" loading="lazy" decoding="async">
+                                    <span class="px-video__play" aria-hidden="true"><i class="fas fa-play"></i></span>
+                                    <span class="px-video__cap">
+                                        <b>Xem video hành trình</b>
+                                        <small>Cảm nhận không khí chuyến đi trước khi đặt</small>
+                                    </span>
+                                </button>
+                            </aside>
+                        @endif
+                    </div>
                 </section>
 
                 {{-- Bản đồ --}}
-                <section class="td-section" id="ban-do">
-                    <h2 class="td-h2">Điểm đến trên bản đồ</h2>
-                    <div class="td-map">
+                <section class="px-sec" id="ban-do">
+                    <h2 class="px-h2">Điểm đến trên bản đồ</h2>
+                    <div class="px-map">
                         <iframe title="Bản đồ {{ $tourDetail->destination }}" loading="lazy"
                             referrerpolicy="no-referrer-when-downgrade"
                             src="https://www.google.com/maps?q={{ urlencode($tourDetail->destination . ', Việt Nam') }}&output=embed&hl=vi"></iframe>
                     </div>
-                    <a class="td-link" target="_blank" rel="noopener"
+                    <a class="px-link" target="_blank" rel="noopener"
                         href="https://www.google.com/maps/search/?api=1&query={{ urlencode($tourDetail->destination . ', Việt Nam') }}">Mở
-                        trong Google Maps <i class="fal fa-external-link"></i></a>
+                        trong Google Maps <i class="fal fa-external-link" aria-hidden="true"></i></a>
                 </section>
 
+                {{-- Thư viện ảnh (chỉ hiện khi tour có hơn 5 ảnh) --}}
+                @if ($moreImages->count())
+                    <section class="px-sec" id="thu-vien">
+                        <h2 class="px-h2">Thư viện ảnh</h2>
+                        <div class="px-gal" data-gallery>
+                            @foreach ($moreImages as $j => $img)
+                                <button type="button" class="px-gal__item td-gallery__item"
+                                    data-full="{{ \App\Support\TourImage::url($img, 1600) }}"
+                                    aria-label="Xem ảnh {{ $j + 6 }} / {{ $imgCount }}">
+                                    <img src="{{ \App\Support\TourImage::url($img, 700) }}"
+                                        alt="{{ $tourDetail->title }} – ảnh {{ $j + 6 }}" loading="lazy"
+                                        decoding="async">
+                                </button>
+                            @endforeach
+                        </div>
+                    </section>
+                @endif
+
                 {{-- Đánh giá --}}
-                <section class="td-section" id="danh-gia">
+                <section class="px-sec" id="danh-gia">
                     <div id="partials_reviews">
                         @include('clients.partials.reviews')
                     </div>
@@ -179,74 +261,90 @@
                 </section>
             </div>
 
-            {{-- Thẻ đặt tour (dính khi cuộn) --}}
-            <aside class="td-side">
-                <div class="td-book" id="tdBook">
-                    <div class="td-book__price">
-                        <small>Giá từ</small>
-                        <b>{{ number_format($tourDetail->priceAdult, 0, ',', '.') }}đ</b>
-                        <span>/ người lớn</span>
+            {{-- ===== THẺ ĐẶT TOUR (dính khi cuộn) ===== --}}
+            <aside class="px-side">
+                <div class="px-book" id="tdBook">
+                    <div class="px-book__head">
+                        <h2>Đặt tour ngay</h2>
+                        <p>Giữ chỗ trước, thanh toán sau</p>
                     </div>
-                    <p class="td-book__child">Trẻ em: {{ number_format($tourDetail->priceChild, 0, ',', '.') }}đ /
-                        người</p>
 
-                    <dl class="td-book__list">
-                        <div>
-                            <dt>Khởi hành</dt>
-                            <dd>{{ $start->format('d/m/Y') }}</dd>
+                    <div class="px-book__body">
+                        <div class="px-book__price">
+                            <b>{{ number_format($tourDetail->priceAdult, 0, ',', '.') }}đ</b>
+                            <span>/ người lớn</span>
                         </div>
-                        <div>
-                            <dt>Kết thúc</dt>
-                            <dd>{{ $end->format('d/m/Y') }}</dd>
-                        </div>
-                        <div>
-                            <dt>Thời gian</dt>
-                            <dd>{{ $tourDetail->time }}</dd>
-                        </div>
-                        <div>
-                            <dt>Số chỗ</dt>
-                            <dd class="{{ $tourDetail->quantity <= 10 ? 'is-low' : '' }}">
-                                @if ($tourDetail->quantity <= 0)
-                                    Đã hết
-                                @elseif ($tourDetail->quantity <= 10)
-                                    Chỉ còn {{ $tourDetail->quantity }} chỗ
-                                @else
-                                    Còn chỗ
-                                @endif
-                            </dd>
-                        </div>
-                    </dl>
+                        <p class="px-book__child">Trẻ em: {{ number_format($tourDetail->priceChild, 0, ',', '.') }}đ /
+                            người</p>
 
-                    @if ($daysToGo >= 0 && $daysToGo <= 30)
-                        <p class="td-book__soon">
-                            {{ $daysToGo === 0 ? 'Khởi hành hôm nay' : 'Khởi hành sau ' . $daysToGo . ' ngày' }}</p>
-                    @endif
+                        <dl class="px-book__list">
+                            <div>
+                                <dt>Khởi hành</dt>
+                                <dd>{{ $start->format('d/m/Y') }}</dd>
+                            </div>
+                            <div>
+                                <dt>Kết thúc</dt>
+                                <dd>{{ $end->format('d/m/Y') }}</dd>
+                            </div>
+                            <div>
+                                <dt>Thời gian</dt>
+                                <dd>{{ $tourDetail->time }}</dd>
+                            </div>
+                            <div>
+                                <dt>Số chỗ</dt>
+                                <dd class="{{ $tourDetail->quantity <= 10 ? 'is-low' : '' }}">
+                                    @if ($tourDetail->quantity <= 0)
+                                        Đã hết
+                                    @elseif ($tourDetail->quantity <= 10)
+                                        Chỉ còn {{ $tourDetail->quantity }} chỗ
+                                    @else
+                                        Còn chỗ
+                                    @endif
+                                </dd>
+                            </div>
+                        </dl>
 
-                    <form id="tdBookForm" action="{{ route('booking', ['id' => $tourDetail->tourId]) }}"
-                        method="POST">
-                        @csrf
-                        <button type="submit" class="td-btn td-btn--cta"
-                            @if ($soldOut) disabled @endif>
-                            {{ $soldOut ? 'Tour đã đóng đặt chỗ' : 'Đặt tour' }}
-                        </button>
-                    </form>
+                        @if ($daysToGo >= 0 && $daysToGo <= 30)
+                            <p class="px-book__soon">
+                                <i class="fal fa-hourglass-half" aria-hidden="true"></i>
+                                {{ $daysToGo === 0 ? 'Khởi hành hôm nay' : 'Khởi hành sau ' . $daysToGo . ' ngày' }}
+                            </p>
+                        @endif
 
-                    @unless ($soldOut)
-                        <p class="td-book__hint">Đơn đặt được giữ chỗ {{ $holdHours }} giờ để bạn hoàn tất thanh toán.
-                        </p>
-                    @endunless
-                    <a class="td-book__help" href="{{ route('contact') }}">Cần tư vấn trước khi đặt? Liên hệ chúng
-                        tôi</a>
+                        <form id="tdBookForm" action="{{ route('booking', ['id' => $tourDetail->tourId]) }}"
+                            method="POST">
+                            @csrf
+                            <button type="submit" class="px-btn px-btn--cta"
+                                @if ($soldOut) disabled @endif>
+                                {{ $soldOut ? 'Tour đã đóng đặt chỗ' : 'Đặt ngay' }}
+                            </button>
+                        </form>
+
+                        <a class="px-book__help" href="{{ route('contact') }}"><i class="fal fa-comment-dots"
+                                aria-hidden="true"></i> Cần tư vấn? Nhắn cho chúng tôi</a>
+                    </div>
+                </div>
+
+                <div class="px-promise">
+                    <h3>Cam kết của chúng tôi</h3>
+                    <ul>
+                        <li><i class="fal fa-calendar-check" aria-hidden="true"></i>Giữ chỗ {{ $holdHours }} giờ để bạn
+                            hoàn tất thanh toán</li>
+                        <li><i class="fal fa-undo" aria-hidden="true"></i>Tự hủy được khi còn hơn {{ $cancelDays }} ngày
+                            trước ngày khởi hành</li>
+                        <li><i class="fal fa-headset" aria-hidden="true"></i>Hỗ trợ ngay trên website, không cần chờ
+                            email</li>
+                    </ul>
                 </div>
             </aside>
         </div>
 
         {{-- Tour gợi ý --}}
         @if (isset($related) && $related->count())
-            <section class="td-related" aria-labelledby="tdRelated">
-                <div class="td-section__head">
-                    <h2 class="td-h2" id="tdRelated">Có thể bạn cũng quan tâm</h2>
-                    <a class="td-link" href="{{ route('tours') }}">Xem tất cả tour</a>
+            <section class="px-related" aria-labelledby="tdRelated">
+                <div class="px-sec__head">
+                    <h2 class="px-h2" id="tdRelated">Có thể bạn cũng quan tâm</h2>
+                    <a class="px-link" href="{{ route('tours') }}">Xem tất cả tour</a>
                 </div>
                 <div class="tv-grid">
                     @foreach ($related as $tour)
@@ -258,7 +356,7 @@
     </div>
 </main>
 
-{{-- Thanh đặt tour cố định trên điện thoại --}}
+{{-- Thanh đặt tour cố định trên điện thoại (JS cũ travel-detail.js tự ẩn khi thẻ đặt tour đã hiện) --}}
 <div class="td-mbar" id="tdMbar">
     <div>
         <small>Giá từ</small>
@@ -271,6 +369,7 @@
 </div>
 
 <script src="{{ asset('clients/assets/js/travel-detail.js') }}?v=1"></script>
+<script src="{{ asset('clients/assets/js/travel-pages.js') }}?v=1"></script>
 
 @include('clients.blocks.new_letter')
 @include('clients.blocks.footer')
