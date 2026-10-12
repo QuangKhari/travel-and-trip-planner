@@ -56,6 +56,11 @@ class ToursManagementController extends Controller
             'domain'      => 'required|in:b,t,n',
             'number'      => 'required|integer|min:1|max:100000',
             'price_adult' => 'required|numeric|min:0|max:999999999999',
+            'video_url'   => ['nullable', 'string', 'max:255', function ($attr, $value, $fail) {
+                if (trim((string) $value) !== '' && !\App\Support\TourVideo::parse($value)) {
+                    $fail('Link video chỉ hỗ trợ YouTube, Vimeo hoặc file .mp4/.webm.');
+                }
+            }],
             'price_child' => 'required|numeric|min:0|max:999999999999',
             'start_date'  => 'required|date_format:d/m/Y',
             'end_date'    => 'required|date_format:d/m/Y',
@@ -116,6 +121,7 @@ class ToursManagementController extends Controller
             'domain'      => $request->input('domain'),
             'startDate'   => $start->format('Y-m-d'),
             'endDate'     => $end->format('Y-m-d'),
+            'video_url'   => \App\Support\TourVideo::normalize($request->input('video_url')),
         ], null];
     }
 
@@ -540,6 +546,11 @@ class ToursManagementController extends Controller
             'number'      => 'required|integer|min:0|max:100000',
             'original_number' => 'nullable|integer|min:0',
             'price_adult' => 'required|numeric|min:0|max:999999999999',
+            'video_url'   => ['nullable', 'string', 'max:255', function ($attr, $value, $fail) {
+                if (trim((string) $value) !== '' && !\App\Support\TourVideo::parse($value)) {
+                    $fail('Link video chỉ hỗ trợ YouTube, Vimeo hoặc file .mp4/.webm.');
+                }
+            }],
             'price_child' => 'required|numeric|min:0|max:999999999999',
             'start_date'  => 'required|date_format:d/m/Y',
             'end_date'    => 'required|date_format:d/m/Y',
@@ -601,6 +612,7 @@ class ToursManagementController extends Controller
             'startDate'   => $start->format('Y-m-d'),
             'endDate'     => $end->format('Y-m-d'),
             'time'        => "{$days} ngày {$nights} đêm",
+            'video_url'   => \App\Support\TourVideo::normalize($request->input('video_url')),
         ];
 
         $images = $request->input('images');

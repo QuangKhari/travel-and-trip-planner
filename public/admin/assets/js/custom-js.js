@@ -140,6 +140,7 @@ $(document).ready(function () {
                     // Điền dữ liệu vào các field
                     $("input[name='name']").val(tour.title);
                     $("input[name='destination']").val(tour.destination);
+                    $("input[name='video_url']").val(tour.video_url || "");
                     $("select[name='domain']").val(tour.domain);
                     $("input[name='number']").val(tour.quantity);
                     originalQuantity = tour.quantity;
@@ -315,6 +316,7 @@ $(document).ready(function () {
             tourId: tourIdSendingImage,
             name: $("input[name='name']").val(),
             destination: $("input[name='destination']").val(),
+            video_url: $("input[name='video_url']").val(),
             domain: $("#domain").val(),
             number: $("input[name='number']").val(),
             original_number: originalQuantity,

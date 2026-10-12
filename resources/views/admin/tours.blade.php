@@ -129,6 +129,15 @@
                                         </div>
                                     </div>
                                     <div class="field item form-group">
+                                        <label class="col-form-label col-md-3 col-sm-3  label-align">Link video</label>
+                                        <div class="col-md-6 col-sm-6">
+                                            <input class="form-control" type="url" name="video_url" maxlength="255"
+                                                placeholder="https://www.youtube.com/watch?v=...">
+                                            <small class="form-text text-muted">YouTube, Vimeo hoặc file .mp4. Để trống
+                                                nếu chưa có.</small>
+                                        </div>
+                                    </div>
+                                    <div class="field item form-group">
                                         <label class="col-form-label col-md-3 col-sm-3  label-align">Khu
                                             vực<span>*</span></label>
                                         <div class="col-md-6 col-sm-6">

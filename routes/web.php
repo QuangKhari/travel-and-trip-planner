@@ -39,7 +39,7 @@ Route::get('/destination', [DestinationController::class, 'index'])->name('desti
 Route::get('/travel-guides', [TravelGuidesController::class, 'index'])->name('team');
 Route::get('/tour-detail/{id}', [TourDetailController::class, 'index'])->whereNumber('id')->name('tour-detail');
 Route::get('/blogs', [BlogController::class, 'index'])->name('blogs');
-Route::get('/blog-detail', [BlogDetailController::class, 'index'])->name('blog-detail');
+Route::get('/blog-detail/{slug?}', [BlogDetailController::class, 'index'])->name('blog-detail');
 Route::get('/search', [SearchController::class, 'index'])->middleware('throttle:60,1,search')->name('search');
 Route::get('/search-voice-text', [SearchController::class, 'searchTours'])->middleware('throttle:30,1,search-voice')->name('search-voice-text');
 

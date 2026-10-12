@@ -63,6 +63,7 @@
     {{-- SEA THEME: giao diện biển cho các trang con. Phải nằm SAU travel-theme.css --}}
     <link rel="stylesheet" href="{{ asset('clients/assets/css/sea-theme.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/client-ui-polish.css') }}?v=4">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/travel-pages.css') }}?v=1">
 </head>
 
 <body class="tv-sea page-{{ str_replace('.', '-', request()->route()?->getName() ?? 'page') }}">

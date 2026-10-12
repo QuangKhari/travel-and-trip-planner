@@ -63,7 +63,7 @@ class Tours extends Model
             $getTourDetail->images = DB::table('tbl_images')
                 ->where('tourId', $getTourDetail->tourId)
                 ->orderBy('sortOrder')
-                ->limit(5)
+                ->limit(12)
                 ->pluck('imageURL');
 
             $getTourDetail->timeline = DB::table('tbl_timeline')
