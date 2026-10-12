@@ -1,235 +1,118 @@
 @include('clients.blocks.header')
-@include('clients.blocks.banner')
 
-<!-- Blog List Area start -->
-<section class="blog-list-page py-100 rel z-1">
+@php
+    // Ảnh banner riêng cho Blog nếu có (banner-blog.jpg), chưa có thì dùng ảnh cũ
+    $blogBanner = file_exists(public_path('clients/assets/images/banner/banner-blog.jpg'))
+        ? 'banner-blog.jpg'
+        : 'banner-about.jpg';
+@endphp
+
+@include('clients.blocks.banner', [
+    'title' => 'Blog',
+    'subtitle' => 'Cảm hứng du lịch, kinh nghiệm và những câu chuyện thú vị',
+    'bannerImage' => $blogBanner,
+])
+
+<main class="px-blog">
     <div class="container">
-        <div class="row">
-            <div class="col-lg-8">
-                <div class="blog-item style-three" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
-                    <div class="image">
-                        <img src="assets/images/blog/blog-list1.jpg" alt="Blog List">
-                    </div>
-                    <div class="content">
-                        <a href="blog.html" class="category">Travel</a>
-                        <h5><a href="blog-details.html">Ultimate Guide to Planning Your Dream Vacation</a></h5>
-                        <ul class="blog-meta">
-                            <li><i class="far fa-calendar-alt"></i> <a href="#">25 February 2024</a></li>
-                            <li><i class="far fa-comments"></i> <a href="#">Comments (5)</a></li>
-                        </ul>
-                        <p>We specialize in crafting unforgettable city experiences for travelers seeking</p>
-                        <a href="blog-details.html" class="theme-btn style-two style-three">
-                            <span data-hover="Book Now">Read More</span>
-                            <i class="fal fa-arrow-right"></i>
-                        </a>
-                    </div>
-                </div>
-                <div class="blog-item style-three" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
-                    <div class="image">
-                        <img src="assets/images/blog/blog-list2.jpg" alt="Blog List">
-                    </div>
-                    <div class="content">
-                        <a href="blog.html" class="category">Travel</a>
-                        <h5><a href="blog-details.html">Ultimate Guide to Planning Your Dream Vacation</a></h5>
-                        <ul class="blog-meta">
-                            <li><i class="far fa-calendar-alt"></i> <a href="#">25 February 2024</a></li>
-                            <li><i class="far fa-comments"></i> <a href="#">Comments (5)</a></li>
-                        </ul>
-                        <p>We specialize in crafting unforgettable city experiences for travelers seeking</p>
-                        <a href="blog-details.html" class="theme-btn style-two style-three">
-                            <span data-hover="Book Now">Read More</span>
-                            <i class="fal fa-arrow-right"></i>
-                        </a>
-                    </div>
-                </div>
-                <div class="blog-item style-three" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
-                    <div class="image">
-                        <img src="assets/images/blog/blog-list3.jpg" alt="Blog List">
-                    </div>
-                    <div class="content">
-                        <a href="blog.html" class="category">Travel</a>
-                        <h5><a href="blog-details.html">Ultimate Guide to Planning Your Dream Vacation</a></h5>
-                        <ul class="blog-meta">
-                            <li><i class="far fa-calendar-alt"></i> <a href="#">25 February 2024</a></li>
-                            <li><i class="far fa-comments"></i> <a href="#">Comments (5)</a></li>
-                        </ul>
-                        <p>We specialize in crafting unforgettable city experiences for travelers seeking</p>
-                        <a href="blog-details.html" class="theme-btn style-two style-three">
-                            <span data-hover="Book Now">Read More</span>
-                            <i class="fal fa-arrow-right"></i>
-                        </a>
-                    </div>
-                </div>
-                <div class="blog-item style-three" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
-                    <div class="image">
-                        <img src="assets/images/blog/blog-list4.jpg" alt="Blog List">
-                    </div>
-                    <div class="content">
-                        <a href="blog.html" class="category">Travel</a>
-                        <h5><a href="blog-details.html">Ultimate Guide to Planning Your Dream Vacation</a></h5>
-                        <ul class="blog-meta">
-                            <li><i class="far fa-calendar-alt"></i> <a href="#">25 February 2024</a></li>
-                            <li><i class="far fa-comments"></i> <a href="#">Comments (5)</a></li>
-                        </ul>
-                        <p>We specialize in crafting unforgettable city experiences for travelers seeking</p>
-                        <a href="blog-details.html" class="theme-btn style-two style-three">
-                            <span data-hover="Book Now">Read More</span>
-                            <i class="fal fa-arrow-right"></i>
-                        </a>
-                    </div>
-                </div>
-                <div class="blog-item style-three" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
-                    <div class="image">
-                        <img src="assets/images/blog/blog-list5.jpg" alt="Blog List">
-                    </div>
-                    <div class="content">
-                        <a href="blog.html" class="category">Travel</a>
-                        <h5><a href="blog-details.html">Ultimate Guide to Planning Your Dream Vacation</a></h5>
-                        <ul class="blog-meta">
-                            <li><i class="far fa-calendar-alt"></i> <a href="#">25 February 2024</a></li>
-                            <li><i class="far fa-comments"></i> <a href="#">Comments (5)</a></li>
-                        </ul>
-                        <p>We specialize in crafting unforgettable city experiences for travelers seeking</p>
-                        <a href="blog-details.html" class="theme-btn style-two style-three">
-                            <span data-hover="Book Now">Read More</span>
-                            <i class="fal fa-arrow-right"></i>
-                        </a>
-                    </div>
-                </div>
+        <div class="px-blog__layout">
+            <div class="px-blog__main">
 
-                <ul class="pagination pt-15 flex-wrap" data-aos="fade-up" data-aos-duration="1500"
-                    data-aos-offset="50">
-                    <li class="page-item disabled">
-                        <span class="page-link"><i class="far fa-chevron-left"></i></span>
-                    </li>
-                    <li class="page-item active">
-                        <span class="page-link">
-                            1
-                            <span class="sr-only">(current)</span>
-                        </span>
-                    </li>
-                    <li class="page-item"><a class="page-link" href="#">2</a></li>
-                    <li class="page-item"><a class="page-link" href="#">3</a></li>
-                    <li class="page-item"><a class="page-link" href="#">...</a></li>
-                    <li class="page-item">
-                        <a class="page-link" href="#"><i class="far fa-chevron-right"></i></a>
-                    </li>
-                </ul>
+                @if ($cat !== '' || $q !== '')
+                    <p class="px-blog__filter">
+                        Đang xem:
+                        @if ($cat !== '')
+                            <b>{{ $cat }}</b>
+                        @endif
+                        @if ($q !== '')
+                            <b>“{{ $q }}”</b>
+                        @endif
+                        · {{ $posts->count() }} bài viết
+                        <a href="{{ route('blogs') }}">Xóa lọc</a>
+                    </p>
+                @endif
+
+                @if ($featured)
+                    <article class="px-feature">
+                        <a class="px-feature__img" href="{{ route('blog-detail', ['slug' => $featured['slug']]) }}">
+                            <img src="{{ asset('clients/assets/images/blog/' . $featured['image']) }}"
+                                alt="{{ $featured['title'] }}" decoding="async">
+                            <span class="px-badge">Nổi bật</span>
+                        </a>
+                        <div class="px-feature__body">
+                            <span class="px-card__tag px-card__tag--inline">{{ $featured['category'] }}</span>
+                            <h2><a
+                                    href="{{ route('blog-detail', ['slug' => $featured['slug']]) }}">{{ $featured['title'] }}</a>
+                            </h2>
+                            <p>{{ $featured['excerpt'] }}</p>
+                            <div class="px-card__meta">
+                                <span><i class="fal fa-calendar-alt"
+                                        aria-hidden="true"></i>{{ \Carbon\Carbon::parse($featured['date'])->format('d/m/Y') }}</span>
+                                <span><i class="fal fa-clock" aria-hidden="true"></i>{{ $featured['read'] }} phút
+                                    đọc</span>
+                            </div>
+                            <a class="px-readmore" href="{{ route('blog-detail', ['slug' => $featured['slug']]) }}">Đọc
+                                bài viết <i class="fal fa-arrow-right" aria-hidden="true"></i></a>
+                        </div>
+                    </article>
+                @endif
+
+                @if ($rest->count())
+                    <h2 class="px-h2 px-blog__h">Bài viết mới</h2>
+                    <div class="px-cards">
+                        @foreach ($rest as $post)
+                            @include('clients.partials.blog-card', ['post' => $post])
+                        @endforeach
+                    </div>
+                @elseif (!$featured)
+                    <div class="px-empty">
+                        <i class="fal fa-search" aria-hidden="true"></i>
+                        <p>Chưa có bài viết phù hợp. Thử chọn danh mục khác nhé.</p>
+                        <a class="px-btn px-btn--cta" href="{{ route('blogs') }}">Xem tất cả bài viết</a>
+                    </div>
+                @endif
             </div>
-            <div class="col-lg-4 col-md-8 col-sm-10 rmt-75">
-                <div class="blog-sidebar">
 
-                    <div class="widget widget-search" data-aos="fade-up" data-aos-duration="1500"
-                        data-aos-offset="50">
-                        <form action="#" class="default-search-form">
-                            <input type="text" placeholder="Search" required="">
-                            <button type="submit" class="searchbutton far fa-search"></button>
-                        </form>
-                    </div>
+            <aside class="px-blog__side">
+                <form class="px-search" action="{{ route('blogs') }}" method="GET" role="search">
+                    <input type="search" name="q" value="{{ $q }}" placeholder="Tìm bài viết…"
+                        aria-label="Tìm bài viết">
+                    @if ($cat !== '')
+                        <input type="hidden" name="cat" value="{{ $cat }}">
+                    @endif
+                    <button type="submit" aria-label="Tìm"><i class="fal fa-search"></i></button>
+                </form>
 
-                    <div class="widget widget-category" data-aos="fade-up" data-aos-duration="1500"
-                        data-aos-offset="50">
-                        <h5 class="widget-title">Category</h5>
-                        <ul class="list-style-three">
-                            <li><a href="blog.html">Adventure</a></li>
-                            <li><a href="blog.html">Hiking & Trekking</a></li>
-                            <li><a href="blog.html">Cycling Tours</a></li>
-                            <li><a href="blog.html">Family Tours</a></li>
-                            <li><a href="blog.html">Mountain Hiking</a></li>
-                            <li><a href="blog.html">Rafting Excursion</a></li>
-                            <li><a href="blog.html">Coastal Paragliding</a></li>
-                        </ul>
-                    </div>
-
-                    <div class="widget widget-news" data-aos="fade-up" data-aos-duration="1500"
-                        data-aos-offset="50">
-                        <h5 class="widget-title">Recent News</h5>
-                        <ul>
-                            <li>
-                                <div class="image">
-                                    <img src="assets/images/widgets/news1.jpg" alt="News">
-                                </div>
-                                <div class="content">
-                                    <h6><a href="blog-details.html">Unique Destinations an tolded Stories ways</a></h6>
-                                    <span class="date"><i class="far fa-calendar-alt"></i> 25 Feb 2024</span>
-                                </div>
+                <section class="px-box">
+                    <h3>Danh mục</h3>
+                    <ul class="px-cats">
+                        <li><a href="{{ route('blogs') }}" class="{{ $cat === '' ? 'is-on' : '' }}"><span>Tất
+                                    cả</span><em>{{ $all->count() }}</em></a></li>
+                        @foreach ($categories as $name => $count)
+                            <li><a href="{{ route('blogs', ['cat' => $name]) }}"
+                                    class="{{ $cat === $name ? 'is-on' : '' }}"><span>{{ $name }}</span><em>{{ $count }}</em></a>
                             </li>
+                        @endforeach
+                    </ul>
+                </section>
+
+                <section class="px-box">
+                    <h3>Bài viết mới nhất</h3>
+                    <ul class="px-latest">
+                        @foreach ($latest as $p)
                             <li>
-                                <div class="image">
-                                    <img src="assets/images/widgets/news2.jpg" alt="News">
-                                </div>
-                                <div class="content">
-                                    <h6><a href="blog-details.html">Immersive Experiences from Around Globe</a></h6>
-                                    <span class="date"><i class="far fa-calendar-alt"></i> 25 Feb 2024</span>
-                                </div>
+                                <a href="{{ route('blog-detail', ['slug' => $p['slug']]) }}">
+                                    <img src="{{ asset('clients/assets/images/blog/' . $p['image']) }}" alt=""
+                                        loading="lazy">
+                                    <span><b>{{ $p['title'] }}</b><small>{{ \Carbon\Carbon::parse($p['date'])->format('d/m/Y') }}</small></span>
+                                </a>
                             </li>
-                            <li>
-                                <div class="image">
-                                    <img src="assets/images/widgets/news3.jpg" alt="News">
-                                </div>
-                                <div class="content">
-                                    <h6><a href="blog-details.html">Journey to Inspire Your Next Adventure</a></h6>
-                                    <span class="date"><i class="far fa-calendar-alt"></i> 25 Feb 2024</span>
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div class="widget widget-gallery" data-aos="fade-up" data-aos-duration="1500"
-                        data-aos-offset="50">
-                        <h5 class="widget-title">Gallery</h5>
-                        <div class="gallery">
-                            <a href="assets/images/widgets/gallery1.jpg">
-                                <img src="assets/images/widgets/gallery1.jpg" alt="Gallery">
-                            </a>
-                            <a href="assets/images/widgets/gallery2.jpg">
-                                <img src="assets/images/widgets/gallery2.jpg" alt="Gallery">
-                            </a>
-                            <a href="assets/images/widgets/gallery3.jpg">
-                                <img src="assets/images/widgets/gallery3.jpg" alt="Gallery">
-                            </a>
-                            <a href="assets/images/widgets/gallery4.jpg">
-                                <img src="assets/images/widgets/gallery4.jpg" alt="Gallery">
-                            </a>
-                            <a href="assets/images/widgets/gallery5.jpg">
-                                <img src="assets/images/widgets/gallery5.jpg" alt="Gallery">
-                            </a>
-                            <a href="assets/images/widgets/gallery6.jpg">
-                                <img src="assets/images/widgets/gallery6.jpg" alt="Gallery">
-                            </a>
-                            <a href="assets/images/widgets/gallery7.jpg">
-                                <img src="assets/images/widgets/gallery7.jpg" alt="Gallery">
-                            </a>
-                            <a href="assets/images/widgets/gallery8.jpg">
-                                <img src="assets/images/widgets/gallery8.jpg" alt="Gallery">
-                            </a>
-                            <a href="assets/images/widgets/gallery9.jpg">
-                                <img src="assets/images/widgets/gallery9.jpg" alt="Gallery">
-                            </a>
-                        </div>
-                    </div>
-
-                    <div class="widget widget-cta" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
-                        <div class="content text-white">
-                            <span class="h6">Explore The World</span>
-                            <h3>Best Tourist Place</h3>
-                            <a href="tour-list.html" class="theme-btn style-two bgc-secondary">
-                                <span data-hover="Explore Now">Explore Now</span>
-                                <i class="fal fa-arrow-right"></i>
-                            </a>
-                        </div>
-                        <div class="image">
-                            <img src="assets/images/widgets/cta-widget.png" alt="CTA">
-                        </div>
-                        <div class="cta-shape"><img src="assets/images/widgets/cta-shape.png" alt="Shape"></div>
-                    </div>
-
-                </div>
-
-            </div>
+                        @endforeach
+                    </ul>
+                </section>
+            </aside>
         </div>
     </div>
-</section>
-<!-- Blog List Area end -->
+</main>
 
 @include('clients.blocks.footer')
