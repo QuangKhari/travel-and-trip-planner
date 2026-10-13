@@ -59,6 +59,7 @@
         rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/travel-theme.css') }}?v=3">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/inspiration.css') }}?v=2">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/inspiration-hub.css') }}?v=1">
 </head>
 
 <body class="tv-home">

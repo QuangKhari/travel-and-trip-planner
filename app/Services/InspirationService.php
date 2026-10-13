@@ -16,6 +16,18 @@ class InspirationService
 {
     public const DOMAINS = ['b' => 'Miền Bắc', 't' => 'Miền Trung', 'n' => 'Miền Nam'];
 
+    /** Câu viết tay hiển thị trên ảnh hero của từng cảm hứng. */
+    public const QUOTES = [
+        'bien' => 'Biển xanh là khởi đầu của những hành trình đẹp!',
+        'thien-nhien' => 'Đi giữa mây và rừng, lòng nhẹ tênh.',
+        'chua-lanh' => 'Chậm lại một nhịp, bình yên sẽ tự tìm đến.',
+        'van-hoa' => 'Mỗi con phố cũ là một trang sử đang mở.',
+        'am-thuc' => 'Nhớ một vùng đất bằng hương vị của nó.',
+        'mien-que' => 'Về quê, nghe nhịp sống chậm của đồng lúa.',
+        'san-anh' => 'Dậy sớm một chút, đổi lấy khung hình đáng nhớ.',
+        'hai-nguoi' => 'Một chuyến đi, hai người, vạn kỷ niệm.',
+    ];
+
     /** Các cảm hứng đang bật, kèm ảnh bìa và số điểm đến. */
     public function all(): Collection
     {
@@ -80,6 +92,7 @@ class InspirationService
                     'slug' => $d->slug,
                     'name' => $d->name,
                     'province' => $d->province,
+                    'domain' => $d->domain,
                     'domainName' => self::DOMAINS[$d->domain] ?? '',
                     'description' => $d->description,
                     'image' => DiscoverImage::url($d->coverImage),
@@ -102,6 +115,8 @@ class InspirationService
                 'headline' => $i->headline,
                 'icon' => $i->icon,
                 'count' => $i->destinationCount,
+                'image' => $i->image,
+                'quote' => self::QUOTES[$i->slug] ?? $i->headline,
             ])->values()->all(),
             'destinations' => $destinations,
         ];
