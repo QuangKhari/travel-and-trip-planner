@@ -67,6 +67,7 @@
     <link rel="stylesheet" href="{{ asset('clients/assets/css/sea-theme.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/client-ui-polish.css') }}?v=4">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/travel-pages.css') }}?v=2">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/inspiration.css') }}?v=2">
     <script src="{{ asset('clients/assets/js/travel-motion.js') }}?v=1" defer></script>
 </head>
 

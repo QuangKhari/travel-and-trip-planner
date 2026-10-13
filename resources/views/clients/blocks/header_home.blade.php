@@ -58,6 +58,7 @@
         href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Caveat:wght@600;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/travel-theme.css') }}?v=3">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/inspiration.css') }}?v=2">
 </head>
 
 <body class="tv-home">

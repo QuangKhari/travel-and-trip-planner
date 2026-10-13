@@ -27,6 +27,7 @@ use App\Http\Controllers\admin\PromotionManagementController;
 use App\Http\Controllers\clients\ForgotPasswordController;
 use App\Http\Controllers\clients\EmailVerificationController;
 use App\Http\Controllers\clients\EmailChangeController;
+use App\Http\Controllers\clients\ExploreController;
 
 
 
@@ -36,6 +37,7 @@ Route::get('/about', [AboutController::class, 'index'])->name('about');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:5,1,contact')->name('contact.send');
 Route::get('/destination', [DestinationController::class, 'index'])->name('destination');
+Route::get('/explore', [ExploreController::class, 'index'])->middleware('throttle:60,1,explore')->name('explore');
 Route::get('/travel-guides', [TravelGuidesController::class, 'index'])->name('team');
 Route::get('/tour-detail/{id}', [TourDetailController::class, 'index'])->whereNumber('id')->name('tour-detail');
 Route::get('/blogs', [BlogController::class, 'index'])->name('blogs');

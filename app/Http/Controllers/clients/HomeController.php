@@ -5,6 +5,7 @@ namespace App\Http\Controllers\clients;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\clients\Home;
+use App\Services\InspirationService;
 
 class HomeController extends Controller
 {
@@ -16,12 +17,12 @@ class HomeController extends Controller
         $this->homeTours = new Home();
     }
 
-    public function index()
+    public function index(InspirationService $inspirationService)
     {
         $title = 'Trang chủ';
         $tours = $this->homeTours->getHomeTours();
-        //dd($tours);
+        $inspirationMap = $inspirationService->mapData();
 
-        return view('clients.home', compact('title', 'tours'));
+        return view('clients.home', compact('title', 'tours', 'inspirationMap'));
     }
 }
