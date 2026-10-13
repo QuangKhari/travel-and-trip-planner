@@ -1,0 +1,1279 @@
+/* =========================================================
+   Khám phá theo cảm hứng
+   - Home: Bản đồ cảm xúc (tabs + bản đồ Việt Nam + pin tương tác)  → .tvx-map*
+   - /explore: Travel Journal (giấy nhám, chữ viết tay, tem, nhãn dán) → .tvx-j*
+   Dùng biến của travel-theme.css (--tv-teal, --tv-navy, --tv-sand, --tv-hand ...). Tiền tố: tvx-
+   ========================================================= */
+
+/* ---------- Màu theo từng cảm hứng: --rgb (viền, pin, nút) và gradient thay ảnh ---------- */
+.tvx-card--bien,
+.tvx-map[data-active="bien"],
+.tvx-tab[data-slug="bien"] {
+    --rgb: 11, 148, 136;
+    --tvx-a: #25c7b5;
+    --tvx-b: #0a5f60;
+}
+.tvx-card--thien-nhien,
+.tvx-map[data-active="thien-nhien"],
+.tvx-tab[data-slug="thien-nhien"] {
+    --rgb: 63, 128, 88;
+    --tvx-a: #4f9a6a;
+    --tvx-b: #1f4d36;
+}
+.tvx-card--chua-lanh,
+.tvx-map[data-active="chua-lanh"],
+.tvx-tab[data-slug="chua-lanh"] {
+    --rgb: 61, 143, 134;
+    --tvx-a: #8ccdc0;
+    --tvx-b: #2f7a74;
+}
+.tvx-card--van-hoa,
+.tvx-map[data-active="van-hoa"],
+.tvx-tab[data-slug="van-hoa"] {
+    --rgb: 190, 140, 24;
+    --tvx-a: #e6c068;
+    --tvx-b: #a8741a;
+}
+.tvx-card--am-thuc,
+.tvx-map[data-active="am-thuc"],
+.tvx-tab[data-slug="am-thuc"] {
+    --rgb: 214, 120, 24;
+    --tvx-a: #f0b44c;
+    --tvx-b: #a9561a;
+}
+.tvx-card--mien-que,
+.tvx-map[data-active="mien-que"],
+.tvx-tab[data-slug="mien-que"] {
+    --rgb: 98, 148, 38;
+    --tvx-a: #a7c957;
+    --tvx-b: #4a7229;
+}
+.tvx-card--san-anh,
+.tvx-map[data-active="san-anh"],
+.tvx-tab[data-slug="san-anh"] {
+    --rgb: 42, 106, 124;
+    --tvx-a: #2a6a7c;
+    --tvx-b: #102f3a;
+}
+.tvx-card--hai-nguoi,
+.tvx-map[data-active="hai-nguoi"],
+.tvx-tab[data-slug="hai-nguoi"] {
+    --rgb: 200, 92, 116;
+    --tvx-a: #f1b79f;
+    --tvx-b: #b5586a;
+}
+
+/* ---------- Tiêu đề section ---------- */
+.tvx-inspire {
+    position: relative;
+    z-index: 5;
+    background: var(--tv-bg, #f8fbf9);
+    padding: 72px 0 96px;
+}
+.tvx-inspire__head {
+    max-width: 680px;
+    margin: 0 auto 44px;
+    text-align: center;
+}
+.tvx-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 14px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--tv-teal, #0b9488);
+}
+.tvx-eyebrow::before,
+.tvx-eyebrow::after {
+    content: "";
+    width: 28px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--tv-orange, #ddaf32);
+}
+.tvx-inspire__head h2 {
+    margin: 0 0 14px;
+    font-size: clamp(28px, 4vw, 44px);
+    line-height: 1.15;
+    font-weight: 800;
+    color: var(--tv-navy, #102f3a);
+}
+.tvx-inspire__head h2 em {
+    font-style: normal;
+    color: var(--tv-teal, #0b9488);
+}
+.tvx-lead {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--tv-mute, #64748b);
+}
+
+/* =========================================================
+   HOME — Bản đồ cảm xúc
+   ========================================================= */
+.tvx-map {
+    --rgb: 11, 148, 136;
+    display: grid;
+    grid-template-columns: minmax(300px, 0.78fr) minmax(0, 1.22fr);
+    grid-template-areas:
+        "tabs stage"
+        "detail stage";
+    grid-template-rows: auto 1fr;
+    gap: 22px 44px;
+    align-items: start;
+}
+.tvx-map__tabs {
+    grid-area: tabs;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.tvx-map__stage {
+    grid-area: stage;
+    position: relative;
+    width: 100%;
+    max-width: 640px;
+    margin-inline: auto;
+}
+.tvx-detail {
+    grid-area: detail;
+}
+
+/* --- tab cảm hứng --- */
+.tvx-tab {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 16px 10px 12px;
+    border-radius: 18px;
+    color: var(--tv-navy, #102f3a);
+    background: transparent;
+    border: 1px solid transparent;
+    text-decoration: none;
+    transition:
+        background 0.3s,
+        box-shadow 0.3s,
+        border-color 0.3s,
+        transform 0.3s;
+}
+.tvx-tab:hover {
+    background: rgba(255, 255, 255, 0.7);
+    color: var(--tv-navy, #102f3a);
+    transform: translateX(4px);
+}
+.tvx-tab:focus-visible {
+    outline: 3px solid var(--tv-orange, #ddaf32);
+    outline-offset: 2px;
+}
+.tvx-tab.is-on,
+.tvx-tab[aria-selected="true"] {
+    background: #fff;
+    border-color: rgba(var(--rgb), 0.28);
+    box-shadow: 0 12px 28px rgba(16, 47, 58, 0.1);
+    transform: translateX(8px);
+}
+.tvx-tab__icon {
+    flex: none;
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 14px;
+    font-size: 17px;
+    color: rgb(var(--rgb));
+    background: rgba(var(--rgb), 0.12);
+    transition:
+        background 0.3s,
+        color 0.3s;
+}
+.tvx-tab.is-on .tvx-tab__icon,
+.tvx-tab[aria-selected="true"] .tvx-tab__icon {
+    color: #fff;
+    background: rgb(var(--rgb));
+}
+.tvx-tab__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+.tvx-tab__text strong {
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.25;
+}
+.tvx-tab__text small {
+    font-size: 13px;
+    color: var(--tv-mute, #64748b);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.tvx-tab__n {
+    flex: none;
+    min-width: 28px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 700;
+    text-align: center;
+    color: rgb(var(--rgb));
+    background: rgba(var(--rgb), 0.1);
+}
+
+/* --- khối chi tiết dưới tab --- */
+.tvx-detail {
+    margin-top: 6px;
+    padding: 22px 24px;
+    border-radius: 24px;
+    background: #fff;
+    box-shadow: var(--tv-shadow, 0 10px 30px rgba(16, 47, 58, 0.1));
+    border-left: 5px solid rgb(var(--rgb));
+    transition: border-color 0.4s;
+}
+.tvx-detail__hand {
+    margin: 0 0 12px;
+    min-height: 3.3em;
+    font-family: var(--tv-hand, "Caveat", cursive);
+    font-size: 29px;
+    line-height: 1.15;
+    color: rgb(var(--rgb));
+}
+.tvx-detail__top {
+    margin: 0 0 18px;
+    font-size: 14.5px;
+    color: var(--tv-mute, #64748b);
+}
+.tvx-linkbtn {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-weight: 700;
+    color: var(--tv-navy, #102f3a);
+    text-decoration: underline;
+    text-decoration-color: rgba(var(--rgb), 0.5);
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+.tvx-linkbtn:hover {
+    color: rgb(var(--rgb));
+}
+.tvx-detail__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 22px;
+    border-radius: 999px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    background: rgb(var(--rgb));
+    box-shadow: 0 10px 20px rgba(var(--rgb), 0.3);
+    transition:
+        transform 0.3s,
+        box-shadow 0.3s;
+}
+.tvx-detail__cta:hover {
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 14px 26px rgba(var(--rgb), 0.38);
+}
+.tvx-detail__cta i {
+    transition: transform 0.3s;
+}
+.tvx-detail__cta:hover i {
+    transform: translateX(4px);
+}
+
+/* --- bản đồ --- */
+.tvx-map__board {
+    position: relative;
+    aspect-ratio: 800 / 952.8;
+    overflow: hidden;
+    border-radius: 32px;
+    background:
+        radial-gradient(
+            120% 90% at 85% 70%,
+            rgba(var(--rgb), 0.16),
+            transparent 60%
+        ),
+        linear-gradient(170deg, #eaf6f3, #dff0ee);
+    box-shadow: var(--tv-shadow-lg, 0 24px 50px rgba(16, 47, 58, 0.2));
+}
+.tvx-map__svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+.tvx-map__nb {
+    fill: rgba(16, 47, 58, 0.06);
+    stroke: rgba(16, 47, 58, 0.1);
+    stroke-width: 1;
+}
+.tvx-map__vn {
+    fill: #fff8e6;
+    stroke: rgba(var(--rgb), 0.6);
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 8px 12px rgba(16, 47, 58, 0.14));
+    transition: stroke 0.5s;
+}
+.tvx-map__dot {
+    fill: rgba(var(--rgb), 0.75);
+}
+.tvx-map__lbl {
+    font-size: 12px;
+    font-style: italic;
+    fill: #5f7b7b;
+}
+.tvx-map__sea {
+    font-family: var(--tv-hand, "Caveat", cursive);
+    font-size: 28px;
+    letter-spacing: 0.2em;
+    text-anchor: middle;
+    fill: rgba(var(--rgb), 0.4);
+    transition: fill 0.5s;
+}
+.tvx-map__pins {
+    position: absolute;
+    inset: 0;
+}
+
+/* --- pin --- */
+.tvx-pin {
+    position: absolute;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.tvx-pin:hover,
+.tvx-pin:focus-visible,
+.tvx-pin.is-open {
+    z-index: 999 !important;
+}
+.tvx-pin:focus-visible {
+    outline: none;
+}
+.tvx-pin__dot {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 22px;
+    height: 22px;
+    margin: -11px 0 0 -11px;
+    border-radius: 50%;
+    background: #9db8b4;
+    opacity: 0.5;
+    transform: scale(var(--k, 0.4));
+    transition:
+        transform 0.55s cubic-bezier(0.3, 1.5, 0.5, 1),
+        background 0.4s,
+        opacity 0.4s,
+        box-shadow 0.4s;
+    transition-delay: calc(var(--i, 0) * 12ms);
+}
+.tvx-pin.is-lit .tvx-pin__dot {
+    opacity: 1;
+    background: rgb(var(--rgb));
+    border: 2.5px solid #fff;
+    box-shadow:
+        0 0 0 5px rgba(var(--rgb), 0.2),
+        0 6px 12px rgba(var(--rgb), 0.45);
+}
+.tvx-pin.is-lit.has-label .tvx-pin__dot::after {
+    content: "";
+    position: absolute;
+    inset: -9px;
+    border-radius: 50%;
+    border: 2px solid rgba(var(--rgb), 0.5);
+    animation: tvxPulse 2.6s ease-out infinite;
+}
+@keyframes tvxPulse {
+    0% {
+        transform: scale(0.7);
+        opacity: 0.9;
+    }
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
+}
+.tvx-pin:hover .tvx-pin__dot,
+.tvx-pin:focus-visible .tvx-pin__dot {
+    opacity: 1;
+}
+.tvx-pin.is-open .tvx-pin__dot {
+    box-shadow:
+        0 0 0 4px #fff,
+        0 0 0 7px rgb(var(--rgb)),
+        0 8px 16px rgba(var(--rgb), 0.5);
+}
+.tvx-pin__label {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(calc(10px + var(--k, 0.4) * 12px), -52%);
+    white-space: nowrap;
+    pointer-events: none;
+    font-family: var(--tv-hand, "Caveat", cursive);
+    font-size: 21px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--tv-navy, #102f3a);
+    text-shadow:
+        0 0 3px #fff8e6,
+        0 0 6px #fff8e6,
+        0 0 8px #fff8e6;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.tvx-pin.has-label .tvx-pin__label,
+.tvx-pin:hover .tvx-pin__label,
+.tvx-pin:focus-visible .tvx-pin__label,
+.tvx-pin.is-open .tvx-pin__label {
+    opacity: 1;
+}
+
+/* --- chú thích --- */
+.tvx-map__legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 14px 4px 0;
+    font-size: 13.5px;
+    color: var(--tv-mute, #64748b);
+}
+.tvx-map__legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgb(var(--rgb));
+    box-shadow: 0 0 0 4px rgba(var(--rgb), 0.2);
+}
+.tvx-map__lit {
+    margin-left: auto;
+    padding: 3px 12px;
+    border-radius: 999px;
+    font-weight: 700;
+    color: rgb(var(--rgb));
+    background: rgba(var(--rgb), 0.1);
+}
+
+/* --- thẻ điểm đến (popover) --- */
+.tvx-pop {
+    position: absolute;
+    top: 16px;
+    z-index: 2000;
+    width: min(290px, 46%);
+    overflow: hidden;
+    border-radius: 22px;
+    background: #fff;
+    box-shadow: 0 24px 50px rgba(16, 47, 58, 0.28);
+    animation: tvxPop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.tvx-pop[hidden] {
+    display: none;
+}
+.tvx-pop[data-side="right"] {
+    right: 16px;
+}
+.tvx-pop[data-side="left"] {
+    left: 16px;
+}
+@keyframes tvxPop {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+.tvx-pop__media {
+    position: relative;
+    height: 112px;
+    background: linear-gradient(
+        160deg,
+        rgba(var(--rgb), 0.95),
+        rgba(var(--rgb), 0.55)
+    );
+}
+.tvx-pop__media img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.tvx-pop__close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 50%;
+    font-size: 20px;
+    line-height: 1;
+    color: var(--tv-navy, #102f3a);
+    background: rgba(255, 255, 255, 0.92);
+    cursor: pointer;
+}
+.tvx-pop__score {
+    position: absolute;
+    left: 12px;
+    bottom: 10px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--tv-on-sand, #102f3a);
+    background: var(--tv-sand, #f3d39a);
+}
+.tvx-pop__body {
+    padding: 14px 18px 18px;
+}
+.tvx-pop__place {
+    margin: 0 0 4px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgb(var(--rgb));
+}
+.tvx-pop__name {
+    margin: 0 0 6px;
+    font-size: 21px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--tv-navy, #102f3a);
+}
+.tvx-pop__desc {
+    margin: 0 0 12px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: #475569;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.tvx-pop__also {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: var(--tv-mute, #64748b);
+}
+.tvx-chip {
+    padding: 4px 11px;
+    border: 1px solid var(--tv-line, #e2e8f0);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--tv-navy, #102f3a);
+    background: #fff;
+    cursor: pointer;
+    transition:
+        border-color 0.2s,
+        color 0.2s;
+}
+.tvx-chip:hover {
+    border-color: var(--tv-teal, #0b9488);
+    color: var(--tv-teal, #0b9488);
+}
+.tvx-pop__cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 12px;
+    border-top: 1px solid var(--tv-line, #e2e8f0);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--tv-teal-dark, #086b66);
+}
+.tvx-pop__soon {
+    margin: 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--tv-line, #e2e8f0);
+    font-size: 13.5px;
+    color: var(--tv-mute, #64748b);
+}
+
+/* =========================================================
+   Image card (dùng cho dải "cảm hứng khác" ở /explore)
+   ========================================================= */
+.tvx-card {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    border-radius: 20px;
+    color: #fff;
+    background: linear-gradient(
+        160deg,
+        var(--tvx-a, #25c7b5),
+        var(--tvx-b, #0b9488)
+    );
+    box-shadow: 0 10px 28px rgba(16, 47, 58, 0.12);
+    transition:
+        transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
+        box-shadow 0.45s;
+    isolation: isolate;
+    text-decoration: none;
+}
+.tvx-card:hover,
+.tvx-card:focus-visible {
+    transform: translateY(-6px);
+    box-shadow: 0 22px 44px rgba(16, 47, 58, 0.22);
+    color: #fff;
+}
+.tvx-card:focus-visible {
+    outline: 3px solid var(--tv-orange, #ddaf32);
+    outline-offset: 3px;
+}
+.tvx-card__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -2;
+    transition: transform 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.tvx-card:hover .tvx-card__img {
+    transform: scale(1.04);
+}
+.tvx-card__ghost {
+    position: absolute;
+    right: -4%;
+    top: 50%;
+    transform: translateY(-62%);
+    font-size: 110px;
+    color: rgba(255, 255, 255, 0.16);
+    z-index: -2;
+    pointer-events: none;
+}
+.tvx-card__shade {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(
+        to top,
+        rgba(7, 44, 46, 0.74) 0%,
+        rgba(7, 44, 46, 0.3) 42%,
+        rgba(7, 44, 46, 0) 72%
+    );
+    transition: opacity 0.4s;
+}
+.tvx-card__body {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 18px;
+}
+.tvx-card__icon {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    font-size: 15px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+}
+.tvx-card__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+.tvx-card__text strong {
+    font-size: 17px;
+    line-height: 1.2;
+    font-weight: 700;
+}
+.tvx-card__arrow {
+    flex: none;
+    font-size: 18px;
+    transition: transform 0.35s;
+}
+.tvx-card:hover .tvx-card__arrow {
+    transform: translateX(4px);
+}
+
+/* =========================================================
+   /explore — Travel Journal
+   ========================================================= */
+.tvx-hero {
+    position: relative;
+    overflow: hidden;
+    min-height: 440px;
+    display: flex;
+    align-items: flex-end;
+    padding: 150px 0 80px;
+    color: #fff;
+    background: linear-gradient(
+        160deg,
+        var(--tvx-a, #25c7b5),
+        var(--tvx-b, #0b9488)
+    );
+}
+.tvx-hero__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.tvx-hero__shade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to top,
+        rgba(7, 44, 46, 0.78) 0%,
+        rgba(7, 44, 46, 0.35) 55%,
+        rgba(7, 44, 46, 0.18) 100%
+    );
+}
+.tvx-hero__tear {
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    width: 100%;
+    height: 30px;
+    fill: #f7f0e1;
+}
+.tvx-hero .container {
+    position: relative;
+}
+.tvx-crumb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 26px;
+    font-size: 13.5px;
+    color: rgba(255, 255, 255, 0.85);
+}
+.tvx-crumb a {
+    color: inherit;
+}
+.tvx-crumb a:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+.tvx-crumb i {
+    font-size: 9px;
+    opacity: 0.7;
+}
+.tvx-hero__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 6px;
+    font-family: var(--tv-hand, "Caveat", cursive);
+    font-size: 30px;
+    line-height: 1;
+    color: var(--tv-orange-2, #f3d878);
+    transform: rotate(-2deg);
+}
+.tvx-hero__title {
+    margin: 0 0 14px;
+    font-size: clamp(44px, 8vw, 88px);
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    color: #fff;
+}
+.tvx-hero__lead {
+    max-width: 560px;
+    margin: 0;
+    font-size: clamp(17px, 2vw, 21px);
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.tvx-explore {
+    padding: 40px 0 110px;
+    background-color: #f7f0e1;
+    background-image: radial-gradient(
+        rgba(16, 47, 58, 0.09) 1.2px,
+        transparent 1.2px
+    );
+    background-size: 24px 24px;
+}
+.tvx-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 44px;
+}
+.tvx-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.tvx-pill {
+    padding: 9px 20px;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--tv-navy, #102f3a);
+    background: #fffdf7;
+    border: 1px solid rgba(16, 47, 58, 0.15);
+    border-radius: 999px;
+    transition:
+        background 0.25s,
+        color 0.25s,
+        border-color 0.25s;
+}
+.tvx-pill:hover {
+    border-color: var(--tv-teal, #0b9488);
+    color: var(--tv-teal, #0b9488);
+}
+.tvx-pill.is-on {
+    background: var(--tv-teal, #0b9488);
+    border-color: var(--tv-teal, #0b9488);
+    color: #fff;
+}
+.tvx-count {
+    margin: 0;
+    font-family: var(--tv-hand, "Caveat", cursive);
+    font-size: 26px;
+    color: var(--tv-navy, #102f3a);
+}
+
+.tvx-journal {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 54px 36px;
+    align-items: start;
+}
+.tvx-jcard {
+    --rgb: 11, 148, 136;
+    position: relative;
+    padding: 14px 14px 22px;
+    border-radius: 4px;
+    background: #fffdf7;
+    box-shadow:
+        0 1px 1px rgba(16, 47, 58, 0.08),
+        0 16px 30px rgba(16, 47, 58, 0.13);
+    transform: rotate(var(--rot, 0deg));
+    transition:
+        transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
+        box-shadow 0.45s;
+}
+.tvx-jcard:nth-child(3n + 1) {
+    --rot: -1.4deg;
+}
+.tvx-jcard:nth-child(3n + 2) {
+    --rot: 1deg;
+    margin-top: 28px;
+}
+.tvx-jcard:nth-child(3n) {
+    --rot: -0.5deg;
+    margin-top: 10px;
+}
+.tvx-jcard:hover {
+    transform: rotate(0deg) translateY(-8px);
+    box-shadow:
+        0 1px 1px rgba(16, 47, 58, 0.08),
+        0 28px 44px rgba(16, 47, 58, 0.2);
+}
+/* băng dính */
+.tvx-tape {
+    position: absolute;
+    top: -13px;
+    left: 50%;
+    z-index: 3;
+    width: 96px;
+    height: 28px;
+    background: rgba(243, 211, 154, 0.82);
+    transform: translateX(-50%) rotate(-3deg);
+    clip-path: polygon(
+        0 8%,
+        4% 0,
+        8% 10%,
+        12% 0,
+        88% 0,
+        92% 10%,
+        96% 0,
+        100% 8%,
+        100% 92%,
+        96% 100%,
+        92% 90%,
+        88% 100%,
+        12% 100%,
+        8% 90%,
+        4% 100%,
+        0 92%
+    );
+}
+.tvx-jcard:nth-child(2n) .tvx-tape {
+    transform: translateX(-50%) rotate(2.5deg);
+    background: rgba(180, 225, 218, 0.85);
+}
+.tvx-jphoto {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    isolation: isolate;
+    border-radius: 2px;
+    background: linear-gradient(
+        160deg,
+        var(--tvx-a, #25c7b5),
+        var(--tvx-b, #0b9488)
+    );
+}
+.tvx-jphoto img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -2;
+    filter: saturate(1.05) contrast(1.02);
+    transition: transform 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.tvx-jcard:hover .tvx-jphoto img {
+    transform: scale(1.04);
+}
+.tvx-jphoto .tvx-card__ghost {
+    font-size: 150px;
+}
+.tvx-jphoto .tvx-card__shade {
+    background: linear-gradient(
+        to top,
+        rgba(7, 44, 46, 0.3),
+        rgba(7, 44, 46, 0) 55%
+    );
+}
+/* tem bưu điện ghi tỉnh/thành */
+.tvx-stamp {
+    position: absolute;
+    top: -16px;
+    right: -12px;
+    z-index: 4;
+    width: 84px;
+    height: 84px;
+    display: grid;
+    place-items: center;
+    padding: 12px;
+    border: 2px solid rgba(var(--rgb), 0.75);
+    border-radius: 50%;
+    font-size: 9.5px;
+    font-weight: 800;
+    line-height: 1.25;
+    letter-spacing: 0.06em;
+    text-align: center;
+    text-transform: uppercase;
+    color: rgb(var(--rgb));
+    background: rgba(255, 253, 247, 0.82);
+    transform: rotate(14deg);
+}
+.tvx-stamp::before {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border: 1px dashed rgba(var(--rgb), 0.6);
+    border-radius: 50%;
+}
+.tvx-stamp small {
+    display: block;
+    margin-top: 2px;
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    opacity: 0.8;
+}
+.tvx-jname {
+    margin: 16px 6px 2px;
+    font-family: var(--tv-hand, "Caveat", cursive);
+    font-size: 38px;
+    font-weight: 700;
+    line-height: 1.05;
+    color: var(--tv-navy, #102f3a);
+    transform: rotate(-1deg);
+    transform-origin: left;
+}
+.tvx-jplace {
+    margin: 0 6px 10px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgb(var(--rgb));
+}
+.tvx-jdesc {
+    margin: 0 6px 18px;
+    font-size: 14.5px;
+    line-height: 1.65;
+    color: #475569;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.tvx-jfoot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 6px;
+}
+/* nhãn dán "độ hợp" */
+.tvx-sticker {
+    flex: none;
+    width: 66px;
+    height: 66px;
+    display: grid;
+    place-content: center;
+    border-radius: 50%;
+    text-align: center;
+    color: var(--tv-on-sand, #102f3a);
+    background: var(--tv-sand, #f3d39a);
+    box-shadow:
+        0 0 0 3px #fffdf7,
+        0 6px 12px rgba(16, 47, 58, 0.2);
+    transform: rotate(-9deg);
+}
+.tvx-sticker small {
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+.tvx-sticker b {
+    font-family: var(--tv-hand, "Caveat", cursive);
+    font-size: 28px;
+    line-height: 0.95;
+}
+/* vé tour */
+.tvx-ticket {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 16px;
+    border: 1.5px dashed rgba(var(--rgb), 0.75);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: rgb(var(--rgb));
+    background: rgba(var(--rgb), 0.06);
+    transition:
+        background 0.25s,
+        transform 0.25s;
+}
+.tvx-ticket:hover {
+    color: rgb(var(--rgb));
+    background: rgba(var(--rgb), 0.14);
+    transform: translateX(3px);
+}
+.tvx-ticket--soon {
+    color: var(--tv-mute, #64748b);
+    border-color: rgba(100, 116, 139, 0.45);
+    background: transparent;
+    font-weight: 500;
+}
+.tvx-jcard.has-link .tvx-ticket::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+}
+
+.tvx-empty {
+    padding: 72px 20px;
+    text-align: center;
+    color: var(--tv-mute, #64748b);
+}
+.tvx-empty i {
+    font-size: 44px;
+    color: var(--tv-teal, #0b9488);
+}
+.tvx-empty h3 {
+    margin: 16px 0 8px;
+    color: var(--tv-navy, #102f3a);
+}
+
+/* cảm hứng khác */
+.tvx-others-wrap {
+    margin-top: 96px;
+}
+.tvx-others__title {
+    margin: 0 0 24px;
+    font-family: var(--tv-hand, "Caveat", cursive);
+    font-size: clamp(32px, 4vw, 46px);
+    font-weight: 700;
+    color: var(--tv-navy, #102f3a);
+}
+.tvx-others {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+.tvx-others .tvx-card {
+    height: 150px;
+}
+
+/* =========================================================
+   Responsive
+   ========================================================= */
+@media (max-width: 1199px) {
+    .tvx-journal {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .tvx-jcard:nth-child(n) {
+        margin-top: 0;
+    }
+    .tvx-jcard:nth-child(2n) {
+        margin-top: 28px;
+    }
+}
+@media (max-width: 991px) {
+    .tvx-inspire {
+        padding: 56px 0 72px;
+    }
+    .tvx-map {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "tabs"
+            "stage"
+            "detail";
+        grid-template-rows: none;
+        gap: 18px;
+    }
+    .tvx-map__tabs {
+        flex-direction: row;
+        gap: 8px;
+        margin: 0 -16px;
+        padding: 4px 16px 10px;
+        overflow-x: auto;
+        scroll-snap-type: x proximity;
+        scrollbar-width: none;
+    }
+    .tvx-map__tabs::-webkit-scrollbar {
+        display: none;
+    }
+    .tvx-tab {
+        flex: none;
+        scroll-snap-align: start;
+        padding: 8px 14px 8px 8px;
+        background: #fff;
+        border-color: var(--tv-line, #e2e8f0);
+    }
+    .tvx-tab:hover,
+    .tvx-tab.is-on,
+    .tvx-tab[aria-selected="true"] {
+        transform: none;
+    }
+    .tvx-tab__icon {
+        width: 34px;
+        height: 34px;
+        font-size: 14px;
+        border-radius: 11px;
+    }
+    .tvx-tab__text strong {
+        font-size: 15px;
+        white-space: nowrap;
+    }
+    .tvx-tab__text small,
+    .tvx-tab__n {
+        display: none;
+    }
+    .tvx-map__board {
+        border-radius: 26px;
+    }
+    .tvx-pop,
+    .tvx-pop[data-side="left"],
+    .tvx-pop[data-side="right"] {
+        position: static;
+        width: auto;
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: 150px 1fr;
+    }
+    .tvx-pop[hidden] {
+        display: none;
+    }
+    .tvx-pop__media {
+        height: auto;
+        min-height: 160px;
+    }
+    .tvx-detail__hand {
+        min-height: 0;
+        font-size: 26px;
+    }
+}
+@media (max-width: 767px) {
+    .tvx-journal {
+        grid-template-columns: 1fr;
+        gap: 46px;
+    }
+    .tvx-jcard:nth-child(n) {
+        margin-top: 0;
+    }
+    .tvx-hero {
+        min-height: 380px;
+        padding: 120px 0 64px;
+    }
+}
+@media (max-width: 575px) {
+    .tvx-pin__label {
+        font-size: 17px;
+    }
+    .tvx-pop,
+    .tvx-pop[data-side="left"],
+    .tvx-pop[data-side="right"] {
+        grid-template-columns: 104px 1fr;
+    }
+    .tvx-pop__body {
+        padding: 12px 14px 14px;
+    }
+    .tvx-pop__desc {
+        -webkit-line-clamp: 2;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tvx-pin__dot,
+    .tvx-tab,
+    .tvx-card,
+    .tvx-card__img,
+    .tvx-jcard,
+    .tvx-jphoto img {
+        transition: none;
+    }
+    .tvx-pin.is-lit.has-label .tvx-pin__dot::after,
+    .tvx-pop {
+        animation: none;
+    }
+    .tvx-card:hover,
+    .tvx-jcard:hover {
+        transform: none;
+    }
+}
