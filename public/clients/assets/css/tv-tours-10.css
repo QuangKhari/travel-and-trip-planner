@@ -1,0 +1,2295 @@
+/* =====================================================================
+   tv-tours-10.css — Trang Tour (Listing) + Chi tiết tour (Detail) + watercolor decoration
+   Nạp SAU tv-final.css (xem hướng dẫn). Xoá file này + bỏ <link> là về như cũ.
+   Quy tắc: ẢNH THẬT là nhân vật chính; watercolor chỉ nối section / kể chuyện.
+   Tiền tố:  wt- = dùng chung (card, decor) · tl- = Tour Listing · td10- = Tour Detail
+   ===================================================================== */
+
+/* ---------- 0. Biến ---------- */
+:root {
+    --wt-teal: #16a6a1; /* hành động nhẹ, đường nét, trang trí (KHÔNG dùng làm chữ trên nền sáng) */
+    --wt-teal-d: #087f7b; /* nút chính, link, chữ nhấn (đủ tương phản 4.5:1 với trắng) */
+    --wt-ink: #173b3a; /* chữ chính */
+    --wt-mute: #4f6f6d; /* chữ phụ (đạt 4.5:1 trên kem) */
+    --wt-sand: #e9c46a; /* vàng cát: điểm nhấn, KHÔNG làm chữ */
+    --wt-sand-l: #fbf1d6;
+    --wt-cream: #f8f6f0;
+    --wt-white: #fff;
+    --wt-terra: #b4573d; /* "không bao gồm": đất nung dịu, thay cho đỏ gắt */
+    --wt-line: rgba(23, 59, 58, 0.12);
+    --wt-shadow: 0 10px 30px rgba(8, 79, 76, 0.1);
+    --wt-shadow-lg: 0 22px 50px rgba(8, 79, 76, 0.16);
+    --wt-serif: "Playfair Display", "Be Vietnam Pro", Georgia, serif;
+    --wt-hand: "Caveat", cursive;
+    --wt-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --wt-img: "../images/watercolor/";
+}
+
+/* ---------- 1. Header sáng cho 2 trang này (trong, nhẹ — theo đặc tả) ---------- */
+body.page-tours .tv-header,
+body.page-tour-detail .tv-header {
+    background: rgba(248, 246, 240, 0.86);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    backdrop-filter: blur(14px) saturate(1.2);
+    box-shadow: 0 1px 0 var(--wt-line);
+    padding: 14px 0;
+}
+body.page-tours .tv-header.is-scrolled,
+body.page-tour-detail .tv-header.is-scrolled {
+    background: rgba(255, 255, 255, 0.94);
+    padding: 8px 0;
+    box-shadow: 0 6px 20px rgba(8, 79, 76, 0.08);
+}
+body.page-tours .tv-nav a,
+body.page-tour-detail .tv-nav a,
+body.page-tours .px-brand__name,
+body.page-tour-detail .px-brand__name,
+body.page-tours .tv-icon-btn,
+body.page-tour-detail .tv-icon-btn,
+body.page-tours .tv-user__btn,
+body.page-tour-detail .tv-user__btn {
+    color: var(--wt-ink);
+}
+body.page-tours .tv-nav a.is-active,
+body.page-tour-detail .tv-nav a.is-active {
+    color: var(--wt-teal-d);
+}
+body.page-tours .tv-burger span,
+body.page-tours .tv-burger span::before,
+body.page-tours .tv-burger span::after,
+body.page-tour-detail .tv-burger span,
+body.page-tour-detail .tv-burger span::before,
+body.page-tour-detail .tv-burger span::after {
+    background: var(--wt-ink);
+}
+body.page-tours .tv-hsearch__form input,
+body.page-tour-detail .tv-hsearch__form input {
+    color: var(--wt-ink);
+}
+
+/* ---------- 2. Decor dùng chung ---------- */
+.wt-deco {
+    position: absolute;
+    pointer-events: none;
+    user-select: none;
+    z-index: 0;
+    max-width: none;
+}
+.wt-drift {
+    animation: wtDrift 9s ease-in-out infinite;
+}
+.wt-drift--slow {
+    animation-duration: 12s;
+    animation-delay: -3s;
+}
+@keyframes wtDrift {
+    0%,
+    100% {
+        transform: translateY(0) rotate(0);
+    }
+    50% {
+        transform: translateY(-4px) rotate(0.5deg);
+    }
+}
+/* giấy mỹ thuật: gần như không thấy, chỉ để nền bớt "phẳng" */
+.wt-paper {
+    position: relative;
+    background: var(--wt-cream);
+    isolation: isolate;
+}
+.wt-paper::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: url("../images/watercolor/wc-paper.svg") 0 0 / 420px;
+    opacity: 0.04;
+}
+/* hiện dần khi cuộn — chỉ bật khi JS chạy (không có JS thì nội dung vẫn hiện) */
+.wt-js .wt-reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition:
+        opacity 0.6s var(--wt-ease),
+        transform 0.6s var(--wt-ease);
+}
+.wt-js .wt-reveal.is-in {
+    opacity: 1;
+    transform: none;
+}
+
+/* focus nhìn thấy được cho bàn phím */
+.tl a:focus-visible,
+.tl button:focus-visible,
+.tl input:focus-visible,
+.tl select:focus-visible,
+.td10 a:focus-visible,
+.td10 button:focus-visible,
+.wt-card a:focus-visible,
+.wt-card button:focus-visible {
+    outline: 3px solid var(--wt-sand);
+    outline-offset: 2px;
+    border-radius: 10px;
+}
+
+/* ---------- 3. THẺ TOUR dùng chung ---------- */
+.wt-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--wt-white);
+    border: 1px solid var(--wt-line);
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(8, 79, 76, 0.06);
+    transition:
+        transform 0.35s var(--wt-ease),
+        box-shadow 0.35s var(--wt-ease);
+}
+.wt-card:hover,
+.wt-card:focus-within {
+    transform: translateY(-6px);
+    box-shadow: var(--wt-shadow-lg);
+}
+.wt-card__img {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: #dfeeed;
+}
+.wt-card__img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.7s var(--wt-ease);
+}
+.wt-card:hover .wt-card__img img {
+    transform: scale(1.04);
+}
+.wt-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 2;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: var(--wt-sand);
+    color: #4a3708;
+    font:
+        700 12px/1.2 "Be Vietnam Pro",
+        sans-serif;
+}
+.wt-badge.is-hot {
+    background: #fff;
+    color: var(--wt-terra);
+}
+.wt-badge.is-green {
+    background: var(--wt-teal-d);
+    color: #fff;
+}
+.wt-heart {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 3;
+    width: 44px;
+    height: 44px; /* vùng chạm đủ lớn */
+    display: grid;
+    place-items: center;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+.wt-heart i {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    color: #7a9694;
+    font-size: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+    transition:
+        transform 0.25s var(--wt-ease),
+        color 0.2s;
+}
+.wt-heart:hover i {
+    transform: scale(1.1);
+}
+.wt-heart.is-on i {
+    color: #e0525e;
+}
+.wt-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 16px 16px;
+    flex: 1;
+}
+.wt-card__place {
+    margin: 0;
+    font-size: 13px;
+    color: var(--wt-mute);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.wt-card__place i {
+    color: var(--wt-teal-d);
+}
+.wt-card__title {
+    margin: 0;
+    font:
+        700 17px/1.35 "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-ink);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 2.7em;
+}
+.wt-card__title a {
+    color: inherit;
+}
+.wt-card__title a::after {
+    content: ""; /* cả thẻ bấm được */
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+.wt-card__rate {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--wt-mute);
+}
+.wt-card__rate b {
+    color: var(--wt-ink);
+}
+.wt-card__rate i {
+    color: #d9a41c;
+}
+.wt-card__rate .is-new {
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: var(--wt-sand-l);
+    color: #6b4f08;
+    font-weight: 600;
+    font-size: 12px;
+}
+.wt-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 13px;
+    color: var(--wt-mute);
+}
+.wt-card__meta i {
+    color: var(--wt-teal-d);
+    margin-right: 5px;
+}
+.wt-card__meta .is-low {
+    color: var(--wt-terra);
+    font-weight: 600;
+}
+.wt-card__price {
+    margin-top: auto;
+    padding-top: 6px;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.wt-card__price small {
+    font-size: 12px;
+    color: var(--wt-mute);
+}
+.wt-card__price b {
+    font:
+        800 20px/1 "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-teal-d);
+}
+.wt-card__price span {
+    font-size: 13px;
+    color: var(--wt-mute);
+}
+.wt-card__cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 44px;
+    margin-top: 6px;
+    border-radius: 14px;
+    background: var(--wt-teal-d);
+    color: #fff;
+    font:
+        600 14px "Be Vietnam Pro",
+        sans-serif;
+    transition:
+        background 0.25s,
+        gap 0.25s var(--wt-ease);
+}
+.wt-card:hover .wt-card__cta {
+    background: var(--wt-teal);
+    gap: 12px;
+}
+
+/* ---------- 4. TOUR LISTING ---------- */
+.tl {
+    padding-top: 0;
+    overflow-x: clip;
+}
+.tl > * {
+    position: relative;
+}
+
+/* 4.1 Hero nhỏ gọn (220–300px) */
+.tl-hero {
+    padding: 104px 0 0;
+    overflow: hidden;
+}
+.tl-hero__in {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: center;
+    min-height: 280px;
+    position: relative;
+    z-index: 1;
+}
+.tl-crumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: var(--wt-mute);
+}
+.tl-crumb a {
+    color: var(--wt-teal-d);
+}
+.tl-crumb i {
+    font-size: 9px;
+}
+.tl-script {
+    display: block;
+    font: 700 44px/1 var(--wt-hand);
+    color: var(--wt-teal-d);
+    transform: rotate(-3deg);
+    transform-origin: left;
+    margin-bottom: 2px;
+}
+.tl-hero h1 {
+    margin: 0 0 12px;
+    font: 700 clamp(32px, 4.2vw, 52px) / 1.12 var(--wt-serif);
+    color: var(--wt-ink);
+    letter-spacing: -0.01em;
+}
+.tl-hero p {
+    max-width: 470px;
+    margin: 0;
+    color: var(--wt-mute);
+    line-height: 1.7;
+}
+.tl-hero__photo {
+    position: relative;
+    height: 300px;
+    margin-right: -6%;
+}
+.tl-hero__photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* ảnh KHÔNG kết thúc bằng đường thẳng: mép trái nhoè dần, mép dưới loang như giấy ướt */
+    -webkit-mask: url("../images/watercolor/wc-mask-hero.svg") center / 100%
+        100% no-repeat;
+    mask: url("../images/watercolor/wc-mask-hero.svg") center / 100% 100%
+        no-repeat;
+}
+.tl-hero__wash {
+    position: absolute;
+    inset: -10% -6% -14% -12%;
+    background: url("../images/watercolor/wc-wash-teal.svg") center / 100% 100%
+        no-repeat;
+    opacity: 0.16; /* lớp wash 10–20% */
+    z-index: -1;
+}
+.tl-hero__note {
+    position: absolute;
+    right: 3%;
+    top: 4%;
+    z-index: 2;
+    max-width: 160px;
+    font: 700 22px/1.15 var(--wt-hand);
+    color: var(--wt-teal-d);
+    text-align: center;
+    transform: rotate(6deg);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.tl-hero .wt-deco.l {
+    left: -30px;
+    top: 90px;
+    width: 190px;
+    opacity: 0.85;
+}
+.tl-hero .wt-deco.r {
+    right: -40px;
+    top: 150px;
+    width: 160px;
+    opacity: 0.8;
+    transform: scaleX(-1);
+}
+.tl-hero .wt-deco.b {
+    left: 40%;
+    top: 128px;
+    width: 90px;
+    opacity: 0.8;
+}
+
+/* 4.2 Ô tìm kiếm: nhân vật chính */
+.tl-searchwrap {
+    z-index: 5;
+    margin-top: -38px;
+}
+.tl-search {
+    display: grid;
+    grid-template-columns: 1.25fr 1.6fr 1fr 1fr auto;
+    align-items: stretch;
+    background: rgba(255, 255, 255, 0.92);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(8, 127, 123, 0.14);
+    border-radius: 24px;
+    box-shadow: var(--wt-shadow);
+    padding: 8px;
+}
+.tl-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 18px;
+    min-width: 0;
+    border-radius: 18px;
+    transition: background 0.2s;
+}
+.tl-field + .tl-field::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 22%;
+    bottom: 22%;
+    width: 1px;
+    background: var(--wt-line);
+}
+.tl-field:focus-within {
+    background: rgba(22, 166, 161, 0.08);
+}
+.tl-field > i {
+    font-size: 19px;
+    color: var(--wt-teal-d);
+    flex: none;
+}
+.tl-field__body {
+    min-width: 0;
+    flex: 1;
+}
+.tl-field label,
+.tl-field__lbl {
+    display: block;
+    margin: 0 0 1px;
+    font:
+        600 12px "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-ink);
+}
+.tl-field input,
+.tl-field select {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    height: 24px;
+    font:
+        500 14px "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-ink);
+    outline: 0;
+    min-width: 0;
+}
+.tl-field input::placeholder {
+    color: #6f8987;
+}
+.tl-dates {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.tl-dates input {
+    font-size: 13px;
+}
+.tl-dates span {
+    color: var(--wt-mute);
+}
+.tl-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.tl-step button {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--wt-line);
+    background: #fff;
+    color: var(--wt-teal-d);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.tl-step button:hover {
+    background: var(--wt-teal-d);
+    color: #fff;
+}
+.tl-step output {
+    min-width: 62px;
+    font:
+        600 14px "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-ink);
+}
+.tl-search__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 150px;
+    padding: 0 26px;
+    border: 0;
+    border-radius: 18px;
+    background: var(--wt-teal-d);
+    color: #fff;
+    font:
+        600 15px "Be Vietnam Pro",
+        sans-serif;
+    cursor: pointer;
+    transition:
+        background 0.25s,
+        transform 0.25s var(--wt-ease);
+}
+.tl-search__btn:hover {
+    background: var(--wt-teal);
+    transform: translateY(-2px);
+}
+
+/* 4.3 Chip danh mục (theo "cảm hứng" trong CSDL) */
+.tl-cats {
+    display: flex;
+    gap: 10px;
+    margin: 22px 0 6px;
+    padding: 4px 2px 10px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+}
+.tl-cats::-webkit-scrollbar {
+    display: none;
+}
+.tl-cat {
+    flex: none;
+    scroll-snap-align: start;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 46px;
+    padding: 5px 18px 5px 6px;
+    border: 1px solid var(--wt-line);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--wt-ink);
+    font:
+        600 14px "Be Vietnam Pro",
+        sans-serif;
+    cursor: pointer;
+    transition: all 0.25s var(--wt-ease);
+}
+.tl-cat__ico {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--wt-sand-l);
+    color: var(--wt-teal-d);
+    font-size: 14px;
+}
+.tl-cat:hover {
+    transform: translateY(-2px);
+    border-color: var(--wt-teal);
+}
+.tl-cat.is-on {
+    background: var(--wt-teal-d);
+    border-color: var(--wt-teal-d);
+    color: #fff;
+}
+.tl-cat.is-on .tl-cat__ico {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+/* 4.4 Bố cục lọc + kết quả */
+.tl-body {
+    padding: 14px 0 40px;
+}
+.tl-layout {
+    display: grid;
+    grid-template-columns: 272px minmax(0, 1fr);
+    gap: 28px;
+    align-items: start;
+}
+.tl-filter {
+    position: sticky;
+    top: 92px;
+    max-height: calc(100vh - 110px);
+    overflow-y: auto;
+    padding: 6px 20px 18px;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid var(--wt-line);
+    border-radius: 22px;
+    box-shadow: 0 6px 22px rgba(8, 79, 76, 0.06);
+    scrollbar-width: thin;
+}
+.tl-filter__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0 8px;
+}
+.tl-filter__head h2 {
+    margin: 0;
+    font:
+        700 18px "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-ink);
+}
+.tl-link {
+    border: 0;
+    background: none;
+    padding: 6px 0;
+    color: var(--wt-teal-d);
+    font:
+        600 13px "Be Vietnam Pro",
+        sans-serif;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.tl-filter__close {
+    display: none;
+}
+.tl-fg {
+    border-top: 1px solid var(--wt-line);
+}
+.tl-fg > summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0 10px;
+    font:
+        700 14px "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-ink);
+    cursor: pointer;
+}
+.tl-fg > summary::-webkit-details-marker {
+    display: none;
+}
+.tl-fg > summary i {
+    font-size: 11px;
+    color: var(--wt-mute);
+    transition: transform 0.25s;
+}
+.tl-fg[open] > summary i {
+    transform: rotate(180deg);
+}
+.tl-fg__in {
+    padding: 0 0 14px;
+}
+.tl-opt {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    padding: 4px 6px;
+    border: 0;
+    border-radius: 10px;
+    background: none;
+    color: var(--wt-ink);
+    font:
+        500 14px "Be Vietnam Pro",
+        sans-serif;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.tl-opt:hover {
+    background: rgba(22, 166, 161, 0.08);
+}
+.tl-opt::before {
+    content: "";
+    flex: none;
+    width: 18px;
+    height: 18px;
+    border: 1.6px solid #9bb5b3;
+    border-radius: 50%;
+    background: #fff;
+    transition: all 0.2s;
+}
+.tl-opt.is-on {
+    font-weight: 700;
+    color: var(--wt-teal-d);
+}
+.tl-opt.is-on::before {
+    border-color: var(--wt-teal-d);
+    background: radial-gradient(circle, var(--wt-teal-d) 0 4px, #fff 4.5px);
+}
+.tl-opt em {
+    margin-left: auto;
+    font-style: normal;
+    font-size: 12px;
+    color: var(--wt-mute);
+}
+.tl-dsearch {
+    position: relative;
+    margin-bottom: 8px;
+}
+.tl-dsearch i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--wt-mute);
+    font-size: 13px;
+}
+.tl-dsearch input {
+    width: 100%;
+    height: 40px;
+    padding: 0 12px 0 34px;
+    border: 1px solid var(--wt-line);
+    border-radius: 12px;
+    background: var(--wt-cream);
+    font:
+        500 14px "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-ink);
+}
+.tl-dest {
+    max-height: 232px;
+    overflow-y: auto;
+}
+.tl-range {
+    position: relative;
+    height: 28px;
+    margin: 8px 6px 0;
+}
+.tl-range__track {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 12px;
+    height: 4px;
+    border-radius: 4px;
+    background: #d9e6e4;
+}
+.tl-range__fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 4px;
+    background: var(--wt-teal-d);
+}
+.tl-range input[type="range"] {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    top: 0;
+    height: 28px;
+    margin: 0;
+    background: none;
+    pointer-events: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+.tl-range input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    pointer-events: auto;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid var(--wt-teal-d);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    cursor: grab;
+}
+.tl-range input[type="range"]::-moz-range-thumb {
+    pointer-events: auto;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid var(--wt-teal-d);
+    cursor: grab;
+}
+.tl-range__lbl {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font:
+        600 12px "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-mute);
+}
+.tl-filter__foot {
+    display: none;
+}
+
+/* 4.5 Thanh công cụ + tag đang lọc */
+.tl-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+.tl-count {
+    margin-right: auto;
+    font:
+        700 18px "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-ink);
+}
+.tl-count b {
+    color: var(--wt-teal-d);
+}
+.tl-sort {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--wt-mute);
+}
+.tl-sort select {
+    height: 42px;
+    padding: 0 34px 0 14px;
+    border: 1px solid var(--wt-line);
+    border-radius: 12px;
+    background: #fff;
+    font:
+        600 14px "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-ink);
+    cursor: pointer;
+}
+.tl-filter-open {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    height: 42px;
+    padding: 0 16px;
+    border: 1px solid var(--wt-teal-d);
+    border-radius: 12px;
+    background: #fff;
+    color: var(--wt-teal-d);
+    font:
+        600 14px "Be Vietnam Pro",
+        sans-serif;
+    cursor: pointer;
+}
+.tl-active {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.tl-active:empty {
+    display: none;
+}
+.tl-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 6px 5px 12px;
+    border-radius: 999px;
+    background: var(--wt-sand-l);
+    color: #5b4306;
+    font:
+        600 13px "Be Vietnam Pro",
+        sans-serif;
+}
+.tl-tag button {
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(91, 67, 6, 0.12);
+    color: inherit;
+    cursor: pointer;
+    font-size: 11px;
+}
+.tl-active .tl-link {
+    margin-left: 4px;
+}
+
+/* 4.6 Lưới thẻ + trạng thái */
+.tl .tv-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(262px, 1fr));
+    gap: 22px;
+}
+#tvResults {
+    transition: opacity 0.25s;
+    min-height: 320px;
+}
+#tvResults.is-loading {
+    opacity: 0.45;
+    pointer-events: none;
+}
+.tl .tv-pager {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 34px 0 0;
+}
+.tl .tv-pager a,
+.tl .tv-pager .tv-pager__dots {
+    min-width: 42px;
+    height: 42px;
+    display: inline-grid;
+    place-items: center;
+    padding: 0 6px;
+    border-radius: 50%;
+    color: var(--wt-ink);
+    font:
+        600 14px "Be Vietnam Pro",
+        sans-serif;
+}
+.tl .tv-pager a {
+    background: #fff;
+    border: 1px solid var(--wt-line);
+    transition: all 0.2s;
+}
+.tl .tv-pager a:hover {
+    border-color: var(--wt-teal);
+}
+.tl .tv-pager a.is-active {
+    background: var(--wt-teal-d);
+    border-color: var(--wt-teal-d);
+    color: #fff;
+}
+.tl .tv-empty {
+    text-align: center;
+    padding: 56px 20px;
+    background: #fff;
+    border: 1px dashed rgba(8, 127, 123, 0.35);
+    border-radius: 24px;
+}
+.tl .tv-empty__icon {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 14px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--wt-sand-l);
+    color: var(--wt-teal-d);
+    font-size: 28px;
+}
+.tl .tv-empty h3 {
+    margin: 0 0 6px;
+    font:
+        700 20px "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-ink);
+}
+.tl .tv-empty p {
+    max-width: 420px;
+    margin: 0 auto 18px;
+    color: var(--wt-mute);
+}
+.tl .tv-btn-solid {
+    height: 46px;
+    padding: 0 24px;
+    border: 0;
+    border-radius: 14px;
+    background: var(--wt-teal-d);
+    color: #fff;
+    font:
+        600 14px "Be Vietnam Pro",
+        sans-serif;
+    cursor: pointer;
+}
+.tl .tv-btn-solid:hover {
+    background: var(--wt-teal);
+}
+.tl-overlay {
+    display: none;
+}
+
+/* Tablet + điện thoại */
+@media (max-width: 1100px) {
+    .tl-search {
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+    }
+    .tl-field + .tl-field::before {
+        display: none;
+    }
+    .tl-search__btn {
+        grid-column: 1 / -1;
+        height: 52px;
+        margin-top: 4px;
+    }
+}
+@media (max-width: 991px) {
+    .tl-hero__in {
+        grid-template-columns: 1fr;
+        min-height: 0;
+    }
+    .tl-hero__photo {
+        height: 200px;
+        margin: 8px -20px 0;
+    }
+    .tl-hero__note {
+        display: none;
+    }
+    .tl-layout {
+        grid-template-columns: 1fr;
+    }
+    .tl-filter-open {
+        display: inline-flex;
+    }
+    .tl-filter {
+        position: fixed;
+        z-index: 1101;
+        inset: 0 auto 0 0;
+        width: min(340px, 88vw);
+        max-height: none;
+        border-radius: 0 22px 22px 0;
+        transform: translateX(-102%);
+        transition: transform 0.35s var(--wt-ease);
+    }
+    .tl-filter.is-open {
+        transform: none;
+    }
+    .tl-filter__close {
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border: 0;
+        border-radius: 50%;
+        background: var(--wt-cream);
+        cursor: pointer;
+    }
+    .tl-filter__foot {
+        display: flex;
+        gap: 10px;
+        position: sticky;
+        bottom: -18px;
+        padding: 12px 0 4px;
+        background: linear-gradient(transparent, #fff 30%);
+    }
+    .tl-filter__foot > * {
+        flex: 1;
+    }
+    .tl-overlay {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 1100;
+        background: rgba(10, 40, 40, 0.5);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+    }
+    .tl-overlay.is-open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
+@media (max-width: 575px) {
+    .tl-hero {
+        padding-top: 92px;
+    }
+    .tl-search {
+        grid-template-columns: 1fr;
+        border-radius: 20px;
+    }
+    .tl .tv-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+    .wt-card__body {
+        padding: 10px 11px 12px;
+    }
+    .wt-card__title {
+        font-size: 14px;
+    }
+    .wt-card__price b {
+        font-size: 16px;
+    }
+    .wt-card__meta li:nth-child(n + 3) {
+        display: none;
+    }
+    .wt-card__cta {
+        height: 40px;
+        font-size: 13px;
+    }
+    .tl-hero .wt-deco {
+        opacity: 0.5;
+        width: 110px;
+    }
+}
+
+/* ---------- 5. CTA CUỐI TRANG: tranh màu nước signature của Travela ---------- */
+.wt-cta {
+    position: relative;
+    margin-top: 40px;
+    padding: 90px 0 0;
+    text-align: center;
+    overflow: hidden;
+    isolation: isolate;
+}
+.wt-cta__scene {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    width: max(100%, 1100px);
+    transform: translateX(-50%);
+    z-index: -1;
+    pointer-events: none;
+}
+.wt-cta__in {
+    position: relative;
+    z-index: 1;
+    max-width: 640px;
+    margin: 0 auto;
+    padding-bottom: 210px;
+}
+.wt-cta .wt-deco.l {
+    left: 6%;
+    top: 30px;
+    width: 120px;
+    opacity: 0.85;
+}
+.wt-cta .wt-deco.r {
+    right: 6%;
+    top: 40px;
+    width: 120px;
+    transform: scaleX(-1);
+    opacity: 0.85;
+}
+.wt-cta .wt-deco.p {
+    left: 14%;
+    top: 110px;
+    width: 190px;
+    opacity: 0.9;
+}
+.wt-cta h2 {
+    margin: 0 0 10px;
+    font: 700 clamp(28px, 3.4vw, 40px) / 1.2 var(--wt-serif);
+    color: var(--wt-ink);
+}
+.wt-cta p {
+    margin: 0 0 22px;
+    color: var(--wt-mute);
+    line-height: 1.7;
+}
+.wt-cta__btns {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.wt-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 50px;
+    padding: 0 28px;
+    border-radius: 16px;
+    border: 1.5px solid var(--wt-teal-d);
+    background: var(--wt-teal-d);
+    color: #fff;
+    font:
+        600 15px "Be Vietnam Pro",
+        sans-serif;
+    transition:
+        transform 0.25s var(--wt-ease),
+        background 0.25s;
+}
+.wt-btn:hover {
+    background: var(--wt-teal);
+    border-color: var(--wt-teal);
+    color: #fff;
+    transform: translateY(-2px);
+}
+.wt-btn--ghost {
+    background: #fff;
+    color: var(--wt-teal-d);
+}
+.wt-btn--ghost:hover {
+    background: var(--wt-sand-l);
+    color: var(--wt-teal-d);
+    border-color: var(--wt-teal-d);
+}
+@media (max-width: 767px) {
+    .wt-cta__in {
+        padding-bottom: 140px;
+    }
+    .wt-cta .wt-deco {
+        display: none;
+    }
+}
+
+/* ---------- 6. TOUR DETAIL ---------- */
+.td10 {
+    padding: 96px 0 30px;
+    overflow-x: clip; /* decor tràn mép không gây thanh cuộn ngang (clip KHÔNG làm hỏng position: sticky) */
+}
+.td10-crumb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: var(--wt-mute);
+}
+.td10-crumb a {
+    color: var(--wt-teal-d);
+}
+.td10-crumb i {
+    font-size: 9px;
+}
+.td10-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 372px;
+    gap: 32px;
+    align-items: start;
+}
+.td10-main {
+    min-width: 0;
+}
+
+/* 6.1 Hero: ảnh lớn 16:8, mép dưới loang watercolor */
+.td10-hero {
+    position: relative;
+    margin-bottom: 8px;
+}
+.td10-hero__photo {
+    position: relative;
+    aspect-ratio: 16 / 8;
+    border-radius: 26px 26px 0 0;
+    overflow: hidden;
+    background: #cfe6e4;
+}
+.td10-hero__photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.td10-hero__shade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        180deg,
+        rgba(6, 40, 40, 0) 38%,
+        rgba(6, 40, 40, 0.72) 100%
+    );
+}
+.td10-hero__frame {
+    /* mặt nạ cọ: bo góc trên bình thường, mép dưới loang */
+    -webkit-mask: url("../images/watercolor/wc-mask-bottom.svg") center / 100%
+        100% no-repeat;
+    mask: url("../images/watercolor/wc-mask-bottom.svg") center / 100% 100%
+        no-repeat;
+}
+.td10-hero__wash {
+    position: absolute;
+    left: -3%;
+    right: -3%;
+    bottom: -26px;
+    height: 90px;
+    background: url("../images/watercolor/wc-wash-teal.svg") center / 100% 100%
+        no-repeat;
+    opacity: 0.2; /* wash 15–25% ở Detail */
+    pointer-events: none;
+}
+.td10-hero__cap {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 0 30px 40px;
+    color: #fff;
+    z-index: 2;
+}
+.td10-hero__cap h1 {
+    margin: 0 0 10px;
+    font: 700 clamp(26px, 3.2vw, 40px) / 1.2 var(--wt-serif);
+    color: #fff;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+}
+.td10-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.td10-chips li,
+.td10-chips a {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 13px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    font:
+        600 13px "Be Vietnam Pro",
+        sans-serif;
+}
+.td10-chips .is-star i {
+    color: var(--wt-sand);
+}
+.td10-hero__tools {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 3;
+    display: flex;
+    gap: 8px;
+}
+.td10-tool {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--wt-ink);
+    font:
+        600 13px "Be Vietnam Pro",
+        sans-serif;
+    cursor: pointer;
+    transition: transform 0.25s var(--wt-ease);
+}
+.td10-tool:hover {
+    transform: translateY(-2px);
+}
+.td10-tool.is-on i {
+    color: #e0525e;
+}
+.td10-tool--play {
+    background: var(--wt-sand);
+    color: #3f2f04;
+}
+.td10-hero .wt-deco.l {
+    left: -34px;
+    bottom: -40px;
+    width: 120px;
+    z-index: 4;
+    opacity: 0.9;
+}
+
+/* 6.2 Thông tin nhanh */
+.td10-quick {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0;
+    margin: 22px 0 10px;
+    padding: 6px;
+    background: #fff;
+    border: 1px solid var(--wt-line);
+    border-radius: 20px;
+    box-shadow: 0 6px 20px rgba(8, 79, 76, 0.06);
+}
+.td10-q {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+}
+.td10-q + .td10-q {
+    border-left: 1px solid var(--wt-line);
+}
+.td10-q > i {
+    font-size: 22px;
+    color: var(--wt-teal-d);
+}
+.td10-q small {
+    display: block;
+    font-size: 12px;
+    color: var(--wt-mute);
+}
+.td10-q b {
+    display: block;
+    font:
+        700 14px "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-ink);
+}
+.td10-q .is-low {
+    color: var(--wt-terra);
+}
+
+/* 6.3 Tab: dính nhẹ khi cuộn, không dạng nút to */
+.td10-tabs {
+    position: sticky;
+    top: 70px;
+    z-index: 20;
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    margin: 0 0 8px;
+    padding: 0 4px;
+    background: rgba(248, 246, 240, 0.92);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--wt-line);
+    scrollbar-width: none;
+}
+.td10-tabs::-webkit-scrollbar {
+    display: none;
+}
+.td10-tabs a {
+    flex: none;
+    padding: 15px 16px 13px;
+    border-bottom: 3px solid transparent;
+    color: var(--wt-mute);
+    font:
+        600 14px "Be Vietnam Pro",
+        sans-serif;
+    transition: color 0.2s;
+}
+.td10-tabs a:hover {
+    color: var(--wt-ink);
+}
+.td10-tabs a.is-on {
+    color: var(--wt-teal-d);
+    border-bottom-color: var(--wt-teal-d);
+}
+
+/* 6.4 Section */
+.td10-sec {
+    position: relative;
+    padding: 34px 0 6px;
+    scroll-margin-top: 130px;
+}
+.td10-h2 {
+    margin: 0 0 18px;
+    font: 700 clamp(22px, 2.4vw, 28px) / 1.25 var(--wt-serif);
+    color: var(--wt-ink);
+}
+.td10-h2 small {
+    font:
+        600 13px "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-mute);
+    margin-left: 8px;
+}
+.td10-sec__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+.td10-hl {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.td10-hl a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--wt-line);
+    border-radius: 16px;
+    background: #fff;
+    color: var(--wt-ink);
+    transition:
+        transform 0.25s var(--wt-ease),
+        border-color 0.25s;
+}
+.td10-hl a:hover {
+    transform: translateY(-3px);
+    border-color: var(--wt-teal);
+}
+.td10-hl i {
+    width: 40px;
+    height: 40px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: var(--wt-sand-l);
+    color: var(--wt-teal-d);
+}
+.td10-hl small {
+    display: block;
+    font-size: 12px;
+    color: var(--wt-mute);
+}
+.td10-hl b {
+    font:
+        600 14px/1.35 "Be Vietnam Pro",
+        sans-serif;
+}
+.td10-prose {
+    color: #2c4a49;
+    line-height: 1.85;
+    font-size: 15.5px;
+}
+.td10-prose img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 14px;
+}
+.td10-prose h2,
+.td10-prose h3,
+.td10-prose h4 {
+    color: var(--wt-ink);
+    margin: 1.4em 0 0.5em;
+}
+.td10-ov-deco {
+    right: -30px;
+    top: 20px;
+    width: 110px;
+    opacity: 0.5;
+}
+
+/* 6.5 Gallery kiểu editorial: 1 ảnh lớn (62%) + 2 ảnh phụ */
+.td10-gal {
+    display: grid;
+    grid-template-columns: 1.65fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 10px;
+    height: 400px;
+}
+.td10-gal__i {
+    position: relative;
+    padding: 0;
+    border: 0;
+    border-radius: 18px;
+    overflow: hidden;
+    cursor: zoom-in;
+    background: #cfe6e4;
+}
+.td10-gal__i:first-child {
+    grid-row: 1 / 3;
+}
+.td10-gal__i img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s var(--wt-ease);
+}
+.td10-gal__i:hover img {
+    transform: scale(1.03);
+}
+.td10-gal__i.is-hidden {
+    display: none;
+}
+.td10-gal__all {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    padding: 9px 16px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.94);
+    color: var(--wt-ink);
+    font:
+        700 13px "Be Vietnam Pro",
+        sans-serif;
+    cursor: pointer;
+    z-index: 2;
+}
+.td10-galwrap {
+    position: relative;
+}
+.td10-gal--1 {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+}
+.td10-gal--2 {
+    grid-template-rows: 1fr;
+}
+.td10-gal--2 .td10-gal__i:first-child {
+    grid-row: auto;
+}
+
+/* 6.6 Lịch trình: timeline */
+.td10-plan {
+    position: relative;
+    display: grid;
+    gap: 24px;
+}
+.td10-plan.has-video {
+    grid-template-columns: minmax(0, 1fr) 260px;
+}
+.td10-plan::before {
+    content: "";
+    position: absolute;
+    right: -26px;
+    top: -10px;
+    width: 140px;
+    height: 220px;
+    background: url("../images/watercolor/wc-mountain-line.svg") center / 100%
+        auto no-repeat;
+    opacity: 0.12; /* rất nhẹ phía sau timeline */
+    pointer-events: none;
+    z-index: 0;
+}
+.td10-days {
+    position: relative;
+    z-index: 1;
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 34px;
+}
+.td10-days::before {
+    content: "";
+    position: absolute;
+    left: 11px;
+    top: 14px;
+    bottom: 14px;
+    width: 2px;
+    background: repeating-linear-gradient(
+        180deg,
+        rgba(22, 166, 161, 0.5) 0 8px,
+        transparent 8px 14px
+    );
+}
+.td10-days > li {
+    position: relative;
+    margin-bottom: 14px;
+}
+.td10-dot {
+    position: absolute;
+    left: -34px;
+    top: 17px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid var(--wt-teal);
+    box-shadow: 0 0 0 5px rgba(22, 166, 161, 0.14);
+}
+.td10-day {
+    border: 1px solid var(--wt-line);
+    border-radius: 18px;
+    background: #fff;
+    overflow: hidden;
+    transition: box-shadow 0.25s;
+}
+.td10-day[open] {
+    box-shadow: var(--wt-shadow);
+}
+.td10-day > summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    cursor: pointer;
+}
+.td10-day > summary::-webkit-details-marker {
+    display: none;
+}
+.td10-day__no {
+    flex: none;
+    padding: 5px 13px;
+    border-radius: 999px;
+    background: var(--wt-sand-l);
+    color: #5b4306;
+    font:
+        800 12px "Be Vietnam Pro",
+        sans-serif;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.td10-day__t {
+    flex: 1;
+    font:
+        700 16px/1.4 "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-ink);
+}
+.td10-day > summary i {
+    color: var(--wt-mute);
+    transition: transform 0.25s;
+}
+.td10-day[open] > summary i {
+    transform: rotate(180deg);
+}
+.td10-day__body {
+    padding: 4px 20px 18px;
+}
+.td10-link {
+    border: 0;
+    background: none;
+    padding: 6px 0;
+    color: var(--wt-teal-d);
+    font:
+        600 14px "Be Vietnam Pro",
+        sans-serif;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.td10-video {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: pointer;
+    aspect-ratio: 3 / 4;
+    background: #0c3b3a;
+    box-shadow: var(--wt-shadow);
+}
+.td10-video img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.9;
+    transition: transform 0.6s var(--wt-ease);
+}
+.td10-video:hover img {
+    transform: scale(1.04);
+}
+.td10-video__play {
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    width: 62px;
+    height: 62px;
+    margin: -31px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--wt-sand);
+    color: #3f2f04;
+    font-size: 20px;
+    padding-left: 4px;
+}
+.td10-video__cap {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 40px 14px 14px;
+    background: linear-gradient(transparent, rgba(6, 40, 40, 0.85));
+    color: #fff;
+    text-align: left;
+}
+.td10-video__cap small {
+    display: block;
+    opacity: 0.9;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+/* 6.7 Bao gồm / không bao gồm (chỉ hiện khi tour có dữ liệu) */
+.td10-svc {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+.td10-svc > div {
+    padding: 18px 20px;
+    border-radius: 18px;
+    background: #fff;
+    border: 1px solid var(--wt-line);
+}
+.td10-svc h3 {
+    margin: 0 0 10px;
+    font:
+        700 16px "Be Vietnam Pro",
+        sans-serif;
+}
+.td10-svc .in h3 {
+    color: var(--wt-teal-d);
+}
+.td10-svc .out h3 {
+    color: var(--wt-terra);
+}
+.td10-svc ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+}
+.td10-svc li {
+    display: flex;
+    gap: 10px;
+    font-size: 14.5px;
+    line-height: 1.5;
+    color: #2c4a49;
+}
+.td10-svc .in li i {
+    color: var(--wt-teal-d);
+    margin-top: 3px;
+}
+.td10-svc .out li i {
+    color: var(--wt-terra);
+    margin-top: 3px;
+}
+
+/* 6.8 Bản đồ */
+.td10-map {
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid var(--wt-line);
+    margin-bottom: 8px;
+}
+.td10-map iframe {
+    display: block;
+    width: 100%;
+    height: 340px;
+    border: 0;
+}
+
+/* 6.9 Đánh giá: giữ markup cũ, chỉnh nhẹ tông */
+#danh-gia .td-h3,
+#danh-gia h3 {
+    color: var(--wt-ink);
+}
+#danh-gia .td-review-wrap {
+    margin-top: 24px;
+    padding: 22px;
+    background: #fff;
+    border: 1px solid var(--wt-line);
+    border-radius: 20px;
+}
+#danh-gia .td-review-wrap.hide {
+    display: none;
+}
+#danh-gia textarea {
+    width: 100%;
+    border: 1px solid var(--wt-line);
+    border-radius: 14px;
+    padding: 12px 14px;
+    background: var(--wt-cream);
+    font:
+        500 14px "Be Vietnam Pro",
+        sans-serif;
+}
+#danh-gia .td-btn--primary {
+    margin-top: 12px;
+    height: 46px;
+    padding: 0 26px;
+    border: 0;
+    border-radius: 14px;
+    background: var(--wt-teal-d);
+    color: #fff;
+    font:
+        600 14px "Be Vietnam Pro",
+        sans-serif;
+    cursor: pointer;
+}
+
+/* 6.10 Booking box (sticky) */
+.td10-side {
+    position: sticky;
+    top: 92px;
+    display: grid;
+    gap: 14px;
+}
+.td10-book {
+    padding: 22px 22px 18px;
+    background: #fff;
+    border: 1px solid rgba(8, 127, 123, 0.16);
+    border-radius: 24px;
+    box-shadow: var(--wt-shadow-lg);
+    position: relative;
+    overflow: hidden;
+}
+.td10-book::after {
+    content: "";
+    position: absolute;
+    right: -30px;
+    top: -30px;
+    width: 150px;
+    height: 150px;
+    background: url("../images/watercolor/wc-blob-1.svg") center / contain
+        no-repeat;
+    opacity: 0.25;
+    pointer-events: none;
+}
+.td10-book > * {
+    position: relative;
+    z-index: 1;
+}
+.td10-book__from {
+    font-size: 13px;
+    color: var(--wt-mute);
+}
+.td10-book__price {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+.td10-book__price b {
+    font:
+        800 32px/1.1 "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-teal-d);
+}
+.td10-book__price span {
+    font-size: 14px;
+    color: var(--wt-mute);
+}
+.td10-book__child {
+    margin: 2px 0 14px;
+    font-size: 13px;
+    color: var(--wt-mute);
+}
+.td10-bf {
+    margin-bottom: 12px;
+}
+.td10-bf > label,
+.td10-bf > .lbl {
+    display: block;
+    margin-bottom: 6px;
+    font:
+        600 13px "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-ink);
+}
+.td10-date {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 46px;
+    padding: 0 14px;
+    border: 1px solid var(--wt-line);
+    border-radius: 14px;
+    background: var(--wt-cream);
+    font:
+        600 14px "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-ink);
+}
+.td10-date i {
+    color: var(--wt-teal-d);
+}
+.td10-date em {
+    margin-left: auto;
+    font:
+        500 12px "Be Vietnam Pro",
+        sans-serif;
+    font-style: normal;
+    color: var(--wt-mute);
+}
+.td10-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 12px;
+    border: 1px solid var(--wt-line);
+    border-radius: 14px;
+    margin-bottom: 8px;
+}
+.td10-stepper > span {
+    font:
+        600 14px "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-ink);
+}
+.td10-stepper > span small {
+    display: block;
+    font:
+        500 12px "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-mute);
+}
+.td10-stepper div {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.td10-stepper button {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--wt-line);
+    background: #fff;
+    color: var(--wt-teal-d);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.td10-stepper button:hover:not(:disabled) {
+    background: var(--wt-teal-d);
+    color: #fff;
+}
+.td10-stepper button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+.td10-stepper output {
+    min-width: 28px;
+    text-align: center;
+    font:
+        700 16px "Be Vietnam Pro",
+        sans-serif;
+}
+.td10-note {
+    margin: 0 0 10px;
+    font-size: 12.5px;
+    color: var(--wt-mute);
+    min-height: 18px;
+}
+.td10-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 12px 0;
+    margin: 4px 0 12px;
+    border-top: 1px dashed rgba(8, 127, 123, 0.3);
+    font-size: 14px;
+    color: var(--wt-mute);
+}
+.td10-total b {
+    font:
+        800 22px "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-ink);
+}
+.td10-cta {
+    width: 100%;
+    height: 54px;
+    border: 0;
+    border-radius: 16px;
+    background: var(--wt-teal-d);
+    color: #fff;
+    font:
+        700 16px "Be Vietnam Pro",
+        sans-serif;
+    cursor: pointer;
+    transition:
+        transform 0.25s var(--wt-ease),
+        background 0.25s;
+}
+.td10-cta:hover:not(:disabled) {
+    background: var(--wt-teal);
+    transform: translateY(-2px);
+}
+.td10-cta:disabled {
+    background: #a9bfbd;
+    cursor: not-allowed;
+}
+.td10-book__row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+.td10-book__row button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 44px;
+    padding: 0 8px;
+    border: 0;
+    background: none;
+    color: var(--wt-ink);
+    font:
+        600 13px "Be Vietnam Pro",
+        sans-serif;
+    cursor: pointer;
+}
+.td10-book__row button.is-on i {
+    color: #e0525e;
+}
+.td10-help {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 4px;
+    font:
+        600 13px "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-teal-d);
+}
+.td10-soon {
+    margin: 0 0 12px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: var(--wt-sand-l);
+    color: #5b4306;
+    font:
+        600 13px "Be Vietnam Pro",
+        sans-serif;
+}
+.td10-promise {
+    padding: 18px 20px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid var(--wt-line);
+}
+.td10-promise h3 {
+    margin: 0 0 10px;
+    font:
+        700 15px "Be Vietnam Pro",
+        sans-serif;
+    color: var(--wt-ink);
+}
+.td10-promise ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 10px;
+}
+.td10-promise li {
+    display: flex;
+    gap: 10px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: #2c4a49;
+}
+.td10-promise i {
+    color: var(--wt-teal-d);
+    margin-top: 3px;
+}
+
+/* 6.11 Gợi ý */
+.td10-related {
+    margin-top: 50px;
+}
+
+/* 6.12 Thanh đặt tour dưới cùng (điện thoại) */
+.td-mbar {
+    background: rgba(255, 255, 255, 0.96) !important;
+    border-top: 1px solid var(--wt-line);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+}
+.td-mbar b {
+    color: var(--wt-teal-d);
+}
+.td-mbar .td-btn--cta {
+    background: var(--wt-teal-d) !important;
+    border-radius: 14px;
+    min-height: 46px;
+}
+
+@media (max-width: 1100px) {
+    .td10-grid {
+        grid-template-columns: 1fr;
+    }
+    .td10-side {
+        position: static;
+        order: -1;
+    }
+    .td10-hero .wt-deco {
+        display: none;
+    }
+}
+@media (max-width: 767px) {
+    .td10 {
+        padding-top: 84px;
+    }
+    .td10-hero__photo {
+        aspect-ratio: 4 / 3.4;
+        border-radius: 20px 20px 0 0;
+    }
+    .td10-hero__cap {
+        padding: 0 16px 30px;
+    }
+    .td10-hero__tools .td10-tool span {
+        display: none;
+    }
+    .td10-tool {
+        padding: 0 14px;
+    }
+    .td10-quick {
+        grid-template-columns: 1fr 1fr;
+    }
+    .td10-q:nth-child(odd) {
+        border-left: 0;
+    }
+    .td10-q:nth-child(n + 3) {
+        border-top: 1px solid var(--wt-line);
+    }
+    .td10-gal {
+        height: 280px;
+        gap: 6px;
+    }
+    .td10-plan.has-video {
+        grid-template-columns: 1fr;
+    }
+    .td10-video {
+        aspect-ratio: 16 / 9;
+    }
+    .td10-svc {
+        grid-template-columns: 1fr;
+    }
+    .td10-side {
+        order: 0;
+        margin-top: 24px;
+    }
+    .td10-tabs {
+        top: 60px;
+    }
+}
+
+/* ---------- 7. Giảm chuyển động nếu người dùng yêu cầu ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .wt-drift {
+        animation: none;
+    }
+    .wt-js .wt-reveal {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+    .wt-card,
+    .wt-card__img img,
+    .td10-gal__i img {
+        transition: none;
+    }
+}

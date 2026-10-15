@@ -33,11 +33,12 @@ class ToursController extends Controller
             'n' => (int) optional($domain->firstWhere('domain', 'n'))->count,
         ];
 
-        $popularTours = $this->tours->getPopularTours(3);
+        $inspirations = $this->catalog->inspirations();
+        $destOptions = $this->catalog->destinations();
         $tours = $this->catalog->paginate($state, 9);
         $tours->withPath(route('tours'))->appends($request->except('page'));
 
-        return view('clients.tours', compact('title', 'tours', 'domainsCount', 'popularTours', 'state', 'minBound', 'maxBound'));
+        return view('clients.tours', compact('title', 'tours', 'domainsCount', 'inspirations', 'destOptions', 'state', 'minBound', 'maxBound'));
     }
 
     /** AJAX: trả JSON { html, total, page, lastPage } cho trang /tours. */
@@ -99,6 +100,14 @@ class ToursController extends Controller
             [$min, $max] = [$max, $min];
         }
 
+        // số khách (0 = không lọc), điểm đến cụ thể, cảm hứng (chỉ nhận slug có thật)
+        $guests = max(0, min(30, (int) $r->input('guests', 0)));
+        $dest = trim(mb_substr((string) $r->input('dest', ''), 0, 120));
+        $cat = (string) $r->input('cat', '');
+        if ($cat !== '' && !$this->catalog->inspirations()->contains('slug', $cat)) {
+            $cat = '';
+        }
+
         $from = $this->readDate($r->input('from'));
         $to = $this->readDate($r->input('to'));
 
@@ -106,6 +115,9 @@ class ToursController extends Controller
             'from' => $from,
             'to' => $to,
             'keyword' => $keyword,
+            'guests' => $guests,
+            'dest' => $dest,
+            'cat' => $cat,
             'domain' => $domain,
             'days' => $days,
             'rating' => $rating,

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" ><defs>
+<filter id="wc" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency="0.035 0.045" numOctaves="3" seed="6" result="w"/>
+<feDisplacementMap in="SourceGraphic" in2="w" scale="7" xChannelSelector="R" yChannelSelector="G" result="s"/>
+<feGaussianBlur in="s" stdDeviation="0.9"/>
+</filter>
+<filter id="ink" x="-5%" y="-5%" width="110%" height="110%">
+<feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="9" result="w"/>
+<feDisplacementMap in="SourceGraphic" in2="w" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+</filter>
+</defs>
+<g filter="url(#wc)">
+<ellipse cx="160" cy="205" rx="140" ry="20" fill="#16A6A1" opacity=".28"/>
+<ellipse cx="170" cy="214" rx="96" ry="9" fill="#087F7B" opacity=".22"/>
+<path d="M58 170 Q160 205 262 168 L246 192 Q160 216 76 192Z" fill="#0f5f5c" opacity=".9"/>
+<path d="M140 40 L140 168 L88 168 Q96 92 140 40Z" fill="#d9704f" opacity=".82"/>
+<path d="M150 62 L150 168 L214 168 Q208 110 150 62Z" fill="#e48a62" opacity=".8"/>
+<path d="M236 112 L236 166 L260 166 Q258 134 236 112Z" fill="#d9704f" opacity=".7"/>
+</g>
+<g filter="url(#ink)" stroke="#2a4a4a" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".7">
+<path d="M140 36V170M150 58V170M236 108V168"/><path d="M100 120H140M96 144H140M158 100H196M162 130H206"/>
+<path d="M58 170 Q160 205 262 168"/>
+</g></svg>

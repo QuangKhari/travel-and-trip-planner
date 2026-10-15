@@ -11,10 +11,13 @@ use Illuminate\Support\Facades\DB;
  */
 class TourCatalog
 {
-    public const SORTS = ['new', 'old', 'price_asc', 'price_desc', 'rating', 'soon'];
+    public const SORTS = ['new', 'old', 'popular', 'price_asc', 'price_desc', 'rating', 'soon'];
+
+    /** Điểm tối thiểu (0-100) để một điểm đến được coi là "hợp" với một cảm hứng (chip danh mục). */
+    public const CAT_MIN_SCORE = 60;
 
     /** Số ngày: nhóm -> [từ, đến] */
-    public const DAY_GROUPS = ['short' => [1, 3], 'mid' => [4, 5], 'long' => [6, 99]];
+    public const DAY_GROUPS = ['day' => [0, 1], 'short' => [2, 3], 'mid' => [4, 5], 'long' => [6, 99]];
 
     public function paginate(array $f, int $perPage = 9): LengthAwarePaginator
     {
@@ -60,6 +63,24 @@ class TourCatalog
         if (!empty($f['domain'])) {
             $q->where('tbl_tours.domain', $f['domain']);
         }
+        // Chọn đúng một điểm đến trong danh sách bên trái
+        if (!empty($f['dest'])) {
+            $q->where('tbl_tours.destination', $f['dest']);
+        }
+        // Số khách: chỉ hiện tour còn đủ chỗ
+        if (!empty($f['guests'])) {
+            $q->where('tbl_tours.quantity', '>=', (int) $f['guests']);
+        }
+        // Chip danh mục = cảm hứng: tour thuộc điểm đến có điểm >= CAT_MIN_SCORE với cảm hứng đó
+        if (!empty($f['cat'])) {
+            $q->whereIn('tbl_tours.destinationId', function ($s) use ($f) {
+                $s->select('di.destinationId')
+                    ->from('tbl_destination_inspiration as di')
+                    ->join('tbl_inspirations as i', 'i.inspirationId', '=', 'di.inspirationId')
+                    ->where('i.slug', $f['cat'])
+                    ->where('di.score', '>=', self::CAT_MIN_SCORE);
+            });
+        }
         if (isset($f['min']) && $f['min'] !== null) {
             $q->where('tbl_tours.priceAdult', '>=', $f['min']);
         }
@@ -83,6 +104,9 @@ class TourCatalog
                 break;
             case 'price_desc':
                 $q->orderBy('tbl_tours.priceAdult', 'desc');
+                break;
+            case 'popular':
+                $q->orderByRaw('COUNT(tbl_reviews.reviewId) DESC');
                 break;
             case 'soon':
                 $q->orderBy('tbl_tours.startDate', 'asc');
@@ -119,6 +143,31 @@ class TourCatalog
         }
 
         return [$min, $max];
+    }
+
+    /** Danh sách cảm hứng đang bật (chip danh mục). Lỗi/chưa migrate -> trả về rỗng, trang vẫn chạy. */
+    public function inspirations()
+    {
+        try {
+            return DB::table('tbl_inspirations')
+                ->where('isActive', 1)
+                ->orderBy('displayOrder')
+                ->get(['slug', 'name', 'icon']);
+        } catch (\Throwable $e) {
+            return collect();
+        }
+    }
+
+    /** Điểm đến (theo cột tbl_tours.destination) của các tour đang mở bán + số tour, nhiều tour nhất lên đầu. */
+    public function destinations()
+    {
+        return DB::table('tbl_tours')
+            ->where('availability', 1)->where('quantity', '>', 0)
+            ->whereDate('startDate', '>', now()->toDateString())
+            ->selectRaw('destination as name, COUNT(*) as total')
+            ->groupBy('destination')
+            ->orderByDesc('total')->orderBy('destination')
+            ->get();
     }
 
     private function hydrate(LengthAwarePaginator $tours): void

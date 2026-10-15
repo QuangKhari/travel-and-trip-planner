@@ -48,8 +48,9 @@
                         <label>Người lớn <small>từ 12 tuổi</small></label>
                         <div class="input__quanlity">
                             <button type="button" class="quantity-btn" data-step="-1" aria-label="Giảm">-</button>
-                            <input type="number" class="quantity-input" value="1" min="1" id="numAdults"
-                                name="numAdults" data-price-adults="{{ $tour->priceAdult }}" readonly>
+                            <input type="number" class="quantity-input"
+                                value="{{ max(1, min(50, (int) request()->input('adults', 1))) }}" min="1"
+                                id="numAdults" name="numAdults" data-price-adults="{{ $tour->priceAdult }}" readonly>
                             <button type="button" class="quantity-btn" data-step="1" aria-label="Tăng">+</button>
                         </div>
                     </div>
@@ -58,8 +59,10 @@
                         <label>Trẻ em <small>dưới 12 tuổi</small></label>
                         <div class="input__quanlity">
                             <button type="button" class="quantity-btn" data-step="-1" aria-label="Giảm">-</button>
-                            <input type="number" class="quantity-input" value="0" min="0" id="numChildren"
-                                name="numChildren" data-price-children="{{ $tour->priceChild }}" readonly>
+                            <input type="number" class="quantity-input"
+                                value="{{ max(0, min(50, (int) request()->input('children', 0))) }}" min="0"
+                                id="numChildren" name="numChildren" data-price-children="{{ $tour->priceChild }}"
+                                readonly>
                             <button type="button" class="quantity-btn" data-step="1" aria-label="Tăng">+</button>
                         </div>
                     </div>

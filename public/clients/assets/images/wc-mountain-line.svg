@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 220" ><defs>
+<filter id="wc" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency="0.035 0.045" numOctaves="3" seed="18" result="w"/>
+<feDisplacementMap in="SourceGraphic" in2="w" scale="7" xChannelSelector="R" yChannelSelector="G" result="s"/>
+<feGaussianBlur in="s" stdDeviation="0.9"/>
+</filter>
+<filter id="ink" x="-5%" y="-5%" width="110%" height="110%">
+<feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="21" result="w"/>
+<feDisplacementMap in="SourceGraphic" in2="w" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+</filter>
+</defs>
+<defs><linearGradient id="fd" x1="0" y1="0" x2="0" y2="1"><stop offset=".55" stop-color="#fff"/><stop offset="1" stop-color="#000"/></linearGradient>
+<mask id="m"><rect width="1200" height="220" fill="url(#fd)"/></mask></defs>
+<g mask="url(#m)"><g filter="url(#wc)">
+<path d="M0 150 L90 90 L170 128 L270 60 L380 132 L470 84 L580 140 L690 70 L790 130 L890 92 L1000 138 L1100 86 L1200 130 V220 H0Z" fill="#9fd6d2" opacity=".42"/>
+<path d="M0 182 L120 126 L220 160 L340 108 L450 168 L580 118 L700 170 L820 124 L940 172 L1060 120 L1200 168 V220 H0Z" fill="#5fb1a8" opacity=".42"/></g>
+<g filter="url(#ink)" fill="none" stroke="#3b7f7a" stroke-width="1.6" stroke-linejoin="round" opacity=".55">
+<path d="M0 150 L90 90 L170 128 L270 60 L380 132 L470 84 L580 140 L690 70 L790 130 L890 92 L1000 138 L1100 86 L1200 130"/></g></g></svg>
