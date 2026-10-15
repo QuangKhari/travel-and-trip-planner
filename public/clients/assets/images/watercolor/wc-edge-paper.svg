@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 140" preserveAspectRatio="none"><defs><filter id="e" x="-12%" y="-12%" width="124%" height="124%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency="0.008 0.05" numOctaves="4" seed="31" result="warp"/>
+<feDisplacementMap in="SourceGraphic" in2="warp" scale="26" xChannelSelector="R" yChannelSelector="G" result="shape"/>
+<feGaussianBlur in="shape" stdDeviation="1.1" result="sh"/>
+<feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="3" seed="36" result="blot"/>
+<feColorMatrix in="blot" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.02 0 0 0 0.99" result="blotA"/>
+<feComposite in="sh" in2="blotA" operator="in" result="body"/>
+<feMorphology in="sh" operator="erode" radius="2" result="inner"/>
+<feGaussianBlur in="inner" stdDeviation="3.2" result="innerB"/>
+<feComposite in="sh" in2="innerB" operator="out" result="ring"/>
+<feColorMatrix in="ring" type="matrix" values="0.74 0 0 0 0 0 0.78 0 0 0 0 0 0.82 0 0 0 0 0 0 0.85 0" result="ringD"/>
+<feMerge><feMergeNode in="body"/><feMergeNode in="ringD"/></feMerge>
+</filter><filter id="bb"><feGaussianBlur stdDeviation="7"/></filter></defs><path d="M-40,82.2C-20,80.4 33.3,70.8 80,70.9C126.7,71.1 186.7,79.1 240,83.3C293.3,87.5 346.7,98 400,96.1C453.3,94.2 506.7,76.3 560,72.1C613.3,67.9 666.7,70.3 720,70.9C773.3,71.6 826.7,71.5 880,76.2C933.3,80.9 986.7,100 1040,99.3C1093.3,98.7 1146.7,72.6 1200,72.5C1253.3,72.4 1313.3,95.3 1360,98.6C1406.7,101.8 1460,93.1 1480,92L1480,200L-40,200Z" fill="#9fd9d0" opacity=".5" filter="url(#bb)"/><g filter="url(#e)"><path d="M-40,60.2C-20,58.4 33.3,48.8 80,48.9C126.7,49.1 186.7,57.1 240,61.3C293.3,65.5 346.7,76 400,74.1C453.3,72.2 506.7,54.3 560,50.1C613.3,45.9 666.7,48.3 720,48.9C773.3,49.6 826.7,49.5 880,54.2C933.3,58.9 986.7,78 1040,77.3C1093.3,76.7 1146.7,50.6 1200,50.5C1253.3,50.4 1313.3,73.3 1360,76.6C1406.7,79.8 1460,71.1 1480,70L1480,200L-40,200Z" fill="#f8f6f0"/></g></svg>

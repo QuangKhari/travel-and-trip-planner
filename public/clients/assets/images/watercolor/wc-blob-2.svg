@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" ><defs><filter id="k" x="-12%" y="-12%" width="124%" height="124%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency="0.05 0.05" numOctaves="4" seed="6" result="warp"/>
+<feDisplacementMap in="SourceGraphic" in2="warp" scale="10" xChannelSelector="R" yChannelSelector="G" result="shape"/>
+<feGaussianBlur in="shape" stdDeviation="1.1" result="sh"/>
+<feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="3" seed="11" result="blot"/>
+<feColorMatrix in="blot" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.05 0 0 0 0.3" result="blotA"/>
+<feComposite in="sh" in2="blotA" operator="in" result="body"/>
+<feMorphology in="sh" operator="erode" radius="1.4" result="inner"/>
+<feGaussianBlur in="inner" stdDeviation="3.2" result="innerB"/>
+<feComposite in="sh" in2="innerB" operator="out" result="ring"/>
+<feColorMatrix in="ring" type="matrix" values="0.74 0 0 0 0 0 0.78 0 0 0 0 0 0.82 0 0 0 0 0 0 0.85 0" result="ringD"/>
+<feMerge><feMergeNode in="body"/><feMergeNode in="ringD"/></feMerge>
+</filter></defs><g filter="url(#k)"><path d="M108.1,60C109.2,67.7 105.8,78.7 100.8,85C95.8,91.4 86,95.8 78.2,98C70.4,100.2 61.3,100.3 54.2,98.4C47.1,96.5 42.2,91 35.8,86.7C29.4,82.3 18.5,78.8 15.6,72.4C12.6,66.1 16,56.1 18.2,48.3C20.4,40.5 22.8,30.3 28.8,25.6C34.8,20.9 45.5,21.3 54,20.1C62.5,18.9 73.1,15.4 79.9,18.5C86.6,21.6 89.6,32 94.3,38.9C99,45.9 107,52.3 108.1,60Z" fill="#fff"/></g></svg>

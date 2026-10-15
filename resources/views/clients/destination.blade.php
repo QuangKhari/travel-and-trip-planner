@@ -1,103 +1,184 @@
 @include('clients.blocks.header')
-@include('clients.blocks.banner')
 
 @php
-    $domainNames = ['b' => 'Miền Bắc', 't' => 'Miền Trung', 'n' => 'Miền Nam'];
-    // Spotlight: chỉ hiện các miền đang có tour
-    $spotDomains = collect($tours)->pluck('domain')->unique()->filter(fn($d) => isset($domainNames[$d]))->values();
+    $base = 'clients/assets/images/';
+    $art = fn($f) => asset($base . 'illustrations/' . $f);
+    $wc = fn($f) => asset($base . 'watercolor/' . $f);
+    $heroSrc = file_exists(public_path($base . 'destinations/hero-destination.jpg'))
+        ? asset($base . 'destinations/hero-destination.jpg')
+        : $art('scene-island-wide.svg');
+    $bannerSrc = file_exists(public_path($base . 'destinations/banner-journey.jpg'))
+        ? asset($base . 'destinations/banner-journey.jpg')
+        : $art('scene-bay-wide.svg');
+    $hasData = !empty($map['destinations']) && !empty($map['inspirations']);
 @endphp
 
-<section class="tv-dest">
-    <div class="container">
+<main class="tvp tvf" id="tvpDest" data-art="{{ $art('') }}/">
 
-        {{-- ===== SPOTLIGHT ĐIỂM ĐẾN (mới) — dữ liệu lấy từ $tours, JS nằm trong sea-theme.js ===== --}}
-        @if ($spotDomains->count())
-            <div class="tv-spot" id="tvSpot">
-                <div class="tv-spot__bg"></div>
-                <div class="tv-spot__in">
-                    <div class="tv-spot__head">
-                        <h2>Điểm đến được săn đón</h2>
-                        <p>Chọn một vùng đất để xem hành trình đang mở bán.</p>
+    {{-- ===== HERO + TÌM KIẾM ===== --}}
+    <section class="tvf-dhero" aria-labelledby="tvfDH1">
+        <img class="tvf-deco tvf-dhero__wash" src="{{ $wc('wc-wash-teal.svg') }}" alt="" aria-hidden="true"
+            width="900" height="620">
+        <div class="tvf-dhero__photo">
+            <img src="{{ $heroSrc }}" alt="" width="1400" height="800" fetchpriority="high">
+        </div>
+        <img class="tvf-deco tvf-leaf" src="{{ $wc('wc-leaf-c.svg') }}" alt="" aria-hidden="true" width="560"
+            height="640" style="--r:-8deg;right:-50px;bottom:-50px;width:240px;transform:scaleX(-1)">
+        <img class="tvf-deco tvf-leaf tvf-leaf--b" src="{{ $wc('wc-leaf-a.svg') }}" alt="" aria-hidden="true"
+            width="560" height="640" style="--r:6deg;left:-70px;bottom:-40px;width:210px">
+        <div class="tvf-dhero__tag" aria-hidden="true">Mỗi điểm đến là một câu chuyện đang chờ bạn</div>
+        <div class="tvp-wrap tvf-dhero__in">
+            <nav class="tvf-crumb" aria-label="breadcrumb"><a href="{{ route('home') }}">Trang chủ</a> › <span
+                    aria-current="page">Điểm đến</span></nav>
+            <span class="tvp-eyebrow">Khám phá Việt Nam</span>
+            <h1 id="tvfDH1">Điểm đến</h1>
+            <p class="tvf-dhero__sub">Những vùng đất tuyệt đẹp đang chờ bạn!</p>
+            <form class="tvf-search" id="tvpSearch" role="search" onsubmit="return false">
+                <svg class="tvp-ic" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="M20 20l-4-4" />
+                </svg>
+                <input id="tvpQ" type="search" autocomplete="off" enterkeyhint="search"
+                    placeholder="Tìm điểm đến, địa danh, thắng cảnh...  (nhấn / để tìm)" aria-label="Tìm điểm đến">
+                <button type="submit" aria-label="Tìm"><svg class="tvp-ic" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="11" cy="11" r="7" />
+                        <path d="M20 20l-4-4" />
+                    </svg></button>
+            </form>
+            <div class="tvf-quick" aria-label="Gợi ý tìm nhanh">
+                <span>Phổ biến:</span>
+                <button type="button" data-q="Phú Yên">Phú Yên</button>
+                <button type="button" data-q="Đà Nẵng">Đà Nẵng</button>
+                <button type="button" data-q="Hà Giang">Hà Giang</button>
+                <button type="button" data-q="Phú Quốc">Phú Quốc</button>
+            </div>
+        </div>
+    </section>
+
+    @if ($hasData)
+        {{-- ===== THANH LỌC THEO CẢM HỨNG ===== --}}
+        <div class="tvf-sentinel" aria-hidden="true"></div>
+        <div class="tvp-chipbar">
+            <div class="tvp-wrap">
+                <div class="tvp-chips" id="tvpChips" role="group" aria-label="Lọc điểm đến theo cảm hứng"></div>
+            </div>
+        </div>
+
+        {{-- ===== BẢN ĐỒ CẢM XÚC ===== --}}
+        <section class="tvp-mapsec" aria-labelledby="tvpMapH">
+            <img class="tvf-deco tvf-leaf" src="{{ $wc('wc-leaf-b.svg') }}" alt="" aria-hidden="true"
+                width="560" height="640" loading="lazy" style="--r:5deg;left:-60px;top:40px;width:190px">
+            <img class="tvf-deco tvf-leaf tvf-leaf--b" src="{{ $wc('wc-leaf-a.svg') }}" alt=""
+                aria-hidden="true" width="560" height="640" loading="lazy"
+                style="--r:-6deg;right:-60px;top:10px;width:200px;transform:scaleX(-1)">
+            <div class="tvp-wrap">
+                <div class="tvp-mtabs" id="tvpTabs" role="group" aria-label="Chọn cảm hứng trên bản đồ"></div>
+                <div class="tvp-mapgrid">
+                    <div class="tvp-mapl">
+                        <h2 id="tvpMapH"><span class="tvp-script">Khám phá</span>Việt Nam<br>qua bản đồ</h2>
+                        <p class="tvp-mhead" id="tvpHead"></p>
+                        <div class="tvp-mlit"><b id="tvpLit">0</b> điểm sáng theo cảm hứng bạn chọn</div>
+                        <div class="tvp-mtop" id="tvpTop"></div>
+                        <a class="tvp-btn tvp-btn--teal" id="tvpCta" href="{{ $map['exploreUrl'] }}">Xem các điểm
+                            đến</a>
+                        <img src="{{ $art('compass.svg') }}" alt=""
+                            style="width:92px;opacity:.55;margin-top:34px;display:block">
                     </div>
-
-                    <div class="tv-spot__tabs" role="tablist" aria-label="Chọn miền">
-                        @foreach ($spotDomains as $d)
-                            <button type="button" class="tv-spot__tab"
-                                data-spot-domain="{{ $d }}">{{ $domainNames[$d] }}</button>
-                        @endforeach
+                    <div class="tvp-board" id="tvpBoard">
+                        <div class="tvp-vnwrap" id="tvpVn">
+                            <div class="tvp-pins" id="tvpPins"></div>
+                        </div>
+                        <div class="tvp-mapleg"><span><i style="background:#d9a441"></i>Hợp nhất</span><span><i
+                                    style="background:#087f7b"></i>Phù hợp</span><span><i
+                                    style="background:#9bb5b3"></i>Chưa sáng</span></div>
+                        <div class="tvp-mpop" id="tvpPop" hidden></div>
                     </div>
-
-                    <div class="tv-spot__stage">
-                        <div class="tv-spot__text">
-                            <p class="tv-spot__kicker" id="tvSpotKicker"></p>
-                            <h3 class="tv-spot__title" id="tvSpotTitle"></h3>
-                            <p class="tv-spot__meta" id="tvSpotMeta"></p>
-                            <a href="#" class="tv-spot__cta" id="tvSpotCta">Xem tour <i
-                                    class="fal fa-arrow-right"></i></a>
-                        </div>
-
-                        <div class="tv-spot__media">
-                            <div class="tv-spot__img"><img id="tvSpotImg" src="" alt=""></div>
-                            <div class="tv-spot__thumbs">
-                                @foreach ($tours as $tour)
-                                    @php
-                                        $thumb = \App\Support\TourImage::url($tour->images[0] ?? 'default.jpg', 800);
-                                    @endphp
-                                    <button type="button" class="tv-spot__thumb" data-spot-thumb hidden
-                                        data-domain="{{ $tour->domain }}"
-                                        data-domain-name="{{ $domainNames[$tour->domain] ?? '' }}"
-                                        data-title="{{ $tour->title }}"
-                                        data-meta="{{ $tour->destination }} · {{ $tour->time }} · từ {{ number_format($tour->priceAdult, 0, ',', '.') }}đ/người"
-                                        data-img="{{ $thumb }}"
-                                        data-href="{{ route('tour-detail', ['id' => $tour->tourId]) }}"
-                                        aria-label="{{ $tour->title }}">
-                                        <img loading="lazy" decoding="async" src="{{ $thumb }}" alt="">
-                                    </button>
-                                @endforeach
-                            </div>
-                        </div>
+                    <div class="tvp-regions">
+                        <h3>Điểm đến theo vùng miền</h3>
+                        <div id="tvpRegions"></div>
                     </div>
                 </div>
             </div>
-        @endif
-        {{-- ===== HẾT SPOTLIGHT ===== --}}
+        </section>
 
-        <div class="td-section__head">
-            <div>
-                <h2 class="td-h2" style="margin-bottom:6px">Điểm đến đang có tour</h2>
-                <p class="tv-muted" style="margin:0">{{ count($tours) }} hành trình đang mở bán. Chọn miền để thu hẹp
-                    danh
-                    sách.</p>
+        {{-- ===== ĐIỂM ĐẾN NỔI BẬT ===== --}}
+        <div class="tvp-wrap">
+            <div class="tvp-sech">
+                <div>
+                    <h2 id="tvpTitle">Điểm đến nổi bật</h2>
+                    <p id="tvpCount" aria-live="polite"></p>
+                </div>
+                <button class="tvp-more" id="tvpReset" type="button" hidden>Xóa bộ lọc</button>
+            </div>
+            <div class="tvp-dgrid" id="tvpGrid" aria-busy="true">
+                @for ($i = 0; $i < 8; $i++)
+                    <div class="tvp-skel" aria-hidden="true"></div>
+                @endfor
+            </div>
+            <div class="tvp-loadmore"><button class="tvp-btn tvp-btn--ghost" id="tvpMore" type="button">Xem thêm
+                    điểm
+                    đến</button></div>
+        </div>
+    @else
+        <div class="tvp-wrap">
+            <div class="tvp-empty" style="padding:80px 0">
+                <p>Dữ liệu điểm đến chưa sẵn sàng. Chạy <code>php artisan migrate</code> và <code>php artisan db:seed
+                        --class=DiscoverSeeder</code>.</p>
+            </div>
+        </div>
+    @endif
+
+    <div class="tvp-wrap">
+        {{-- ===== BANNER ===== --}}
+        <div class="tvf-banner tvf-rv">
+            <div class="tvf-banner__bg"><img src="{{ $bannerSrc }}" alt="" width="1200"
+                    height="420" loading="lazy"></div>
+            <img class="tvf-deco tvf-leaf" src="{{ $wc('wc-leaf-c.svg') }}" alt="" aria-hidden="true"
+                width="560" height="640" loading="lazy"
+                style="--r:-6deg;right:-34px;bottom:-46px;width:190px;transform:scaleX(-1)">
+            <div class="tvf-banner__in">
+                <div>
+                    <h3>Những hành trình đang chờ bạn</h3>
+                    <p>Khám phá các tour trọn gói, lịch trình rõ ràng, giá minh bạch.</p>
+                </div>
+                <a class="tvp-btn tvp-btn--white" href="{{ route('tours') }}">Đặt tour ngay
+                    <svg class="tvp-ic" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M5 12h14M13 6l6 6-6 6" />
+                    </svg></a>
             </div>
         </div>
 
-        <div class="tv-chiprow" role="group" aria-label="Lọc theo miền" id="tvDomainFilter">
-            <button type="button" class="tv-chipbtn is-on" data-domain="all">Tất cả</button>
-            @foreach ($domainNames as $key => $label)
-                <button type="button" class="tv-chipbtn"
-                    data-domain="{{ $key }}">{{ $label }}</button>
-            @endforeach
-        </div>
-
-        <div class="tv-dest__grid" id="tvDestGrid">
-            @foreach ($tours as $tour)
-                <a class="tv-dest__item" data-domain="{{ $tour->domain }}"
-                    href="{{ route('tour-detail', ['id' => $tour->tourId]) }}">
-                    <img loading="lazy" decoding="async"
-                        src="{{ \App\Support\TourImage::url($tour->images[0] ?? 'default.jpg', 800) }}"
-                        alt="{{ $tour->title }}">
-                    <span class="tv-dest__label">
-                        <small>{{ $domainNames[$tour->domain] ?? '' }} · {{ $tour->time }}</small>
-                        <b>{{ $tour->title }}</b>
-                    </span>
-                </a>
-            @endforeach
-        </div>
-        <p class="tv-muted tv-dest__none" id="tvDestNone" hidden>Chưa có điểm đến nào ở khu vực này.</p>
-        <div class="tv-more"><button type="button" class="tv-btn-ghost" id="tvDestMore" hidden>Xem thêm điểm
-                đến</button></div>
+        {{-- ===== BÀI VIẾT LIÊN QUAN (config/blog.php) ===== --}}
+        @if ($posts->count())
+            <div class="tvp-sech">
+                <div>
+                    <h2>Bài viết liên quan</h2>
+                </div><a class="tvp-more" href="{{ route('blogs') }}">Xem tất cả</a>
+            </div>
+            <div class="tvp-posts">
+                @foreach ($posts as $post)
+                    <a class="tvp-post tvp-rv" href="{{ route('blog-detail', ['slug' => $post['slug']]) }}">
+                        <div class="tvp-post__img">
+                            <img src="{{ asset($base . 'blog/' . $post['image']) }}" alt="" loading="lazy">
+                            <span class="tvp-post__cat">{{ $post['category'] }}</span>
+                        </div>
+                        <div class="tvp-post__b">
+                            <h3>{{ $post['title'] }}</h3>
+                            <small>{{ \Carbon\Carbon::parse($post['date'])->format('d/m/Y') }} · {{ $post['read'] }}
+                                phút đọc</small>
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+        @endif
     </div>
-</section>
+</main>
 
-@include('clients.blocks.new_letter')
+@if ($hasData)
+    {{-- Dữ liệu cho bản đồ + bản đồ SVG (dùng chung partial với trang chủ) --}}
+    <script type="application/json" id="tvpData">{!! json_encode($map, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) !!}</script>
+    <template id="tvpSvg">@include('clients.partials.vn-map-svg')</template>
+    <script src="{{ asset('clients/assets/js/tv-destination.js') }}?v=2" defer></script>
+@endif
+
 @include('clients.blocks.footer')

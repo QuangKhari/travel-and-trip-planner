@@ -1,0 +1,763 @@
+/* ==========================================================
+   TRAVELA — WATERCOLOUR REFINEMENT
+   Phạm vi: trang Giới thiệu và Điểm đến
+   Không thay thế CSS cũ; chỉ tinh chỉnh giao diện.
+   ========================================================== */
+
+/* 1. Hệ thống màu và khoảng cách thống nhất */
+.tvp#tvpAbout,
+.tvp#tvpDest {
+    --wc-paper: #f7f5ef;
+    --wc-paper-light: #fcfbf7;
+    --wc-teal: #087f7b;
+    --wc-teal-dark: #075e5b;
+    --wc-sage: #dceae1;
+    --wc-mist: #e5f1ee;
+    --wc-sky: #dcebf0;
+    --wc-sand: #d9a441;
+    --wc-ink: #203c3a;
+    --wc-muted: #637b78;
+
+    color: var(--wc-ink);
+    background-color: var(--wc-paper);
+    overflow: clip;
+}
+
+/* 2. Giấy màu nước: nền nhẹ, không cạnh tranh với nội dung */
+#tvpAbout,
+#tvpDest {
+    background-image:
+        radial-gradient(
+            ellipse at 8% 18%,
+            rgba(154, 200, 185, 0.14),
+            transparent 30%
+        ),
+        radial-gradient(
+            ellipse at 92% 48%,
+            rgba(179, 211, 219, 0.17),
+            transparent 32%
+        ),
+        radial-gradient(
+            ellipse at 45% 85%,
+            rgba(230, 210, 165, 0.12),
+            transparent 32%
+        );
+    background-attachment: scroll;
+}
+
+/* 3. Đồng bộ chiều rộng nội dung */
+#tvpAbout .tvp-wrap,
+#tvpDest .tvp-wrap {
+    width: min(1200px, calc(100% - 64px));
+    margin-inline: auto;
+}
+
+/* 4. Chỉ giữ một vài lớp trang trí cần thiết */
+#tvpAbout > .tvp-hero > .tvp-leafy,
+#tvpAbout > .tvp-story > .tvp-leafy,
+#tvpDest .tvp-mapsec > .tvp-leafy {
+    opacity: 0.32;
+    pointer-events: none;
+}
+
+#tvpAbout .tvp-slogan {
+    opacity: 0.88;
+}
+
+#tvpAbout .tvp-girl--hero {
+    opacity: 0.9;
+    pointer-events: none;
+}
+
+/* 5. Hero Giới thiệu: tập trung vào thông điệp */
+#tvpAbout .tvp-hero {
+    min-height: 620px;
+    background-color: #dcebe5;
+}
+
+#tvpAbout .tvp-hero::after {
+    background:
+        linear-gradient(
+            90deg,
+            rgba(17, 54, 51, 0.78) 0%,
+            rgba(17, 54, 51, 0.54) 37%,
+            rgba(17, 54, 51, 0.12) 72%,
+            rgba(17, 54, 51, 0.04) 100%
+        ),
+        linear-gradient(0deg, rgba(17, 54, 51, 0.2), transparent 45%);
+}
+
+#tvpAbout .tvp-hero__copy {
+    max-width: 600px;
+}
+
+#tvpAbout .tvp-hero__copy h1 {
+    max-width: 600px;
+    line-height: 1.16;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+}
+
+#tvpAbout .tvp-hero__copy p {
+    max-width: 510px;
+    line-height: 1.85;
+}
+
+/* 6. Chuyển cảnh mềm hơn giữa hero và nội dung */
+#tvpAbout .tvp-edge {
+    height: 62px;
+}
+
+#tvpAbout .tvp-story,
+#tvpAbout .tvp-values {
+    background-color: transparent;
+}
+
+#tvpAbout .tvp-story {
+    padding-block: 88px;
+}
+
+#tvpAbout .tvp-story .tvp-wrap {
+    gap: clamp(36px, 5vw, 72px);
+}
+
+#tvpAbout .tvp-story h2,
+#tvpAbout .tvp-values h2 {
+    color: var(--wc-teal-dark);
+    line-height: 1.25;
+    letter-spacing: -0.025em;
+}
+
+#tvpAbout .tvp-story p,
+#tvpAbout .tvp-values p {
+    color: var(--wc-muted);
+    line-height: 1.85;
+}
+
+/* 7. Ảnh câu chuyện: thống nhất thành bộ ảnh editorial */
+#tvpAbout .tvp-collage {
+    max-width: 520px;
+}
+
+#tvpAbout .tvp-pola {
+    border-radius: 12px;
+    padding: 7px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 12px 32px rgba(31, 74, 67, 0.12);
+}
+
+#tvpAbout .tvp-pola img {
+    border-radius: 7px;
+}
+
+/* 8. Số liệu: làm nổi bật dữ liệu thực */
+#tvpAbout .tvp-stats {
+    background: linear-gradient(
+        110deg,
+        rgba(220, 234, 225, 0.88),
+        rgba(248, 246, 239, 0.95)
+    );
+    border-block: 1px solid rgba(8, 127, 123, 0.08);
+}
+
+#tvpAbout .tvp-stats li span {
+    color: var(--wc-muted);
+}
+
+/* 9. Giá trị cốt lõi: bớt cảm giác các khối rời rạc */
+#tvpAbout .tvp-values {
+    padding-block: 84px 96px;
+}
+
+#tvpAbout .tvp-val {
+    border-radius: 22px;
+    padding: 28px 24px;
+    background: rgba(255, 255, 255, 0.57);
+    border: 1px solid rgba(8, 127, 123, 0.09);
+    box-shadow: 0 8px 28px rgba(32, 60, 58, 0.035);
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease;
+}
+
+@media (hover: hover) {
+    #tvpAbout .tvp-val:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 14px 32px rgba(32, 60, 58, 0.09);
+    }
+}
+
+/* 10. Section cảnh quan: giữ ảnh đẹp, hạn chế minh họa đè nội dung */
+#tvpAbout .tvp-scenic {
+    isolation: isolate;
+}
+
+#tvpAbout .tvp-scenic__watercolor {
+    opacity: 0.64;
+}
+
+#tvpAbout .tvp-girl--scenic {
+    opacity: 0.82;
+}
+
+#tvpAbout .tvp-quote {
+    background: rgba(20, 51, 49, 0.68);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 22px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* 11. CTA cuối trang: dùng màu nước làm nền, giữ chữ dễ đọc */
+#tvpAbout .tvp-explore {
+    background:
+        radial-gradient(
+            ellipse at 78% 70%,
+            rgba(124, 184, 161, 0.2),
+            transparent 42%
+        ),
+        linear-gradient(180deg, var(--wc-paper), #e8f1eb);
+}
+
+#tvpAbout .tvp-explore h2 {
+    max-width: 520px;
+    line-height: 1.3;
+}
+
+#tvpAbout .tvp-explore p {
+    line-height: 1.85;
+}
+
+/* 12. Hero Điểm đến: ảnh là điểm nhấn, chữ luôn rõ */
+#tvpDest .tvp-dhero {
+    min-height: 440px;
+    height: 440px;
+    background-color: #527e78;
+}
+
+#tvpDest .tvp-dhero__bg {
+    filter: saturate(0.82) contrast(0.97);
+}
+
+#tvpDest .tvp-dhero::after {
+    background:
+        linear-gradient(
+            90deg,
+            rgba(18, 52, 49, 0.74),
+            rgba(18, 52, 49, 0.3) 55%,
+            rgba(18, 52, 49, 0.05)
+        ),
+        linear-gradient(0deg, rgba(18, 52, 49, 0.22), transparent 48%);
+}
+
+#tvpDest .tvp-dhero h1 {
+    line-height: 1.08;
+    text-wrap: balance;
+}
+
+#tvpDest .tvp-dhero__sub {
+    max-width: 520px;
+    line-height: 1.8;
+}
+
+/* 13. Tìm kiếm: dễ nhận biết và thao tác */
+#tvpDest .tvp-search {
+    border: 1px solid rgba(8, 127, 123, 0.16);
+    border-radius: 18px;
+    background: rgba(252, 251, 247, 0.97);
+    box-shadow: 0 14px 36px rgba(24, 57, 53, 0.13);
+}
+
+#tvpDest .tvp-search input {
+    min-width: 0;
+    color: var(--wc-ink);
+}
+
+#tvpDest .tvp-search input::placeholder {
+    color: #738783;
+}
+
+#tvpDest .tvp-search:focus-within {
+    outline: 3px solid rgba(8, 127, 123, 0.22);
+    outline-offset: 3px;
+}
+
+/* 14. Bộ lọc: dễ quét bằng mắt */
+#tvpDest .tvp-chipbar {
+    background: rgba(247, 245, 239, 0.94);
+    border-bottom: 1px solid rgba(8, 127, 123, 0.08);
+}
+
+#tvpDest .tvp-chip {
+    border-radius: 999px;
+}
+
+#tvpDest .tvp-chip:focus-visible,
+#tvpDest .tvp-mtab:focus-visible,
+#tvpDest .tvp-btn:focus-visible,
+#tvpDest .tvp-more:focus-visible {
+    outline: 3px solid var(--wc-sand);
+    outline-offset: 3px;
+}
+
+/* 15. Bản đồ: vẫn là điểm khác biệt nhưng không quá nặng */
+#tvpDest .tvp-mapsec {
+    margin-top: 18px;
+    padding-block: 68px 78px;
+    background:
+        radial-gradient(
+            ellipse at 72% 35%,
+            rgba(161, 207, 196, 0.26),
+            transparent 48%
+        ),
+        linear-gradient(180deg, #f7f5ef, #edf4ee);
+}
+
+#tvpDest .tvp-mapgrid {
+    align-items: center;
+}
+
+#tvpDest .tvp-board {
+    border-radius: 26px;
+    background: rgba(255, 255, 255, 0.48);
+    border: 1px solid rgba(8, 127, 123, 0.1);
+    box-shadow: 0 12px 38px rgba(32, 60, 58, 0.07);
+}
+
+#tvpDest .tvp-regions {
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.58);
+}
+
+/* 16. Tiêu đề danh sách và thẻ điểm đến */
+#tvpDest .tvp-sech {
+    padding-top: 54px;
+    margin-bottom: 24px;
+    gap: 20px;
+}
+
+#tvpDest .tvp-sech h2 {
+    line-height: 1.3;
+    color: var(--wc-teal-dark);
+}
+
+#tvpDest .tvp-dgrid {
+    gap: 24px;
+}
+
+#tvpDest .tvp-dcard {
+    overflow: hidden;
+    border-radius: 20px;
+    background: rgba(252, 251, 247, 0.96);
+    border: 1px solid rgba(8, 127, 123, 0.1);
+    box-shadow: 0 8px 24px rgba(32, 60, 58, 0.055);
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease;
+}
+
+@media (hover: hover) {
+    #tvpDest .tvp-dcard:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 16px 34px rgba(32, 60, 58, 0.12);
+    }
+}
+
+#tvpDest .tvp-dcard__img img {
+    filter: saturate(0.92);
+}
+
+#tvpDest .tvp-dcard__body {
+    padding: 20px;
+}
+
+#tvpDest .tvp-dcard__body h3 {
+    line-height: 1.4;
+}
+
+#tvpDest .tvp-loadmore {
+    padding-block: 28px 48px;
+}
+
+/* 17. Banner cuối trang: đồng bộ với màu nền giấy */
+#tvpDest .tvp-banner {
+    overflow: hidden;
+    border-radius: 24px;
+    box-shadow: 0 12px 32px rgba(32, 60, 58, 0.1);
+}
+
+/* 18. Responsive tablet */
+@media (max-width: 1024px) {
+    #tvpAbout .tvp-hero {
+        min-height: 570px;
+    }
+
+    #tvpAbout .tvp-story {
+        padding-block: 64px;
+    }
+
+    #tvpDest .tvp-mapsec {
+        padding-block: 52px 60px;
+    }
+
+    #tvpDest .tvp-dgrid {
+        gap: 18px;
+    }
+}
+
+/* 19. Responsive mobile */
+@media (max-width: 760px) {
+    #tvpAbout .tvp-wrap,
+    #tvpDest .tvp-wrap {
+        width: calc(100% - 36px);
+    }
+
+    #tvpAbout .tvp-hero {
+        min-height: 620px;
+    }
+
+    #tvpAbout .tvp-hero__copy {
+        left: 18px;
+        right: 18px;
+        top: calc(var(--p-hdr) + 36px);
+        width: auto;
+        max-width: none;
+    }
+
+    #tvpAbout .tvp-hero__copy h1 {
+        font-size: clamp(30px, 8vw, 42px);
+    }
+
+    #tvpAbout .tvp-slogan {
+        display: none;
+    }
+
+    #tvpAbout .tvp-girl--hero {
+        opacity: 0.48;
+    }
+
+    #tvpAbout .tvp-story {
+        padding-block: 52px;
+    }
+
+    #tvpAbout .tvp-story .tvp-wrap {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+
+    #tvpAbout .tvp-collage {
+        width: 100%;
+        max-width: 480px;
+        margin-inline: auto;
+    }
+
+    #tvpAbout .tvp-values {
+        padding-block: 56px;
+    }
+
+    #tvpAbout .tvp-scenic .tvp-wrap {
+        grid-template-columns: 1fr;
+        gap: 24px;
+        padding-block: 56px;
+    }
+
+    #tvpAbout .tvp-scenic__watercolor {
+        width: 100%;
+        opacity: 0.42;
+    }
+
+    #tvpAbout .tvp-girl--scenic {
+        opacity: 0.45;
+    }
+
+    #tvpAbout .tvp-explore {
+        min-height: 0;
+        padding: 90px 0 220px;
+    }
+
+    #tvpAbout .tvp-paint {
+        width: 100%;
+        height: 250px;
+        opacity: 0.65;
+        -webkit-mask-image: linear-gradient(180deg, transparent, #000 28%);
+        mask-image: linear-gradient(180deg, transparent, #000 28%);
+    }
+
+    #tvpDest .tvp-dhero {
+        height: 410px;
+        min-height: 410px;
+    }
+
+    #tvpDest .tvp-dhero .tvp-wrap {
+        padding-top: calc(var(--p-hdr) + 14px);
+    }
+
+    #tvpDest .tvp-dhero h1 {
+        font-size: clamp(44px, 12vw, 62px);
+    }
+
+    #tvpDest .tvp-dhero__tag {
+        display: none;
+    }
+
+    #tvpDest .tvp-search {
+        left: 18px;
+        right: 18px;
+        width: auto;
+        max-width: none;
+        bottom: 22px;
+    }
+
+    #tvpDest .tvp-mapsec {
+        margin-top: 10px;
+        padding-block: 42px 48px;
+    }
+
+    #tvpDest .tvp-mapgrid {
+        grid-template-columns: 1fr;
+    }
+
+    #tvpDest .tvp-board {
+        min-width: 0;
+        width: 100%;
+        border-radius: 18px;
+    }
+
+    #tvpDest .tvp-sech {
+        padding-top: 36px;
+        align-items: flex-start;
+    }
+
+    #tvpDest .tvp-dgrid {
+        gap: 16px;
+    }
+
+    #tvpDest .tvp-dcard {
+        border-radius: 16px;
+    }
+
+    #tvpDest .tvp-dcard__body {
+        padding: 15px;
+    }
+
+    #tvpDest .tvp-banner {
+        border-radius: 18px;
+    }
+}
+
+/* 20. Điện thoại nhỏ */
+@media (max-width: 380px) {
+    #tvpAbout .tvp-wrap,
+    #tvpDest .tvp-wrap {
+        width: calc(100% - 28px);
+    }
+
+    #tvpAbout .tvp-hero__copy h1 {
+        font-size: 29px;
+    }
+
+    #tvpDest .tvp-search {
+        left: 14px;
+        right: 14px;
+    }
+}
+
+/* 21. Tôn trọng cài đặt giảm chuyển động */
+@media (prefers-reduced-motion: reduce) {
+    #tvpAbout *,
+    #tvpDest * {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* FIX: bảo đảm bộ lọc cảm hứng nhận được thao tác */
+#tvpDest .tvp-chips .tvp-chip {
+    pointer-events: auto;
+    position: relative;
+    z-index: 1;
+    cursor: pointer;
+}
+
+/* Nút đang chọn phải được nhận diện rõ */
+#tvpDest .tvp-chip[aria-pressed="true"] {
+    background: #087f7b;
+    color: #fff;
+    border-color: #087f7b;
+}
+
+/* Tab bản đồ cũng phải dễ thao tác */
+#tvpDest .tvp-mtabs .tvp-mtab {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+/* Trạng thái bàn phím */
+#tvpDest .tvp-chip:focus-visible,
+#tvpDest .tvp-mtab:focus-visible {
+    outline: 3px solid #d9a441;
+    outline-offset: 3px;
+}
+
+/* MOBILE REFINEMENT — hero Giới thiệu */
+@media (max-width: 760px) {
+    #tvpAbout .tvp-hero {
+        min-height: 0;
+        padding-bottom: 250px;
+        isolation: isolate;
+    }
+
+    #tvpAbout .tvp-hero__img {
+        height: 340px;
+        top: auto;
+        bottom: 0;
+        object-fit: cover;
+        object-position: center;
+    }
+
+    #tvpAbout .tvp-hero::after {
+        background: linear-gradient(
+            180deg,
+            rgba(248, 246, 240, 0.98) 0%,
+            rgba(248, 246, 240, 0.94) 35%,
+            rgba(248, 246, 240, 0.2) 76%,
+            rgba(17, 64, 60, 0.18) 100%
+        );
+    }
+
+    #tvpAbout .tvp-hero__copy {
+        position: relative;
+        inset: auto;
+        width: auto;
+        max-width: 620px;
+        padding: calc(var(--p-hdr) + 20px) 18px 30px;
+    }
+
+    #tvpAbout .tvp-hero__copy h1 {
+        font-size: clamp(30px, 8vw, 42px);
+        line-height: 1.2;
+    }
+
+    #tvpAbout .tvp-hero__copy p {
+        font-size: 15px;
+        line-height: 1.8;
+    }
+
+    #tvpAbout .tvp-girl--hero {
+        width: min(150px, 38vw);
+        right: 5%;
+        bottom: 12px;
+        opacity: 0.72;
+    }
+}
+
+/* MOBILE REFINEMENT — hero Điểm đến */
+@media (max-width: 760px) {
+    #tvpDest .tvp-dhero {
+        height: 500px;
+        min-height: 500px;
+    }
+
+    #tvpDest .tvp-dhero::after {
+        background:
+            linear-gradient(
+                90deg,
+                rgba(17, 64, 60, 0.68),
+                rgba(17, 64, 60, 0.22)
+            ),
+            linear-gradient(0deg, rgba(17, 64, 60, 0.48), transparent 65%);
+    }
+
+    #tvpDest .tvp-dhero .tvp-wrap {
+        padding-top: calc(var(--p-hdr) + 14px);
+    }
+
+    #tvpDest .tvp-dhero h1 {
+        font-size: clamp(48px, 12vw, 66px);
+    }
+
+    #tvpDest .tvp-dhero__sub {
+        max-width: 340px;
+        font-size: 17px;
+        line-height: 1.7;
+    }
+
+    #tvpDest .tvp-search {
+        left: 18px;
+        right: 18px;
+        bottom: 24px;
+        width: auto;
+        border-radius: 16px;
+        padding-left: 14px;
+    }
+
+    #tvpDest .tvp-search input {
+        font-size: 14px;
+    }
+
+    #tvpDest .tvp-search button {
+        width: 42px;
+        height: 42px;
+        flex-shrink: 0;
+    }
+}
+
+/* Điện thoại rất nhỏ */
+@media (max-width: 380px) {
+    #tvpAbout .tvp-hero {
+        padding-bottom: 220px;
+    }
+
+    #tvpAbout .tvp-hero__img {
+        height: 290px;
+    }
+
+    #tvpDest .tvp-dhero {
+        height: 470px;
+        min-height: 470px;
+    }
+
+    #tvpDest .tvp-search {
+        left: 14px;
+        right: 14px;
+    }
+}
+
+/* ABOUT — giảm cạnh tranh thị giác trong hero */
+#tvpAbout .tvp-slogan {
+    top: calc(var(--p-hdr) + 30px);
+    right: 7%;
+    max-width: 240px;
+    font-size: clamp(24px, 2.4vw, 34px);
+    opacity: 0.76;
+    transform: rotate(-3deg);
+    box-shadow: 0 8px 24px rgba(20, 60, 54, 0.06);
+}
+
+/* Lá trang trí là lớp nền, không phải nội dung chính */
+#tvpAbout .tvp-hero > .tvp-leafy {
+    opacity: 0.2;
+}
+
+/* Giữ hình minh họa nhưng không để nó lấn át tiêu đề */
+#tvpAbout .tvp-girl--hero {
+    opacity: 0.78;
+}
+
+/* Mobile: ưu tiên tiêu đề và CTA */
+@media (max-width: 760px) {
+    #tvpAbout .tvp-slogan {
+        display: none;
+    }
+
+    #tvpAbout .tvp-hero > .tvp-leafy {
+        opacity: 0.12;
+    }
+
+    #tvpAbout .tvp-girl--hero {
+        opacity: 0.58;
+    }
+}

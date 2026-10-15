@@ -1,0 +1,279 @@
+/* =========================================================
+   TRAVEL — PREMIUM ART DIRECTION
+   About + Destination
+   ========================================================= */
+
+.tvp {
+    --p-paper: #f8f6f0;
+    --p-paper-deep: #f0ede3;
+    --p-white: #ffffff;
+    --p-ink: #173b3a;
+    --p-soft: #607775;
+    --p-teal: #16a6a1;
+    --p-teal-dark: #087f7b;
+    --p-sand: #d9a441;
+    --p-mist: #e6f3f1;
+
+    --p-shadow-soft: 0 16px 42px rgba(23, 59, 58, 0.08);
+
+    --p-shadow-hover: 0 26px 60px rgba(23, 59, 58, 0.15);
+}
+
+.tvp-scenic__watercolor {
+    position: absolute;
+    z-index: 2;
+
+    right: -3%;
+    bottom: -2px;
+
+    width: min(980px, 78%);
+    height: 270px;
+
+    object-fit: contain;
+    object-position: right bottom;
+
+    opacity: 0.92;
+
+    pointer-events: none;
+
+    filter: saturate(0.92) contrast(0.97);
+
+    -webkit-mask-image: radial-gradient(
+        ellipse 75% 85% at 72% 100%,
+        #000 45%,
+        rgba(0, 0, 0, 0.85) 63%,
+        transparent 100%
+    );
+
+    mask-image: radial-gradient(
+        ellipse 75% 85% at 72% 100%,
+        #000 45%,
+        rgba(0, 0, 0, 0.85) 63%,
+        transparent 100%
+    );
+}
+
+.tvp-girl--scenic {
+    position: absolute;
+
+    z-index: 4;
+
+    right: 5%;
+    bottom: -2px;
+
+    width: min(320px, 28vw);
+
+    filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.16));
+
+    pointer-events: none;
+
+    transform-origin: 50% 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .tvp-girl--scenic {
+        animation: tvpGirlFloat 6s ease-in-out infinite alternate;
+    }
+}
+
+@keyframes tvpGirlFloat {
+    from {
+        transform: translateY(0) rotate(0deg);
+    }
+
+    to {
+        transform: translateY(-5px) rotate(0.35deg);
+    }
+}
+/* =========================================================
+   ABOUT — WATERCOLOUR SCENIC TRANSITION
+   Ảnh thật → wash màu nước → Hạ Long → nhân vật
+   ========================================================= */
+
+.tvp-scenic {
+    isolation: isolate;
+    overflow: hidden;
+}
+
+.tvp-scenic::before {
+    content: "";
+
+    position: absolute;
+
+    left: -8%;
+    right: -8%;
+    bottom: -70px;
+
+    height: 330px;
+
+    z-index: 1;
+
+    pointer-events: none;
+
+    background:
+        radial-gradient(
+            ellipse 42% 58% at 74% 52%,
+            rgba(95, 214, 207, 0.34),
+            transparent 72%
+        ),
+        radial-gradient(
+            ellipse 32% 45% at 54% 72%,
+            rgba(255, 255, 255, 0.22),
+            transparent 75%
+        ),
+        radial-gradient(
+            ellipse 24% 38% at 90% 78%,
+            rgba(217, 164, 65, 0.1),
+            transparent 76%
+        );
+
+    filter: blur(14px);
+
+    opacity: 0.95;
+}
+.tvp-scenic__watercolor {
+    position: absolute;
+
+    z-index: 2;
+
+    right: -2%;
+    bottom: -8px;
+
+    width: min(1050px, 82%);
+    height: 310px;
+
+    object-fit: contain;
+    object-position: right bottom;
+
+    opacity: 0.94;
+
+    pointer-events: none;
+
+    filter: saturate(0.88) contrast(0.96)
+        drop-shadow(0 14px 22px rgba(23, 59, 58, 0.08));
+
+    -webkit-mask-image: radial-gradient(
+        ellipse 78% 88% at 72% 100%,
+        #000 38%,
+        rgba(0, 0, 0, 0.92) 58%,
+        rgba(0, 0, 0, 0.45) 74%,
+        transparent 100%
+    );
+
+    mask-image: radial-gradient(
+        ellipse 78% 88% at 72% 100%,
+        #000 38%,
+        rgba(0, 0, 0, 0.92) 58%,
+        rgba(0, 0, 0, 0.45) 74%,
+        transparent 100%
+    );
+}
+.tvp-pola {
+    border-radius: 4px;
+
+    box-shadow: 0 18px 38px rgba(23, 59, 58, 0.13);
+
+    transition:
+        transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+        box-shadow 0.5s ease;
+}
+
+.tvp-pola:hover {
+    box-shadow: 0 26px 50px rgba(23, 59, 58, 0.18);
+
+    z-index: 6;
+}
+
+.tvp-pola:nth-child(1):hover {
+    transform: rotate(-1deg) translateY(-7px);
+}
+
+.tvp-pola:nth-child(2):hover {
+    transform: rotate(4deg) translateY(-7px);
+}
+
+.tvp-pola:nth-child(3):hover {
+    transform: rotate(-3deg) translateY(-7px);
+}
+.tvp-val {
+    position: relative;
+
+    padding: 16px 14px 20px;
+
+    border-radius: 22px;
+
+    transition:
+        transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+        box-shadow 0.4s ease,
+        background 0.4s ease;
+}
+
+.tvp-val:hover {
+    transform: translateY(-6px);
+
+    background: rgba(255, 255, 255, 0.72);
+
+    box-shadow: 0 18px 40px rgba(23, 59, 58, 0.08);
+}
+
+.tvp-val__blob {
+    transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.tvp-val:hover .tvp-val__blob {
+    transform: rotate(-4deg) scale(1.06);
+}
+.tvp-hero__img {
+    filter: saturate(0.94) contrast(0.98);
+}
+@media (max-width: 1020px) {
+    .tvp-scenic__watercolor {
+        width: 92%;
+        height: 290px;
+        right: -8%;
+    }
+
+    .tvp-girl--scenic {
+        width: 270px;
+        right: 3%;
+    }
+}
+
+@media (max-width: 760px) {
+    .tvp-scenic {
+        min-height: 560px;
+    }
+
+    .tvp-scenic__watercolor {
+        width: 145%;
+        max-width: none;
+
+        height: 250px;
+
+        right: -35%;
+        bottom: -4px;
+    }
+
+    .tvp-girl--scenic {
+        width: 190px;
+        right: 3%;
+        bottom: 0;
+    }
+
+    .tvp-scenic::before {
+        height: 260px;
+        bottom: -40px;
+    }
+}
+
+@media (max-width: 480px) {
+    .tvp-scenic__watercolor {
+        width: 165%;
+        right: -48%;
+    }
+
+    .tvp-girl--scenic {
+        width: 165px;
+        right: 2%;
+    }
+}

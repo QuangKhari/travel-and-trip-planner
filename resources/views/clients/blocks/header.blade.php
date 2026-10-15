@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zxx">
+<html lang="vi">
 
 <head>
     <!-- Required meta tags -->
@@ -17,6 +17,10 @@
     <link rel="shortcut icon" href="{{ asset('clients/assets/images/logos/favicon.png') }}" type="image/x-icon">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&amp;display=swap"
+        rel="stylesheet">
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Caveat:wght@600;700&family=Dancing+Script:wght@600;700&display=swap"
         rel="stylesheet">
 
     <!-- Flaticon -->
@@ -68,7 +72,13 @@
     <link rel="stylesheet" href="{{ asset('clients/assets/css/client-ui-polish.css') }}?v=4">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/travel-pages.css') }}?v=2">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/inspiration.css') }}?v=2">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-pages.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-pages-10.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-watercolor.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-watercolor-refine.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-final.css') }}?v=1">
     <script src="{{ asset('clients/assets/js/travel-motion.js') }}?v=1" defer></script>
+    <script src="{{ asset('clients/assets/js/tv-final.js') }}?v=1" defer></script>
 </head>
 
 <body class="tv-sea page-{{ str_replace('.', '-', request()->route()?->getName() ?? 'page') }}">
