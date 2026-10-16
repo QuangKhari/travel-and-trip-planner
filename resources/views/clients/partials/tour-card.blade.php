@@ -47,6 +47,10 @@
                     aria-hidden="true"></i>{{ \Carbon\Carbon::parse($tour->startDate)->format('d/m/Y') }}</li>
             <li class="{{ $qty <= 10 ? 'is-low' : '' }}"><i class="fal fa-users" aria-hidden="true"></i>Còn
                 {{ $qty }} chỗ</li>
+            @if (($tour->bookingCount ?? 0) >= 2)
+                <li class="is-proof"><i class="fal fa-fire-alt" aria-hidden="true"></i>{{ $tour->bookingCount }} lượt
+                    đặt</li>
+            @endif
         </ul>
         <div class="wt-card__price">
             <small>Từ</small>

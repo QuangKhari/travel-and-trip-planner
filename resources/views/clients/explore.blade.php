@@ -13,7 +13,7 @@
             <i class="fas fa-chevron-right"></i>
             <a href="{{ route('home') }}#kham-pha">Khám phá theo cảm hứng</a>
             <i class="fas fa-chevron-right"></i>
-            <span>{{ $inspiration->name }}</span>
+            <span aria-current="page">{{ $inspiration->name }}</span>
         </nav>
         <p class="tvx-hero__eyebrow"><i class="fas {{ $inspiration->icon }}"></i> {{ $inspiration->tagline }}</p>
         <h1 class="tvx-hero__title">{{ $inspiration->name }}</h1>
@@ -37,20 +37,22 @@
                         class="tvx-pill {{ $domain === $code ? 'is-on' : '' }}">{{ $label }}</a>
                 @endforeach
             </div>
-            <p class="tvx-count">{{ $destinations->count() }} trang nhật ký</p>
+            <p class="tvx-count">{{ $destinations->count() }} điểm đến</p>
         </div>
 
         @if ($destinations->isEmpty())
             <div class="tvx-empty">
                 <i class="fal fa-compass"></i>
-                <h3>Chưa có trang nhật ký nào ở khu vực này</h3>
+                <h3>Chưa có điểm đến nào ở khu vực này</h3>
                 <p>Hãy thử chọn “Tất cả” hoặc một miền khác.</p>
+                <a class="ux-chip" href="{{ route('explore', ['inspiration' => $inspiration->slug]) }}">Xem tất cả
+                    miền</a>
             </div>
         @else
             <div class="tvx-journal">
                 @foreach ($destinations as $i => $d)
                     @php
-                        $href = $d->tourCount > 0 ? route('search-voice-text', ['keyword' => $d->name]) : null;
+                        $href = $d->tourCount > 0 ? route('tours', ['keyword' => $d->name]) : null;
                     @endphp
                     <article class="tvx-jcard tvx-card--{{ $inspiration->slug }} {{ $href ? 'has-link' : '' }}"
                         data-aos="fade-up" data-aos-delay="{{ ($i % 3) * 70 }}" data-aos-duration="700"
@@ -76,8 +78,10 @@
                         <p class="tvx-jdesc">{{ $d->description }}</p>
 
                         <div class="tvx-jfoot">
-                            <span class="tvx-sticker" title="Mức độ phù hợp với “{{ $inspiration->name }}”">
-                                <small>Độ hợp</small><b>{{ $d->score }}</b>
+                            <span class="tvx-sticker" title="Mức độ phù hợp với “{{ $inspiration->name }}”"
+                                aria-label="Mức độ phù hợp {{ $d->score }} trên 100">
+                                <small>Độ hợp</small><b>{{ $d->score }}<span
+                                        class="tvx-sticker__max">/100</span></b>
                             </span>
                             @if ($href)
                                 <a href="{{ $href }}" class="tvx-ticket">
@@ -85,9 +89,10 @@
                                     <span>{{ $d->tourCount }} tour<br>đang mở bán</span>
                                 </a>
                             @else
-                                <span class="tvx-ticket tvx-ticket--soon">
-                                    <i class="fal fa-ticket-alt"></i><span>Tour<br>sắp có</span>
-                                </span>
+                                <a href="{{ route('contact') }}" class="tvx-ticket tvx-ticket--soon">
+                                    <i class="fal fa-ticket-alt" aria-hidden="true"></i><span>Tour sắp có<br>Nhắn để
+                                        được báo</span>
+                                </a>
                             @endif
                         </div>
                     </article>

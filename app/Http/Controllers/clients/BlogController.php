@@ -4,20 +4,25 @@ namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
  * Danh sách blog. Nguồn dữ liệu: config/blog.php (nội dung mẫu).
- * Hỗ trợ lọc ?cat=Tên danh mục và tìm ?q=từ khóa.
+ * Hỗ trợ lọc ?cat=Tên danh mục, tìm ?q=từ khóa và phân trang ?page=.
  */
 class BlogController extends Controller
 {
+    private const PER_PAGE = 9;
+
     public function index(Request $request)
     {
         $title = 'Blog';
 
-        $all = collect(config('blog.posts', []));
+        // Bài mới nhất luôn đứng đầu (trước đây theo thứ tự khai báo trong file config)
+        $all = collect(config('blog.posts', []))->sortByDesc('date')->values();
         $cat = trim((string) $request->query('cat', ''));
-        $q = trim((string) $request->query('q', ''));
+        $q = trim(mb_substr((string) $request->query('q', ''), 0, 100));
+        $page = max(1, (int) $request->query('page', 1));
 
         $categories = collect(config('blog.categories', []))
             ->mapWithKeys(fn($name) => [$name => $all->where('category', $name)->count()]);
@@ -25,15 +30,29 @@ class BlogController extends Controller
         $posts = $all
             ->when($cat !== '', fn($c) => $c->where('category', $cat))
             ->when($q !== '', fn($c) => $c->filter(
-                fn($p) => mb_stripos($p['title'] . ' ' . $p['excerpt'], $q) !== false
+                fn($p) => mb_stripos($p['title'] . ' ' . $p['excerpt'] . ' ' . $p['category'], $q) !== false
             ))
             ->values();
 
-        $featured = $posts->firstWhere('featured', true) ?? $posts->first();
-        $rest = $posts
-            ->reject(fn($p) => $featured && $p['slug'] === $featured['slug'])
+        $isFiltered = $cat !== '' || $q !== '';
+
+        // Bài nổi bật chỉ tách riêng khi xem toàn bộ; đang lọc/tìm thì hiện một danh sách duy nhất cho dễ so sánh
+        $featuredPost = !$isFiltered ? ($posts->firstWhere('featured', true) ?? $posts->first()) : null;
+        $list = $posts
+            ->reject(fn($p) => $featuredPost && $p['slug'] === $featuredPost['slug'])
             ->values();
-        $latest = $all->sortByDesc('date')->take(4)->values();
+        $featured = $page === 1 ? $featuredPost : null;
+
+        $rest = new LengthAwarePaginator(
+            $list->forPage($page, self::PER_PAGE)->values(),
+            $list->count(),
+            self::PER_PAGE,
+            $page,
+            ['path' => route('blogs'), 'query' => $request->except('page')]
+        );
+
+        $latest = $all->take(4)->values();
+        $total = $posts->count();
 
         return view('clients.blogs', compact(
             'title',
@@ -44,7 +63,9 @@ class BlogController extends Controller
             'latest',
             'categories',
             'cat',
-            'q'
+            'q',
+            'total',
+            'isFiltered'
         ));
     }
 }

@@ -1,10 +1,25 @@
 {{-- Kết quả danh sách tour: dùng cho lần tải đầu và cho AJAX (/filter-tours). Biến: $tours (paginator) --}}
 @if ($tours->count() === 0)
+    @php
+        // Gợi ý các điểm đến đang có tour để người dùng không bị "ngõ cụt" khi lọc ra 0 kết quả
+        $suggest = app(\App\Services\TourCatalog::class)->destinations()->take(6);
+    @endphp
     <div class="tv-empty">
         <div class="tv-empty__icon"><i class="fal fa-compass"></i></div>
         <h3>Chưa tìm thấy tour phù hợp</h3>
         <p>Thử bỏ bớt bộ lọc, mở rộng khoảng giá hoặc tìm bằng từ khóa khác (ví dụ: Đà Nẵng, Phú Quốc, biển).</p>
         <button type="button" class="tv-btn-solid" data-action="reset">Xóa tất cả bộ lọc</button>
+        @if ($suggest->isNotEmpty())
+            <p class="ux-empty__sub">Hoặc xem nhanh các điểm đến đang có tour:</p>
+            <div class="ux-chips">
+                @foreach ($suggest as $d)
+                    <a class="ux-chip"
+                        href="{{ route('tours', ['dest' => $d->name]) }}">{{ $d->name }}<em>{{ $d->total }}</em></a>
+                @endforeach
+            </div>
+        @endif
+        <p class="ux-empty__sub">Không thấy tour mong muốn? <a href="{{ route('contact') }}">Nhắn cho chúng tôi</a> để
+            được tư vấn.</p>
     </div>
 @else
     <div class="tv-grid">

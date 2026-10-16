@@ -26,18 +26,33 @@ class UserProfileController extends Controller
 
     public function index()
     {
-
         $title = 'Thông tin cá nhân';
         $userId = $this->getUserId();
-        $user = $this->user->getUser($userId);
-        //dd(session()->all());
 
+        // Kiểm tra đăng nhập TRƯỚC khi truy vấn (trước đây truy vấn rồi mới kiểm tra)
         if (!$userId) {
-            return redirect('/login')->withErrors('User not found');
+            return redirect()->route('login')->withErrors('Vui lòng đăng nhập để xem tài khoản.');
         }
 
         $user = $this->user->getUser($userId);
-        return view('clients.user-profile', compact('title', 'user'));
+        if (!$user) {
+            return redirect()->route('login')->withErrors('Không tìm thấy tài khoản.');
+        }
+
+        // Email mới đang chờ xác minh (nếu có): hiện lại sau khi tải lại trang và cho phép gửi lại thư
+        $pendingEmail = DB::table('tbl_email_verification')
+            ->where('userId', $userId)
+            ->whereNotNull('pendingEmail')
+            ->where('expiresAt', '>', now())
+            ->value('pendingEmail');
+
+        // Tóm tắt đơn đặt tour: giúp trang tài khoản có ích hơn một biểu mẫu trống
+        $stats = DB::table('tbl_booking')
+            ->where('userId', $userId)
+            ->selectRaw("COUNT(*) as total, SUM(bookingStatus = 'n') as waiting, SUM(bookingStatus = 'y') as confirmed, SUM(bookingStatus = 'f') as done")
+            ->first();
+
+        return view('clients.user-profile', compact('title', 'user', 'pendingEmail', 'stats'));
     }
 
     public function update(Request $req)

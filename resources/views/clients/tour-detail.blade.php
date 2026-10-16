@@ -149,6 +149,9 @@
 
                 <nav class="px-tabs" id="tdTabs" aria-label="Các phần của trang">
                     <a href="#tong-quan" class="is-on">Tổng quan</a>
+                    @if (!empty(trim((string) ($tourDetail->includes ?? ''))) || !empty(trim((string) ($tourDetail->excludes ?? ''))))
+                        <a href="#bao-gom">Bao gồm</a>
+                    @endif
                     <a href="#lich-trinh">Lịch trình</a>
                     <a href="#ban-do">Bản đồ</a>
                     <a href="#danh-gia">Đánh giá</a>
@@ -172,6 +175,43 @@
                     @endif
                     <div class="td-prose px-prose">{!! $tourDetail->description !!}</div>
                 </section>
+
+                {{-- Giá tour bao gồm / không bao gồm (cột includes, excludes; mỗi dòng một mục; trống thì tự ẩn) --}}
+                @php
+                    $incList = array_values(
+                        array_filter(array_map('trim', preg_split('/\R/u', (string) ($tourDetail->includes ?? '')))),
+                    );
+                    $excList = array_values(
+                        array_filter(array_map('trim', preg_split('/\R/u', (string) ($tourDetail->excludes ?? '')))),
+                    );
+                @endphp
+                @if ($incList || $excList)
+                    <section class="px-sec" id="bao-gom">
+                        <h2 class="px-h2">Giá tour đã gồm những gì?</h2>
+                        <div class="px-inc">
+                            @if ($incList)
+                                <div class="px-inc__col is-yes">
+                                    <h3><i class="fas fa-check-circle" aria-hidden="true"></i> Bao gồm</h3>
+                                    <ul>
+                                        @foreach ($incList as $item)
+                                            <li>{{ $item }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+                            @if ($excList)
+                                <div class="px-inc__col is-no">
+                                    <h3><i class="fas fa-times-circle" aria-hidden="true"></i> Không bao gồm</h3>
+                                    <ul>
+                                        @foreach ($excList as $item)
+                                            <li>{{ $item }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+                        </div>
+                    </section>
+                @endif
 
                 {{-- Lịch trình + video --}}
                 <section class="px-sec" id="lich-trinh">
@@ -346,12 +386,60 @@
                         @endif
 
                         <form id="tdBookForm" action="{{ route('booking', ['id' => $tourDetail->tourId]) }}"
-                            method="POST">
+                            method="POST" data-adult="{{ (int) $tourDetail->priceAdult }}"
+                            data-child="{{ (int) $tourDetail->priceChild }}"
+                            data-max="{{ max(1, min(50, (int) $tourDetail->quantity)) }}">
                             @csrf
+
+                            @unless ($soldOut)
+                                {{-- Chọn số khách ngay tại đây: tạm tính hiện tức thì, số khách mang sang trang đặt tour --}}
+                                <div class="px-guests">
+                                    <div class="px-guest" role="group" aria-labelledby="tdLblAdults">
+                                        <div class="px-guest__txt"><b id="tdLblAdults">Người lớn</b><small>Từ 12
+                                                tuổi</small></div>
+                                        <div class="px-stepper">
+                                            <button type="button" data-step="-1" data-for="adults"
+                                                aria-label="Giảm số người lớn">−</button>
+                                            <output id="tdAdultsOut" aria-live="polite">1</output>
+                                            <button type="button" data-step="1" data-for="adults"
+                                                aria-label="Tăng số người lớn">+</button>
+                                            <input type="hidden" name="adults" id="tdAdults" value="1">
+                                        </div>
+                                    </div>
+                                    <div class="px-guest" role="group" aria-labelledby="tdLblChildren">
+                                        <div class="px-guest__txt"><b id="tdLblChildren">Trẻ em</b><small>Dưới 12
+                                                tuổi</small></div>
+                                        <div class="px-stepper">
+                                            <button type="button" data-step="-1" data-for="children"
+                                                aria-label="Giảm số trẻ em">−</button>
+                                            <output id="tdChildrenOut" aria-live="polite">0</output>
+                                            <button type="button" data-step="1" data-for="children"
+                                                aria-label="Tăng số trẻ em">+</button>
+                                            <input type="hidden" name="children" id="tdChildren" value="0">
+                                        </div>
+                                    </div>
+                                    <div class="px-estimate">
+                                        <span>Tạm tính</span>
+                                        <b id="tdTotal">{{ number_format($tourDetail->priceAdult, 0, ',', '.') }}đ</b>
+                                    </div>
+                                    <p class="px-hint" id="tdNote" aria-live="polite">1 khách</p>
+                                </div>
+                            @endunless
+
                             <button type="submit" class="px-btn px-btn--cta"
                                 @if ($soldOut) disabled @endif>
                                 {{ $soldOut ? 'Tour đã đóng đặt chỗ' : 'Đặt ngay' }}
                             </button>
+
+                            @if ($soldOut)
+                                <p class="px-hint">Tour này đã đóng đặt chỗ. <a href="{{ route('tours') }}">Xem tour
+                                        khác</a>
+                                    hoặc <a href="{{ route('contact') }}">nhắn cho chúng tôi</a> để được tư vấn.</p>
+                            @elseif (!session()->has('userId'))
+                                <p class="px-hint"><i class="fal fa-lock" aria-hidden="true"></i> Bạn sẽ được nhắc
+                                    đăng
+                                    nhập khi đặt tour, và quay lại đúng chỗ này sau khi đăng nhập.</p>
+                            @endif
                         </form>
 
                         <a class="px-book__help" href="{{ route('contact') }}"><i class="fal fa-comment-dots"

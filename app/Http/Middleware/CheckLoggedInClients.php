@@ -19,6 +19,18 @@ class CheckLoggedInClients
                 ], 401);
             }
 
+            // UX: nhớ trang đang định vào để đăng nhập xong quay lại đúng chỗ (xem LoginController::login)
+            if ($request->isMethod('GET')) {
+                $request->session()->put('url.intended', $request->fullUrl());
+            } elseif ($request->routeIs('booking') && $request->route('id')) {
+                // Bấm "Đặt ngay" ở trang chi tiết tour là POST: lưu lại link GET kèm số khách
+                $request->session()->put('url.intended', route('booking', array_filter([
+                    'id'       => (int) $request->route('id'),
+                    'adults'   => (int) $request->input('adults', 1),
+                    'children' => (int) $request->input('children', 0),
+                ], fn($v) => $v !== 0)));
+            }
+
             toastr()->error('Vui lòng đăng nhập để thực hiện.');
             return redirect()->route('login');
         }

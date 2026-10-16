@@ -99,7 +99,7 @@ class InspirationService
                     'x' => $x,
                     'y' => $y,
                     'tourCount' => $tours,
-                    'tourUrl' => $tours > 0 ? route('search-voice-text', ['keyword' => $d->name]) : null,
+                    'tourUrl' => $tours > 0 ? route('tours', ['keyword' => $d->name]) : null,
                     'scores' => $own,
                 ];
             })

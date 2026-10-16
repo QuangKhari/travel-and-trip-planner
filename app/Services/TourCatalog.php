@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
  */
 class TourCatalog
 {
-    public const SORTS = ['new', 'old', 'popular', 'price_asc', 'price_desc', 'rating', 'soon'];
+    public const SORTS = ['new', 'old', 'popular', 'reviews', 'price_asc', 'price_desc', 'rating', 'soon'];
 
     /** Điểm tối thiểu (0-100) để một điểm đến được coi là "hợp" với một cảm hứng (chip danh mục). */
     public const CAT_MIN_SCORE = 60;
@@ -34,11 +34,20 @@ class TourCatalog
             'tbl_tours.domain',
         ];
 
+        // Số lượt đặt thật của từng tour (không tính đơn đã hủy) -> dùng cho "Phổ biến nhất" và bằng chứng xã hội.
+        // Subquery chỉ có MỘT dòng cho mỗi tour nên không làm nhân đôi dòng khi JOIN cùng tbl_reviews.
+        $bookingCounts = DB::table('tbl_booking')
+            ->select('tourId', DB::raw('COUNT(*) as bookingCount'))
+            ->where('bookingStatus', '<>', 'c')
+            ->groupBy('tourId');
+
         $q = DB::table('tbl_tours')
             ->leftJoin('tbl_reviews', 'tbl_tours.tourId', '=', 'tbl_reviews.tourId')
+            ->leftJoinSub($bookingCounts, 'bk', 'bk.tourId', '=', 'tbl_tours.tourId')
             ->select(array_merge($cols, [
                 DB::raw('AVG(tbl_reviews.rating) as averageRating'),
                 DB::raw('COUNT(tbl_reviews.reviewId) as reviewCount'),
+                DB::raw('COALESCE(MAX(bk.bookingCount), 0) as bookingCount'),
             ]))
             ->where('tbl_tours.availability', 1)
             ->where('tbl_tours.quantity', '>', 0)
@@ -106,13 +115,21 @@ class TourCatalog
                 $q->orderBy('tbl_tours.priceAdult', 'desc');
                 break;
             case 'popular':
+                // Phổ biến = nhiều người đặt nhất; hòa thì xét số đánh giá, rồi tour mới hơn (bên dưới)
+                $q->orderByRaw('COALESCE(MAX(bk.bookingCount), 0) DESC')
+                    ->orderByRaw('COUNT(tbl_reviews.reviewId) DESC');
+                break;
+            case 'reviews':
                 $q->orderByRaw('COUNT(tbl_reviews.reviewId) DESC');
                 break;
             case 'soon':
                 $q->orderBy('tbl_tours.startDate', 'asc');
                 break;
             case 'rating':
-                $q->orderByRaw('AVG(tbl_reviews.rating) IS NULL')->orderByRaw('AVG(tbl_reviews.rating) DESC');
+                // Tour chưa có đánh giá xuống cuối; cùng điểm thì tour nhiều đánh giá hơn đứng trước
+                $q->orderByRaw('AVG(tbl_reviews.rating) IS NULL')
+                    ->orderByRaw('AVG(tbl_reviews.rating) DESC')
+                    ->orderByRaw('COUNT(tbl_reviews.reviewId) DESC');
                 break;
             default:
                 $q->orderBy('tbl_tours.tourId', 'desc');
@@ -187,6 +204,7 @@ class TourCatalog
             $tour->images = collect($imagesByTour->get($tour->tourId, []))->pluck('imageURL')->values();
             $tour->rating = $tour->averageRating !== null ? (float) $tour->averageRating : null;
             $tour->ratingCount = (int) $tour->reviewCount;
+            $tour->bookingCount = (int) ($tour->bookingCount ?? 0);
         }
     }
 }

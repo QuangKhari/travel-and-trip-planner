@@ -56,6 +56,16 @@
     if (!state.max) state.max = cfg.max;
     if (!state.page) state.page = 1;
 
+    var SORT_LABEL = {
+        new: "Mới nhất",
+        old: "Cũ nhất",
+        popular: "Phổ biến nhất",
+        reviews: "Nhiều đánh giá",
+        rating: "Đánh giá cao",
+        price_asc: "Giá thấp → cao",
+        price_desc: "Giá cao → thấp",
+        soon: "Khởi hành sớm",
+    };
     var LABELS = {
         domain: { b: "Miền Bắc", t: "Miền Trung", n: "Miền Nam" },
         days: {
@@ -130,6 +140,19 @@
         });
 
         if (sortSel) sortSel.value = state.sort;
+        // thanh sắp xếp nhanh + dòng ghi chú "đang sắp xếp theo ..." cạnh số kết quả
+        $$("[data-sort]").forEach(function (b) {
+            var on = b.dataset.sort === state.sort;
+            b.classList.toggle("is-on", on);
+            b.setAttribute("aria-checked", on ? "true" : "false");
+            b.tabIndex = on ? 0 : -1; // roving tabindex: Tab vào nhóm một lần, mũi tên để chọn
+        });
+        var sortNote = $("#tvSortNote");
+        if (sortNote)
+            sortNote.textContent =
+                state.sort && state.sort !== "new" && SORT_LABEL[state.sort]
+                    ? "· " + SORT_LABEL[state.sort]
+                    : "";
         if (domainSel) domainSel.value = state.domain;
         if (fromIn) fromIn.value = state.from;
         if (toIn) toIn.value = state.to;
@@ -258,6 +281,15 @@
     document.addEventListener("click", function (e) {
         var t = e.target;
 
+        var so = t.closest("[data-sort]");
+        if (so) {
+            if (state.sort !== so.dataset.sort) {
+                state.sort = so.dataset.sort;
+                apply();
+            }
+            return;
+        }
+
         var f = t.closest("[data-filter]");
         if (f) {
             var key = f.dataset.filter,
@@ -385,6 +417,24 @@
         sortSel.addEventListener("change", function () {
             state.sort = sortSel.value;
             apply();
+        });
+
+    /* ---------- sắp xếp nhanh: dùng được bằng bàn phím (mũi tên trái/phải) ---------- */
+    var sortBar = $("#tvSortBar");
+    if (sortBar)
+        sortBar.addEventListener("keydown", function (e) {
+            var chips = $$("[data-sort]", sortBar),
+                i = chips.indexOf(document.activeElement);
+            if (i < 0) return;
+            var to = null;
+            if (e.key === "ArrowRight" || e.key === "ArrowDown")
+                to = (i + 1) % chips.length;
+            else if (e.key === "ArrowLeft" || e.key === "ArrowUp")
+                to = (i - 1 + chips.length) % chips.length;
+            if (to === null) return;
+            e.preventDefault();
+            chips[to].focus();
+            chips[to].click();
         });
 
     /* ---------- lọc nhanh danh sách điểm đến (chỉ trên trình duyệt) ---------- */

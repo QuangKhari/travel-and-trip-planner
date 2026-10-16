@@ -219,18 +219,40 @@
                         <div class="tl-count" id="tvCount" aria-live="polite"><b>{{ $tours->total() }}</b> tour
                             phù hợp
                         </div>
+                        <span class="tl-sortnote" id="tvSortNote"></span>
                         <button type="button" class="tl-filter-open" data-action="open-filter"><i
                                 class="fal fa-sliders-h" aria-hidden="true"></i> Bộ lọc</button>
+                        {{-- Điện thoại: dùng ô chọn (gọn, chọn bằng bộ chọn của hệ điều hành) --}}
                         <label class="tl-sort">Sắp xếp
                             <select id="tvSort">
                                 <option value="new">Mới nhất</option>
-                                <option value="popular">Nhiều đánh giá</option>
+                                <option value="popular">Phổ biến nhất</option>
                                 <option value="rating">Đánh giá cao</option>
+                                <option value="reviews">Nhiều đánh giá</option>
                                 <option value="price_asc">Giá thấp → cao</option>
                                 <option value="price_desc">Giá cao → thấp</option>
                                 <option value="soon">Khởi hành sớm</option>
                             </select>
                         </label>
+                    </div>
+
+                    {{-- Máy tính: hàng nút sắp xếp nhanh, thấy ngay mọi lựa chọn, không cần mở danh sách --}}
+                    <div class="tl-sortbar" id="tvSortBar" role="radiogroup" aria-label="Sắp xếp danh sách tour">
+                        <span class="tl-sortbar__lbl" aria-hidden="true">Sắp xếp</span>
+                        @foreach ([
+        'new' => 'Mới nhất',
+        'popular' => 'Phổ biến nhất',
+        'price_asc' => 'Giá thấp → cao',
+        'price_desc' => 'Giá cao → thấp',
+        'soon' => 'Khởi hành sớm',
+        'rating' => 'Đánh giá cao',
+        'reviews' => 'Nhiều đánh giá',
+    ] as $key => $label)
+                            <button type="button" role="radio"
+                                aria-checked="{{ ($state['sort'] ?? 'new') === $key ? 'true' : 'false' }}"
+                                class="tl-sortchip {{ ($state['sort'] ?? 'new') === $key ? 'is-on' : '' }}"
+                                data-sort="{{ $key }}">{{ $label }}</button>
+                        @endforeach
                     </div>
 
                     <div class="tl-active" id="tvActive" aria-label="Bộ lọc đang áp dụng"></div>
@@ -255,6 +277,6 @@
         state: @json($state)
     };
 </script>
-<script src="{{ asset('clients/assets/js/travel-tours.js') }}?v=3"></script>
+<script src="{{ asset('clients/assets/js/travel-tours.js') }}?v=4"></script>
 
 @include('clients.blocks.footer')

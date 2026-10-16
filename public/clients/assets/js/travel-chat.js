@@ -59,7 +59,9 @@
     var current = "email";
 
     adapters.email = {
-        statusText: "Chúng tôi phản hồi qua email hoặc điện thoại",
+        statusText:
+            "Phản hồi qua email hoặc điện thoại" +
+            (cfg.hours ? " · " + cfg.hours : ""),
         needsContact: true,
         send: function (msg) {
             var body = new FormData();
@@ -114,7 +116,7 @@
             return JSON.parse(sessionStorage.getItem(STORE)) || [];
         }, []);
         this.contact = safe(function () {
-            return JSON.parse(localStorage.getItem(CONTACT)) || null;
+            return JSON.parse(sessionStorage.getItem(CONTACT)) || null;
         }, null);
         this.pending = []; // tin khách đã gõ nhưng chưa gửi (đang chờ để lại thông tin)
         this.busy = false;
@@ -209,6 +211,15 @@
         form.appendChild(this.input);
         form.appendChild(send);
         r.appendChild(form);
+        if (this.mode === "widget" && cfg.contactUrl) {
+            var more = el(
+                "a",
+                "tc-more",
+                '<i class="fal fa-external-link-alt" aria-hidden="true"></i> Cần gửi chi tiết hơn? Mở biểu mẫu liên hệ',
+            );
+            more.href = cfg.contactUrl;
+            r.appendChild(more);
+        }
 
         form.addEventListener("submit", function (e) {
             e.preventDefault();
@@ -286,7 +297,7 @@
             "bot",
             "Xin chào, đây là kênh hỗ trợ của " +
                 name +
-                ". Bạn muốn hỏi điều gì ạ?",
+                ". Câu hỏi thường gặp được trả lời ngay; tin nhắn khác sẽ chuyển tới tư vấn viên và phản hồi qua email hoặc điện thoại. Bạn muốn hỏi điều gì ạ?",
         );
         this.setChips(cfg.chips || []);
     };
@@ -390,21 +401,36 @@
             var phone = card.elements.phone.value.trim();
             var email = card.elements.email.value.trim();
             var err = $(".tc-err", card);
+            var fail = function (input, msg) {
+                [
+                    card.elements.name,
+                    card.elements.phone,
+                    card.elements.email,
+                ].forEach(function (i) {
+                    i.removeAttribute("aria-invalid");
+                });
+                input.setAttribute("aria-invalid", "true");
+                input.setAttribute("aria-describedby", "tcErr");
+                err.id = "tcErr";
+                err.textContent = msg;
+                input.focus();
+            };
             if (!name) {
-                err.textContent = "Vui lòng nhập họ và tên.";
+                fail(card.elements.name, "Vui lòng nhập họ và tên.");
                 return;
             }
             if (!/^[0-9+\s.\-]{8,15}$/.test(phone)) {
-                err.textContent = "Số điện thoại chưa đúng (8–15 số).";
+                fail(card.elements.phone, "Số điện thoại chưa đúng (8–15 số).");
                 return;
             }
             if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-                err.textContent = "Email chưa đúng định dạng.";
+                fail(card.elements.email, "Email chưa đúng định dạng.");
                 return;
             }
+            err.textContent = "";
             self.contact = { name: name, phone: phone, email: email };
             safe(function () {
-                localStorage.setItem(CONTACT, JSON.stringify(self.contact));
+                sessionStorage.setItem(CONTACT, JSON.stringify(self.contact));
             });
             card.remove();
             self.formEl = null;
@@ -430,6 +456,8 @@
                     self.say("bot", t);
                 });
                 self.busy = false;
+                // gợi ý lại các câu hỏi có đáp án ngay để người dùng hỏi tiếp
+                self.setChips(Object.keys(cfg.faq || {}));
             })
             .catch(function (err) {
                 self.typing(false);
@@ -496,11 +524,38 @@
             }
             fab.focus();
         };
+        var dialItems = function () {
+            return Array.prototype.slice.call(
+                dial.querySelectorAll(".tc-dial__item"),
+            );
+        };
         var toggleDial = function () {
             var open = !dial.classList.contains("is-open");
             dial.classList.toggle("is-open", open);
             fab.setAttribute("aria-expanded", open ? "true" : "false");
+            // mở menu: chuyển tiêu điểm vào mục đầu để người dùng bàn phím/đọc màn hình thao tác tiếp được
+            if (open) {
+                setTimeout(function () {
+                    var first = dialItems()[0];
+                    if (first) first.focus();
+                }, 60);
+            }
         };
+        if (dial)
+            dial.addEventListener("keydown", function (e) {
+                var items = dialItems(),
+                    i = items.indexOf(document.activeElement);
+                if (i < 0) return;
+                var to = null;
+                if (e.key === "ArrowDown") to = (i + 1) % items.length;
+                else if (e.key === "ArrowUp")
+                    to = (i - 1 + items.length) % items.length;
+                else if (e.key === "Home") to = 0;
+                else if (e.key === "End") to = items.length - 1;
+                if (to === null) return;
+                e.preventDefault();
+                items[to].focus();
+            });
 
         fab.addEventListener("click", function () {
             if (!panel.hidden) {

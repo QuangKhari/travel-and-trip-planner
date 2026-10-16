@@ -4,120 +4,109 @@ namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\clients\Tours;
 use Carbon\Carbon;
 
+/**
+ * /search và /search-voice-text chỉ là "cửa vào": làm sạch dữ liệu rồi chuyển sang /tours
+ * (nơi có bộ lọc, sắp xếp, phân trang). Nhờ vậy chỉ có MỘT trang kết quả để duy trì.
+ *
+ * UX: dữ liệu sai KHÔNG còn redirect()->back() (dễ đưa người dùng về trang trống hoặc trang ngoài site)
+ * mà luôn đưa tới /tours kèm thông báo rõ ràng.
+ */
 class SearchController extends Controller
 {
-    private $tours;
-
-    public function __construct()
-    {
-        parent::__construct();
-        $this->tours = new Tours();
-    }
+    /** Mã điểm đến của ô tìm kiếm ở trang chủ -> tên hiển thị. */
+    private const DESTINATIONS = [
+        'dn' => 'Đà Nẵng',
+        'cd' => 'Côn Đảo',
+        'hn' => 'Hà Nội',
+        'hcm' => 'TP. Hồ Chí Minh',
+        'hl' => 'Hạ Long',
+        'nb' => 'Ninh Bình',
+        'pq' => 'Phú Quốc',
+        'dl' => 'Đà Lạt',
+        'qt' => 'Quảng Trị',
+        'kh' => 'Khánh Hòa',
+        'ct' => 'Cần Thơ',
+        'vt' => 'Vũng Tàu',
+        'qn' => 'Quảng Ninh',
+        'la' => 'Lào Cai',
+        'bd' => 'Bình Định',
+    ];
 
     public function index(Request $request)
     {
-        $title = 'Tìm kiếm';
+        $destination = (string) $request->input('destination', '');
 
-        $destinationMap = [
-            'dn' => 'Đà Nẵng',
-            'cd' => 'Côn Đảo',
-            'hn' => 'Hà Nội',
-            'hcm' => 'TP. Hồ Chí Minh',
-            'hl' => 'Hạ Long',
-            'nb' => 'Ninh Bình',
-            'pq' => 'Phú Quốc',
-            'dl' => 'Đà Lạt',
-            'qt' => 'Quảng Trị',
-            'kh' => 'Khánh Hòa',
-            'ct' => 'Cần Thơ',
-            'vt' => 'Vũng Tàu',
-            'qn' => 'Quảng Ninh',
-            'la' => 'Lào Cai',
-            'bd' => 'Bình Định',
-        ];
-
-        $destination = $request->input('destination');
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
-
-        /*
-         * Kiểm tra destination
-         */
-        if (!empty($destination) && !isset($destinationMap[$destination])) {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Điểm đến không hợp lệ.');
+        if ($destination !== '' && !isset(self::DESTINATIONS[$destination])) {
+            toastr()->warning('Điểm đến không hợp lệ, mình đã hiện tất cả tour để bạn chọn lại.');
+            return redirect()->route('tours');
         }
 
-        /*
-         * Chuyển đổi định dạng ngày tháng
-         */
-        try {
-            $formattedStartDate = $startDate
-                ? Carbon::createFromFormat('d/m/Y', $startDate)->format('Y-m-d')
-                : null;
+        $from = $this->readDate($request->input('start_date'));
+        $to = $this->readDate($request->input('end_date'));
 
-            $formattedEndDate = $endDate
-                ? Carbon::createFromFormat('d/m/Y', $endDate)->format('Y-m-d')
-                : null;
-        } catch (\Exception $e) {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Ngày tìm kiếm không hợp lệ. Vui lòng nhập ngày theo định dạng dd/mm/yyyy.');
+        if ($from === false || $to === false) {
+            toastr()->warning('Ngày tìm kiếm chưa đúng định dạng (dd/mm/yyyy). Bạn có thể chọn lại ngày ở bộ lọc.');
+            return redirect()->route('tours', array_filter([
+                'keyword' => $destination !== '' ? self::DESTINATIONS[$destination] : null,
+            ]));
         }
 
-        /*
-         * Chuyển đổi mã destination sang tên chi tiết
-         */
-        $destinationName = !empty($destination)
-            ? $destinationMap[$destination]
-            : null;
+        // Ngày về trước ngày đi: tự đổi chỗ thay vì trả về 0 kết quả khó hiểu
+        if ($from && $to && $to < $from) {
+            [$from, $to] = [$to, $from];
+        }
 
-        $dataSearch = [
-            'destination' => $destinationName,
-            'startDate' => $formattedStartDate,
-            'endDate' => $formattedEndDate,
-        ];
-
-        // Chuyển sang trang /tours: có sẵn bộ lọc, sắp xếp và phân trang
         return redirect()->route('tours', array_filter([
-            'keyword' => $destinationName,
-            'from' => $formattedStartDate,
-            'to' => $formattedEndDate,
+            'keyword' => $destination !== '' ? self::DESTINATIONS[$destination] : null,
+            'from' => $from ?: null,
+            'to' => $to ?: null,
         ]));
     }
 
     public function searchTours(Request $request)
     {
-        $title = 'Kết quả tìm kiếm';
-
         $keyword = trim((string) $request->input('keyword'));
 
-        if (empty($keyword)) {
-            return redirect()->route('home')
-                ->with('error', 'Vui lòng nhập từ khóa tìm kiếm.');
+        // Không có từ khóa: vẫn vào trang tour (thay vì về trang chủ kèm thông báo lỗi)
+        if ($keyword === '') {
+            return redirect()->route('tours');
         }
 
         $keyword = $this->normalizeVoiceKeyword($keyword);
 
-        if (empty($keyword)) {
-            return redirect()->route('home')
-                ->with('error', 'Không thể xác định từ khóa tìm kiếm.');
+        if ($keyword === '') {
+            toastr()->info('Mình chưa nghe rõ điểm đến. Bạn thử gõ tên nơi muốn đến nhé.');
+            return redirect()->route('tours');
         }
 
         if (mb_strlen($keyword) > 100) {
-            return redirect()->route('home')
-                ->with('error', 'Từ khóa tìm kiếm không được vượt quá 100 ký tự.');
+            $keyword = mb_substr($keyword, 0, 100);
         }
 
-        $dataSearch = [
-            'keyword' => $keyword
-        ];
-
         return redirect()->route('tours', ['keyword' => $keyword]);
+    }
+
+    /** @return string|null|false  Y-m-d, null nếu để trống, false nếu sai định dạng */
+    private function readDate($value)
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        foreach (['d/m/Y', 'Y-m-d'] as $format) {
+            try {
+                $d = Carbon::createFromFormat($format, $value);
+                if ($d && $d->format($format) === $value) {
+                    return $d->format('Y-m-d');
+                }
+            } catch (\Throwable $e) {
+            }
+        }
+
+        return false;
     }
 
     private function normalizeVoiceKeyword(string $keyword): string
@@ -170,16 +159,11 @@ class SearchController extends Controller
         ];
 
         foreach ($removePhrases as $phrase) {
-            $keyword = preg_replace(
-                '/\b' . preg_quote($phrase, '/') . '\b/iu',
-                '',
-                $keyword
-            );
+            $keyword = preg_replace('/\b' . preg_quote($phrase, '/') . '\b/iu', '', $keyword);
         }
 
         $keyword = preg_replace('/\s+/u', ' ', $keyword);
-        $keyword = trim($keyword, " \t\n\r\0\x0B.,!?;:");
 
-        return $keyword;
+        return trim($keyword, " \t\n\r\0\x0B.,!?;:");
     }
 }

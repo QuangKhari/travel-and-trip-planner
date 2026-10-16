@@ -21,6 +21,8 @@
         'csrf' => csrf_token(),
         'siteName' => config('site.name'),
         'title' => 'Hỗ trợ khách hàng',
+        'hours' => config('site.hours'),
+        'contactUrl' => route('contact'),
         'chips' => $chatChips,
         'faq' => $chatFaq,
     ];
@@ -35,7 +37,8 @@
 
 @unless (request()->routeIs('contact'))
     <div class="tc-widget" id="tcWidget">
-        <section class="tc-panel" id="tcPanel" hidden role="dialog" aria-label="Chat hỗ trợ khách hàng"></section>
+        <section class="tc-panel" id="tcPanel" hidden role="dialog" aria-modal="false" aria-label="Chat hỗ trợ khách hàng">
+        </section>
 
         <div class="tc-dial" id="tcDial" role="menu" aria-label="Các cách liên hệ">
             <button type="button" class="tc-dial__item" data-tc-open role="menuitem">

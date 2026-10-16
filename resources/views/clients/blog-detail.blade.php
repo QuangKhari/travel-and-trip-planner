@@ -15,6 +15,22 @@
     </svg>
 </section>
 
+<div class="px-progress" id="postProgress" aria-hidden="true"><i></i></div>
+<script type="application/ld+json">
+{!! json_encode(
+    [
+        '@context' => 'https://schema.org',
+        '@type' => 'Article',
+        'headline' => $post['title'],
+        'datePublished' => $post['date'],
+        'articleSection' => $post['category'],
+        'description' => $post['excerpt'] ?? $post['intro'],
+        'image' => asset('clients/assets/images/blog/' . $post['image']),
+        'mainEntityOfPage' => url()->current(),
+    ],
+    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP,
+) !!}
+</script>
 <main class="px-blog px-post">
     <div class="container">
         <nav class="px-crumb px-crumb--dark" aria-label="breadcrumb">
@@ -23,6 +39,8 @@
             <a href="{{ route('blogs') }}">Blog</a>
             <i class="fas fa-chevron-right" aria-hidden="true"></i>
             <a href="{{ route('blogs', ['cat' => $post['category']]) }}">{{ $post['category'] }}</a>
+            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+            <span aria-current="page">{{ \Illuminate\Support\Str::limit($post['title'], 48) }}</span>
         </nav>
 
         <div class="px-blog__layout">
@@ -34,6 +52,13 @@
                                 aria-hidden="true"></i>{{ \Carbon\Carbon::parse($post['date'])->format('d/m/Y') }}</span>
                         <span><i class="fal fa-clock" aria-hidden="true"></i>{{ $post['read'] }} phút đọc</span>
                         <span><i class="fal fa-folder-open" aria-hidden="true"></i>{{ $post['category'] }}</span>
+                    </div>
+                    <div class="px-share" role="group" aria-label="Chia sẻ bài viết">
+                        <button type="button" data-share-copy data-share-title="{{ $post['title'] }}"><i
+                                class="fal fa-link" aria-hidden="true"></i> <span>Sao chép liên kết</span></button>
+                        <a href="https://www.facebook.com/sharer/sharer.php?u={{ urlencode(url()->current()) }}"
+                            target="_blank" rel="noopener"><i class="fab fa-facebook-f" aria-hidden="true"></i>
+                            <span>Facebook</span></a>
                     </div>
                 </header>
 
@@ -75,7 +100,7 @@
                         <h3>Mục lục</h3>
                         <ol>
                             @foreach ($sections as $i => $sec)
-                                <li><a href="#muc-{{ $i + 1 }}">{{ $sec[0] }}</a></li>
+                                <li><a href="#muc-{{ $i + 1 }}" data-toc>{{ $sec[0] }}</a></li>
                             @endforeach
                         </ol>
                     </section>
@@ -88,6 +113,21 @@
                 </a>
             </aside>
         </div>
+
+        @if (isset($tours) && $tours->count())
+            <section class="px-blog__tours" aria-labelledby="postToursH">
+                <div class="px-blog__tours-head">
+                    <h2 class="px-h2" id="postToursH">Tour {{ $tourDest }} sắp khởi hành</h2>
+                    <a class="px-readmore" href="{{ route('tours', ['keyword' => $tourDest]) }}">Xem tất cả <i
+                            class="fal fa-arrow-right" aria-hidden="true"></i></a>
+                </div>
+                <div class="tv-grid px-blog__tourgrid">
+                    @foreach ($tours as $tour)
+                        @include('clients.partials.tour-card', ['tour' => $tour])
+                    @endforeach
+                </div>
+            </section>
+        @endif
 
         @if ($related->count())
             <section class="px-blog__related">

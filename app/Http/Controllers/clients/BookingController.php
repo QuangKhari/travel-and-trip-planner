@@ -14,8 +14,6 @@ use App\Services\BookingService;
 use App\Services\CouponService;
 use Illuminate\Support\Facades\Validator;
 
-
-
 class BookingController extends Controller
 {
     private $tour;
@@ -32,7 +30,7 @@ class BookingController extends Controller
         $this->promotion = new PromotionModel();
     }
 
-    public function index($id = null)
+    public function index(Request $request, $id = null)
     {
         $title = 'Đặt tour';
         $tour = $id ? $this->tour->getTourDetail($id) : null;
@@ -52,7 +50,21 @@ class BookingController extends Controller
             return redirect()->route('tour-detail', ['id' => $tour->tourId]);
         }
 
-        return view('clients.booking', compact('title', 'tour'));
+        // UX: điền sẵn thông tin liên hệ từ tài khoản (người dùng vẫn sửa được)
+        $u = $this->user->getUser((int) $this->getUserId());
+        $prefill = [
+            'fullName' => (string) ($u->fullName ?? ''),
+            'email'    => (string) ($u->email ?? ''),
+            'tel'      => preg_replace('/\D+/', '', (string) ($u->phoneNumber ?? '')),
+            'address'  => (string) ($u->address ?? ''),
+        ];
+
+        // UX: số khách mang từ trang chi tiết sang, luôn nằm trong giới hạn số chỗ
+        $limit    = max(1, min(50, (int) $tour->quantity));
+        $adults   = max(1, min($limit, (int) $request->input('adults', 1)));
+        $children = max(0, min($limit - $adults, (int) $request->input('children', 0)));
+
+        return view('clients.booking', compact('title', 'tour', 'prefill', 'limit', 'adults', 'children'));
     }
 
     public function createBooking(Request $req, BookingService $bookings)
@@ -86,18 +98,22 @@ class BookingController extends Controller
 
         $tourId = (int) $req->input('tourId');
 
+        // UX: lỗi thì quay lại ĐÚNG trang đặt tour và giữ nguyên dữ liệu đã nhập
+        // (trước đây quay về trang chi tiết nên người dùng phải nhập lại từ đầu).
+        $backToForm = fn() => $tourId > 0
+            ? redirect()->route('booking', ['id' => $tourId])
+            : redirect()->route('tours');
+
         if ($validator->fails()) {
             toastr()->error($validator->errors()->first());
-            return $tourId
-                ? redirect()->route('tour-detail', ['id' => $tourId])
-                : redirect()->route('tours');
+            return $backToForm()->withInput()->withErrors($validator);
         }
 
         try {
             $result = $bookings->create((int) $this->getUserId(), $validator->validated());
         } catch (BookingException $e) {
             toastr()->error($e->getMessage());
-            return redirect()->route('tour-detail', ['id' => $tourId]);
+            return $backToForm()->withInput();
         }
 
         $prefix = $result['duplicate']
@@ -106,7 +122,20 @@ class BookingController extends Controller
 
         toastr()->success($prefix . $result['bookingCode']
             . '. Chỗ được giữ trong ' . (int) config('travela.hold_hours', 48) . ' giờ, vui lòng đến văn phòng để xác nhận.');
-        return redirect()->route('tours');
+
+        // UX: đưa người dùng tới trang chi tiết đơn vừa tạo (trước đây về danh sách tour)
+        $checkoutId = (int) DB::table('tbl_checkout')
+            ->where('bookingId', $result['bookingId'])
+            ->value('checkoutId');
+
+        if ($checkoutId > 0) {
+            return redirect()->route('tour-booked', [
+                'bookingId'  => $result['bookingId'],
+                'checkoutId' => $checkoutId,
+            ]);
+        }
+
+        return redirect()->route('my-tours');
     }
 
     public function checkBooking(Request $req)

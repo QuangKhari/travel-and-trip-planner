@@ -116,6 +116,7 @@
 <script src="{{ asset('clients/assets/js/jquery.datetimepicker.full.min.js') }}"></script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<script src="{{ asset('clients/assets/js/ux-pass.js') }}?v=2"></script>
 
 </body>
 

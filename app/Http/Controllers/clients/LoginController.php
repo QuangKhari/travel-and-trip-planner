@@ -232,8 +232,28 @@ class LoginController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Đăng nhập thành công',
-            'redirectUrl' => route('home'),
+            // UX: quay lại trang người dùng đang định vào (đặt tour, tour đã đặt...). Mặc định về trang chủ.
+            'redirectUrl' => $this->intendedUrl(),
         ]);
+    }
+
+    /** Lấy (và xóa) link được lưu bởi CheckLoggedInClients; chỉ nhận link cùng domain để tránh open-redirect. */
+    private function intendedUrl(): string
+    {
+        $url = (string) session()->pull('url.intended', '');
+        $home = route('home');
+
+        if ($url === '' || !str_starts_with($url, rtrim(url('/'), '/') . '/')) {
+            return $home;
+        }
+
+        // Không quay lại các trang đăng nhập/đăng ký/đăng xuất
+        $path = (string) parse_url($url, PHP_URL_PATH);
+        if (preg_match('#^/(login|register|logout|quen-mat-khau|dat-lai-mat-khau|xac-thuc-email)#', $path)) {
+            return $home;
+        }
+
+        return $url;
     }
 
     public function logout(Request $request)

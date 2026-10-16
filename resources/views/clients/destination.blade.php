@@ -45,13 +45,20 @@
                         <path d="M20 20l-4-4" />
                     </svg></button>
             </form>
-            <div class="tvf-quick" aria-label="Gợi ý tìm nhanh">
-                <span>Phổ biến:</span>
-                <button type="button" data-q="Phú Yên">Phú Yên</button>
-                <button type="button" data-q="Đà Nẵng">Đà Nẵng</button>
-                <button type="button" data-q="Hà Giang">Hà Giang</button>
-                <button type="button" data-q="Phú Quốc">Phú Quốc</button>
-            </div>
+            @php
+                // Gợi ý lấy từ dữ liệu thật: ưu tiên điểm đến đang có tour (trước đây gõ cứng Phú Yên, Hà Giang...)
+                $allDest = collect($map['destinations'] ?? []);
+                $withTours = $allDest->where('tourCount', '>', 0)->sortByDesc('tourCount');
+                $quick = ($withTours->isNotEmpty() ? $withTours : $allDest)->take(4)->pluck('name');
+            @endphp
+            @if ($quick->isNotEmpty())
+                <div class="tvf-quick" aria-label="Gợi ý tìm nhanh">
+                    <span>{{ $withTours->isNotEmpty() ? 'Đang có tour:' : 'Gợi ý:' }}</span>
+                    @foreach ($quick as $q)
+                        <button type="button" data-q="{{ $q }}">{{ $q }}</button>
+                    @endforeach
+                </div>
+            @endif
         </div>
     </section>
 
@@ -115,15 +122,25 @@
                     <div class="tvp-skel" aria-hidden="true"></div>
                 @endfor
             </div>
+            <noscript>
+                <p class="tvp-empty ux-dest-empty">Trang này cần bật JavaScript để hiện danh sách điểm đến.
+                    <a href="{{ route('tours') }}">Xem tất cả tour</a>
+                </p>
+            </noscript>
             <div class="tvp-loadmore"><button class="tvp-btn tvp-btn--ghost" id="tvpMore" type="button">Xem thêm
                     điểm
                     đến</button></div>
         </div>
     @else
         <div class="tvp-wrap">
-            <div class="tvp-empty" style="padding:80px 0">
-                <p>Dữ liệu điểm đến chưa sẵn sàng. Chạy <code>php artisan migrate</code> và <code>php artisan db:seed
-                        --class=DiscoverSeeder</code>.</p>
+            <div class="tvp-empty ux-dest-empty">
+                <p>Danh sách điểm đến đang được cập nhật. Trong lúc chờ, bạn có thể xem toàn bộ tour hiện có.</p>
+                <a class="tvp-btn tvp-btn--teal" href="{{ route('tours') }}">Xem tất cả tour</a>
+                @if (app()->environment('local'))
+                    <p class="ux-dev">Dev: chạy <code>php artisan migrate</code> và
+                        <code>php artisan db:seed --class=DiscoverSeeder</code>.
+                    </p>
+                @endif
             </div>
         </div>
     @endif

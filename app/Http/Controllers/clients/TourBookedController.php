@@ -35,10 +35,16 @@ class TourBookedController extends Controller
             abort(404);
         }
 
-        // Chính sách hủy 7 ngày 
+        // Chính sách hủy (CancelPolicy::MIN_DAYS ngày)
         $canCancel = CancelPolicy::allows($tour_booked->bookingStatus, $tour_booked->startDate);
 
-        return view("clients.tour-booked", compact('title', 'tour_booked', 'canCancel', 'bookingId'));
+        // Ảnh bìa tour để trang chi tiết đơn nhìn giống thẻ tour ở các trang khác
+        $cover = DB::table('tbl_images')
+            ->where('tourId', $tour_booked->tourId)
+            ->orderBy('sortOrder')
+            ->value('imageURL');
+
+        return view("clients.tour-booked", compact('title', 'tour_booked', 'canCancel', 'bookingId', 'cover'));
     }
 
     public function cancelBooking(Request $req, BookingService $bookings)
@@ -88,11 +94,17 @@ class TourBookedController extends Controller
         });
 
         if ($cancelled) {
-            toastr()->success('Hủy thành công!', ['positionClass' => 'toast-top-right']);
-        } else {
-            toastr()->error($refusal, ['positionClass' => 'toast-top-right']);
+            toastr()->success('Đã hủy đơn. Chỗ đã được trả lại.', ['positionClass' => 'toast-top-right']);
+            // UX: về danh sách "Tour đã đặt" (trước đây về trang chủ nên người dùng mất ngữ cảnh)
+            return redirect()->route('my-tours');
         }
 
-        return redirect()->route('home');
+        toastr()->error($refusal, ['positionClass' => 'toast-top-right']);
+
+        // Không hủy được: ở lại đúng đơn đó để đọc lý do, thay vì đẩy về trang chủ
+        $checkoutId = (int) DB::table('tbl_checkout')->where('bookingId', $bookingId)->value('checkoutId');
+        return $checkoutId > 0
+            ? redirect()->route('tour-booked', ['bookingId' => $bookingId, 'checkoutId' => $checkoutId])
+            : redirect()->route('my-tours');
     }
 }

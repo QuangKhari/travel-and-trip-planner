@@ -79,6 +79,7 @@
     <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-final.css') }}?v=1">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-tours-10.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/ux-pass.css') }}?v=2">
     <script src="{{ asset('clients/assets/js/travel-motion.js') }}?v=1" defer></script>
     <script src="{{ asset('clients/assets/js/tv-final.js') }}?v=1" defer></script>
     <script src="{{ asset('clients/assets/js/tv-tours-10.js') }}?v=1" defer></script>
