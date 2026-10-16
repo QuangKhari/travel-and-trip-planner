@@ -1277,3 +1277,24 @@
         transform: none;
     }
 }
+
+/* Link tên điểm đến + ghi công ảnh (trang /explore) */
+.tvx-jlink {
+    color: inherit;
+    text-decoration: none;
+}
+.tvx-jlink:hover {
+    text-decoration: underline;
+}
+.tvx-credit {
+    position: absolute;
+    right: 8px;
+    bottom: 6px;
+    z-index: 2;
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.8);
+    max-width: 80%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

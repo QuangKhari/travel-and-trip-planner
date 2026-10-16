@@ -37,6 +37,7 @@ Route::get('/about', [AboutController::class, 'index'])->name('about');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:5,1,contact')->name('contact.send');
 Route::get('/destination', [DestinationController::class, 'index'])->name('destination');
+Route::get('/destination/{slug}', [\App\Http\Controllers\clients\DestinationDetailController::class, 'show'])->where('slug', '[a-z0-9-]+')->middleware('throttle:60,1,destination-detail')->name('destination.show');
 Route::get('/explore', [ExploreController::class, 'index'])->middleware('throttle:60,1,explore')->name('explore');
 Route::get('/travel-guides', [TravelGuidesController::class, 'index'])->name('team');
 Route::get('/tour-detail/{id}', [TourDetailController::class, 'index'])->whereNumber('id')->name('tour-detail');

@@ -25,3 +25,6 @@ Schedule::call(function () {
         })
         ->delete();
 })->daily()->name('users:purge-unverified')->withoutOverlapping();
+
+// Thời tiết điểm đến (Open-Meteo): 1-2 request mỗi lần, lưu cache DB; web không gọi trực tiếp.
+Schedule::command('discover:warm-weather')->everyThreeHours()->withoutOverlapping();

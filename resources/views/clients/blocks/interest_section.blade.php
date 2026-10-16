@@ -199,9 +199,13 @@
 
                             <div class="tvh-detail" id="tvhDetail">
                                 <p class="tvh-detail__where"><i class="fas fa-map-marker-alt" aria-hidden="true"></i>
-                                    <span id="tvhDetailWhere"></span></p>
+                                    <span id="tvhDetailWhere"></span>
+                                </p>
                                 <h4 id="tvhDetailName"></h4>
                                 <p class="tvh-detail__desc" id="tvhDetailDesc"></p>
+                                <p class="tvh-detail__wx" id="tvhDetailWx" hidden></p>
+                                <a href="#" class="tvh-btn is-ghost" id="tvhDetailMore">Xem chi tiết điểm
+                                    đến</a>
                                 <a href="{{ route('tours') }}" class="tvh-btn" id="tvhDetailCta">Xem tour</a>
                                 <p class="tvh-detail__soon" id="tvhDetailSoon" hidden></p>
                             </div>
@@ -257,8 +261,7 @@
                                         Sắp có tour
                                     @endif
                                 </span>
-                                <a class="tvh-fcard__go"
-                                    href="{{ $d['tourUrl'] ?? route('explore', ['inspiration' => $lead]) }}"
+                                <a class="tvh-fcard__go" href="{{ $d['url'] }}"
                                     aria-label="Xem {{ $d['tourCount'] > 0 ? 'tour tại' : 'điểm đến' }} {{ $d['name'] }}"><i
                                         class="fas fa-arrow-right" aria-hidden="true"></i></a>
                             </article>

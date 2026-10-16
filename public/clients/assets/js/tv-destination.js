@@ -142,6 +142,7 @@
     }
     function linkOf(d) {
         return (
+            d.url ||
             d.tourUrl ||
             DATA.exploreUrl +
                 "?inspiration=" +

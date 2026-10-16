@@ -72,11 +72,17 @@ class InspirationService
             ->get()
             ->pluck('total', 'destinationId');
 
+        try {
+            $weatherRows = DB::table('tbl_destination_weather')->get()->keyBy('destinationId');
+        } catch (\Throwable $e) {
+            $weatherRows = collect(); // chưa chạy migration thời tiết: vẫn hiển thị trang
+        }
+
         $destinations = DB::table('tbl_destinations')
             ->where('isActive', 1)
             ->orderBy('destinationId')
             ->get()
-            ->map(function ($d) use ($scores, $slugById, $tourCounts) {
+            ->map(function ($d) use ($scores, $slugById, $tourCounts, $weatherRows) {
                 [$x, $y] = VietnamMap::project((float) $d->latitude, (float) $d->longitude);
 
                 $own = [];
@@ -88,6 +94,8 @@ class InspirationService
 
                 $tours = (int) ($tourCounts[$d->destinationId] ?? 0);
 
+                $w = isset($weatherRows[$d->destinationId]) ? json_decode($weatherRows[$d->destinationId]->payload, true) : null;
+
                 return [
                     'slug' => $d->slug,
                     'name' => $d->name,
@@ -98,6 +106,9 @@ class InspirationService
                     'image' => DiscoverImage::url($d->coverImage),
                     'x' => $x,
                     'y' => $y,
+                    'url' => route('destination.show', ['slug' => $d->slug]),
+                    'weather' => $w ? ['temp' => $w['current']['temp'], 'label' => $w['current']['label'], 'icon' => $w['current']['icon']] : null,
+                    'imageCredit' => $d->imageCredit,
                     'tourCount' => $tours,
                     'tourUrl' => $tours > 0 ? route('tours', ['keyword' => $d->name]) : null,
                     'scores' => $own,
@@ -161,6 +172,7 @@ class InspirationService
                 'd.latitude',
                 'd.longitude',
                 'd.coverImage',
+                'd.imageCredit',
                 'di.score'
             )
             ->selectSub($tourCount, 'tourCount')
@@ -174,6 +186,7 @@ class InspirationService
 
         return $q->get()->map(function ($row) {
             $row->image = DiscoverImage::url($row->coverImage);
+            $row->url = route('destination.show', ['slug' => $row->slug]);
             $row->domainName = self::DOMAINS[$row->domain] ?? '';
             $row->tourCount = (int) $row->tourCount;
 

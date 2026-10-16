@@ -62,6 +62,8 @@
         dDesc: $("tvhDetailDesc"),
         dCta: $("tvhDetailCta"),
         dSoon: $("tvhDetailSoon"),
+        dWx: $("tvhDetailWx"),
+        dMore: $("tvhDetailMore"),
         all: $("tvhAll"),
         allText: $("tvhAllText"),
         live: $("tvhLive"),
@@ -451,6 +453,19 @@
             (sel.domainName || DOMNAME[sel.domain] || "");
         els.dName.textContent = sel.name;
         els.dDesc.textContent = sel.description || "";
+        els.dMore.href = sel.url;
+        if (sel.weather && sel.weather.temp !== null) {
+            els.dWx.innerHTML =
+                '<i class="fas ' +
+                esc(sel.weather.icon) +
+                '" aria-hidden="true"></i> ' +
+                esc(String(sel.weather.temp)) +
+                "°C · " +
+                esc(sel.weather.label);
+            els.dWx.hidden = false;
+        } else {
+            els.dWx.hidden = true;
+        }
         var withTour = sel.tourCount > 0 && sel.tourUrl;
         if (withTour) {
             els.dCta.href = sel.tourUrl;

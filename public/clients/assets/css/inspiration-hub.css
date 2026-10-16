@@ -1604,3 +1604,16 @@
         transition: none !important;
     }
 }
+
+/* Thời tiết + nút chi tiết trong panel điểm đến */
+.tvh-detail__wx {
+    margin: 6px 0 10px;
+    font-size: 14px;
+    opacity: 0.85;
+}
+.tvh-detail__wx[hidden] {
+    display: none;
+}
+.tvh-detail .tvh-btn.is-ghost#tvhDetailMore {
+    margin-right: 8px;
+}

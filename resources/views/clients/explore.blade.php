@@ -67,13 +67,18 @@
                                 <i class="fas {{ $inspiration->icon }} tvx-card__ghost" aria-hidden="true"></i>
                             @endif
                             <span class="tvx-card__shade" aria-hidden="true"></span>
+                            @if ($d->imageCredit)
+                                <small class="tvx-credit" title="Ảnh: {{ $d->imageCredit }}">©
+                                    {{ \Illuminate\Support\Str::limit($d->imageCredit, 38) }}</small>
+                            @endif
                         </div>
 
                         <span class="tvx-stamp" aria-hidden="true">
                             <span>{{ $d->province }}<small>Việt Nam</small></span>
                         </span>
 
-                        <h3 class="tvx-jname">{{ $d->name }}</h3>
+                        <h3 class="tvx-jname"><a href="{{ $d->url }}" class="tvx-jlink">{{ $d->name }}</a>
+                        </h3>
                         <p class="tvx-jplace">{{ $d->province }} · {{ $d->domainName }}</p>
                         <p class="tvx-jdesc">{{ $d->description }}</p>
 
