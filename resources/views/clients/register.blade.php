@@ -1,6 +1,6 @@
 @include('clients.blocks.header')
 
-<main class="tv-auth px-auth">
+<main class="tv-auth px-auth ux-wc-auth" id="main">
     <div class="container">
         <div class="tv-auth__card px-auth__card">
             <div class="tv-auth__body px-auth__body">
@@ -9,10 +9,10 @@
                     <small>Khám phá thêm. Sống trọn từng chuyến đi.</small>
                 </a>
 
-                <div class="px-tabsw" role="tablist">
-                    <a href="{{ route('register.form') }}" role="tab" aria-selected="true" class="is-on">Đăng ký</a>
-                    <a href="{{ route('login') }}" role="tab" aria-selected="false">Đăng nhập</a>
-                </div>
+                <nav class="px-tabsw" aria-label="Đăng nhập hoặc đăng ký">
+                    <a href="{{ route('register.form') }}" aria-current="page" class="is-on">Đăng ký</a>
+                    <a href="{{ route('login') }}">Đăng nhập</a>
+                </nav>
 
                 <section class="signup">
                     <h1 class="tv-auth__title">Bắt đầu hành trình của bạn</h1>

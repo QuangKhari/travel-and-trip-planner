@@ -355,46 +355,84 @@
                     .slice(0, max - 1),
             )
             .slice(0, max);
+        // vị trí (px) của mọi chấm đang sáng, để nhãn không đè lên chấm khác
+        var litPx = DEST.filter(function (o) {
+            return (
+                score(o, ins.slug) > 0 &&
+                (state.dom === "all" || o.domain === state.dom)
+            );
+        }).map(function (o) {
+            return { slug: o.slug, x: (o.x / 100) * W, y: (o.y / 100) * H };
+        });
         var taken = [],
             html = "";
+        var pinR = 16,
+            h = 42;
         cand.forEach(function (d) {
             var px = (d.x / 100) * W,
                 py = (d.y / 100) * H;
-            var w = Math.max(d.name.length * 7.6, 84) + 24,
-                h = 42,
-                pinR = 16;
+            var w = Math.max(d.name.length * 7.6, 84) + 24;
             function mk(side) {
-                var x0 = side === "r" ? px + pinR : px - pinR - w;
-                return {
-                    x0: x0,
-                    y0: py - h / 2,
-                    x1: x0 + w,
-                    y1: py + h / 2,
-                    side: side,
-                };
-            }
-            function ok(r) {
-                if (r.x0 < 4 || r.x1 > W - 4) {
-                    return false;
+                var x0, y0;
+                if (side === "r") {
+                    x0 = px + pinR;
+                    y0 = py - h / 2;
+                } else if (side === "l") {
+                    x0 = px - pinR - w;
+                    y0 = py - h / 2;
+                } else if (side === "t") {
+                    x0 = px - w / 2;
+                    y0 = py - pinR - h - 2;
+                } else {
+                    x0 = px - w / 2;
+                    y0 = py + pinR + 2;
                 }
-                return !taken.some(function (o) {
-                    return !(
-                        r.x1 + 4 < o.x0 ||
-                        r.x0 - 4 > o.x1 ||
-                        r.y1 + 3 < o.y0 ||
-                        r.y0 - 3 > o.y1
+                return { x0: x0, y0: y0, x1: x0 + w, y1: y0 + h, side: side };
+            }
+            function inside(r) {
+                return r.x0 >= 4 && r.x1 <= W - 4 && r.y0 >= 4 && r.y1 <= H - 4;
+            }
+            function free(r) {
+                return (
+                    inside(r) &&
+                    !taken.some(function (o) {
+                        return !(
+                            r.x1 + 4 < o.x0 ||
+                            r.x0 - 4 > o.x1 ||
+                            r.y1 + 3 < o.y0 ||
+                            r.y0 - 3 > o.y1
+                        );
+                    })
+                );
+            }
+            function clear(r) {
+                return !litPx.some(function (p) {
+                    return (
+                        p.slug !== d.slug &&
+                        p.x > r.x0 - 10 &&
+                        p.x < r.x1 + 10 &&
+                        p.y > r.y0 - 10 &&
+                        p.y < r.y1 + 10
                     );
                 });
             }
-            var r = [mk("r"), mk("l")].filter(ok)[0];
+            var opts = ["r", "l", "t", "b"].map(mk);
+            var r =
+                opts.filter(function (o) {
+                    return free(o) && clear(o);
+                })[0] ||
+                opts.filter(free)[0] ||
+                (d.slug === sel.slug ? opts.filter(inside)[0] : null);
             if (!r) {
                 return;
             }
             taken.push(r);
-            var tf =
-                r.side === "r"
-                    ? "translate(" + pinR + "px,-50%)"
-                    : "translate(calc(-100% - " + pinR + "px),-50%)";
+            var tf = {
+                r: "translate(" + pinR + "px,-50%)",
+                l: "translate(calc(-100% - " + pinR + "px),-50%)",
+                t: "translate(-50%,calc(-100% - " + pinR + "px))",
+                b: "translate(-50%," + pinR + "px)",
+            }[r.side];
             html +=
                 '<span class="tvh-label' +
                 (d.slug === sel.slug ? " is-sel" : "") +
@@ -446,6 +484,112 @@
             .join("");
     }
 
+    var WX_THEME = {
+        "fa-sun": "clear",
+        "fa-cloud-sun": "partly",
+        "fa-cloud": "cloud",
+        "fa-cloud-rain": "rain",
+        "fa-cloud-sun-rain": "rain",
+        "fa-cloud-showers-heavy": "rain",
+        "fa-bolt": "storm",
+        "fa-smog": "fog",
+        "fa-snowflake": "snow",
+    };
+    var WX_WD = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+    function wxNum(v) {
+        return v === null || v === undefined ? "–" : esc(String(v));
+    }
+    function wxTip(w) {
+        var d = w.daily && w.daily[0];
+        if (!d) return null;
+        if (d.rain !== null && d.rain >= 60)
+            return [
+                "fa-umbrella",
+                "Khả năng mưa cao hôm nay — nên mang áo mưa hoặc ô.",
+            ];
+        if (d.tMax !== null && d.tMax >= 34)
+            return [
+                "fa-sun",
+                "Trời nóng — nhớ mang mũ, kem chống nắng và nước uống.",
+            ];
+        if (d.tMax !== null && d.tMax <= 17)
+            return ["fa-snowflake", "Trời lạnh — nên mang theo áo ấm."];
+        return null;
+    }
+    function renderWeather(w) {
+        var theme = WX_THEME[w.icon] || "cloud",
+            chips = "";
+        if (w.feels != null)
+            chips +=
+                '<span class="tvw__chip"><i class="fas fa-thermometer-half"></i>Cảm giác ' +
+                wxNum(w.feels) +
+                "°</span>";
+        if (w.humidity != null)
+            chips +=
+                '<span class="tvw__chip"><i class="fas fa-tint"></i>' +
+                wxNum(w.humidity) +
+                "%</span>";
+        if (w.wind != null)
+            chips +=
+                '<span class="tvw__chip"><i class="fas fa-wind"></i>' +
+                wxNum(w.wind) +
+                " km/h</span>";
+        var tip = wxTip(w),
+            days = "";
+        (w.daily || []).forEach(function (d, i) {
+            var dt = new Date(d.date + "T00:00:00"),
+                r = (r = d.rain);
+            var name =
+                i === 0 ? "Hôm nay" : isNaN(dt) ? "" : WX_WD[dt.getDay()];
+            days +=
+                '<li class="tvw__day' +
+                (i === 0 ? " is-today" : "") +
+                '"><span class="tvw__dn">' +
+                esc(name) +
+                "</span>" +
+                '<i class="fas ' +
+                esc(d.icon) +
+                '" title="' +
+                esc(d.label) +
+                '"></i><b>' +
+                wxNum(d.tMax) +
+                "°</b><small>" +
+                wxNum(d.tMin) +
+                "°</small>" +
+                (r !== null && r !== undefined
+                    ? '<span class="tvw__rain"><i style="--r:' +
+                      Math.max(0, Math.min(100, Number(r) || 0)) +
+                      '%"></i></span><span class="tvw__rn">' +
+                      wxNum(r) +
+                      "%</span>"
+                    : "") +
+                "</li>";
+        });
+        return (
+            '<div class="tvw" data-wx="' +
+            theme +
+            '"><div class="tvw__now"><span class="tvw__ico"><i class="fas ' +
+            esc(w.icon) +
+            '"></i></span>' +
+            '<div><span class="tvw__temp">' +
+            wxNum(w.temp) +
+            '<sup>°C</sup></span><span class="tvw__lbl">' +
+            esc(w.label) +
+            "</span></div>" +
+            (chips ? '<div class="tvw__chips">' + chips + "</div>" : "") +
+            "</div>" +
+            (tip
+                ? '<p class="tvw__tip"><i class="fas ' +
+                  tip[0] +
+                  '"></i><span>' +
+                  esc(tip[1]) +
+                  "</span></p>"
+                : "") +
+            (days ? '<ol class="tvw__days">' + days + "</ol>" : "") +
+            '<p class="tvw__src">Dữ liệu: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo.com</a></p></div>'
+        );
+    }
+
     function renderDetail(ins, sel, pool) {
         els.dWhere.textContent =
             sel.province +
@@ -455,13 +599,7 @@
         els.dDesc.textContent = sel.description || "";
         els.dMore.href = sel.url;
         if (sel.weather && sel.weather.temp !== null) {
-            els.dWx.innerHTML =
-                '<i class="fas ' +
-                esc(sel.weather.icon) +
-                '" aria-hidden="true"></i> ' +
-                esc(String(sel.weather.temp)) +
-                "°C · " +
-                esc(sel.weather.label);
+            els.dWx.innerHTML = renderWeather(sel.weather);
             els.dWx.hidden = false;
         } else {
             els.dWx.hidden = true;

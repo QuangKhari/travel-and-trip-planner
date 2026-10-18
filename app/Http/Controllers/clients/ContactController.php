@@ -121,6 +121,25 @@ class ContactController extends Controller
                 ->withInput();
         }
 
+        // Thư xác nhận cho khách: họ biết tin nhắn đã đến nơi và có bản sao nội dung đã gửi.
+        // Không bắt buộc thành công (khách vẫn thấy màn hình "đã gửi"), lỗi chỉ ghi log.
+        try {
+            $siteName = config('site.name', 'Travel');
+            $hours = config('site.hours');
+            $copy = "Xin chào {$name},\n\n"
+                . "{$siteName} đã nhận được tin nhắn của bạn (chủ đề: {$topicLabel})"
+                . ($code !== '' ? ", mã đơn {$code}" : '') . ".\n"
+                . "Chúng tôi sẽ phản hồi qua email hoặc điện thoại trong giờ làm việc" . ($hours ? " ({$hours})" : '') . ".\n\n"
+                . "Nội dung bạn đã gửi:\n" . $data['message'] . "\n\n"
+                . "Đây là thư tự động, bạn không cần trả lời thư này.\n— {$siteName}";
+
+            Mail::raw($copy, function ($message) use ($data, $name, $siteName) {
+                $message->to($data['email'], $name)->subject("Đã nhận tin nhắn của bạn – {$siteName}");
+            });
+        } catch (\Throwable $e) {
+            Log::warning('Gửi thư xác nhận liên hệ cho khách thất bại.', ['email' => $data['email'], 'exception' => $e->getMessage()]);
+        }
+
         if ($request->expectsJson()) {
             return response()->json(['success' => true, 'message' => 'Đã nhận tin nhắn của bạn.']);
         }

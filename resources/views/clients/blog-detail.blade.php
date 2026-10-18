@@ -31,7 +31,7 @@
     JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP,
 ) !!}
 </script>
-<main class="px-blog px-post">
+<main class="px-blog px-post wcx">
     <div class="container">
         <nav class="px-crumb px-crumb--dark" aria-label="breadcrumb">
             <a href="{{ route('home') }}">Trang chủ</a>
@@ -96,14 +96,14 @@
 
             <aside class="px-blog__side">
                 @if (count($sections) > 1)
-                    <section class="px-box px-toc">
-                        <h3>Mục lục</h3>
+                    <details class="px-box px-toc" id="postToc" open>
+                        <summary>Mục lục</summary>
                         <ol>
                             @foreach ($sections as $i => $sec)
                                 <li><a href="#muc-{{ $i + 1 }}" data-toc>{{ $sec[0] }}</a></li>
                             @endforeach
                         </ol>
-                    </section>
+                    </details>
                 @endif
 
                 <a class="px-side-img" href="{{ route('tours') }}">
@@ -141,5 +141,10 @@
         @endif
     </div>
 </main>
+
+@include('clients.partials.tour-cta-scene', [
+    'ctaTitle' => 'Đọc xong rồi, đi thôi!',
+    'ctaText' => 'Chọn một chuyến đi hợp với bạn, hoặc nhắn cho chúng tôi để được tư vấn lịch trình.',
+])
 
 @include('clients.blocks.footer')

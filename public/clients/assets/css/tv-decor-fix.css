@@ -1,0 +1,108 @@
+/* =====================================================================
+   tv-decor-fix.css  -  Trang Điểm đến: decor gọn, không che bản đồ
+   Đặt tại public/clients/assets/css/ và nạp SAU ux-pass.css (xem hướng dẫn).
+   ===================================================================== */
+
+/* 1. MÂY / LOANG: chuyển từ TRONG card bản đồ ra NỀN của section.. */
+#tvpDest .tvp-board::before {
+    content: none;
+}
+#tvpDest .tvp-mapsec::before {
+    content: "";
+    position: absolute;
+    inset: auto;
+    left: 50%;
+    top: 50%;
+    width: 620px; /* giữ tỉ lệ 640:760 của wc-map-wash.svg */
+    height: 736px;
+    max-width: none;
+    transform: translate(-50%, -50%);
+    background: url("../images/watercolor/wc-map-wash.svg") center / 100% 100%
+        no-repeat;
+    mix-blend-mode: normal;
+    opacity: 0.6;
+    z-index: 0;
+    pointer-events: none;
+}
+#tvpDest .tvp-board {
+    background: rgba(255, 253, 247, 0.94);
+    border: 1px solid rgba(8, 127, 123, 0.12);
+}
+
+/* 2. BẢN ĐỒ: mặt nạ cũ làm mờ dần viền (mất biên Tây Bắc) -> làm nhẹ lại */
+#tvpDest .tvp-vnwrap > svg {
+    -webkit-mask-image: radial-gradient(
+        ellipse 92% 90% at 50% 50%,
+        #000 82%,
+        transparent 100%
+    );
+    mask-image: radial-gradient(
+        ellipse 92% 90% at 50% 50%,
+        #000 82%,
+        transparent 100%
+    );
+}
+
+/* 3. LA BÀN: đưa vào trong card, góc trên phải (vùng Biển Đông trống) */
+#tvpDest .tvp-board::after {
+    content: "";
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    width: 54px;
+    height: 54px;
+    background: url("../images/illustrations/compass.svg") center / contain
+        no-repeat;
+    opacity: 0.7;
+    z-index: 3;
+    pointer-events: none;
+}
+
+/* 4. LÁ: chỉ 2 cụm ở hai góc DƯỚI của section, bám theo cột nội dung
+      (không bám mép màn hình), nhỏ, mờ, không đung đưa */
+#tvpDest .tvf-deco.tvf-leaf--mapA,
+#tvpDest .tvf-deco.tvf-leaf--mapB {
+    width: 130px;
+    bottom: -56px;
+    top: auto;
+    opacity: 0.55;
+    animation: none;
+    z-index: 1;
+}
+#tvpDest .tvf-deco.tvf-leaf--mapA {
+    left: max(-30px, calc(50% - 660px));
+    right: auto;
+    transform: rotate(4deg);
+}
+#tvpDest .tvf-deco.tvf-leaf--mapB {
+    right: max(-30px, calc(50% - 660px));
+    left: auto;
+    transform: scaleX(-1) rotate(-4deg);
+}
+
+/* 5. BANNER "Những hành trình đang chờ bạn": lá nhỏ ở góc dưới phải,
+      không thò lên cao ra ngoài khung */
+#tvpDest .tvf-banner .tvf-deco.tvf-leaf--cta {
+    width: 120px;
+    right: -30px;
+    bottom: -30px;
+    top: auto;
+    left: auto;
+    opacity: 0.7;
+    animation: none;
+    transform: scaleX(-1) rotate(-4deg);
+}
+
+/* 6. MOBILE / TABLET: bỏ lá, giữ lại mảng loang nền */
+@media (max-width: 980px) {
+    #tvpDest .tvf-deco.tvf-leaf--mapA,
+    #tvpDest .tvf-deco.tvf-leaf--mapB,
+    #tvpDest .tvf-banner .tvf-deco.tvf-leaf--cta {
+        display: none;
+    }
+    #tvpDest .tvp-mapsec::before {
+        width: 440px;
+        height: 522px;
+        opacity: 0.45;
+    }
+}

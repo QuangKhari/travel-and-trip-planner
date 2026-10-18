@@ -203,7 +203,7 @@
                                 </p>
                                 <h4 id="tvhDetailName"></h4>
                                 <p class="tvh-detail__desc" id="tvhDetailDesc"></p>
-                                <p class="tvh-detail__wx" id="tvhDetailWx" hidden></p>
+                                <div id="tvhDetailWx" hidden></div>
                                 <a href="#" class="tvh-btn is-ghost" id="tvhDetailMore">Xem chi tiết điểm
                                     đến</a>
                                 <a href="{{ route('tours') }}" class="tvh-btn" id="tvhDetailCta">Xem tour</a>

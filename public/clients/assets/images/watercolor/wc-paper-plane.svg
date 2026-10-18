@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200"><defs>
+<filter id="pw" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency="0.035 0.05" numOctaves="3" seed="6" result="warp"/>
+<feDisplacementMap in="SourceGraphic" in2="warp" scale="5" xChannelSelector="R" yChannelSelector="G" result="shape"/>
+<feGaussianBlur in="shape" stdDeviation="0.7"/></filter></defs>
+<g filter="url(#pw)">
+<path d="M10 96 L300 14 L206 178 L150 118 Z" fill="#fffaf0" stroke="#087f7b" stroke-width="2.4" stroke-linejoin="round" opacity=".96"/>
+<path d="M10 96 L150 118 L300 14 Z" fill="#8fd8cd" opacity=".55"/>
+<path d="M150 118 L206 178 L184 108 Z" fill="#e9c46a" opacity=".6"/>
+<path d="M150 118 L300 14" stroke="#087f7b" stroke-width="1.6" fill="none" opacity=".6"/>
+</g>
+<path d="M-6 150 C30 160 50 128 84 140 S130 176 160 168" fill="none" stroke="#16a6a1" stroke-width="2" stroke-dasharray="3 9" stroke-linecap="round" opacity=".6"/>
+</svg>

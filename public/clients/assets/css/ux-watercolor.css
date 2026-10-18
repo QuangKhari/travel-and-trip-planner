@@ -1,0 +1,620 @@
+/* =====================================================================
+   ux-watercolor.css — trang trí "màu nước" 
+   ===================================================================== */
+
+/* ---------- 1. Khung trang "giấy màu nước" (thêm class wcx vào <main>) ---------- */
+.wcx.wcx {
+    position: relative;
+    isolation: isolate;
+    background-color: var(--tv-bg, #f8fbf9);
+    background-image: url("../images/watercolor/wc-paper.svg");
+    background-size: 420px;
+}
+/* Vệt loang xanh ngọc (phải) + cát (trái) ở đầu trang */
+.wcx::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 560px;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        url("../images/watercolor/wc-wash-teal.svg") no-repeat right -190px
+            top -170px / 780px auto,
+        url("../images/watercolor/wc-wash-sand.svg") no-repeat left -230px
+            top -150px / 660px auto;
+    opacity: 0.22; /* khớp quy ước của site: lớp wash 10–25% */
+}
+/* Cành lá ở hai góc cuối trang */
+.wcx::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 380px;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        url("../images/watercolor/wc-leaf-a.svg") no-repeat left -100px
+            bottom -50px / 270px auto,
+        url("../images/watercolor/wc-leaf-b.svg") no-repeat right -90px
+            bottom -40px / 250px auto;
+    opacity: 0.26;
+}
+@media (max-width: 767px) {
+    .wcx::before {
+        height: 360px;
+        background-size:
+            480px auto,
+            420px auto;
+        background-position:
+            right -150px top -120px,
+            left -180px top -110px;
+        opacity: 0.2;
+    }
+    .wcx::after {
+        display: none;
+    }
+}
+
+/* Nét cọ dưới tiêu đề trang (thêm class wcx-title vào <h1>) */
+.wcx-title {
+    position: relative;
+    display: inline-block;
+}
+.wcx-title::after {
+    content: "";
+    position: absolute;
+    left: -6px;
+    right: -6px;
+    bottom: -12px;
+    height: 16px;
+    background: url("../images/watercolor/wc-brush.svg") center / 100% 100%
+        no-repeat;
+    opacity: 0.55;
+    pointer-events: none;
+}
+.wcx .bk-head,
+.wcx .pf-head {
+    position: relative;
+    padding-bottom: 8px;
+}
+/* Đàn chim nhỏ ở góc phải đầu trang */
+.wcx .bk-head::before,
+.wcx .pf-head::before {
+    content: "";
+    position: absolute;
+    right: 2%;
+    top: -4px;
+    width: 120px;
+    height: 60px;
+    background: url("../images/watercolor/wc-birds.svg") center / contain
+        no-repeat;
+    opacity: 0.7;
+    pointer-events: none;
+}
+@media (max-width: 640px) {
+    .wcx .bk-head::before,
+    .wcx .pf-head::before {
+        width: 84px;
+        height: 42px;
+    }
+}
+
+/* Thẻ nội dung: nền trắng đặc (giữ nguyên độ tương phản) + vệt màu 25% ở góc, nằm dưới chữ */
+.wcx .bk-card,
+.wcx .ct-card,
+.wcx .pf-card,
+.wcx .bk-sum {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background-color: #fff;
+}
+.wcx .bk-card::before,
+.wcx .ct-card::before,
+.wcx .pf-card::before,
+.wcx .bk-sum::before {
+    content: "";
+    position: absolute;
+    right: -36px;
+    top: -36px;
+    width: 140px;
+    height: 140px;
+    z-index: -1;
+    background: url("../images/watercolor/wc-blob-1.svg") center / contain
+        no-repeat;
+    opacity: 0.25;
+    pointer-events: none;
+}
+.wcx .bk-card--danger {
+    background-color: #fffafa;
+}
+.wcx .ct-card--info::before {
+    right: auto;
+    left: -70px;
+    top: auto;
+    bottom: -70px;
+    width: 260px;
+    height: 200px;
+    background-image: url("../images/watercolor/wc-wash-sand.svg");
+    opacity: 0.22;
+}
+
+/* ---------- 2. Liên hệ: mép giấy rách dưới hero + vệt màu ---------- */
+.ct-hero {
+    position: relative;
+    isolation: isolate;
+}
+.ct-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        url("../images/watercolor/wc-wash-sand.svg") no-repeat right -160px
+            bottom -190px / 560px auto,
+        url("../images/watercolor/wc-leaf-a.svg") no-repeat left -90px
+            bottom -90px / 230px auto;
+    opacity: 0.22;
+    mix-blend-mode: screen;
+}
+.ct-hero::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 64px;
+    background: url("../images/watercolor/wc-edge-paper.svg") bottom / 100% 100%
+        no-repeat;
+    pointer-events: none;
+}
+.ct-channels {
+    position: relative;
+    z-index: 2;
+}
+
+/* ---------- 3. Đăng nhập / đăng ký / quên mật khẩu ---------- */
+.ux-wc-auth {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+}
+.ux-wc-auth::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        url("../images/watercolor/wc-wash-teal.svg") no-repeat right -230px
+            top -190px / 760px auto,
+        url("../images/watercolor/wc-wash-sand.svg") no-repeat left -250px
+            bottom -220px / 700px auto;
+    opacity: 0.2;
+}
+.ux-wc-auth::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        url("../images/watercolor/wc-leaf-a.svg") no-repeat left -90px
+            bottom -60px / 250px auto,
+        url("../images/watercolor/wc-leaf-b.svg") no-repeat right -80px top
+            30px / 220px auto,
+        url("../images/watercolor/wc-birds.svg") no-repeat left 8% top 56px /
+            120px auto;
+    opacity: 0.3;
+}
+@media (max-width: 767px) {
+    .ux-wc-auth::after {
+        background: url("../images/watercolor/wc-birds.svg") no-repeat right 6%
+            top 18px / 90px auto;
+        opacity: 0.5;
+    }
+}
+.ux-caps {
+    margin: 6px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #b45309;
+}
+.ux-caps i {
+    margin-right: 4px;
+}
+.ux-formerr {
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #fff1f0;
+    border: 1px solid #f4c7c3;
+    color: #7a271a;
+    font-size: 14px;
+    font-weight: 600;
+}
+.tv-auth__submit[aria-busy="true"] {
+    opacity: 0.75;
+    cursor: wait;
+}
+.tv-auth :focus-visible {
+    outline: 3px solid var(--tv-orange, #ddaf32);
+    outline-offset: 2px;
+}
+
+/* ---------- 4. Booking: "Sau khi bạn xác nhận" ---------- */
+.bk-after {
+    margin-top: 16px;
+    padding: 18px 20px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px dashed #99d6cf;
+    border-radius: 20px;
+}
+.bk-after h2 {
+    margin: 0 0 12px;
+    font-size: 16px;
+    font-weight: 800;
+}
+.bk-after ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    counter-reset: bkstep;
+    display: grid;
+    gap: 14px;
+}
+.bk-after li {
+    position: relative;
+    padding-left: 40px;
+    counter-increment: bkstep;
+}
+.bk-after li::before {
+    content: counter(bkstep);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--tv-sand-light, #fff4d8);
+    border: 1.5px solid var(--tv-sand, #f3d39a);
+    color: #8a6a14;
+    font-weight: 800;
+    font-size: 13px;
+}
+.bk-after li:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 13px;
+    top: 30px;
+    bottom: -12px;
+    border-left: 2px dotted #cfe3df;
+}
+.bk-after li b {
+    display: block;
+    font-size: 14.5px;
+}
+.bk-after li span {
+    display: block;
+    font-size: 13px;
+    color: var(--tv-mute, #64748b);
+    line-height: 1.5;
+}
+
+/* ---------- 5. Chi tiết đơn: tiện ích ---------- */
+.bk-tools {
+    margin-top: 14px;
+    display: grid;
+    gap: 10px;
+}
+.bk-tool {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 46px;
+    padding: 0 16px;
+    border-radius: 14px;
+    border: 1.5px solid #cfe3df;
+    background: rgba(255, 255, 255, 0.94);
+    color: var(--tv-teal-dark, #086b66);
+    font:
+        700 14.5px "Be Vietnam Pro",
+        sans-serif;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+        border-color 0.2s,
+        background 0.2s;
+}
+.bk-tool:hover {
+    border-color: var(--tv-teal, #0b9488);
+    background: #f0fdfa;
+}
+.bk-tool:focus-visible {
+    outline: 3px solid var(--tv-orange, #ddaf32);
+    outline-offset: 2px;
+}
+
+/* ---------- 6. Hồ sơ: thanh phần + đơn gần đây ---------- */
+.pf-tabs {
+    display: none;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    gap: 8px;
+    margin: 0 -4px 16px;
+    padding: 8px 4px;
+    overflow-x: auto;
+    background: rgba(248, 251, 249, 0.94);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--tv-line, #e2e8f0);
+}
+.pf-tabs a {
+    flex: none;
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1.5px solid var(--tv-line, #e2e8f0);
+    background: #fff;
+    color: var(--tv-ink, #102f3a);
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none;
+}
+.pf-tabs a.is-on {
+    background: var(--tv-teal, #0b9488);
+    border-color: var(--tv-teal, #0b9488);
+    color: #fff;
+}
+@media (max-width: 991px) {
+    .pf-tabs {
+        display: flex;
+    }
+}
+.pf-card[id] {
+    scroll-margin-top: 90px;
+}
+.pf-recent {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 4px;
+}
+.pf-recent a {
+    display: block;
+    padding: 10px 12px;
+    border-radius: 12px;
+    color: inherit;
+    text-decoration: none;
+}
+.pf-recent a:hover {
+    background: #f0fdfa;
+}
+.pf-recent b {
+    display: block;
+    font-size: 14.5px;
+    line-height: 1.35;
+}
+.pf-recent small {
+    color: var(--tv-mute, #64748b);
+    font-size: 12.5px;
+}
+.pf-st {
+    font-weight: 700;
+}
+.pf-st--n {
+    color: #b45309;
+}
+.pf-st--y {
+    color: #15803d;
+}
+.pf-st--f {
+    color: #0b7285;
+}
+.pf-st--c {
+    color: #b42318;
+}
+
+/* ---------- 7. Blog chi tiết ---------- */
+.px-post .px-article__intro::first-letter {
+    float: left;
+    margin: 4px 10px 0 0;
+    font-size: 3.4em;
+    line-height: 0.85;
+    font-weight: 800;
+    color: var(--tv-teal, #0b9488);
+}
+.px-toc summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    list-style: none;
+    font-weight: 800;
+    font-size: 17px;
+}
+.px-toc summary::-webkit-details-marker {
+    display: none;
+}
+.px-toc summary::after {
+    content: "▾";
+    color: var(--tv-teal, #0b9488);
+    transition: transform 0.2s;
+}
+.px-toc:not([open]) summary::after {
+    transform: rotate(-90deg);
+}
+.px-toc summary:focus-visible {
+    outline: 3px solid var(--tv-orange, #ddaf32);
+    outline-offset: 3px;
+    border-radius: 6px;
+}
+.px-toc ol {
+    margin-top: 10px;
+}
+
+/* ---------- 8. Trang tour: kệ "đã lưu" / "xem gần đây" ---------- */
+.ux-shelf {
+    margin: 0 0 18px;
+    padding: 16px 18px 14px;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid var(--tv-line, #e2e8f0);
+    border-radius: 20px;
+}
+.ux-shelf[hidden] {
+    display: none;
+}
+.ux-shelf__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+.ux-shelf__head h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 800;
+}
+.ux-shelf__head h2 i {
+    margin-right: 6px;
+    color: var(--tv-teal, #0b9488);
+}
+.ux-shelf__head h2 em {
+    font-style: normal;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--tv-mute, #64748b);
+}
+.ux-shelf__row {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+}
+.ux-mini {
+    position: relative;
+    flex: none;
+    width: 250px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 8px;
+    border: 1px solid var(--tv-line, #e2e8f0);
+    border-radius: 14px;
+    background: #fff;
+    color: inherit;
+    text-decoration: none;
+    scroll-snap-align: start;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+}
+.ux-mini:hover {
+    border-color: var(--tv-teal, #0b9488);
+    box-shadow: 0 6px 16px rgba(8, 79, 76, 0.1);
+}
+.ux-mini img {
+    flex: none;
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+    object-fit: cover;
+}
+.ux-mini b {
+    display: block;
+    font-size: 13.5px;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.ux-mini small {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--tv-mute, #64748b);
+}
+.ux-mini__rm {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--tv-mute, #64748b);
+    cursor: pointer;
+}
+.ux-mini__rm:hover {
+    color: #d92d20;
+    background: #fff1f0;
+}
+.ux-mini:focus-visible,
+.ux-mini__rm:focus-visible {
+    outline: 3px solid var(--tv-orange, #ddaf32);
+    outline-offset: 2px;
+}
+
+/* ---------- 9. Chi tiết tour: nút Lưu / In ---------- */
+.px-iconbtn[data-fav].is-on i {
+    font-weight: 900;
+    color: var(--tv-coral, #e8795b);
+}
+
+/* ---------- 10. In (lịch trình tour, chi tiết đơn) ---------- */
+@media print {
+    .px-hero__shade,
+    .px-hero__cta,
+    .px-wave,
+    .px-tabs,
+    .px-book,
+    .px-related,
+    .td-mbar,
+    .wt-cta,
+    .px-iconbtn,
+    #tdToggleAll,
+    .tc-widget,
+    #partials_reviews .td-review-form,
+    .wcx::before,
+    .wcx::after {
+        display: none !important;
+    }
+    .px-hero__img {
+        max-height: 220px;
+        object-fit: cover;
+        width: 100%;
+    }
+    .px-hero {
+        min-height: 0 !important;
+        color: #000;
+    }
+    .px-hero__title {
+        color: #000 !important;
+        text-shadow: none !important;
+    }
+    .px-sec {
+        break-inside: avoid;
+    }
+    a[href]::after {
+        content: "";
+    }
+}
+
+/* ---------- Giảm chuyển động theo cài đặt hệ thống ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .ux-mini,
+    .bk-tool,
+    .px-toc summary::after {
+        transition: none !important;
+    }
+}

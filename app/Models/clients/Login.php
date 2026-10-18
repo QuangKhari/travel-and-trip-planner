@@ -32,6 +32,23 @@ class Login extends Model
             ->first();
     }
 
+    /**
+     * Đăng nhập bằng tên đăng nhập HOẶC email (người dùng hay quên tên đăng nhập hơn quên email).
+     * Ưu tiên tên đăng nhập trước; chỉ khi không thấy và chuỗi có dạng email mới tìm theo email.
+     */
+    public function findByLogin($login)
+    {
+        $user = $this->findByUsername($login);
+
+        if (!$user && filter_var($login, FILTER_VALIDATE_EMAIL)) {
+            $user = DB::table($this->table)
+                ->where('email', $login)
+                ->first();
+        }
+
+        return $user;
+    }
+
     public function checkAccountMatch($username, $email)
     {
         $check = DB::table($this->table)

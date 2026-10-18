@@ -19,13 +19,22 @@
     $total = (int) ($stats->total ?? 0);
 @endphp
 
-<main class="pf" id="pfPage">
+<main class="pf wcx" id="pfPage">
     <div class="container">
 
         <header class="pf-head">
-            <h1>Tài khoản của tôi</h1>
+            <h1 class="wcx-title">Tài khoản của tôi</h1>
             <p>Thông tin chính xác giúp lần đặt tour sau chỉ còn vài bước.</p>
         </header>
+
+        {{-- Chuyển nhanh giữa các phần (cố định dưới đầu trang trên điện thoại) --}}
+        <nav class="pf-tabs" aria-label="Các phần của trang">
+            <a href="#thong-tin">Thông tin cá nhân</a>
+            <a href="#bao-mat">Mật khẩu</a>
+            @if ($total > 0)
+                <a href="{{ route('my-tours') }}">Tour đã đặt</a>
+            @endif
+        </nav>
 
         <div class="pf-layout">
 
@@ -83,6 +92,25 @@
                         <a class="pf-btn pf-btn--solid pf-btn--block" href="{{ route('tours') }}">Khám phá tour</a>
                     @endif
                 </section>
+                @if (!empty($recent) && count($recent))
+                    <section class="pf-card" aria-labelledby="pfRecentH">
+                        <h2 id="pfRecentH" class="pf-card__t">Đơn gần đây</h2>
+                        @php $stl = ['n' => 'Chờ xác nhận', 'y' => 'Đã xác nhận', 'f' => 'Hoàn thành', 'c' => 'Đã hủy']; @endphp
+                        <ul class="pf-recent">
+                            @foreach ($recent as $r)
+                                <li>
+                                    <a
+                                        href="{{ $r->checkoutId ? route('tour-booked', ['bookingId' => $r->bookingId, 'checkoutId' => $r->checkoutId]) : route('my-tours') }}">
+                                        <b>{{ \Illuminate\Support\Str::limit($r->title, 38) }}</b>
+                                        <small>{{ \Carbon\Carbon::parse($r->startDate)->format('d/m/Y') }} ·
+                                            <span
+                                                class="pf-st pf-st--{{ $r->bookingStatus }}">{{ $stl[$r->bookingStatus] ?? '—' }}</span></small>
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </section>
+                @endif
             </aside>
 
             {{-- ================= CỘT PHẢI ================= --}}
@@ -110,8 +138,9 @@
                         <div class="pf-grid">
                             <div class="pf-field pf-field--full">
                                 <label for="pfFullName">Họ và tên <em aria-hidden="true">*</em></label>
-                                <input id="pfFullName" name="fullName" type="text" maxlength="50" autocomplete="name"
-                                    value="{{ $user->fullName }}" required aria-describedby="pfErr-fullName">
+                                <input id="pfFullName" name="fullName" type="text" maxlength="50"
+                                    autocomplete="name" value="{{ $user->fullName }}" required
+                                    aria-describedby="pfErr-fullName">
                                 <p class="pf-err" id="pfErr-fullName"></p>
                             </div>
 
@@ -182,7 +211,8 @@
                                             aria-hidden="true"></i></button>
                                 </div>
                                 <div class="pf-strength" id="pfStrength" data-level="0" aria-hidden="true">
-                                    <i></i><i></i><i></i><i></i></div>
+                                    <i></i><i></i><i></i><i></i>
+                                </div>
                                 <p class="pf-hint" id="pfHint-new">Ít nhất 8 ký tự. Nên có chữ hoa, chữ thường và số.
                                 </p>
                                 <p class="pf-err" id="pfErr-newPass"></p>

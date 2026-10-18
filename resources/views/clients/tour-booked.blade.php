@@ -33,7 +33,7 @@
     };
 @endphp
 
-<main class="bk bk--view" id="bkPage">
+<main class="bk bk--view wcx" id="bkPage">
     <div class="container">
 
         <nav class="bk-crumb" aria-label="breadcrumb">
@@ -44,7 +44,7 @@
 
         <header class="bk-head bk-head--row">
             <div>
-                <h1>Chi tiết đơn đặt tour</h1>
+                <h1 class="wcx-title">Chi tiết đơn đặt tour</h1>
                 <p class="bk-code">
                     Mã đơn <b id="bkCode">{{ $code }}</b>
                     <button type="button" class="bk-link" data-copy="#bkCode" aria-label="Sao chép mã đơn">
@@ -231,6 +231,21 @@
                     <a class="bk-sum__help" href="{{ route('contact') }}"><i class="fal fa-comment-dots"
                             aria-hidden="true"></i> Cần hỗ trợ về đơn này?</a>
                 </div>
+                @if (in_array($status, ['n', 'y'], true))
+                    {{-- Tiện ích sau khi đặt: thêm vào lịch (.ics tạo ngay trên trình duyệt) và gọi văn phòng --}}
+                    <section class="bk-tools" aria-label="Tiện ích cho đơn này">
+                        <button type="button" class="bk-tool" data-ics data-title="{{ $b->title }}"
+                            data-start="{{ $start->format('Y-m-d') }}" data-end="{{ $end->format('Y-m-d') }}"
+                            data-place="{{ $b->destination }}" data-code="{{ $code }}"
+                            data-url="{{ route('tour-detail', ['id' => $b->tourId]) }}">
+                            <i class="fal fa-calendar-plus" aria-hidden="true"></i> Thêm vào lịch
+                        </button>
+                        @if ($sitePhone)
+                            <a class="bk-tool" href="tel:{{ preg_replace('/\s+/', '', $sitePhone) }}"><i
+                                    class="fal fa-phone" aria-hidden="true"></i> Gọi văn phòng</a>
+                        @endif
+                    </section>
+                @endif
             </aside>
         </div>
     </div>

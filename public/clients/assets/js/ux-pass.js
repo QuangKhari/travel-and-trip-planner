@@ -1,5 +1,5 @@
 /* ux-pass.js — hành vi cho các trang đã làm lại: đặt tour, chi tiết đơn, đánh giá sao, yêu thích,
-   liên hệ, hồ sơ, chi tiết blog.
+   liên hệ, hồ sơ, chi tiết blog, đăng nhập, thêm vào lịch, kệ tour đã lưu.
    Nạp SAU toastr/jQuery trong footer.blade.php. Mỗi khối tự kiểm tra phần tử có trên trang hay không,
    nên nạp ở mọi trang đều an toàn. */
 (function () {
@@ -587,8 +587,12 @@
             if (!h) {
                 return;
             }
-            // listener của trang chạy trước nên lúc này class is-on đã phản ánh trạng thái mới
-            if (h.classList.contains("is-on")) {
+            // Chờ một nhịp: listener của trang (tv-tours-10.js) có thể chạy SAU listener này,
+            // nên chỉ sau setTimeout 0 class is-on mới phản ánh đúng trạng thái mới
+            setTimeout(function () {
+                if (!h.classList.contains("is-on")) {
+                    return;
+                }
                 try {
                     if (sessionStorage.getItem("uxFavHint")) {
                         return;
@@ -597,8 +601,11 @@
                 } catch (err) {
                     /* chế độ riêng tư: vẫn hiện thông báo */
                 }
-                toast("info", "Đã lưu tour yêu thích trên thiết bị này.");
-            }
+                toast(
+                    "info",
+                    "Đã lưu tour. Bạn xem lại ở mục “Tour đã lưu” phía trên danh sách (chỉ trên thiết bị này).",
+                );
+            }, 0);
         });
     }
 
@@ -1356,6 +1363,507 @@
         }
     }
 
+    /* =====================================================================
+       8. ĐĂNG NHẬP (#lgForm): tên đăng nhập hoặc email, Caps Lock, trạng thái đang xử lý
+       ===================================================================== */
+    function initLogin() {
+        var form = $("#lgForm");
+        if (!form) {
+            return;
+        }
+
+        var user = $("#lgUser"),
+            pass = $("#lgPass"),
+            caps = $("#lgCaps");
+        var errUser = $("#lgErrUser"),
+            errPass = $("#lgErrPass"),
+            errForm = $("#lgErrForm");
+        var btn = $("#lgSubmit"),
+            label = $("span", btn),
+            busy = false;
+
+        /* hiện/ẩn mật khẩu (cả trang đăng nhập) */
+        $$("[data-ux-pass]").forEach(function (b) {
+            b.addEventListener("click", function () {
+                var input = $(b.dataset.uxPass),
+                    show = input.type === "password";
+                input.type = show ? "text" : "password";
+                b.setAttribute("aria-pressed", show ? "true" : "false");
+                b.setAttribute(
+                    "aria-label",
+                    show ? "Ẩn mật khẩu" : "Hiện mật khẩu",
+                );
+                $("i", b).className = show ? "fal fa-eye-slash" : "fal fa-eye";
+            });
+        });
+
+        /* cảnh báo Caps Lock: lỗi gõ nhầm phổ biến nhất ở ô mật khẩu */
+        function capsState(e) {
+            if (e.getModifierState) {
+                caps.hidden = !e.getModifierState("CapsLock");
+            }
+        }
+        pass.addEventListener("keydown", capsState);
+        pass.addEventListener("keyup", capsState);
+        pass.addEventListener("blur", function () {
+            caps.hidden = true;
+        });
+
+        function setErr(box, input, text) {
+            box.textContent = text || "";
+            box.style.display = text ? "block" : "none";
+            if (input) {
+                if (text) {
+                    input.setAttribute("aria-invalid", "true");
+                } else {
+                    input.removeAttribute("aria-invalid");
+                }
+            }
+        }
+        function formErr(text) {
+            errForm.textContent = text || "";
+            errForm.hidden = !text;
+        }
+        user.addEventListener("input", function () {
+            setErr(errUser, user, "");
+            formErr("");
+        });
+        pass.addEventListener("input", function () {
+            setErr(errPass, pass, "");
+            formErr("");
+        });
+
+        form.addEventListener("submit", function (e) {
+            e.preventDefault();
+            if (busy) {
+                return;
+            }
+            formErr("");
+            var u = user.value.trim(),
+                p = pass.value,
+                bad = null;
+            setErr(errUser, user, "");
+            setErr(errPass, pass, "");
+            if (!u) {
+                setErr(
+                    errUser,
+                    user,
+                    "Vui lòng nhập tên đăng nhập hoặc email.",
+                );
+                bad = user;
+            }
+            if (!p) {
+                setErr(errPass, pass, "Vui lòng nhập mật khẩu.");
+                if (!bad) {
+                    bad = pass;
+                }
+            }
+            if (bad) {
+                bad.focus();
+                return;
+            }
+
+            busy = true;
+            btn.disabled = true;
+            btn.setAttribute("aria-busy", "true");
+            label.textContent = "Đang đăng nhập…";
+
+            // Mở khóa nút khi đăng nhập chưa thành công để người dùng thử lại
+            function unlock() {
+                busy = false;
+                btn.disabled = false;
+                btn.removeAttribute("aria-busy");
+                label.textContent = "Đăng nhập";
+            }
+
+            var fd = new FormData();
+            fd.append("_token", form.elements._token.value);
+            fd.append("username", u);
+            fd.append("password", p);
+
+            postForm(form.getAttribute("action"), fd)
+                .then(function (res) {
+                    var j = res.json || {};
+                    if (res.ok && j.success) {
+                        label.textContent = "Đang chuyển trang…"; // giữ nút khóa trong lúc chuyển trang
+                        window.location.href = j.redirectUrl || "/";
+                        return;
+                    }
+                    unlock();
+                    formErr(
+                        res.ok
+                            ? j.message || "Đăng nhập chưa thành công."
+                            : netMessage(res),
+                    );
+                    pass.value = "";
+                    pass.focus();
+                })
+                .catch(function () {
+                    unlock();
+                    formErr(
+                        "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
+                    );
+                });
+        });
+        window.addEventListener("pageshow", function (e) {
+            if (e.persisted) {
+                busy = false;
+                btn.disabled = false;
+                btn.removeAttribute("aria-busy");
+                label.textContent = "Đăng nhập";
+            }
+        });
+    }
+
+    /* =====================================================================
+       9. CHI TIẾT ĐƠN: "Thêm vào lịch" (.ics tạo ngay trên trình duyệt) + in
+       ===================================================================== */
+    function icsEscape(s) {
+        return String(s || "")
+            .replace(/\\/g, "\\\\")
+            .replace(/;/g, "\\;")
+            .replace(/,/g, "\\,")
+            .replace(/\r?\n/g, "\\n");
+    }
+    function icsFold(line) {
+        // RFC 5545: dòng tối đa 75 byte; ở đây gấp theo 66 ký tự để an toàn với tiếng Việt có dấu
+        var out = [];
+        while (line.length > 66) {
+            out.push(line.slice(0, 66));
+            line = " " + line.slice(66);
+        }
+        out.push(line);
+        return out.join("\r\n");
+    }
+    function ymd(d) {
+        return String(d).replace(/-/g, "");
+    }
+    function plusOneDay(iso) {
+        var p = iso.split("-"),
+            d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + 1));
+        return (
+            d.getUTCFullYear() +
+            ("0" + (d.getUTCMonth() + 1)).slice(-2) +
+            ("0" + d.getUTCDate()).slice(-2)
+        );
+    }
+    function buildIcs(o) {
+        var now = new Date()
+            .toISOString()
+            .replace(/[-:]/g, "")
+            .replace(/\.\d+Z$/, "Z");
+        var lines = [
+            "BEGIN:VCALENDAR",
+            "VERSION:2.0",
+            "PRODID:-//Travela//Tour booking//VI",
+            "CALSCALE:GREGORIAN",
+            "BEGIN:VEVENT",
+            "UID:" + icsEscape(o.code) + "@travela",
+            "DTSTAMP:" + now,
+            "DTSTART;VALUE=DATE:" + ymd(o.start),
+            "DTEND;VALUE=DATE:" + plusOneDay(o.end), // sự kiện cả ngày: ngày kết thúc tính loại trừ
+            "SUMMARY:" + icsEscape(o.title),
+            "LOCATION:" + icsEscape(o.place),
+            "DESCRIPTION:" + icsEscape("Mã đơn: " + o.code + "\n" + o.url),
+            "URL:" + o.url,
+            "END:VEVENT",
+            "END:VCALENDAR",
+        ];
+        return lines.map(icsFold).join("\r\n") + "\r\n";
+    }
+    function initIcs() {
+        var btn = $("[data-ics]");
+        if (btn) {
+            btn.addEventListener("click", function () {
+                var d = btn.dataset;
+                var blob = new Blob(
+                    [
+                        buildIcs({
+                            title: d.title,
+                            start: d.start,
+                            end: d.end,
+                            place: d.place,
+                            code: d.code,
+                            url: d.url,
+                        }),
+                    ],
+                    { type: "text/calendar;charset=utf-8" },
+                );
+                var a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download =
+                    "tour-" +
+                    String(d.code).replace(/[^A-Za-z0-9\-_]/g, "") +
+                    ".ics";
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(function () {
+                    URL.revokeObjectURL(a.href);
+                    a.remove();
+                }, 500);
+                toast(
+                    "success",
+                    "Đã tải tệp lịch. Mở tệp để thêm chuyến đi vào lịch của bạn.",
+                );
+            });
+        }
+    }
+
+    /* =====================================================================
+       10. TRANG TOUR: kệ "đã lưu" + "xem gần đây" (dữ liệu nằm trong trình duyệt này)
+       Khóa: wt_fav (danh sách id, do tv-tours-10.js quản lý), wt_fav_meta (ảnh chụp thông tin tour), wt_recent.
+       ===================================================================== */
+    var FAV = "wt_fav",
+        META = "wt_fav_meta",
+        RECENT = "wt_recent";
+    function lsGet(k, fb) {
+        try {
+            return JSON.parse(localStorage.getItem(k)) || fb;
+        } catch (e) {
+            return fb;
+        }
+    }
+    function lsSet(k, v) {
+        try {
+            localStorage.setItem(k, JSON.stringify(v));
+        } catch (e) {
+            /* chế độ riêng tư */
+        }
+    }
+    function sameOrigin(u) {
+        try {
+            return new URL(u, location.href).origin === location.origin;
+        } catch (e) {
+            return false;
+        }
+    }
+    function priceNum(t) {
+        return parseInt(String(t || "").replace(/\D+/g, ""), 10) || 0;
+    }
+    function snapshotFromCard(id) {
+        var heart = document.querySelector('.wt-heart[data-fav="' + id + '"]');
+        var card = heart && heart.closest(".wt-card");
+        if (!card) {
+            return null;
+        }
+        var a = $(".wt-card__title a", card),
+            img = $(".wt-card__img img", card),
+            pl = $(".wt-card__place", card),
+            pr = $(".wt-card__price b", card);
+        if (!a) {
+            return null;
+        }
+        return {
+            id: String(id),
+            title: a.textContent.trim(),
+            url: a.getAttribute("href"),
+            img: img ? img.getAttribute("src") : "",
+            dest: pl ? pl.textContent.trim() : "",
+            price: priceNum(pr && pr.textContent),
+        };
+    }
+    function detailMeta() {
+        var el = $("#uxTourMeta");
+        if (!el) {
+            return null;
+        }
+        try {
+            return JSON.parse(el.textContent);
+        } catch (e) {
+            return null;
+        }
+    }
+    function miniCard(t, removable) {
+        var a = document.createElement("a");
+        a.className = "ux-mini";
+        a.href = sameOrigin(t.url) ? t.url : "#";
+        if (t.img && /^(https?:)?\/\/|^\//.test(t.img)) {
+            var im = document.createElement("img");
+            im.src = t.img;
+            im.alt = "";
+            im.loading = "lazy";
+            im.width = 64;
+            im.height = 64;
+            a.appendChild(im);
+        }
+        var box = document.createElement("span"),
+            b = document.createElement("b"),
+            s = document.createElement("small");
+        b.textContent = t.title || "Tour";
+        s.textContent =
+            (t.dest ? t.dest + " · " : "") +
+            (t.price ? "từ " + t.price.toLocaleString("vi-VN") + "đ" : "");
+        box.appendChild(b);
+        box.appendChild(s);
+        a.appendChild(box);
+        if (removable) {
+            var rm = document.createElement("button");
+            rm.type = "button";
+            rm.className = "ux-mini__rm";
+            rm.dataset.uxUnsave = t.id;
+            rm.setAttribute("aria-label", "Bỏ lưu tour " + (t.title || ""));
+            rm.innerHTML = '<i class="fal fa-times" aria-hidden="true"></i>';
+            a.appendChild(rm);
+        }
+        return a;
+    }
+    function renderShelves() {
+        var saved = $("#uxSaved"),
+            recent = $("#uxRecent");
+        if (!saved && !recent) {
+            return;
+        }
+        if (saved) {
+            var ids = lsGet(FAV, []),
+                meta = lsGet(META, {}),
+                row = $("#uxSavedRow");
+            var items = ids
+                .map(function (id) {
+                    return meta[id];
+                })
+                .filter(Boolean);
+            row.textContent = "";
+            items.forEach(function (t) {
+                row.appendChild(miniCard(t, true));
+            });
+            $("#uxSavedN").textContent = items.length
+                ? "(" + items.length + ")"
+                : "";
+            saved.hidden = items.length === 0;
+        }
+        if (recent) {
+            var list = lsGet(RECENT, []),
+                rrow = $("#uxRecentRow");
+            rrow.textContent = "";
+            list.forEach(function (t) {
+                rrow.appendChild(miniCard(t, false));
+            });
+            recent.hidden = list.length === 0;
+        }
+    }
+    function initShelves() {
+        // Trang chi tiết: ghi nhớ tour vừa xem (tối đa 6, không trùng)
+        var m = detailMeta();
+        if (m && m.id) {
+            var list = lsGet(RECENT, []).filter(function (t) {
+                return t.id !== m.id;
+            });
+            list.unshift(m);
+            lsSet(RECENT, list.slice(0, 6));
+        }
+
+        // Bấm tim: chờ trang xử lý xong (thứ tự listener không cố định) rồi lưu/xóa ảnh chụp thông tin tour
+        document.addEventListener("click", function (e) {
+            var h = e.target.closest && e.target.closest("[data-fav]");
+            if (!h) {
+                return;
+            }
+            var id = String(h.dataset.fav);
+            setTimeout(function () {
+                var ids = lsGet(FAV, []),
+                    meta = lsGet(META, {});
+                if (ids.indexOf(id) !== -1) {
+                    var snap =
+                        snapshotFromCard(id) || (m && m.id === id ? m : null);
+                    if (snap) {
+                        meta[id] = snap;
+                    }
+                } else {
+                    delete meta[id];
+                }
+                lsSet(META, meta);
+                renderShelves();
+            }, 0);
+        });
+
+        // Bỏ lưu / xóa kệ
+        document.addEventListener("click", function (e) {
+            var rm = e.target.closest && e.target.closest("[data-ux-unsave]");
+            if (rm) {
+                e.preventDefault();
+                e.stopPropagation();
+                var id = String(rm.dataset.uxUnsave);
+                lsSet(
+                    FAV,
+                    lsGet(FAV, []).filter(function (x) {
+                        return x !== id;
+                    }),
+                );
+                var meta = lsGet(META, {});
+                delete meta[id];
+                lsSet(META, meta);
+                document.dispatchEvent(new Event("wt:cards")); // để các nút tim trên trang tô lại trạng thái
+                renderShelves();
+                return;
+            }
+            var clr = e.target.closest && e.target.closest("[data-ux-clear]");
+            if (clr) {
+                if (clr.dataset.uxClear === "saved") {
+                    lsSet(FAV, []);
+                    lsSet(META, {});
+                    document.dispatchEvent(new Event("wt:cards"));
+                } else {
+                    lsSet(RECENT, []);
+                }
+                renderShelves();
+            }
+        });
+        renderShelves();
+    }
+
+    /* =====================================================================
+       11. CHI TIẾT TOUR: In lịch trình; BLOG: mục lục gọn trên điện thoại; HỒ SƠ: thanh phần
+       ===================================================================== */
+    function initMisc() {
+        var pr = $("[data-print]");
+        if (pr) {
+            pr.addEventListener("click", function () {
+                window.print();
+            });
+        }
+        // In: mở hết các ngày của lịch trình để bản in đầy đủ
+        window.addEventListener("beforeprint", function () {
+            $$("details.td-day, details.px-day").forEach(function (d) {
+                d.open = true;
+            });
+        });
+
+        var toc = $("#postToc");
+        if (
+            toc &&
+            window.matchMedia &&
+            window.matchMedia("(max-width: 991px)").matches
+        ) {
+            toc.removeAttribute("open");
+        }
+
+        var tabs = $$(".pf-tabs a[href^='#']");
+        if (tabs.length && "IntersectionObserver" in window) {
+            var io = new IntersectionObserver(
+                function (entries) {
+                    entries.forEach(function (en) {
+                        if (en.isIntersecting) {
+                            tabs.forEach(function (a) {
+                                a.classList.toggle(
+                                    "is-on",
+                                    a.getAttribute("href") ===
+                                        "#" + en.target.id,
+                                );
+                            });
+                        }
+                    });
+                },
+                { rootMargin: "-25% 0px -60% 0px" },
+            );
+            tabs.forEach(function (a) {
+                var s = $(a.getAttribute("href"));
+                if (s) {
+                    io.observe(s);
+                }
+            });
+        }
+    }
+
     function ready(fn) {
         if (document.readyState !== "loading") {
             fn();
@@ -1376,5 +1884,9 @@
         initContact();
         initProfile();
         initPost();
+        initLogin();
+        initIcs();
+        initShelves();
+        initMisc();
     });
 })();

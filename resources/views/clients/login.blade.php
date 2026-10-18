@@ -1,6 +1,6 @@
 @include('clients.blocks.header')
 
-<main class="tv-auth px-auth">
+<main class="tv-auth px-auth ux-wc-auth" id="main">
     <div class="container">
         <div class="tv-auth__card px-auth__card">
             <div class="tv-auth__body px-auth__body">
@@ -9,47 +9,53 @@
                     <small>Khám phá thêm. Sống trọn từng chuyến đi.</small>
                 </a>
 
-                <div class="px-tabsw" role="tablist">
-                    <a href="{{ route('register.form') }}" role="tab" aria-selected="false">Đăng ký</a>
-                    <a href="{{ route('login') }}" role="tab" aria-selected="true" class="is-on">Đăng nhập</a>
-                </div>
+                {{-- Hai liên kết điều hướng giữa 2 trang (không phải tab): dùng aria-current thay vì role="tab" --}}
+                <nav class="px-tabsw" aria-label="Đăng nhập hoặc đăng ký">
+                    <a href="{{ route('register.form') }}">Đăng ký</a>
+                    <a href="{{ route('login') }}" aria-current="page" class="is-on">Đăng nhập</a>
+                </nav>
 
                 {{-- ĐĂNG NHẬP (jQuery cũ bật/tắt .sign-in / .signup — giữ nguyên tên lớp và id) --}}
                 <section class="sign-in">
                     <h1 class="tv-auth__title">Chào mừng bạn quay lại</h1>
                     <p class="tv-auth__sub">Đăng nhập để xem tour đã đặt và tiếp tục hành trình.</p>
 
-                    <form action="{{ route('user-login') }}" method="POST" class="login-form" id="login-form"
+                    <form action="{{ route('user-login') }}" method="POST" class="login-form" id="lgForm"
                         novalidate>
                         @csrf
+                        <p class="ux-formerr" id="lgErrForm" role="alert" hidden></p>
+
                         <div class="tv-fieldrow">
-                            <label for="username_login">Tên đăng nhập</label>
-                            <input type="text" name="username_login" id="username_login" autocomplete="username"
-                                placeholder="Nhập tên đăng nhập">
-                            <div class="invalid-feedback" id="validate_username"></div>
+                            <label for="lgUser">Tên đăng nhập hoặc email</label>
+                            <input type="text" name="username_login" id="lgUser" autocomplete="username"
+                                placeholder="Tên đăng nhập hoặc email" autocapitalize="none" spellcheck="false"
+                                autofocus aria-describedby="lgErrUser">
+                            <div class="invalid-feedback" id="lgErrUser"></div>
                         </div>
 
                         <div class="tv-fieldrow">
-                            <label for="password_login">Mật khẩu</label>
+                            <label for="lgPass">Mật khẩu</label>
                             <div class="tv-pass">
-                                <input type="password" name="password_login" id="password_login"
-                                    autocomplete="current-password" placeholder="Nhập mật khẩu">
-                                <button type="button" class="tv-pass__eye" data-toggle-pass
-                                    aria-label="Hiện/ẩn mật khẩu"><i class="fal fa-eye"></i></button>
+                                <input type="password" name="password_login" id="lgPass"
+                                    autocomplete="current-password" placeholder="Nhập mật khẩu"
+                                    aria-describedby="lgCaps lgErrPass">
+                                <button type="button" class="tv-pass__eye" data-ux-pass="#lgPass"
+                                    aria-label="Hiện mật khẩu" aria-pressed="false"><i class="fal fa-eye"
+                                        aria-hidden="true"></i></button>
                             </div>
-                            <div class="invalid-feedback" id="validate_password"></div>
+                            <p class="ux-caps" id="lgCaps" role="status" hidden><i
+                                    class="fas fa-exclamation-triangle" aria-hidden="true"></i> Caps Lock đang bật</p>
+                            <div class="invalid-feedback" id="lgErrPass"></div>
                         </div>
 
                         <p class="px-auth__forgot"><a href="{{ route('password.request') }}">Quên mật khẩu?</a></p>
 
-                        <button type="submit" name="signin" id="signin" class="tv-auth__submit">Bắt đầu hành
-                            trình</button>
+                        <button type="submit" name="signin" id="lgSubmit" class="tv-auth__submit"><span>Đăng
+                                nhập</span></button>
                     </form>
 
                     <p class="tv-auth__switch">Chưa có tài khoản? <a href="{{ route('register.form') }}">Tạo tài
                             khoản</a></p>
-                    <p class="tv-auth__admin"><a href="{{ route('admin.login') }}">Đăng nhập dành cho quản trị viên</a>
-                    </p>
                 </section>
             </div>
 

@@ -1,6 +1,6 @@
 @include('clients.blocks.header')
 
-<main class="tv-auth">
+<main class="tv-auth ux-wc-auth" id="main">
     <div class="container">
         <div class="tv-auth__card">
             @include('clients.partials.auth-aside', [

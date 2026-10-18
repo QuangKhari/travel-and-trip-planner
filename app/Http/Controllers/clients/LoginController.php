@@ -171,7 +171,7 @@ class LoginController extends Controller
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'username' => 'required|string|max:50',
+            'username' => 'required|string|max:255',   // tên đăng nhập hoặc email
             'password' => 'required|string|max:72',
         ]);
 
@@ -185,7 +185,7 @@ class LoginController extends Controller
         $username = trim((string) $request->username);
         $password = (string) $request->password;
 
-        $user = $this->login->findByUsername($username);
+        $user = $this->login->findByLogin($username);
 
         // Sai username hoặc sai mật khẩu: cùng một thông báo, không cho biết tài khoản có tồn tại hay không
         if (!$user || !PasswordHasher::check($password, $user->password)) {

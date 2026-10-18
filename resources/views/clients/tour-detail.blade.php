@@ -86,6 +86,13 @@
                         aria-label="Chia sẻ tour này">
                         <i class="fal fa-share-alt" aria-hidden="true"></i><span>Chia sẻ</span>
                     </button>
+                    <button type="button" class="px-iconbtn" data-fav="{{ $tourDetail->tourId }}" aria-pressed="false"
+                        aria-label="Lưu tour này vào danh sách yêu thích">
+                        <i class="fal fa-heart" aria-hidden="true"></i><span>Lưu</span>
+                    </button>
+                    <button type="button" class="px-iconbtn" data-print aria-label="In hoặc lưu lịch trình thành PDF">
+                        <i class="fal fa-print" aria-hidden="true"></i><span>In</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -492,6 +499,20 @@
     </button>
 </div>
 
+{{-- Thông tin tóm tắt để trang /tours dựng "Tour đã lưu" và "Bạn đã xem gần đây" --}}
+<script type="application/json" id="uxTourMeta">
+{!! json_encode(
+    [
+        'id' => (string) $tourDetail->tourId,
+        'title' => $tourDetail->title,
+        'url' => route('tour-detail', ['id' => $tourDetail->tourId]),
+        'img' => $heroImg,
+        'price' => (int) $tourDetail->priceAdult,
+        'dest' => $tourDetail->destination,
+    ],
+    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP,
+) !!}
+</script>
 <script src="{{ asset('clients/assets/js/travel-detail.js') }}?v=1"></script>
 <script src="{{ asset('clients/assets/js/travel-pages.js') }}?v=1"></script>
 

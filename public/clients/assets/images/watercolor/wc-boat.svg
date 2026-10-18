@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 190"><defs>
+<filter id="bw" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency="0.03 0.04" numOctaves="3" seed="4" result="warp"/>
+<feDisplacementMap in="SourceGraphic" in2="warp" scale="4" xChannelSelector="R" yChannelSelector="G" result="shape"/>
+<feGaussianBlur in="shape" stdDeviation="0.6"/></filter></defs>
+<g filter="url(#bw)">
+<path d="M130 18 L130 128" stroke="#7a4a2b" stroke-width="3.5" stroke-linecap="round"/>
+<path d="M132 22 C186 40 214 84 220 122 L132 122 Z" fill="#c9553d" opacity=".88"/>
+<path d="M128 40 C84 56 52 88 44 122 L128 122 Z" fill="#e9a23b" opacity=".9"/>
+<path d="M132 22 C170 48 192 84 196 122" fill="none" stroke="#8c2f1f" stroke-width="1.6" opacity=".55"/>
+<path d="M128 40 C98 66 74 92 70 122" fill="none" stroke="#a8691b" stroke-width="1.6" opacity=".55"/>
+<path d="M18 124 L242 124 C232 154 214 166 186 166 L72 166 C48 166 28 154 18 124 Z" fill="#5a3a24"/>
+<path d="M18 124 L242 124 L238 134 L22 134 Z" fill="#8a5a36"/>
+<path d="M130 18 L152 26 L130 34 Z" fill="#e9c46a"/>
+</g>
+<path d="M4 176 C40 168 70 184 110 176 S190 168 256 178" fill="none" stroke="#6cc5bd" stroke-width="5" stroke-linecap="round" opacity=".55"/>
+</svg>

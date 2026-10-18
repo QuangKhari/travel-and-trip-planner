@@ -1,0 +1,198 @@
+/* ==========================================================================
+   Trang tour: thanh công cụ + nút "Sắp xếp" (menu thả xuống có nhóm)
+   Không dùng icon: chỉ chữ + dấu mũi tên vẽ bằng CSS + dấu chọn vẽ bằng CSS.
+   Nạp SAU ux-pass.css. JS: tv-sort-menu.js (chỉ đóng/mở menu, không đổi logic lọc).
+   ========================================================================== */
+.tl-toolbar {
+    align-items: center;
+    gap: 10px 12px;
+    margin-bottom: 18px;
+}
+.tl-toolbar .tl-count {
+    margin-right: auto !important;
+}
+
+/* ---- nút mở menu ---- */
+.tl-sortmenu {
+    position: relative;
+    display: none; /* điện thoại dùng ô chọn gốc (.tl-sort) */
+}
+@media (min-width: 768px) {
+    .tl-sortmenu {
+        display: block;
+    }
+}
+.tl-sortmenu__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 46px;
+    padding: 0 18px 0 20px;
+    border: 1.5px solid #cfe0dd;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--wt-ink, #173b3a);
+    font:
+        600 14px "Be Vietnam Pro",
+        system-ui,
+        sans-serif;
+    cursor: pointer;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+}
+.tl-sortmenu__btn:hover,
+.tl-sortmenu.is-open .tl-sortmenu__btn {
+    border-color: var(--wt-teal-d, #087f7b);
+}
+.tl-sortmenu.is-open .tl-sortmenu__btn {
+    box-shadow: 0 0 0 4px rgba(8, 127, 123, 0.12);
+}
+.tl-sortmenu__btn:focus-visible {
+    outline: 3px solid #ddaf32;
+    outline-offset: 2px;
+}
+.tl-sortmenu__k {
+    color: #5b7774;
+    font-weight: 500;
+}
+.tl-sortmenu__btn b {
+    font-weight: 700;
+}
+/* mũi tên vẽ bằng CSS (không phải icon) */
+.tl-sortmenu__caret {
+    width: 8px;
+    height: 8px;
+    margin: -3px 0 0 4px;
+    border-right: 2px solid #5b7774;
+    border-bottom: 2px solid #5b7774;
+    transform: rotate(45deg);
+    transition:
+        transform 0.2s,
+        margin 0.2s;
+}
+.tl-sortmenu.is-open .tl-sortmenu__caret {
+    transform: rotate(225deg);
+    margin-top: 3px;
+}
+
+/* ---- danh sách thả xuống (chính là #tvSortBar cũ) ---- */
+.tl-sortmenu .tl-sortbar {
+    position: absolute;
+    z-index: 40;
+    top: calc(100% + 8px);
+    right: 0;
+    display: block;
+    width: 320px;
+    max-width: calc(100vw - 32px);
+    margin: 0;
+    padding: 8px;
+    overflow: visible;
+    border: 1px solid #dbe7e5;
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 18px 44px rgba(15, 49, 56, 0.18);
+    transform-origin: top right;
+    animation: tlSortIn 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes tlSortIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.98);
+    }
+}
+.tl-sortgrp {
+    display: block;
+    padding: 10px 14px 4px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #6a8582;
+}
+.tl-sortgrp:first-child {
+    padding-top: 6px;
+}
+
+.tl-sortmenu .tl-sortchip {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: auto;
+    padding: 9px 40px 9px 14px;
+    border: 0;
+    border-radius: 14px;
+    background: transparent;
+    color: var(--wt-ink, #173b3a);
+    text-align: left;
+    font:
+        600 14.5px "Be Vietnam Pro",
+        system-ui,
+        sans-serif;
+}
+.tl-sortmenu .tl-sortchip:hover {
+    background: #f1f8f6;
+}
+.tl-sortmenu .tl-sortchip.is-on {
+    background: #e4f3ef;
+    color: var(--wt-teal-d, #087f7b);
+}
+/* dấu chọn vẽ bằng CSS */
+.tl-sortmenu .tl-sortchip.is-on::after {
+    content: "";
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    width: 6px;
+    height: 11px;
+    margin-top: -7px;
+    border-right: 2.5px solid currentColor;
+    border-bottom: 2.5px solid currentColor;
+    transform: rotate(45deg);
+}
+.tl-sortchip__tx {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.tl-sortchip__tx small {
+    margin-top: 1px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #5b7774;
+}
+.tl-sortchip.is-on .tl-sortchip__tx small {
+    color: #3f6b67;
+}
+
+/* ---- ô chọn gốc trên điện thoại: cùng ngôn ngữ thiết kế ---- */
+.tl-sort select {
+    height: 46px;
+    border: 1.5px solid #cfe0dd;
+    border-radius: 999px;
+    padding-left: 18px;
+}
+
+@media (max-width: 767.98px) {
+    .tl-toolbar .tl-count {
+        flex: 1 1 100%;
+    }
+    .tl-toolbar .tl-sort {
+        flex: 1 1 0;
+        min-width: 0;
+        white-space: nowrap;
+    }
+    .tl-toolbar .tl-sort select {
+        width: 100%;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .tl-sortmenu__btn,
+    .tl-sortmenu__caret {
+        transition: none;
+    }
+    .tl-sortmenu .tl-sortbar {
+        animation: none;
+    }
+}

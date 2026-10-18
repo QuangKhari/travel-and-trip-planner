@@ -30,7 +30,7 @@
             alt="{{ $tour->title }}">
     </div>
     <div class="wt-card__body">
-        <p class="wt-card__place"><i class="fas fa-map-marker-alt" aria-hidden="true"></i>{{ $tour->destination }}</p>
+        <p class="wt-card__place">{{ $tour->destination }}</p>
         <h3 class="wt-card__title"><a href="{{ route('tour-detail', ['id' => $tour->tourId]) }}">{{ $tour->title }}</a>
         </h3>
         <div class="wt-card__rate">
@@ -42,14 +42,11 @@
             @endif
         </div>
         <ul class="wt-card__meta">
-            <li><i class="fal fa-clock" aria-hidden="true"></i>{{ $tour->time }}</li>
-            <li><i class="fal fa-calendar-alt"
-                    aria-hidden="true"></i>{{ \Carbon\Carbon::parse($tour->startDate)->format('d/m/Y') }}</li>
-            <li class="{{ $qty <= 10 ? 'is-low' : '' }}"><i class="fal fa-users" aria-hidden="true"></i>Còn
-                {{ $qty }} chỗ</li>
+            <li>{{ $tour->time }}</li>
+            <li>Khởi hành {{ \Carbon\Carbon::parse($tour->startDate)->format('d/m/Y') }}</li>
+            <li class="{{ $qty <= 10 ? 'is-low' : '' }}">Còn {{ $qty }} chỗ</li>
             @if (($tour->bookingCount ?? 0) >= 2)
-                <li class="is-proof"><i class="fal fa-fire-alt" aria-hidden="true"></i>{{ $tour->bookingCount }} lượt
-                    đặt</li>
+                <li class="is-proof">{{ $tour->bookingCount }} lượt đặt</li>
             @endif
         </ul>
         <div class="wt-card__price">
@@ -57,6 +54,6 @@
             <b>{{ number_format($tour->priceAdult, 0, ',', '.') }}đ</b>
             <span>/ người</span>
         </div>
-        <span class="wt-card__cta" aria-hidden="true">Xem chi tiết <i class="fas fa-arrow-right"></i></span>
+        <span class="wt-card__cta" aria-hidden="true">Xem chi tiết<span class="wt-card__arr"></span></span>
     </div>
 </article>

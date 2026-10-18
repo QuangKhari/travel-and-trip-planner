@@ -52,7 +52,16 @@ class UserProfileController extends Controller
             ->selectRaw("COUNT(*) as total, SUM(bookingStatus = 'n') as waiting, SUM(bookingStatus = 'y') as confirmed, SUM(bookingStatus = 'f') as done")
             ->first();
 
-        return view('clients.user-profile', compact('title', 'user', 'pendingEmail', 'stats'));
+        // 3 đơn gần nhất kèm link thẳng tới chi tiết đơn (cần checkoutId của tbl_checkout)
+        $recent = DB::table('tbl_booking as b')
+            ->join('tbl_tours as t', 't.tourId', '=', 'b.tourId')
+            ->leftJoin('tbl_checkout as c', 'c.bookingId', '=', 'b.bookingId')
+            ->where('b.userId', $userId)
+            ->orderByDesc('b.bookingDate')
+            ->limit(3)
+            ->get(['b.bookingId', 'b.bookingStatus', 't.title', 't.startDate', 'c.checkoutId']);
+
+        return view('clients.user-profile', compact('title', 'user', 'pendingEmail', 'stats', 'recent'));
     }
 
     public function update(Request $req)

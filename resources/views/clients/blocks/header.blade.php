@@ -79,7 +79,12 @@
     <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-final.css') }}?v=1">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-tours-10.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/ux-pass.css') }}?v=2">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/ux-pass.css') }}?v=3">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-decor-fix.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-sort.css') }}?v=2">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/ux-watercolor.css') }}?v=1">
+    {{-- Thiết kế lại trang /tours (hero, tìm kiếm, thẻ tour, CTA). Phải nằm SAU tv-sort.css và ux-watercolor.css --}}
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-tours-v2.css') }}?v=1">
     <script src="{{ asset('clients/assets/js/travel-motion.js') }}?v=1" defer></script>
     <script src="{{ asset('clients/assets/js/tv-final.js') }}?v=1" defer></script>
     <script src="{{ asset('clients/assets/js/tv-tours-10.js') }}?v=1" defer></script>

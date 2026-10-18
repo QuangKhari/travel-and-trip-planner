@@ -32,7 +32,7 @@
     $messageValue = old('message');
 @endphp
 
-<main class="ct" id="ctPage">
+<main class="ct wcx" id="ctPage">
 
     {{-- ===== Đầu trang: nói rõ ngay "liên hệ bằng cách nào, bao lâu có trả lời" ===== --}}
     <section class="ct-hero">

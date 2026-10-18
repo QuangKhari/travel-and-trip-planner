@@ -1,0 +1,237 @@
+/* ==========================================================================
+   Bố cục mới cho khối "Cảm hứng của bạn đang dẫn đi đâu?"
+   Bố cục:  [ tiêu đề + mô tả ............ | cảm hứng hiện tại + lọc miền ]
+            [ bản đồ                       | gợi ý + chi tiết + thời tiết   ]
+   ========================================================================== */
+
+/* ---- thanh điều khiển phía trên ---- */
+.tvh-map__intro {
+    flex: 1 1 100%;
+    max-width: none;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "title title" "sub sub" "now doms";
+    column-gap: 16px;
+    row-gap: 8px;
+    align-items: center;
+}
+@media (min-width: 1200px) {
+    .tvh-map__intro {
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        grid-template-areas: "title now doms" "sub now doms";
+    }
+    .tvh-map__intro h3 {
+        align-self: end;
+    }
+    .tvh-map__intro > p {
+        align-self: start;
+    }
+}
+.tvh-map__intro h3 {
+    grid-area: title;
+    font-size: 28px;
+}
+.tvh-map__intro > p {
+    grid-area: sub;
+    margin: 0;
+    max-width: 52ch;
+}
+
+/* thẻ "cảm hứng hiện tại" gọn thành một hàng */
+.tvh-now {
+    grid-area: now;
+    justify-self: start;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 12px 10px 10px;
+    border-radius: 18px;
+}
+.tvh-now__row {
+    gap: 12px;
+}
+.tvh-now__change {
+    margin: 0;
+    min-height: 38px;
+    padding: 0 16px;
+    border-radius: 999px;
+    font-size: 13.5px;
+    white-space: nowrap;
+}
+
+/* lọc miền: thanh chọn liền một khối */
+.tvh-doms {
+    grid-area: doms;
+    justify-self: start;
+    display: inline-flex;
+    flex-wrap: nowrap;
+    gap: 2px;
+    margin: 0;
+    padding: 4px;
+    border-radius: 999px;
+    background: #fff;
+    border: 1.5px solid #cbd7d5;
+}
+.tvh-doms button {
+    min-height: 38px;
+    padding: 0 18px;
+    border: 0;
+    background: transparent;
+    white-space: nowrap;
+}
+.tvh-doms button[aria-pressed="false"]:hover {
+    background: var(--t, #e6f2f0);
+}
+
+/* ---- hai cột: bản đồ | kết quả ---- */
+@media (min-width: 992px) {
+    .tvh-map__inner {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+        grid-template-areas: "intro intro" "col side";
+        gap: 24px 36px;
+        align-items: start;
+    }
+    .tvh-map__intro {
+        grid-area: intro;
+        padding-bottom: 6px;
+    }
+    .tvh-map__col {
+        grid-area: col;
+        max-width: none;
+    }
+    .tvh-map__side {
+        grid-area: side;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas: "title more" "sub more" "band band" "detail detail";
+        column-gap: 16px;
+        align-items: start;
+    }
+    .tvh-map__side h3 {
+        grid-area: title;
+        font-size: 20px;
+    }
+    #tvhDetailWx .tvw {
+        margin: 14px 0 0;
+    }
+    .tvh-map__side .tvh-sub {
+        grid-area: sub;
+    }
+    .tvh-band {
+        grid-area: band;
+        margin-top: 16px;
+    }
+    .tvh-detail {
+        grid-area: detail;
+    }
+
+    /* "Xem tất cả" thành nút nhỏ ở góc phải tiêu đề, bỏ khối đen phía dưới */
+    .tvh-more {
+        grid-area: more;
+        align-self: center;
+        margin: 0;
+        padding: 0;
+        background: none;
+        border-radius: 0;
+    }
+    .tvh-more p {
+        display: none;
+    }
+}
+
+/* ---- khối chi tiết: chữ bên trái, thời tiết bên phải (chỉ khi đủ rộng) ---- */
+@media (min-width: 1440px) {
+    .tvh-detail {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr);
+        grid-template-areas:
+            "where wx"
+            "name  wx"
+            "desc  wx"
+            "more  wx"
+            "cta   wx"
+            "soon  wx";
+        grid-template-rows: repeat(5, auto) 1fr;
+        column-gap: 24px;
+    }
+    .tvh-detail__where {
+        grid-area: where;
+    }
+    .tvh-detail h4 {
+        grid-area: name;
+    }
+    .tvh-detail__desc {
+        grid-area: desc;
+        -webkit-line-clamp: 4;
+    }
+    #tvhDetailWx {
+        grid-area: wx;
+    }
+    #tvhDetailWx .tvw {
+        margin: 0;
+    }
+    .tvh-detail .tvh-btn.is-ghost#tvhDetailMore {
+        grid-area: more;
+        margin: 18px 0 0;
+    }
+    #tvhDetailCta {
+        grid-area: cta;
+    }
+    .tvh-detail__soon {
+        grid-area: soon;
+    }
+    /* chưa có dữ liệu thời tiết thì chữ chiếm cả chiều ngang */
+    .tvh-detail:has(#tvhDetailWx[hidden]) {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: "where" "name" "desc" "more" "cta" "soon";
+    }
+}
+
+/* ---- dưới 992px: một cột, bản đồ vừa phải ở giữa ---- */
+@media (max-width: 991.98px) {
+    .tvh-map__col {
+        flex: 1 1 100%;
+        max-width: 520px;
+        margin: 0 auto;
+    }
+    .tvh-map__side {
+        flex: 1 1 100%;
+    }
+    .tvh-more {
+        margin-top: 16px;
+    }
+}
+@media (max-width: 767.98px) {
+    .tvh-map__intro {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: "title" "sub" "now" "doms";
+    }
+    .tvh-map__intro h3 {
+        font-size: 24px;
+    }
+    .tvh-now,
+    .tvh-doms {
+        justify-self: stretch;
+    }
+    .tvh-now {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .tvh-now__row {
+        flex: 1 1 100%;
+    }
+    .tvh-now__change {
+        flex: 1 1 100%;
+        justify-content: center;
+    }
+    .tvh-doms button {
+        flex: 1 1 0;
+        padding: 0 8px;
+    }
+}
+
+/* hai nút trong khối chi tiết rộng bằng nhau */
+.tvh-detail .tvh-btn.is-ghost#tvhDetailMore {
+    margin-right: 0;
+}

@@ -60,6 +60,8 @@
     <link rel="stylesheet" href="{{ asset('clients/assets/css/travel-theme.css') }}?v=3">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/inspiration.css') }}?v=2">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/inspiration-hub.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-hub-layout.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-weather.css') }}?v=1">
 </head>
 
 <body class="tv-home">

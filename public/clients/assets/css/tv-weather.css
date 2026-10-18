@@ -1,0 +1,250 @@
+/* ==========================================================================
+   Thẻ thời tiết dùng chung (trang Khám phá + trang chi tiết điểm đến)
+   Tiền tố: tvw-   Chủ đề màu theo thời tiết: [data-wx="clear|partly|cloud|rain|storm|fog|snow"]
+   ========================================================================== */
+.tvw {
+    --tvw-ink: #0f3138;
+    --tvw-muted: #3f5a60;
+    --tvw-a: #4d6670;
+    --tvw-glow: rgba(255, 255, 255, 0.55);
+    --tvw-bg: linear-gradient(135deg, #eef2f4, #dde5e9);
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    margin: 10px 0 16px;
+    padding: 16px 18px 14px;
+    border-radius: 18px;
+    color: var(--tvw-ink);
+    background: var(--tvw-bg);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.7) inset,
+        0 6px 18px rgba(15, 49, 56, 0.08);
+}
+.tvw::before {
+    /* quầng sáng mờ phía trên-phải, gợi mặt trời / ánh sáng */
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: -60px;
+    right: -50px;
+    width: 190px;
+    height: 190px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--tvw-glow), transparent 68%);
+}
+
+.tvw[data-wx="clear"] {
+    --tvw-a: #c27a0a;
+    --tvw-glow: rgba(255, 214, 102, 0.75);
+    --tvw-bg: linear-gradient(135deg, #fff6d6, #ffe3a1);
+}
+.tvw[data-wx="partly"] {
+    --tvw-a: #b07a12;
+    --tvw-glow: rgba(255, 220, 130, 0.6);
+    --tvw-bg: linear-gradient(135deg, #e6f4ef, #fbefc8);
+}
+.tvw[data-wx="cloud"] {
+    --tvw-a: #4d6670;
+    --tvw-bg: linear-gradient(135deg, #eef2f4, #dce4e8);
+}
+.tvw[data-wx="rain"] {
+    --tvw-a: #1d6a8f;
+    --tvw-glow: rgba(150, 200, 230, 0.6);
+    --tvw-bg: linear-gradient(135deg, #e4f0f6, #c6dcea);
+}
+.tvw[data-wx="storm"] {
+    --tvw-a: #4a4fa0;
+    --tvw-glow: rgba(170, 175, 225, 0.6);
+    --tvw-bg: linear-gradient(135deg, #e2e4f3, #c8cce4);
+}
+.tvw[data-wx="fog"] {
+    --tvw-a: #5d6b66;
+    --tvw-bg: linear-gradient(135deg, #f0f2f0, #dfe4e1);
+}
+.tvw[data-wx="snow"] {
+    --tvw-a: #3a7ca5;
+    --tvw-glow: rgba(255, 255, 255, 0.85);
+    --tvw-bg: linear-gradient(135deg, #f0f7fc, #dbeaf4);
+}
+
+/* ---- hiện tại ---- */
+.tvw__now {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+.tvw__ico {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    font-size: 26px;
+    color: var(--tvw-a);
+    background: rgba(255, 255, 255, 0.72);
+    box-shadow: 0 3px 10px rgba(15, 49, 56, 0.1);
+}
+.tvw__temp {
+    display: block;
+    font-size: 42px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+.tvw__temp sup {
+    font-size: 0.45em;
+    font-weight: 600;
+    vertical-align: top;
+    position: relative;
+    top: 0.25em;
+    margin-left: 2px;
+}
+.tvw__lbl {
+    display: block;
+    margin-top: 3px;
+    font-size: 15px;
+    color: var(--tvw-muted);
+}
+.tvw__chips {
+    margin-left: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+}
+.tvw__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.62);
+}
+.tvw__chip i {
+    color: var(--tvw-a);
+    font-size: 12px;
+}
+
+/* ---- lời khuyên ngắn ---- */
+.tvw__tip {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 12px 0 0;
+    padding: 8px 11px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    line-height: 1.35;
+    background: rgba(255, 255, 255, 0.55);
+}
+.tvw__tip i {
+    flex: none;
+    color: var(--tvw-a);
+}
+
+/* ---- dự báo 5 ngày ---- */
+.tvw__days {
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+}
+.tvw__day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 9px 3px 8px;
+    border-radius: 12px;
+    font-size: 12.5px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.5);
+}
+.tvw__day.is-today {
+    background: #fff;
+    box-shadow: 0 3px 10px rgba(15, 49, 56, 0.12);
+}
+.tvw__dn {
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    letter-spacing: -0.2px;
+    color: var(--tvw-muted);
+}
+.tvw__day > i {
+    font-size: 18px;
+    line-height: 1.5;
+    color: var(--tvw-a);
+}
+.tvw__day b {
+    font-size: 14px;
+    line-height: 1.1;
+}
+.tvw__day small {
+    font-size: 12px;
+    color: var(--tvw-muted);
+}
+.tvw__rain {
+    width: 68%;
+    height: 4px;
+    margin-top: 3px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: rgba(15, 49, 56, 0.12);
+}
+.tvw__rain i {
+    display: block;
+    height: 100%;
+    width: var(--r, 0%);
+    border-radius: 4px;
+    background: #2a78b5;
+}
+.tvw__rn {
+    font-size: 11px;
+    line-height: 1;
+    color: #1d6a8f;
+}
+
+.tvw__src {
+    margin: 10px 0 0;
+    font-size: 11.5px;
+    color: var(--tvw-muted);
+}
+.tvw__src a {
+    color: inherit;
+    text-decoration: underline;
+}
+
+@media (max-width: 575px) {
+    .tvw {
+        padding: 14px 12px 12px;
+    }
+    .tvw__chips {
+        margin-left: 0;
+        justify-content: flex-start;
+        flex-basis: 100%;
+    }
+    .tvw__temp {
+        font-size: 36px;
+    }
+    .tvw__days {
+        gap: 4px;
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .tvw__ico {
+        animation: tvw-float 4.5s ease-in-out infinite;
+    }
+    @keyframes tvw-float {
+        50% {
+            transform: translateY(-3px);
+        }
+    }
+}

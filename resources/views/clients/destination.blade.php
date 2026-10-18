@@ -73,11 +73,10 @@
 
         {{-- ===== BẢN ĐỒ CẢM XÚC ===== --}}
         <section class="tvp-mapsec" aria-labelledby="tvpMapH">
-            <img class="tvf-deco tvf-leaf" src="{{ $wc('wc-leaf-b.svg') }}" alt="" aria-hidden="true"
-                width="560" height="640" loading="lazy" style="--r:5deg;left:-60px;top:40px;width:190px">
-            <img class="tvf-deco tvf-leaf tvf-leaf--b" src="{{ $wc('wc-leaf-a.svg') }}" alt=""
-                aria-hidden="true" width="560" height="640" loading="lazy"
-                style="--r:-6deg;right:-60px;top:10px;width:200px;transform:scaleX(-1)">
+            <img class="tvf-deco tvf-leaf tvf-leaf--mapA" src="{{ $wc('wc-leaf-b.svg') }}" alt=""
+                aria-hidden="true" width="560" height="640" loading="lazy">
+            <img class="tvf-deco tvf-leaf tvf-leaf--mapB" src="{{ $wc('wc-leaf-a.svg') }}" alt=""
+                aria-hidden="true" width="560" height="640" loading="lazy">
             <div class="tvp-wrap">
                 <div class="tvp-mtabs" id="tvpTabs" role="group" aria-label="Chọn cảm hứng trên bản đồ"></div>
                 <div class="tvp-mapgrid">
@@ -88,8 +87,6 @@
                         <div class="tvp-mtop" id="tvpTop"></div>
                         <a class="tvp-btn tvp-btn--teal" id="tvpCta" href="{{ $map['exploreUrl'] }}">Xem các điểm
                             đến</a>
-                        <img src="{{ $art('compass.svg') }}" alt=""
-                            style="width:92px;opacity:.55;margin-top:34px;display:block">
                     </div>
                     <div class="tvp-board" id="tvpBoard">
                         <div class="tvp-vnwrap" id="tvpVn">
@@ -150,44 +147,42 @@
         <div class="tvf-banner tvf-rv">
             <div class="tvf-banner__bg"><img src="{{ $bannerSrc }}" alt="" width="1200"
                     height="420" loading="lazy"></div>
-            <img class="tvf-deco tvf-leaf" src="{{ $wc('wc-leaf-c.svg') }}" alt="" aria-hidden="true"
-                width="560" height="640" loading="lazy"
-                style="--r:-6deg;right:-34px;bottom:-46px;width:190px;transform:scaleX(-1)">
-            <div class="tvf-banner__in">
-                <div>
-                    <h3>Những hành trình đang chờ bạn</h3>
-                    <p>Khám phá các tour trọn gói, lịch trình rõ ràng, giá minh bạch.</p>
-                </div>
-                <a class="tvp-btn tvp-btn--white" href="{{ route('tours') }}">Đặt tour ngay
-                    <svg class="tvp-ic" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M5 12h14M13 6l6 6-6 6" />
-                    </svg></a>
+            <img class="tvf-deco tvf-leaf tvf-leaf--cta" src="{{ $wc('wc-leaf-c.svg') }}" alt=""
+                aria-hidden="true" width="560" height="640" loading="lazy">
+            <div>
+                <h3>Những hành trình đang chờ bạn</h3>
+                <p>Khám phá các tour trọn gói, lịch trình rõ ràng, giá minh bạch.</p>
             </div>
+            <a class="tvp-btn tvp-btn--white" href="{{ route('tours') }}">Đặt tour ngay
+                <svg class="tvp-ic" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg></a>
         </div>
+    </div>
 
-        {{-- ===== BÀI VIẾT LIÊN QUAN (config/blog.php) ===== --}}
-        @if ($posts->count())
-            <div class="tvp-sech">
-                <div>
-                    <h2>Bài viết liên quan</h2>
-                </div><a class="tvp-more" href="{{ route('blogs') }}">Xem tất cả</a>
-            </div>
-            <div class="tvp-posts">
-                @foreach ($posts as $post)
-                    <a class="tvp-post tvp-rv" href="{{ route('blog-detail', ['slug' => $post['slug']]) }}">
-                        <div class="tvp-post__img">
-                            <img src="{{ asset($base . 'blog/' . $post['image']) }}" alt="" loading="lazy">
-                            <span class="tvp-post__cat">{{ $post['category'] }}</span>
-                        </div>
-                        <div class="tvp-post__b">
-                            <h3>{{ $post['title'] }}</h3>
-                            <small>{{ \Carbon\Carbon::parse($post['date'])->format('d/m/Y') }} · {{ $post['read'] }}
-                                phút đọc</small>
-                        </div>
-                    </a>
-                @endforeach
-            </div>
-        @endif
+    {{-- ===== BÀI VIẾT LIÊN QUAN (config/blog.php) ===== --}}
+    @if ($posts->count())
+        <div class="tvp-sech">
+            <div>
+                <h2>Bài viết liên quan</h2>
+            </div><a class="tvp-more" href="{{ route('blogs') }}">Xem tất cả</a>
+        </div>
+        <div class="tvp-posts">
+            @foreach ($posts as $post)
+                <a class="tvp-post tvp-rv" href="{{ route('blog-detail', ['slug' => $post['slug']]) }}">
+                    <div class="tvp-post__img">
+                        <img src="{{ asset($base . 'blog/' . $post['image']) }}" alt="" loading="lazy">
+                        <span class="tvp-post__cat">{{ $post['category'] }}</span>
+                    </div>
+                    <div class="tvp-post__b">
+                        <h3>{{ $post['title'] }}</h3>
+                        <small>{{ \Carbon\Carbon::parse($post['date'])->format('d/m/Y') }} · {{ $post['read'] }}
+                            phút đọc</small>
+                    </div>
+                </a>
+            @endforeach
+        </div>
+    @endif
     </div>
 </main>
 

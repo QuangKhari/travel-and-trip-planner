@@ -10,33 +10,71 @@
         ['5 – 10 triệu', 5000000, 10000000],
         ['Trên 10 triệu', 10000000, 0],
     ];
+
+    // Nhóm sắp xếp: [nhãn, mô tả ngắn] — không dùng icon, đọc là hiểu
+    $sortGroups = [
+        'Gợi ý' => [
+            'new' => ['Mới nhất', 'Tour được thêm gần đây nhất'],
+            'popular' => ['Phổ biến nhất', 'Có nhiều người đặt nhất'],
+        ],
+        'Giá' => [
+            'price_asc' => ['Giá thấp đến cao', 'Giá người lớn thấp nhất đứng trước'],
+            'price_desc' => ['Giá cao đến thấp', 'Giá người lớn cao nhất đứng trước'],
+        ],
+        'Lịch trình' => [
+            'soon' => ['Khởi hành sớm', 'Ngày khởi hành gần nhất đứng trước'],
+        ],
+        'Đánh giá' => [
+            'rating' => ['Đánh giá cao', 'Điểm trung bình cao nhất đứng trước'],
+            'reviews' => ['Nhiều đánh giá', 'Có nhiều lượt nhận xét nhất'],
+        ],
+    ];
+    $sortCur = $state['sort'] ?? 'new';
+    $sortCurLabel = collect($sortGroups)->collapse()->get($sortCur)[0] ?? 'Mới nhất';
+    // Gợi ý nhanh: điểm đến đang có nhiều tour nhất (dữ liệu thật)
+    $popular = collect($destOptions)->sortByDesc('total')->take(4);
 @endphp
 
 <main class="tl wt-paper">
 
-    {{-- ===== HERO nhỏ gọn: chữ + ảnh thật, watercolor chỉ ở mép ===== --}}
+    {{-- ===== HERO: chữ rõ ràng + ảnh thật; màu nước chỉ ở mép, có chuyển động nhẹ ===== --}}
     <section class="tl-hero" aria-labelledby="tlTitle">
+        <span class="tl-hero__wash tl-hero__wash--a" aria-hidden="true"></span>
+        <span class="tl-hero__wash tl-hero__wash--b" aria-hidden="true"></span>
+        <img class="tl-cloud tl-cloud--1" src="{{ $wc }}/wc-cloud.svg" alt="" aria-hidden="true">
+        <img class="tl-cloud tl-cloud--2" src="{{ $wc }}/wc-cloud.svg" alt="" aria-hidden="true">
         <img class="wt-deco l wt-drift" src="{{ $wc }}/wc-leaf-a.svg" alt="" aria-hidden="true">
         <img class="wt-deco r wt-drift wt-drift--slow" src="{{ $wc }}/wc-leaf-b.svg" alt=""
             aria-hidden="true">
-        <img class="wt-deco b" src="{{ $wc }}/wc-birds.svg" alt="" aria-hidden="true">
+        <img class="tl-birds" src="{{ $wc }}/wc-birds.svg" alt="" aria-hidden="true">
+
         <div class="container tl-hero__in">
             <div class="tl-hero__text">
                 <nav class="tl-crumb" aria-label="breadcrumb">
-                    <a href="{{ route('home') }}">Trang chủ</a><i class="fas fa-chevron-right"
-                        aria-hidden="true"></i><span aria-current="page">Tour</span>
+                    <a href="{{ route('home') }}">Trang chủ</a><span aria-hidden="true">›</span><span
+                        aria-current="page">Tour</span>
                 </nav>
-                <span class="tl-script" aria-hidden="true">Khám phá</span>
-                <h1 id="tlTitle">Những hành trình<br>đáng nhớ</h1>
+                <span class="tl-eyebrow">Khám phá Việt Nam</span>
+                <h1 id="tlTitle">Những hành trình <em>đáng nhớ</em></h1>
                 <p>Từ bãi biển xanh ngắt, dãy núi hùng vĩ đến những nét văn hóa đặc sắc – mỗi tour là một câu chuyện
                     đang chờ bạn.</p>
+
+                @if ($popular->isNotEmpty())
+                    <div class="tl-quick" role="group" aria-label="Điểm đến được chọn nhiều">
+                        <span class="tl-quick__lbl">Đang có nhiều tour:</span>
+                        @foreach ($popular as $d)
+                            <button type="button" class="tl-quick__b" data-filter="dest"
+                                data-value="{{ $d->name }}">{{ $d->name }}</button>
+                        @endforeach
+                    </div>
+                @endif
             </div>
             <div class="tl-hero__photo">
-                <span class="tl-hero__wash" aria-hidden="true"></span>
+                <span class="tl-hero__frame" aria-hidden="true"></span>
                 <img src="{{ asset('clients/assets/images/banner/banner-tours.jpg') }}"
                     alt="Vịnh biển xanh ngọc với những dãy núi đá vôi" fetchpriority="high" width="1200"
                     height="600">
-                <span class="tl-hero__note" aria-hidden="true">Đi để cảm nhận Việt Nam thật đẹp!</span>
+                <span class="tl-hero__note" aria-hidden="true">Đi để cảm nhận<br>Việt Nam thật đẹp!</span>
             </div>
         </div>
     </section>
@@ -66,8 +104,8 @@
                     <div class="tl-field__body">
                         <span class="tl-field__lbl">Thời gian</span>
                         <div class="tl-dates">
-                            <input type="date" id="tvFrom" min="{{ $minDate }}" value="{{ $state['from'] }}"
-                                aria-label="Đi từ ngày">
+                            <input type="date" id="tvFrom" min="{{ $minDate }}"
+                                value="{{ $state['from'] }}" aria-label="Đi từ ngày">
                             <span aria-hidden="true">→</span>
                             <input type="date" id="tvTo" min="{{ $minDate }}" value="{{ $state['to'] }}"
                                 aria-label="Về trước ngày">
@@ -105,7 +143,8 @@
             </form>
 
             {{-- Chip danh mục = "cảm hứng" trong CSDL (tbl_inspirations) --}}
-            <div class="tl-cats" role="group" aria-label="Chọn nhanh theo cảm hứng">
+            <p class="tl-cats__lbl" id="tlCatsLbl">Chọn nhanh theo cảm hứng</p>
+            <div class="tl-cats" role="group" aria-labelledby="tlCatsLbl">
                 <button type="button" class="tl-cat" data-action="clear-cat">
                     <span class="tl-cat__ico"><i class="fas fa-th-large" aria-hidden="true"></i></span>Tất cả
                 </button>
@@ -121,6 +160,8 @@
 
     {{-- ===== BỘ LỌC + KẾT QUẢ ===== --}}
     <section class="tl-body">
+        <img class="wt-deco tl-body__leaf wt-drift wt-drift--slow" src="{{ $wc }}/wc-leaf-c.svg"
+            alt="" aria-hidden="true" loading="lazy">
         <div class="container">
             <div class="tl-layout">
 
@@ -217,43 +258,66 @@
                 <div class="tl-main">
                     <div class="tl-toolbar">
                         <div class="tl-count" id="tvCount" aria-live="polite"><b>{{ $tours->total() }}</b> tour
-                            phù hợp
-                        </div>
-                        <span class="tl-sortnote" id="tvSortNote"></span>
+                            phù hợp</div>
                         <button type="button" class="tl-filter-open" data-action="open-filter"><i
                                 class="fal fa-sliders-h" aria-hidden="true"></i> Bộ lọc</button>
-                        {{-- Điện thoại: dùng ô chọn (gọn, chọn bằng bộ chọn của hệ điều hành) --}}
+
+                        {{-- Điện thoại: ô chọn gốc --}}
                         <label class="tl-sort">Sắp xếp
                             <select id="tvSort">
                                 <option value="new">Mới nhất</option>
                                 <option value="popular">Phổ biến nhất</option>
                                 <option value="rating">Đánh giá cao</option>
                                 <option value="reviews">Nhiều đánh giá</option>
-                                <option value="price_asc">Giá thấp → cao</option>
-                                <option value="price_desc">Giá cao → thấp</option>
+                                <option value="price_asc">Giá thấp đến cao</option>
+                                <option value="price_desc">Giá cao đến thấp</option>
                                 <option value="soon">Khởi hành sớm</option>
                             </select>
                         </label>
+
+                        {{-- Máy tính: nút + menu thả xuống --}}
+                        <div class="tl-sortmenu" id="tvSortMenu">
+                            <button type="button" class="tl-sortmenu__btn" aria-haspopup="true"
+                                aria-expanded="false" aria-controls="tvSortBar">
+                                <span class="tl-sortmenu__k">Sắp xếp</span>
+                                <b id="tvSortCur">{{ $sortCurLabel }}</b>
+                                <span class="tl-sortmenu__caret" aria-hidden="true"></span>
+                            </button>
+                            <div class="tl-sortbar" id="tvSortBar" role="radiogroup"
+                                aria-label="Sắp xếp danh sách tour" hidden>
+                                @foreach ($sortGroups as $group => $items)
+                                    <span class="tl-sortgrp" aria-hidden="true">{{ $group }}</span>
+                                    @foreach ($items as $key => [$label, $hint])
+                                        <button type="button" role="radio" data-sort="{{ $key }}"
+                                            data-label="{{ $label }}"
+                                            aria-checked="{{ $sortCur === $key ? 'true' : 'false' }}"
+                                            class="tl-sortchip {{ $sortCur === $key ? 'is-on' : '' }}">
+                                            <span
+                                                class="tl-sortchip__tx">{{ $label }}<small>{{ $hint }}</small></span>
+                                        </button>
+                                    @endforeach
+                                @endforeach
+                            </div>
+                        </div>
                     </div>
 
-                    {{-- Máy tính: hàng nút sắp xếp nhanh, thấy ngay mọi lựa chọn, không cần mở danh sách --}}
-                    <div class="tl-sortbar" id="tvSortBar" role="radiogroup" aria-label="Sắp xếp danh sách tour">
-                        <span class="tl-sortbar__lbl" aria-hidden="true">Sắp xếp</span>
-                        @foreach ([
-        'new' => 'Mới nhất',
-        'popular' => 'Phổ biến nhất',
-        'price_asc' => 'Giá thấp → cao',
-        'price_desc' => 'Giá cao → thấp',
-        'soon' => 'Khởi hành sớm',
-        'rating' => 'Đánh giá cao',
-        'reviews' => 'Nhiều đánh giá',
-    ] as $key => $label)
-                            <button type="button" role="radio"
-                                aria-checked="{{ ($state['sort'] ?? 'new') === $key ? 'true' : 'false' }}"
-                                class="tl-sortchip {{ ($state['sort'] ?? 'new') === $key ? 'is-on' : '' }}"
-                                data-sort="{{ $key }}">{{ $label }}</button>
-                        @endforeach
-                    </div>
+                    {{-- Kệ cá nhân (đọc từ localStorage của trình duyệt này; tự ẩn khi trống) --}}
+                    <section class="ux-shelf" id="uxSaved" hidden aria-labelledby="uxSavedH">
+                        <div class="ux-shelf__head">
+                            <h2 id="uxSavedH"><i class="fas fa-heart" aria-hidden="true"></i> Tour đã lưu <em
+                                    id="uxSavedN"></em></h2>
+                            <button type="button" class="bk-link" data-ux-clear="saved">Xóa tất cả</button>
+                        </div>
+                        <div class="ux-shelf__row" id="uxSavedRow"></div>
+                    </section>
+                    <section class="ux-shelf" id="uxRecent" hidden aria-labelledby="uxRecentH">
+                        <div class="ux-shelf__head">
+                            <h2 id="uxRecentH"><i class="fal fa-history" aria-hidden="true"></i> Bạn đã xem gần đây
+                            </h2>
+                            <button type="button" class="bk-link" data-ux-clear="recent">Xóa lịch sử</button>
+                        </div>
+                        <div class="ux-shelf__row" id="uxRecentRow"></div>
+                    </section>
 
                     <div class="tl-active" id="tvActive" aria-label="Bộ lọc đang áp dụng"></div>
 
@@ -278,5 +342,7 @@
     };
 </script>
 <script src="{{ asset('clients/assets/js/travel-tours.js') }}?v=4"></script>
+<script src="{{ asset('clients/assets/js/tv-sort-menu.js') }}?v=2"></script>
+<script src="{{ asset('clients/assets/js/tv-tours-v2.js') }}?v=1" defer></script>
 
 @include('clients.blocks.footer')

@@ -17,7 +17,7 @@
     $money = fn($n) => number_format((int) $n, 0, ',', '.') . 'đ';
 @endphp
 
-<main class="bk" id="bkPage">
+<main class="bk wcx" id="bkPage">
     <div class="container">
 
         <nav class="bk-crumb" aria-label="breadcrumb">
@@ -30,7 +30,7 @@
         </nav>
 
         <header class="bk-head">
-            <h1>Hoàn tất đặt tour</h1>
+            <h1 class="wcx-title">Hoàn tất đặt tour</h1>
             <p>Chỉ mất khoảng một phút. Bạn <b>chưa bị tính phí</b> ở bước này.</p>
         </header>
 
@@ -273,6 +273,18 @@
                         <a class="bk-sum__help" href="{{ route('contact') }}"><i class="fal fa-comment-dots"
                                 aria-hidden="true"></i> Cần tư vấn trước khi đặt?</a>
                     </div>
+                    {{-- Nói trước điều gì sẽ xảy ra sau khi bấm xác nhận: giảm lo lắng, tăng tỉ lệ hoàn tất --}}
+                    <section class="bk-after" aria-labelledby="bkAfterH">
+                        <h2 id="bkAfterH">Sau khi bạn xác nhận</h2>
+                        <ol>
+                            <li><b>Nhận mã đơn ngay</b><span>Mã hiện trên màn hình để bạn lưu lại hoặc gửi cho nhân
+                                    viên.</span></li>
+                            <li><b>Đến văn phòng trong {{ $holdHours }} giờ</b><span>Thanh toán và hoàn tất xác nhận
+                                    chỗ.</span></li>
+                            <li><b>Nhân viên xác nhận đơn</b><span>Bạn theo dõi trạng thái trong mục “Tour đã
+                                    đặt”.</span></li>
+                        </ol>
+                    </section>
                 </aside>
             </div>
         </form>

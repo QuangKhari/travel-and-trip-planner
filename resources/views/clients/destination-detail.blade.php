@@ -1,6 +1,7 @@
 @include('clients.blocks.header')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/destination-detail.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/tv-weather.css') }}?v=1">
 
 {{-- /destination/{slug} — biến: $destination, $data (DestinationService::payload), $tours --}}
 @php
@@ -102,32 +103,72 @@
                 <article class="dd-card dd-weather">
                     <h2>Thời tiết</h2>
                     @if ($w)
-                        <div class="dd-now">
-                            <i class="fas {{ $w['current']['icon'] }}"></i>
-                            <div><b>{{ $w['current']['temp'] }}°C</b><span>{{ $w['current']['label'] }}</span></div>
-                            <ul>
-                                <li>Cảm giác {{ $w['current']['feels'] }}°</li>
-                                <li>Độ ẩm {{ $w['current']['humidity'] }}%</li>
-                                <li>Gió {{ $w['current']['wind'] }} km/h</li>
-                            </ul>
+                        @php
+                            $themes = [
+                                'fa-sun' => 'clear',
+                                'fa-cloud-sun' => 'partly',
+                                'fa-cloud' => 'cloud',
+                                'fa-cloud-rain' => 'rain',
+                                'fa-cloud-sun-rain' => 'rain',
+                                'fa-cloud-showers-heavy' => 'rain',
+                                'fa-bolt' => 'storm',
+                                'fa-smog' => 'fog',
+                                'fa-snowflake' => 'snow',
+                            ];
+                            $theme = $themes[$w['current']['icon']] ?? 'cloud';
+                            $d0 = $w['daily'][0] ?? null;
+                            $tip = null;
+                            if ($d0) {
+                                if (($d0['rain'] ?? 0) >= 60) {
+                                    $tip = ['fa-umbrella', 'Khả năng mưa cao hôm nay — nên mang áo mưa hoặc ô.'];
+                                } elseif (($d0['tMax'] ?? 0) >= 34) {
+                                    $tip = ['fa-sun', 'Trời nóng — nhớ mang mũ, kem chống nắng và nước uống.'];
+                                } elseif (isset($d0['tMax']) && $d0['tMax'] <= 17) {
+                                    $tip = ['fa-snowflake', 'Trời lạnh — nên mang theo áo ấm.'];
+                                }
+                            }
+                        @endphp
+                        <div class="tvw" data-wx="{{ $theme }}">
+                            <div class="tvw__now">
+                                <span class="tvw__ico"><i class="fas {{ $w['current']['icon'] }}"></i></span>
+                                <div>
+                                    <span class="tvw__temp">{{ $w['current']['temp'] }}<sup>°C</sup></span>
+                                    <span class="tvw__lbl">{{ $w['current']['label'] }}</span>
+                                </div>
+                                <div class="tvw__chips">
+                                    <span class="tvw__chip"><i class="fas fa-thermometer-half"></i>Cảm giác
+                                        {{ $w['current']['feels'] }}°</span>
+                                    <span class="tvw__chip"><i
+                                            class="fas fa-tint"></i>{{ $w['current']['humidity'] }}%</span>
+                                    <span class="tvw__chip"><i class="fas fa-wind"></i>{{ $w['current']['wind'] }}
+                                        km/h</span>
+                                </div>
+                            </div>
+                            @if ($tip)
+                                <p class="tvw__tip"><i
+                                        class="fas {{ $tip[0] }}"></i><span>{{ $tip[1] }}</span></p>
+                            @endif
+                            <ol class="tvw__days">
+                                @foreach ($w['daily'] as $i => $day)
+                                    <li class="tvw__day {{ $i === 0 ? 'is-today' : '' }}">
+                                        <span
+                                            class="tvw__dn">{{ $i === 0 ? 'Hôm nay' : \Carbon\Carbon::parse($day['date'])->locale('vi')->isoFormat('dd') }}</span>
+                                        <i class="fas {{ $day['icon'] }}" title="{{ $day['label'] }}"></i>
+                                        <b>{{ $day['tMax'] }}°</b><small>{{ $day['tMin'] }}°</small>
+                                        @if ($day['rain'] !== null)
+                                            <span class="tvw__rain"><i
+                                                    style="--r: {{ (int) $day['rain'] }}%"></i></span>
+                                            <span class="tvw__rn">{{ $day['rain'] }}%</span>
+                                        @endif
+                                    </li>
+                                @endforeach
+                            </ol>
+                            <p class="tvw__src">Cập nhật
+                                {{ \Carbon\Carbon::parse($w['fetchedAt'])->locale('vi')->diffForHumans() }} ·
+                                <a href="https://open-meteo.com/" target="_blank"
+                                    rel="noopener noreferrer">Open-Meteo.com</a>
+                            </p>
                         </div>
-                        <ol class="dd-days">
-                            @foreach ($w['daily'] as $day)
-                                <li>
-                                    <span>{{ \Carbon\Carbon::parse($day['date'])->locale('vi')->isoFormat('dd D/M') }}</span>
-                                    <i class="fas {{ $day['icon'] }}" title="{{ $day['label'] }}"></i>
-                                    <b>{{ $day['tMax'] }}°</b><small>{{ $day['tMin'] }}°</small>
-                                    @if ($day['rain'] !== null)
-                                        <em>{{ $day['rain'] }}%</em>
-                                    @endif
-                                </li>
-                            @endforeach
-                        </ol>
-                        <p class="dd-attr">Cập nhật
-                            {{ \Carbon\Carbon::parse($w['fetchedAt'])->locale('vi')->diffForHumans() }} ·
-                            <a href="https://open-meteo.com/" target="_blank"
-                                rel="noopener noreferrer">Open-Meteo.com</a>
-                        </p>
                     @else
                         <p class="dd-empty">Chưa có dữ liệu thời tiết.</p>
                     @endif

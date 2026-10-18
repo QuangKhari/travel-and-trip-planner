@@ -1,0 +1,986 @@
+/* =====================================================================
+   tv-tours-v2.css — Thiết kế trang /tours (hero, tìm kiếm, bộ lọc, thẻ tour, CTA)
+   Ngôn ngữ thiết kế dùng chung với Trang chủ / Giới thiệu / Điểm đến:
+     nền giấy kem #f8f6f0 · teal #087f7b · vàng cát #e9c46a · Playfair Display (tiêu đề)
+     · Be Vietnam Pro (chữ) · Caveat (ghi chú viết tay) · mảng màu nước loang mép.
+   Chuyển động: chỉ dùng transform/opacity, tự tắt khi bật "giảm chuyển động".
+   ===================================================================== */
+
+/* ---------- 0. Nền trang: giấy + vài mảng màu nước rất nhạt ---------- */
+body.page-tours .tl {
+    background:
+        radial-gradient(
+            ellipse 42% 30% at 100% 62%,
+            rgba(233, 196, 106, 0.16),
+            transparent 70%
+        ),
+        radial-gradient(
+            ellipse 38% 28% at 0% 48%,
+            rgba(22, 166, 161, 0.1),
+            transparent 70%
+        ),
+        var(--wt-cream);
+}
+
+/* ---------- 1. HERO ---------- */
+.tl-hero {
+    position: relative;
+    padding: 116px 0 74px;
+    overflow: hidden;
+    isolation: isolate;
+}
+.tl-hero__wash {
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+}
+.tl-hero__wash--a {
+    left: -9%;
+    top: -22%;
+    width: 640px;
+    height: 450px;
+    background-image: url("../images/watercolor/wc-wash-teal.svg");
+    opacity: 0.3;
+    animation: tlWash 16s ease-in-out infinite alternate;
+}
+.tl-hero__wash--b {
+    right: -8%;
+    bottom: -30%;
+    width: 640px;
+    height: 460px;
+    background-image: url("../images/watercolor/wc-wash-sand.svg");
+    opacity: 0.55;
+    animation: tlWash 19s ease-in-out -6s infinite alternate;
+}
+@keyframes tlWash {
+    to {
+        transform: translate3d(14px, -10px, 0) scale(1.05);
+    }
+}
+
+/* mây trôi + chim bay */
+.tl-cloud {
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+    max-width: none;
+}
+.tl-cloud--1 {
+    top: 96px;
+    left: 30%;
+    width: 230px;
+    opacity: 0.8;
+    animation: tlCloud 48s ease-in-out infinite alternate;
+}
+.tl-cloud--2 {
+    top: 190px;
+    right: 6%;
+    width: 170px;
+    opacity: 0.6;
+    animation: tlCloud 62s ease-in-out -20s infinite alternate-reverse;
+}
+@keyframes tlCloud {
+    to {
+        transform: translateX(70px);
+    }
+}
+.tl-birds {
+    position: absolute;
+    z-index: 2;
+    top: 142px;
+    left: 40%;
+    width: 92px;
+    pointer-events: none;
+    opacity: 0.85;
+    animation: tlFly 22s ease-in-out infinite;
+}
+@keyframes tlFly {
+    0%,
+    100% {
+        transform: translate3d(-30px, 6px, 0) rotate(-2deg);
+    }
+    50% {
+        transform: translate3d(54px, -12px, 0) rotate(2deg);
+    }
+}
+
+.tl-hero .wt-deco.l {
+    left: -90px;
+    top: auto;
+    bottom: 10px;
+    width: 180px;
+    opacity: 0.9;
+    transform-origin: 20% 100%;
+}
+.tl-hero .wt-deco.r {
+    right: -44px;
+    top: auto;
+    bottom: 30px;
+    width: 170px;
+    opacity: 0.85;
+    transform: scaleX(-1);
+}
+.tl-hero .wt-deco.l.wt-drift {
+    animation: tlSway 8s ease-in-out infinite;
+}
+@keyframes tlSway {
+    0%,
+    100% {
+        transform: rotate(-1.5deg);
+    }
+    50% {
+        transform: rotate(2deg) translateY(-3px);
+    }
+}
+
+.tl-hero__in {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: center;
+    gap: 12px;
+    min-height: 340px;
+}
+
+/* chữ: vào lần lượt */
+.tl-hero__text > * {
+    animation: tlUp 0.8s var(--wt-ease) both;
+}
+.tl-hero__text > :nth-child(2) {
+    animation-delay: 0.08s;
+}
+.tl-hero__text > :nth-child(3) {
+    animation-delay: 0.16s;
+}
+.tl-hero__text > :nth-child(4) {
+    animation-delay: 0.26s;
+}
+.tl-hero__text > :nth-child(5) {
+    animation-delay: 0.36s;
+}
+@keyframes tlUp {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+}
+
+.tl-crumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 18px;
+    font-size: 13.5px;
+    color: var(--wt-mute);
+}
+.tl-crumb a {
+    color: var(--wt-teal-d);
+    font-weight: 600;
+}
+.tl-crumb a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.tl-eyebrow {
+    display: inline-block;
+    margin-bottom: 10px;
+    font:
+        700 12.5px/1 "Be Vietnam Pro",
+        sans-serif;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--wt-teal-d);
+}
+.tl-hero h1 {
+    margin: 0 0 16px;
+    font: 700 clamp(34px, 4.4vw, 56px) / 1.1 var(--wt-serif);
+    color: var(--wt-ink);
+    letter-spacing: -0.015em;
+}
+.tl-hero h1 em {
+    position: relative;
+    display: inline-block;
+    font-style: italic;
+    color: var(--wt-teal-d);
+    white-space: nowrap;
+}
+/* nét cọ vẽ dưới chữ: "quét" từ trái sang phải */
+.tl-hero h1 em::after {
+    content: "";
+    position: absolute;
+    left: -2%;
+    right: -4%;
+    bottom: -10px;
+    height: 16px;
+    background: url("../images/watercolor/wc-brush.svg") center / 100% 100%
+        no-repeat;
+    clip-path: inset(0 100% 0 0);
+    animation: tlBrush 1s var(--wt-ease) 0.7s forwards;
+}
+@keyframes tlBrush {
+    to {
+        clip-path: inset(0 0 0 0);
+    }
+}
+.tl-hero p {
+    max-width: 480px;
+    margin: 0 0 22px;
+    font-size: 16.5px;
+    line-height: 1.75;
+    color: var(--wt-mute);
+}
+
+/* gợi ý nhanh (điểm đến thật) */
+.tl-quick {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+.tl-quick__lbl {
+    margin-right: 2px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--wt-mute);
+}
+.tl-quick__b {
+    min-height: 38px;
+    padding: 0 16px;
+    border: 1.5px solid rgba(8, 127, 123, 0.28);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.7);
+    color: var(--wt-teal-d);
+    font:
+        600 13.5px "Be Vietnam Pro",
+        sans-serif;
+    cursor: pointer;
+    transition:
+        background 0.2s,
+        color 0.2s,
+        border-color 0.2s,
+        transform 0.2s var(--wt-ease);
+}
+.tl-quick__b:hover {
+    background: #fff;
+    border-color: var(--wt-teal-d);
+    transform: translateY(-2px);
+}
+.tl-quick__b.is-on {
+    background: var(--wt-teal-d);
+    border-color: var(--wt-teal-d);
+    color: #fff;
+}
+
+/* ảnh: mép loang + khung vàng cát lệch + mẩu giấy ghi chú */
+.tl-hero__photo {
+    position: relative;
+    height: 340px;
+    margin-right: -6%;
+    animation: tlPhoto 1.1s var(--wt-ease) 0.1s both;
+}
+@keyframes tlPhoto {
+    from {
+        opacity: 0;
+        transform: translateX(26px) scale(1.02);
+    }
+}
+.tl-hero__photo img {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-top-right-radius: 44px;
+    -webkit-mask: url("../images/watercolor/wc-mask-hero.svg") center / 100%
+        100% no-repeat;
+    mask: url("../images/watercolor/wc-mask-hero.svg") center / 100% 100%
+        no-repeat;
+}
+.tl-hero__frame {
+    position: absolute;
+    inset: -6% -3% -10% 4%;
+    z-index: 0;
+    background: url("../images/watercolor/wc-wash-sand.svg") center / 100% 100%
+        no-repeat;
+    opacity: 0.75;
+    transform: rotate(-2.5deg);
+}
+.tl-hero__note {
+    position: absolute;
+    z-index: 3;
+    left: 4%;
+    bottom: 12%;
+    right: auto;
+    top: auto;
+    padding: 12px 20px 11px;
+    background: #fffaf0;
+    border-radius: 3px 8px 4px 9px;
+    box-shadow:
+        0 10px 24px rgba(8, 79, 76, 0.18),
+        0 1px 0 rgba(0, 0, 0, 0.05);
+    max-width: none;
+    white-space: nowrap;
+    font: 700 22px/1.15 var(--wt-hand);
+    color: var(--wt-teal-d);
+    text-align: center;
+    transform: rotate(-4deg);
+    animation: tlNote 6s ease-in-out infinite;
+}
+.tl-hero__note::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -11px;
+    width: 64px;
+    height: 20px;
+    margin-left: -32px;
+    background: rgba(233, 196, 106, 0.7);
+    transform: rotate(3deg);
+}
+@keyframes tlNote {
+    0%,
+    100% {
+        transform: rotate(-4deg) translateY(0);
+    }
+    50% {
+        transform: rotate(-2.5deg) translateY(-4px);
+    }
+}
+
+/* ---------- 2. Ô TÌM KIẾM ---------- */
+.tl-searchwrap {
+    z-index: 5;
+    margin-top: -40px;
+}
+.tl-search {
+    gap: 2px;
+    padding: 10px;
+    border-radius: 28px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(8, 127, 123, 0.16);
+    box-shadow:
+        0 22px 50px rgba(8, 79, 76, 0.14),
+        0 2px 0 rgba(255, 255, 255, 0.9) inset;
+    animation: tlUp 0.8s var(--wt-ease) 0.4s both;
+}
+.tl-field {
+    padding: 10px 18px;
+    border-radius: 20px;
+    cursor: text;
+}
+.tl-field:hover {
+    background: rgba(22, 166, 161, 0.05);
+}
+.tl-field > i {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: rgba(233, 196, 106, 0.26);
+    font-size: 16px;
+    color: var(--wt-teal-d);
+}
+.tl-field label,
+.tl-field__lbl {
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    color: var(--wt-teal-d);
+}
+.tl-field input,
+.tl-field select {
+    height: 26px;
+    font-size: 15px;
+}
+.tl-search__btn {
+    position: relative;
+    overflow: hidden;
+    min-width: 160px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #0a928d, #087f7b 60%, #076d6a);
+    box-shadow: 0 8px 20px rgba(8, 127, 123, 0.3);
+}
+.tl-search__btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        105deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.28) 50%,
+        transparent 70%
+    );
+    transform: translateX(-120%);
+}
+.tl-search__btn:hover::after {
+    transform: translateX(120%);
+    transition: transform 0.7s var(--wt-ease);
+}
+.tl-search__btn:active {
+    transform: translateY(0) scale(0.98);
+}
+
+/* ---------- 3. CHIP CẢM HỨNG ---------- */
+.tl-cats__lbl {
+    margin: 26px 0 0;
+    font: 700 24px/1 var(--wt-hand);
+    color: var(--wt-teal-d);
+    transform: rotate(-1.5deg);
+    transform-origin: left;
+}
+.tl-cats {
+    margin: 8px 0 4px;
+    padding: 6px 4px 12px;
+    /* mép mờ báo hiệu còn chip để cuộn */
+    -webkit-mask: linear-gradient(
+        90deg,
+        #000 0,
+        #000 calc(100% - 36px),
+        transparent
+    );
+    mask: linear-gradient(90deg, #000 0, #000 calc(100% - 36px), transparent);
+}
+.tl-cat {
+    border-color: rgba(23, 59, 58, 0.14);
+    box-shadow: 0 2px 8px rgba(8, 79, 76, 0.05);
+}
+.tl-cat__ico {
+    background: rgba(233, 196, 106, 0.3);
+}
+.tl-cat:hover {
+    box-shadow: 0 8px 18px rgba(8, 79, 76, 0.12);
+}
+.tl-cat.is-on {
+    box-shadow: 0 8px 18px rgba(8, 127, 123, 0.28);
+}
+
+/* ---------- 4. THÂN TRANG ---------- */
+.tl-body {
+    padding: 22px 0 50px;
+}
+.tl-body__leaf {
+    right: -90px;
+    top: 90px;
+    width: 230px;
+    opacity: 0.45;
+    transform: scaleX(-1) rotate(8deg);
+}
+.tl-filter {
+    border-radius: 26px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 10px 30px rgba(8, 79, 76, 0.08);
+}
+.tl-filter__head h2 {
+    font: 700 22px var(--wt-serif);
+}
+.tl-fg > summary {
+    padding: 16px 0 12px;
+    font-size: 14.5px;
+}
+.tl-fg > summary:hover {
+    color: var(--wt-teal-d);
+}
+.tl-opt {
+    min-height: 44px;
+}
+.tl-count {
+    font: 700 22px var(--wt-serif);
+}
+.tl-count b {
+    color: var(--wt-teal-d);
+}
+.tl-toolbar {
+    padding-bottom: 14px;
+    border-bottom: 1px dashed rgba(23, 59, 58, 0.18);
+}
+.tl-tag {
+    padding-left: 14px;
+}
+
+/* kệ "đã lưu / xem gần đây" cùng ngôn ngữ thẻ giấy */
+.tl .ux-shelf {
+    border-radius: 24px;
+    border-color: rgba(23, 59, 58, 0.1);
+    box-shadow: 0 6px 20px rgba(8, 79, 76, 0.05);
+}
+.tl .ux-shelf__head h2 {
+    font: 700 18px var(--wt-serif);
+}
+
+/* ---------- 5. THẺ TOUR (dùng chung /tours, /search, tour-detail) ---------- */
+.tl .tv-grid {
+    gap: 26px 22px;
+}
+.tl .tv-grid > .wt-card {
+    animation: tlCard 0.6s var(--wt-ease) both;
+}
+.tl .tv-grid > .wt-card:nth-child(2) {
+    animation-delay: 0.05s;
+}
+.tl .tv-grid > .wt-card:nth-child(3) {
+    animation-delay: 0.1s;
+}
+.tl .tv-grid > .wt-card:nth-child(4) {
+    animation-delay: 0.15s;
+}
+.tl .tv-grid > .wt-card:nth-child(5) {
+    animation-delay: 0.2s;
+}
+.tl .tv-grid > .wt-card:nth-child(6) {
+    animation-delay: 0.25s;
+}
+.tl .tv-grid > .wt-card:nth-child(n + 7) {
+    animation-delay: 0.3s;
+}
+@keyframes tlCard {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+}
+.wt-card {
+    border-radius: 24px;
+    border-color: rgba(23, 59, 58, 0.1);
+    box-shadow: 0 6px 20px rgba(8, 79, 76, 0.07);
+}
+.wt-card:hover,
+.wt-card:focus-within {
+    transform: translateY(-8px);
+    box-shadow: 0 26px 54px rgba(8, 79, 76, 0.18);
+}
+/* ảnh: đáy lem như giấy ướt thay vì đường cắt thẳng */
+.wt-card__img {
+    aspect-ratio: 4 / 3.1;
+}
+.wt-card__img::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 24px;
+    z-index: 1;
+    pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 24' preserveAspectRatio='none'%3E%3Cpath d='M0 15C38 5 72 22 122 12S206 3 254 14 344 23 400 8V24H0Z' fill='%23fff'/%3E%3C/svg%3E")
+        center bottom / 100% 100% no-repeat;
+}
+.wt-badge {
+    top: 14px;
+    left: 14px;
+    padding: 6px 13px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
+}
+.wt-card__body {
+    gap: 9px;
+    padding: 6px 18px 18px;
+}
+.wt-card__place {
+    font:
+        700 11.5px/1.2 "Be Vietnam Pro",
+        sans-serif;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--wt-teal-d);
+}
+.wt-card__title {
+    font: 700 18px/1.35 var(--wt-serif);
+    min-height: 2.7em;
+}
+.wt-card__title a:hover {
+    color: var(--wt-teal-d);
+}
+.wt-card__meta {
+    gap: 4px 14px;
+}
+.wt-card__meta li {
+    display: inline-flex;
+    align-items: center;
+}
+.wt-card__price {
+    padding-top: 10px;
+    border-top: 1px dashed rgba(23, 59, 58, 0.16);
+}
+.wt-card__price b {
+    font: 700 23px/1 var(--wt-serif);
+}
+.wt-card__cta {
+    height: 46px;
+    border-radius: 999px;
+    background: transparent;
+    border: 1.5px solid var(--wt-teal-d);
+    color: var(--wt-teal-d);
+    transition:
+        background 0.25s,
+        color 0.25s,
+        gap 0.25s var(--wt-ease);
+}
+.wt-card:hover .wt-card__cta {
+    background: var(--wt-teal-d);
+    color: #fff;
+    gap: 12px;
+}
+/* mũi tên vẽ bằng CSS */
+.wt-card__arr {
+    position: relative;
+    width: 16px;
+    height: 2px;
+    background: currentColor;
+    border-radius: 2px;
+}
+.wt-card__arr::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: -3px;
+    width: 7px;
+    height: 7px;
+    border-top: 2px solid currentColor;
+    border-right: 2px solid currentColor;
+    transform: rotate(45deg);
+}
+.wt-card:hover .wt-card__arr {
+    animation: tlNudge 0.9s ease-in-out infinite;
+}
+@keyframes tlNudge {
+    50% {
+        transform: translateX(4px);
+    }
+}
+.wt-heart {
+    top: 10px;
+    right: 10px;
+}
+.wt-heart.is-on i {
+    animation: tlPop 0.4s var(--wt-ease);
+}
+@keyframes tlPop {
+    40% {
+        transform: scale(1.35);
+    }
+}
+
+/* trạng thái rỗng + phân trang */
+.tl .tv-empty {
+    border-radius: 28px;
+    background: rgba(255, 255, 255, 0.9);
+}
+.tl .tv-empty h3 {
+    font: 700 24px var(--wt-serif);
+}
+.tl .tv-pager a {
+    box-shadow: 0 2px 8px rgba(8, 79, 76, 0.06);
+}
+.tl .tv-pager a:hover {
+    transform: translateY(-2px);
+}
+
+/* ---------- 6. CTA CUỐI TRANG: banner tranh màu nước vịnh Hạ Long ----------
+   Ảnh nền KHÔNG chứa chữ (cta/cta-banner.jpg|webp); chữ + nút là HTML thật nên bấm được,
+   đọc được bằng trình đọc màn hình và co giãn theo bề rộng banner (đơn vị cqw). */
+.wt-cta {
+    margin-top: 34px;
+    padding: 24px 0 70px;
+    text-align: left;
+    overflow: visible;
+}
+.wt-cta__wrap {
+    max-width: 1360px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+.wt-cta__banner {
+    position: relative;
+    margin: 0;
+    overflow: hidden;
+    border-radius: 30px;
+    container-type: inline-size;
+    background: #f4f1e8;
+    box-shadow:
+        0 26px 60px rgba(8, 79, 76, 0.16),
+        0 0 0 1px rgba(23, 59, 58, 0.06);
+}
+.wt-cta__banner picture,
+.wt-cta__banner img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1670 / 557;
+    object-fit: cover;
+}
+/* ảnh "thở" rất chậm cho cảnh có sức sống */
+.wt-cta__banner img {
+    transform-origin: 70% 60%;
+    animation: tlKen 26s ease-in-out infinite alternate;
+}
+@keyframes tlKen {
+    to {
+        transform: scale(1.045);
+    }
+}
+.wt-cta__copy {
+    position: absolute;
+    left: 8.6%;
+    top: 50%;
+    width: 49%;
+    transform: translateY(-50%);
+}
+.wt-js .wt-cta__copy.wt-reveal {
+    transform: translateY(calc(-50% + 14px));
+}
+.wt-js .wt-cta__copy.wt-reveal.is-in {
+    transform: translateY(-50%);
+}
+.wt-cta h2 {
+    position: relative;
+    margin: 0 0 3cqw;
+    font:
+        700 4.4cqw / 1.16 "Dancing Script",
+        "Caveat",
+        cursive;
+    color: #0d7c78;
+    letter-spacing: 0.005em;
+    text-wrap: balance;
+}
+/* nét cọ vàng dưới tiêu đề — "quét" ra khi cuộn tới */
+.wt-cta h2::after {
+    content: "";
+    position: absolute;
+    left: 38%;
+    bottom: -1.1cqw;
+    width: 50%;
+    height: 0.8cqw;
+    min-height: 4px;
+    border-radius: 99px;
+    background: linear-gradient(
+        90deg,
+        rgba(233, 196, 106, 0.2),
+        #e9c46a 14%,
+        #e5b94c 70%,
+        rgba(233, 196, 106, 0.25)
+    );
+    transform-origin: left;
+    transform: rotate(-1.2deg) scaleX(0);
+    transition: transform 0.9s var(--wt-ease) 0.35s;
+}
+.wt-cta__copy.is-in h2::after,
+html:not(.wt-js) .wt-cta h2::after {
+    transform: rotate(-1.2deg) scaleX(1);
+}
+.wt-cta p {
+    max-width: 36cqw;
+    margin: 0 0 2.4cqw;
+    font-size: max(14.5px, 1.18cqw);
+    line-height: 1.7;
+    color: #3b5b5a;
+}
+.wt-cta__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.9cqw;
+    min-height: 48px;
+    padding: 0 max(24px, 2.2cqw);
+    border-radius: 999px;
+    background: linear-gradient(135deg, #12a39d, #0a8782 60%, #087f7b);
+    color: #fff;
+    font:
+        600 max(15px, 1.2cqw) "Be Vietnam Pro",
+        sans-serif;
+    box-shadow: 0 10px 24px rgba(8, 127, 123, 0.32);
+    transition:
+        transform 0.25s var(--wt-ease),
+        box-shadow 0.25s,
+        gap 0.25s var(--wt-ease);
+}
+.wt-cta__btn:hover {
+    color: #fff;
+    gap: 1.5cqw;
+    transform: translateY(-3px);
+    box-shadow: 0 16px 30px rgba(8, 127, 123, 0.38);
+}
+.wt-cta__btn:focus-visible {
+    outline: 3px solid var(--wt-sand);
+    outline-offset: 3px;
+}
+.wt-cta__btn .wt-cta__arr {
+    position: relative;
+    width: 18px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+}
+.wt-cta__btn .wt-cta__arr::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: -3px;
+    width: 7px;
+    height: 7px;
+    border-top: 2px solid currentColor;
+    border-right: 2px solid currentColor;
+    transform: rotate(45deg);
+}
+
+/* ---------- 7. Màn hình nhỏ ---------- */
+@media (max-width: 1100px) {
+    .tl-search {
+        gap: 4px;
+    }
+}
+@media (max-width: 991px) {
+    .tl-hero {
+        padding: 104px 0 58px;
+    }
+    .tl-hero__in {
+        grid-template-columns: 1fr;
+        gap: 22px;
+    }
+    .tl-hero__photo {
+        height: 230px;
+        margin: 0 -20px;
+    }
+    .tl-hero__note {
+        display: block;
+        left: 8%;
+        bottom: 6%;
+        font-size: 18px;
+        padding: 9px 14px 8px;
+    }
+    .tl-cloud--2,
+    .tl-body__leaf {
+        display: none;
+    }
+    .tl-birds {
+        top: 118px;
+        left: auto;
+        right: 12%;
+        width: 70px;
+    }
+}
+@media (max-width: 575px) {
+    .tl-hero {
+        padding-top: 96px;
+    }
+    .tl-hero p {
+        font-size: 15.5px;
+    }
+    .tl-hero .wt-deco {
+        width: 110px;
+        opacity: 0.55;
+    }
+    .tl-hero__photo {
+        height: 190px;
+    }
+    .tl-quick__lbl {
+        flex: 1 1 100%;
+    }
+    .tl-field {
+        padding: 8px 12px;
+    }
+    .tl-cats__lbl {
+        font-size: 21px;
+    }
+    .wt-card {
+        border-radius: 18px;
+    }
+    .wt-card__body {
+        padding: 4px 12px 14px;
+    }
+    .wt-card__title {
+        font-size: 15px;
+    }
+    .wt-card__price b {
+        font-size: 18px;
+    }
+    .wt-card__img::after {
+        height: 22px;
+    }
+    .wt-card__cta {
+        height: 42px;
+    }
+}
+
+@media (max-width: 767px) {
+    .wt-cta {
+        padding-bottom: 50px;
+    }
+    .wt-cta__wrap {
+        padding: 0 14px;
+    }
+    .wt-cta__banner {
+        border-radius: 24px;
+        background: #fbf8ef;
+    }
+    /* điện thoại: ảnh vịnh ở trên, chữ nằm dưới trên nền giấy */
+    .wt-cta__banner picture,
+    .wt-cta__banner img {
+        aspect-ratio: 16 / 10;
+        object-position: 82% 50%;
+    }
+    .wt-cta__copy {
+        position: relative;
+        left: auto;
+        top: auto;
+        width: auto;
+        padding: 22px 22px 28px;
+        transform: none !important;
+    }
+    .wt-cta h2 {
+        margin-bottom: 22px;
+        font-size: 36px;
+    }
+    .wt-cta h2::after {
+        left: 8%;
+        width: 70%;
+        bottom: -10px;
+        height: 5px;
+    }
+    .wt-cta p {
+        max-width: none;
+        font-size: 15.5px;
+        margin-bottom: 22px;
+    }
+}
+
+/* ---------- 8. Giảm chuyển động: giữ nguyên hình, bỏ mọi animation ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .tl-hero *,
+    .tl-hero,
+    .tl-search,
+    .tl .tv-grid > .wt-card,
+    .wt-cta *,
+    .wt-cta__banner img,
+    .wt-card__arr,
+    .wt-heart i {
+        animation: none !important;
+    }
+    .tl-hero h1 em::after {
+        clip-path: none;
+    }
+    .wt-cta h2::after {
+        transform: rotate(-1.2deg) scaleX(1);
+        transition: none;
+    }
+}
+
+/* ---------- 9. Lớp xếp chồng + chỉnh thẻ trên điện thoại ---------- */
+.tl-toolbar {
+    position: relative;
+    z-index: 30;
+}
+.tl-sortmenu.is-open {
+    z-index: 50;
+}
+@media (max-width: 575px) {
+    .wt-card__price small {
+        flex: 1 1 100%;
+    }
+    .wt-card__price {
+        gap: 0 5px;
+    }
+    .wt-card__price span {
+        font-size: 12px;
+    }
+}
