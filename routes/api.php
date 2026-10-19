@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\DestinationController;
 use App\Http\Controllers\Api\V1\InspirationController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\V1\SeasonController;
 
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
@@ -30,6 +31,8 @@ Route::prefix('v1')->group(function () {
             Route::get('/{slug}/weather', [DestinationController::class, 'weather'])->where('slug', '[a-z0-9-]+');
             Route::get('/{slug}/places', [DestinationController::class, 'places'])->where('slug', '[a-z0-9-]+');
         });
+
+        Route::get('seasons', [SeasonController::class, 'index']);
     });
 
     // Các endpoint Trip Planner / AI sau này đặt trong nhóm này để dùng chung xác thực:

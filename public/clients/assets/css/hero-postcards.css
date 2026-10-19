@@ -1,0 +1,442 @@
+/* Hero "Dòng bưu ảnh" - Travela. Màu theo mục 5 tài liệu: turquoise #16A6A1/#087F7B, vàng cát #E9C46A, kem #F8F6F0, navy #0F172A */
+.hp {
+    --hp-navy: #0f172a;
+    --hp-tq: #16a6a1;
+    --hp-tqd: #087f7b;
+    --hp-sand: #e9c46a;
+    --hp-cream: #f8f6f0;
+    --hp-accent: #e9c46a;
+    --hp-serif: "Fraunces", Georgia, serif;
+    position: relative;
+    background: var(--hp-navy);
+    color: #fff;
+    font-family: "Be Vietnam Pro", system-ui, sans-serif;
+}
+.hp[data-season="spring"] {
+    --hp-accent: #8edab0;
+}
+.hp[data-season="summer"] {
+    --hp-accent: #f1cf5a;
+}
+.hp[data-season="autumn"] {
+    --hp-accent: #f0a35e;
+}
+.hp[data-season="winter"] {
+    --hp-accent: #a9cbe3;
+}
+
+/* BẮT BUỘC: .page-wrapper của template để overflow:hidden làm hỏng position:sticky.
+   overflow-x:clip vẫn chặn tràn ngang nhưng không tạo vùng cuộn. */
+body.tv-home .page-wrapper {
+    overflow: visible;
+    overflow-x: clip;
+}
+
+.hp *,
+.hp *::before,
+.hp *::after {
+    box-sizing: border-box;
+}
+.hp button,
+.hp a {
+    font: inherit;
+}
+.hp :focus-visible {
+    outline: 3px solid var(--hp-sand);
+    outline-offset: 3px;
+}
+.hp-skip {
+    position: absolute;
+    left: 12px;
+    top: -64px;
+    z-index: 30;
+    background: var(--hp-sand);
+    color: var(--hp-navy);
+    padding: 8px 14px;
+    border-radius: 8px;
+}
+.hp-skip:focus {
+    top: 84px;
+}
+
+/* ---------- Bản tĩnh (mặc định, mobile, reduced-motion, không JS) ---------- */
+.hp-stage {
+    position: relative;
+    min-height: 100svh;
+    padding: 112px 0 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow: hidden;
+}
+.hp-bg {
+    position: absolute;
+    inset: -80px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(70px) saturate(1.2);
+    opacity: 0;
+    transition: opacity 0.6s;
+}
+.hp-bg.on {
+    opacity: 0.45;
+}
+.hp-veil {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+        ellipse at 50% 45%,
+        transparent 30%,
+        rgba(15, 23, 42, 0.78) 100%
+    );
+}
+.hp-intro,
+.hp-chips,
+.hp-scene,
+.hp-panel,
+.hp-count {
+    position: relative;
+    z-index: 2;
+}
+.hp-intro {
+    padding: 0 20px;
+}
+.hp-eyebrow {
+    margin: 0;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--hp-accent);
+}
+.hp h1 {
+    margin: 6px 0 4px;
+    font: 600 clamp(28px, 4.4vw, 54px) / 1.1 var(--hp-serif);
+    color: #fff;
+    max-width: 14em;
+}
+.hp-lead {
+    margin: 0;
+    color: #cbd5e1;
+    font-size: 14px;
+}
+.hp-chips {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 0 20px 4px;
+    scrollbar-width: none;
+}
+.hp-chips::-webkit-scrollbar {
+    display: none;
+}
+.hp-chip {
+    flex: none;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: rgba(15, 23, 42, 0.5);
+    color: #fff;
+    padding: 7px 16px;
+    border-radius: 99px;
+    font-size: 14px;
+    transition:
+        background 0.2s,
+        color 0.2s;
+}
+.hp-chip:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+.hp-chip[aria-pressed="true"] {
+    background: var(--hp-accent);
+    color: var(--hp-navy);
+    border-color: var(--hp-accent);
+    font-weight: 600;
+}
+
+.hp-world {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding: 8px 11vw 14px;
+    transition: opacity 0.3s;
+}
+.hp-card {
+    position: relative;
+    flex: none;
+    width: 78vw;
+    max-width: 520px;
+    aspect-ratio: 10 / 7;
+    scroll-snap-align: center;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    padding: 10px 10px 0;
+    border-radius: 4px;
+    color: var(--hp-navy);
+    text-decoration: none;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+.hp-img {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    border-radius: 2px;
+    background: #cfe9e6;
+}
+.hp-img img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.hp-cap {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    padding: 8px 4px 10px;
+}
+.hp-cap b {
+    font: 600 17px var(--hp-serif);
+}
+.hp-cap i {
+    font-style: normal;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--hp-tqd);
+}
+.hp-stamp {
+    position: absolute;
+    right: 18px;
+    top: 18px;
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(233, 196, 106, 0.96);
+    color: var(--hp-tqd);
+    border: 2px dashed var(--hp-tqd);
+    font: 600 13px var(--hp-serif);
+    transform: rotate(8deg);
+}
+.hp-blank {
+    padding: 22px 26px;
+    justify-content: center;
+    gap: 12px;
+    background: #fffdf7
+        repeating-linear-gradient(
+            transparent 0 33px,
+            rgba(8, 127, 123, 0.18) 33px 34px
+        );
+}
+.hp-blank b {
+    font: 600 clamp(20px, 3vw, 30px) / 1.2 var(--hp-serif);
+    max-width: 12em;
+}
+.hp-go {
+    align-self: flex-start;
+    background: var(--hp-tqd);
+    color: #fff;
+    padding: 9px 18px;
+    border-radius: 99px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.hp-panel {
+    margin: 0 20px;
+    padding: 14px 18px;
+    align-self: center;
+    text-align: center;
+    max-width: 560px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(6px);
+}
+.hp-panel h2 {
+    margin: 0;
+    font: 600 24px var(--hp-serif);
+    color: #fff;
+}
+.hp-panel p {
+    margin: 2px 0 10px;
+    color: #e2e8f0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+.hp-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.hp-btn {
+    cursor: pointer;
+    border: 0;
+    background: var(--hp-sand);
+    color: var(--hp-navy);
+    padding: 9px 18px;
+    border-radius: 99px;
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none;
+    line-height: 1.4;
+}
+.hp-btn:hover {
+    color: var(--hp-navy);
+    filter: brightness(1.06);
+}
+.hp-btn--ghost {
+    background: transparent;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+.hp-btn--ghost:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+}
+.hp-panel small {
+    display: block;
+    margin-top: 8px;
+    font-size: 11px;
+    color: #94a3b8;
+}
+.hp-panel small a {
+    color: inherit;
+    text-decoration: underline;
+}
+.hp-count {
+    text-align: center;
+    font: 500 13px var(--hp-serif);
+    letter-spacing: 0.2em;
+    color: #cbd5e1;
+}
+.hp-hint {
+    display: none;
+}
+.hp.hp--wait .hp-world {
+    opacity: 0;
+}
+
+/* reduced-motion trên desktop: lưới tĩnh 6 bưu ảnh */
+@media (prefers-reduced-motion: reduce) and (min-width: 600px) {
+    .hp-world {
+        flex-wrap: wrap;
+        overflow: visible;
+        justify-content: center;
+        padding: 8px 20px 14px;
+    }
+    .hp-card {
+        width: min(44vw, 420px);
+    }
+    .hp-card:nth-child(n + 7):not(.hp-blank) {
+        display: none;
+    }
+    .hp-bg {
+        transition: none;
+    }
+}
+
+/* ---------- Bản 3D ---------- */
+.hp--3d .hp-track {
+    height: calc((var(--n, 9) - 1) * 70vh + 100svh);
+}
+.hp--3d .hp-stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    min-height: 0;
+    padding: 0;
+    display: block;
+}
+.hp--3d .hp-intro {
+    position: absolute;
+    left: clamp(20px, 4vw, 56px);
+    top: 108px;
+    padding: 0;
+}
+.hp--3d .hp-chips {
+    position: absolute;
+    z-index: 3;
+    right: clamp(20px, 4vw, 56px);
+    top: 108px;
+    padding: 0;
+    max-width: min(46vw, 560px);
+}
+.hp--3d .hp-scene {
+    position: absolute;
+    inset: 0;
+    perspective: 1000px;
+    perspective-origin: 50% 45%;
+}
+.hp--3d .hp-world {
+    position: absolute;
+    inset: 0;
+    display: block;
+    overflow: visible;
+    padding: 0;
+    transform-style: preserve-3d;
+    will-change: transform;
+}
+.hp--3d .hp-card {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: min(46vw, 760px);
+    max-width: none;
+    visibility: hidden;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+}
+.hp--3d .hp-panel {
+    position: absolute;
+    z-index: 3;
+    left: 50%;
+    bottom: clamp(44px, 7vh, 70px);
+    transform: translateX(-50%);
+    width: min(560px, 90vw);
+    margin: 0;
+}
+.hp--3d .hp-count {
+    position: absolute;
+    z-index: 3;
+    left: clamp(20px, 4vw, 56px);
+    bottom: clamp(20px, 4vh, 40px);
+}
+.hp--3d .hp-hint {
+    display: block;
+    position: absolute;
+    z-index: 3;
+    right: clamp(20px, 4vw, 56px);
+    bottom: clamp(20px, 4vh, 40px);
+    font-size: 13px;
+    color: #cbd5e1;
+}
+@media (max-width: 1023px) {
+    .hp--3d .hp-card {
+        width: min(62vw, 560px);
+    }
+    .hp--3d .hp-chips {
+        max-width: 40vw;
+    }
+}
+
+/* ---------- Thanh tìm tour ngay dưới hero ---------- */
+.hp-search {
+    background: var(--hp-cream);
+    padding: 36px 0 44px;
+}
+.hp-search__lead {
+    margin: 0 0 14px;
+    color: #334155;
+    font-weight: 500;
+}
+.hp-search .tv-search {
+    box-shadow: 0 14px 40px rgba(15, 23, 42, 0.14);
+}

@@ -169,6 +169,7 @@
 
         <script src="{{ asset('clients/assets/js/custom-js.js') }}"></script>
         <script src="{{ asset('clients/assets/js/travel-theme.js') }}?v=2"></script>
+        <script src="{{ asset('clients/assets/js/hero-postcards.js') }}?v=1"></script>
 
         <script src="{{ asset('clients/assets/js/jquery.datetimepicker.full.min.js') }}"></script>
 

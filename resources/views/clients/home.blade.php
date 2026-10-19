@@ -1,5 +1,10 @@
 @include('clients.blocks.header_home')
-@include('clients.blocks.banner_home')
+@if (count($postcards) >= 3)
+    @include('clients.blocks.hero-postcards')
+    @include('clients.blocks.home_search_strip')
+@else
+    @include('clients.blocks.banner_home')
+@endif
 @include('clients.blocks.interest_section')
 
 @include('clients.blocks.tour_featured')
