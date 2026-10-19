@@ -1,0 +1,429 @@
+{
+    "_ghi_chu": "A2/A3. Món ăn và lễ hội đưa vào ở trạng thái draft. wikiTitle=null nghĩa là chưa có bài Wikipedia khớp (tự viết hoặc tìm tên bài). Ngày lễ hội do người nhập, KHÔNG lấy từ Wikipedia; mọi mục có verify cần đối chiếu nguồn chính thống.",
+    "destinations": [
+        {
+            "slug": "ha-noi",
+            "region": "b",
+            "why": "Thủ đô, văn hóa và ẩm thực lâu đời; tour văn hóa/ẩm thực"
+        },
+        {
+            "slug": "hoi-an",
+            "region": "t",
+            "why": "Phố cổ, đèn lồng, di sản; điểm đến du lịch quen thuộc, nhiều ảnh mở"
+        },
+        {
+            "slug": "da-lat",
+            "region": "t",
+            "why": "Cao nguyên mát, khác biệt khí hậu với 3 nơi còn lại; mùa đẹp rõ rệt"
+        },
+        {
+            "slug": "can-tho",
+            "region": "n",
+            "why": "Miền Tây sông nước, chợ nổi, ẩm thực; đại diện miền Nam"
+        }
+    ],
+    "foods": [
+        {
+            "slug": "pho-ha-noi",
+            "name": "Phở Hà Nội",
+            "destination": "ha-noi",
+            "category": "bún phở",
+            "wikiTitle": "Phở"
+        },
+        {
+            "slug": "bun-cha",
+            "name": "Bún chả",
+            "destination": "ha-noi",
+            "category": "bún phở",
+            "wikiTitle": "Bún chả"
+        },
+        {
+            "slug": "bun-thang",
+            "name": "Bún thang",
+            "destination": "ha-noi",
+            "category": "bún phở",
+            "wikiTitle": "Bún thang"
+        },
+        {
+            "slug": "cha-ca-la-vong",
+            "name": "Chả cá Lã Vọng",
+            "destination": "ha-noi",
+            "category": "món nướng chiên",
+            "wikiTitle": "Chả cá Lã Vọng"
+        },
+        {
+            "slug": "banh-cuon",
+            "name": "Bánh cuốn",
+            "destination": "ha-noi",
+            "category": "bánh",
+            "wikiTitle": "Bánh cuốn"
+        },
+        {
+            "slug": "bun-dau-mam-tom",
+            "name": "Bún đậu mắm tôm",
+            "destination": "ha-noi",
+            "category": "bún phở",
+            "wikiTitle": "Bún đậu mắm tôm"
+        },
+        {
+            "slug": "ca-phe-trung",
+            "name": "Cà phê trứng",
+            "destination": "ha-noi",
+            "category": "đồ uống",
+            "wikiTitle": "Cà phê trứng"
+        },
+        {
+            "slug": "com-lang-vong",
+            "name": "Cốm làng Vòng",
+            "destination": "ha-noi",
+            "category": "đặc sản",
+            "wikiTitle": "Cốm"
+        },
+        {
+            "slug": "banh-tom-ho-tay",
+            "name": "Bánh tôm Hồ Tây",
+            "destination": "ha-noi",
+            "category": "món nướng chiên",
+            "wikiTitle": "Bánh tôm Hồ Tây"
+        },
+        {
+            "slug": "xoi-xeo",
+            "name": "Xôi xéo",
+            "destination": "ha-noi",
+            "category": "xôi",
+            "wikiTitle": "Xôi xéo",
+            "desc": null
+        },
+        {
+            "slug": "cao-lau",
+            "name": "Cao lầu",
+            "destination": "hoi-an",
+            "category": "mì bún",
+            "wikiTitle": "Cao lầu"
+        },
+        {
+            "slug": "mi-quang",
+            "name": "Mì Quảng",
+            "destination": "hoi-an",
+            "category": "mì bún",
+            "wikiTitle": "Mì Quảng"
+        },
+        {
+            "slug": "com-ga-hoi-an",
+            "name": "Cơm gà Hội An",
+            "destination": "hoi-an",
+            "category": "cơm",
+            "wikiTitle": null
+        },
+        {
+            "slug": "banh-bao-banh-vac",
+            "name": "Bánh bao bánh vạc",
+            "destination": "hoi-an",
+            "category": "bánh",
+            "wikiTitle": null
+        },
+        {
+            "slug": "banh-mi-hoi-an",
+            "name": "Bánh mì Hội An",
+            "destination": "hoi-an",
+            "category": "bánh",
+            "wikiTitle": "Bánh mì",
+            "desc": null
+        },
+        {
+            "slug": "hoanh-thanh-chien",
+            "name": "Hoành thánh chiên",
+            "destination": "hoi-an",
+            "category": "món nướng chiên",
+            "wikiTitle": null
+        },
+        {
+            "slug": "banh-dap",
+            "name": "Bánh đập",
+            "destination": "hoi-an",
+            "category": "bánh",
+            "wikiTitle": null
+        },
+        {
+            "slug": "che-bap",
+            "name": "Chè bắp",
+            "destination": "hoi-an",
+            "category": "tráng miệng",
+            "wikiTitle": null
+        },
+        {
+            "slug": "banh-trang-nuong",
+            "name": "Bánh tráng nướng",
+            "destination": "da-lat",
+            "category": "ăn vặt",
+            "wikiTitle": "Bánh tráng nướng",
+            "desc": null
+        },
+        {
+            "slug": "banh-can",
+            "name": "Bánh căn",
+            "destination": "da-lat",
+            "category": "bánh",
+            "wikiTitle": "Bánh căn"
+        },
+        {
+            "slug": "nem-nuong-da-lat",
+            "name": "Nem nướng",
+            "destination": "da-lat",
+            "category": "món nướng chiên",
+            "wikiTitle": "Nem nướng",
+            "desc": null
+        },
+        {
+            "slug": "lau-ga-la-e",
+            "name": "Lẩu gà lá é",
+            "destination": "da-lat",
+            "category": "lẩu",
+            "wikiTitle": null
+        },
+        {
+            "slug": "banh-uot-long-ga",
+            "name": "Bánh ướt lòng gà",
+            "destination": "da-lat",
+            "category": "bánh",
+            "wikiTitle": null
+        },
+        {
+            "slug": "atiso-da-lat",
+            "name": "Atisô Đà Lạt",
+            "destination": "da-lat",
+            "category": "đặc sản",
+            "wikiTitle": "Atisô",
+            "desc": null
+        },
+        {
+            "slug": "mut-dau-tay",
+            "name": "Mứt dâu tây",
+            "destination": "da-lat",
+            "category": "đặc sản",
+            "wikiTitle": null
+        },
+        {
+            "slug": "sua-dau-nanh-nong",
+            "name": "Sữa đậu nành nóng",
+            "destination": "da-lat",
+            "category": "đồ uống",
+            "wikiTitle": null
+        },
+        {
+            "slug": "lau-mam",
+            "name": "Lẩu mắm",
+            "destination": "can-tho",
+            "category": "lẩu",
+            "wikiTitle": null
+        },
+        {
+            "slug": "banh-xeo",
+            "name": "Bánh xèo miền Tây",
+            "destination": "can-tho",
+            "category": "bánh",
+            "wikiTitle": "Bánh xèo",
+            "desc": null
+        },
+        {
+            "slug": "banh-cong",
+            "name": "Bánh cống",
+            "destination": "can-tho",
+            "category": "món nướng chiên",
+            "wikiTitle": "Bánh cống",
+            "desc": null
+        },
+        {
+            "slug": "bun-nuoc-leo",
+            "name": "Bún nước lèo",
+            "destination": "can-tho",
+            "category": "mì bún",
+            "wikiTitle": "Bún nước lèo"
+        },
+        {
+            "slug": "hu-tieu",
+            "name": "Hủ tiếu",
+            "destination": "can-tho",
+            "category": "mì bún",
+            "wikiTitle": "Hủ tiếu"
+        },
+        {
+            "slug": "nem-nuong-cai-rang",
+            "name": "Nem nướng Cái Răng",
+            "destination": "can-tho",
+            "category": "món nướng chiên",
+            "wikiTitle": null
+        },
+        {
+            "slug": "ca-loc-nuong-trui",
+            "name": "Cá lóc nướng trui",
+            "destination": "can-tho",
+            "category": "món nướng chiên",
+            "wikiTitle": null
+        },
+        {
+            "slug": "banh-pia",
+            "name": "Bánh pía",
+            "destination": "can-tho",
+            "category": "bánh",
+            "wikiTitle": "Bánh pía"
+        }
+    ],
+    "events": [
+        {
+            "slug": "tet-nguyen-dan",
+            "name": "Tết Nguyên Đán",
+            "destination": null,
+            "isLunar": true,
+            "lunarMonth": 1,
+            "lunarDay": 1,
+            "solarMonth": null,
+            "solarDay": null,
+            "durationDays": 5,
+            "wikiTitle": "Tết Nguyên Đán",
+            "dateNote": "Mùng 1 đến mùng 5 (kỳ nghỉ chính thức dài hơn, thay đổi theo năm)",
+            "verify": "Đối chiếu ngày với nguồn chính thống trước khi chuyển published"
+        },
+        {
+            "slug": "ram-thang-gieng",
+            "name": "Rằm tháng Giêng (Tết Nguyên tiêu)",
+            "destination": null,
+            "isLunar": true,
+            "lunarMonth": 1,
+            "lunarDay": 15,
+            "solarMonth": null,
+            "solarDay": null,
+            "durationDays": 1,
+            "wikiTitle": "Tết Nguyên tiêu",
+            "dateNote": null,
+            "verify": "Đối chiếu ngày với nguồn chính thống trước khi chuyển published"
+        },
+        {
+            "slug": "gio-to-hung-vuong",
+            "name": "Giỗ Tổ Hùng Vương",
+            "destination": null,
+            "isLunar": true,
+            "lunarMonth": 3,
+            "lunarDay": 10,
+            "solarMonth": null,
+            "solarDay": null,
+            "durationDays": 1,
+            "wikiTitle": "Giỗ Tổ Hùng Vương",
+            "dateNote": "Lễ hội chính tại Phú Thọ",
+            "verify": "Đối chiếu ngày với nguồn chính thống trước khi chuyển published"
+        },
+        {
+            "slug": "tet-trung-thu",
+            "name": "Tết Trung thu",
+            "destination": null,
+            "isLunar": true,
+            "lunarMonth": 8,
+            "lunarDay": 15,
+            "solarMonth": null,
+            "solarDay": null,
+            "durationDays": 1,
+            "wikiTitle": "Tết Trung thu",
+            "dateNote": null,
+            "verify": "Đối chiếu ngày với nguồn chính thống trước khi chuyển published"
+        },
+        {
+            "slug": "hoi-go-dong-da",
+            "name": "Hội Gò Đống Đa",
+            "destination": "ha-noi",
+            "isLunar": true,
+            "lunarMonth": 1,
+            "lunarDay": 5,
+            "solarMonth": null,
+            "solarDay": null,
+            "durationDays": 1,
+            "wikiTitle": "Gò Đống Đa",
+            "dateNote": null,
+            "verify": "Đối chiếu ngày với nguồn chính thống trước khi chuyển published"
+        },
+        {
+            "slug": "hoi-chua-huong",
+            "name": "Lễ hội chùa Hương",
+            "destination": "ha-noi",
+            "isLunar": true,
+            "lunarMonth": 1,
+            "lunarDay": 6,
+            "solarMonth": null,
+            "solarDay": null,
+            "durationDays": 60,
+            "wikiTitle": "Lễ hội chùa Hương",
+            "dateNote": "Ngày khai hội; mùa lễ hội kéo dài đến cuối tháng 3 âm lịch (dòng này chỉ là ước lượng độ dài)",
+            "verify": "Đối chiếu ngày với nguồn chính thống trước khi chuyển published"
+        },
+        {
+            "slug": "hoi-giong-phu-dong",
+            "name": "Hội Gióng đền Phù Đổng",
+            "destination": "ha-noi",
+            "isLunar": true,
+            "lunarMonth": 4,
+            "lunarDay": 9,
+            "solarMonth": null,
+            "solarDay": null,
+            "durationDays": 1,
+            "wikiTitle": "Hội Gióng",
+            "dateNote": "Ngày chính hội; lễ hội diễn ra nhiều ngày quanh mùng 9",
+            "verify": "Đối chiếu ngày với nguồn chính thống trước khi chuyển published"
+        },
+        {
+            "slug": "dem-ram-pho-co-hoi-an",
+            "name": "Đêm rằm phố cổ Hội An",
+            "destination": "hoi-an",
+            "isLunar": true,
+            "lunarMonth": null,
+            "lunarDay": 14,
+            "solarMonth": null,
+            "solarDay": null,
+            "durationDays": 1,
+            "wikiTitle": null,
+            "dateNote": "Lặp mỗi tháng âm lịch vào ngày 14",
+            "verify": "Đối chiếu ngày với nguồn chính thống trước khi chuyển published"
+        },
+        {
+            "slug": "le-hoi-ba-thu-bon",
+            "name": "Lễ hội Bà Thu Bồn",
+            "destination": "hoi-an",
+            "isLunar": true,
+            "lunarMonth": 2,
+            "lunarDay": 12,
+            "solarMonth": null,
+            "solarDay": null,
+            "durationDays": 3,
+            "wikiTitle": "Lễ hội Bà Thu Bồn",
+            "dateNote": "Diễn ra tại Duy Xuyên, cách Hội An khoảng 30 km",
+            "verify": "Đối chiếu ngày với nguồn chính thống trước khi chuyển published"
+        },
+        {
+            "slug": "festival-hoa-da-lat",
+            "name": "Festival Hoa Đà Lạt",
+            "destination": "da-lat",
+            "isLunar": false,
+            "lunarMonth": null,
+            "lunarDay": null,
+            "solarMonth": 12,
+            "solarDay": null,
+            "durationDays": 5,
+            "wikiTitle": "Festival Hoa Đà Lạt",
+            "dateNote": "Không tổ chức cố định hằng năm; ngày cụ thể do người duyệt nhập tay mỗi kỳ",
+            "verify": "Đối chiếu ngày với nguồn chính thống trước khi chuyển published"
+        },
+        {
+            "slug": "le-ky-yen-dinh-binh-thuy",
+            "name": "Lễ Kỳ yên đình Bình Thủy",
+            "destination": "can-tho",
+            "isLunar": true,
+            "lunarMonth": 4,
+            "lunarDay": 12,
+            "solarMonth": null,
+            "solarDay": null,
+            "durationDays": 2,
+            "wikiTitle": "Đình Bình Thủy",
+            "dateNote": null,
+            "verify": "Đối chiếu ngày với nguồn chính thống trước khi chuyển published",
+            "desc": null
+        }
+    ]
+}

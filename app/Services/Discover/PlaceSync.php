@@ -5,6 +5,7 @@ namespace App\Services\Discover;
 use App\Services\Discover\Poi\GeoapifyProvider;
 use App\Services\Discover\Poi\OverpassProvider;
 use App\Services\Discover\Poi\PoiProvider;
+use App\Services\Content\ImportRaw;
 use Illuminate\Support\Facades\DB;
 
 /** Chọn provider, lọc top-N mỗi nhóm, ghi tbl_external_places (upsert + dọn bản ghi không còn). */
@@ -48,10 +49,23 @@ class PlaceSync
         return $out;
     }
 
-    /** @return int số địa điểm đã lưu */
-    public function syncDestination(object $d, PoiProvider $provider, bool $prune = true): int
+    /** @return int số địa điểm đã lưu. Bản ghi mới có reviewStatus = draft (mặc định DB); bản đã duyệt không bị đổi. */
+    public function syncDestination(object $d, PoiProvider $provider, bool $prune = true, bool $fromRaw = false): int
     {
-        $raw = $provider->fetch((float) $d->latitude, (float) $d->longitude, (int) config('discover.places.radius_m'));
+        // A4: phản hồi nguồn ngoài (OSM) được đệm vào tbl_import_raw; --from-raw dựng lại không gọi mạng.
+        $rawId = $provider->name() . ':' . $d->slug;
+        if ($fromRaw) {
+            $stored = ImportRaw::get('osm', $rawId);
+            if (!$stored) {
+                throw new \RuntimeException('chưa có vùng đệm, hãy chạy một lần không kèm --from-raw');
+            }
+            $raw = $stored['places'];
+        } else {
+            $raw = $provider->fetch((float) $d->latitude, (float) $d->longitude, (int) config('discover.places.radius_m'));
+            if ($raw) {
+                ImportRaw::put('osm', $rawId, ['slug' => $d->slug, 'provider' => $provider->name(), 'places' => $raw]);
+            }
+        }
         $keep = self::select($raw, (float) $d->latitude, (float) $d->longitude, config('discover.places.per_category'));
 
         $now = now();

@@ -11,7 +11,8 @@ class SyncPlaces extends Command
     protected $signature = 'discover:sync-places
         {--slug= : Chỉ một điểm đến}
         {--provider= : overpass | geoapify (mặc định theo DISCOVER_POI_PROVIDER)}
-        {--no-prune : Không xoá địa điểm cũ không còn trong kết quả}';
+        {--no-prune : Không xoá địa điểm cũ không còn trong kết quả}
+        {--from-raw : Dựng lại từ vùng đệm tbl_import_raw, không gọi mạng}';
 
     protected $description = 'Đồng bộ địa điểm tham quan/văn hoá/ăn uống quanh mỗi điểm đến vào tbl_external_places';
 
@@ -34,7 +35,7 @@ class SyncPlaces extends Command
         $fail = 0;
         foreach ($rows as $i => $d) {
             try {
-                $n = $sync->syncDestination($d, $provider, !$this->option('no-prune'));
+                $n = $sync->syncDestination($d, $provider, !$this->option('no-prune'), (bool) $this->option('from-raw'));
                 $this->line("✓ {$d->slug}: {$n} địa điểm");
             } catch (\Throwable $e) {
                 $fail++;

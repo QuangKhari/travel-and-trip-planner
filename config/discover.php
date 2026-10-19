@@ -41,7 +41,7 @@ return [
         'provider' => env('DISCOVER_POI_PROVIDER', 'overpass'),
         'radius_m' => (int) env('DISCOVER_POI_RADIUS', 12000),
         // Số địa điểm giữ lại cho mỗi nhóm của mỗi điểm đến
-        'per_category' => ['see' => 12, 'culture' => 6, 'eat' => 8],
+        'per_category' => ['see' => 14, 'culture' => 8, 'eat' => 8],   // tổng khoảng 30
         'delay_us' => 2000000,
         'overpass_url' => env('OVERPASS_URL', 'https://overpass-api.de/api/interpreter'),
         'geoapify_key' => env('GEOAPIFY_KEY'),
