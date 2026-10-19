@@ -8,8 +8,9 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Danh sách bưu ảnh cho hero trang chủ (và API GET /api/v1/seasons).
- * Chỉ lấy điểm đến đang bật, có ảnh bìa tồn tại thật trên disk (DiscoverImage::url trả null nếu thiếu).
- * Xếp: điểm đến "đẹp nhất vào tháng này" (theo config/postcards.php) trước, rồi theo điểm cảm hứng cao nhất.
+ * v2: mùa đẹp đọc từ tbl_destination_months (level best/ok/avoid), không đọc config nữa.
+ * Điểm đến level 'avoid' trong tháng bị loại; 'best' lên trước; còn lại xếp theo điểm cảm hứng cao nhất.
+ * Chỉ lấy điểm đến đang bật có ảnh bìa tồn tại thật trên disk.
  */
 class HeroPostcardService
 {
@@ -18,18 +19,20 @@ class HeroPostcardService
         $month = max(1, min(12, $month));
         $limit = $limit ?? (int) config('postcards.limit', 8);
 
-        return Cache::remember("postcards.v1.m{$month}.l{$limit}", 3600, fn() => $this->build($month, $limit));
+        return Cache::remember("postcards.v2.m{$month}.l{$limit}", 3600, fn() => $this->build($month, $limit));
     }
 
     private function build(int $month, int $limit): array
     {
-        $seasons = config('postcards.seasons', []);
-
         $rows = DB::table('tbl_destinations as d')
             ->leftJoin('tbl_destination_inspiration as di', 'di.destinationId', '=', 'd.destinationId')
+            ->leftJoin('tbl_destination_months as dm', function ($j) use ($month) {
+                $j->on('dm.destinationId', '=', 'd.destinationId')->where('dm.month', '=', $month);
+            })
             ->where('d.isActive', 1)
             ->whereNotNull('d.coverImage')
-            ->groupBy('d.destinationId', 'd.slug', 'd.name', 'd.province', 'd.coverImage', 'd.imageCredit', 'd.imageSourceUrl')
+            ->where(fn($q) => $q->whereNull('dm.level')->orWhere('dm.level', '!=', 'avoid'))
+            ->groupBy('d.destinationId', 'd.slug', 'd.name', 'd.province', 'd.coverImage', 'd.imageCredit', 'd.imageSourceUrl', 'dm.level', 'dm.note')
             ->get([
                 'd.slug',
                 'd.name',
@@ -37,6 +40,8 @@ class HeroPostcardService
                 'd.coverImage',
                 'd.imageCredit',
                 'd.imageSourceUrl',
+                'dm.level',
+                'dm.note',
                 DB::raw('COALESCE(MAX(di.score), 0) as topScore'),
             ]);
 
@@ -44,10 +49,9 @@ class HeroPostcardService
         foreach ($rows as $r) {
             $img = DiscoverImage::url($r->coverImage);
             if (!$img) {
-                continue; // thiếu ảnh thì bỏ qua, đúng tài liệu
+                continue;
             }
-            $s = $seasons[$r->slug] ?? null;
-            $best = $s && in_array($month, $s['m'], true);
+            $best = $r->level === 'best';
 
             $items[] = [
                 'slug'      => $r->slug,
@@ -55,7 +59,9 @@ class HeroPostcardService
                 'province'  => $r->province,
                 'image'     => $img,
                 'best'      => $best,
-                'why'       => $best ? $s['w'] . ' · đẹp nhất vào tháng ' . $month : 'Điểm nổi bật quanh năm',
+                'why'       => $best
+                    ? trim(($r->note ? $r->note . ' · ' : '') . 'đẹp nhất vào tháng ' . $month)
+                    : 'Điểm nổi bật quanh năm',
                 'url'       => route('destination.show', ['slug' => $r->slug]),
                 'credit'    => $r->imageCredit,
                 'creditUrl' => $r->imageSourceUrl,

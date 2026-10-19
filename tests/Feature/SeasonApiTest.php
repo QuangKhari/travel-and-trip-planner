@@ -11,9 +11,9 @@ class SeasonApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function destination(string $slug, string $name, ?string $cover): void
+    private function destination(string $slug, string $name, ?string $cover): int
     {
-        DB::table('tbl_destinations')->insert([
+        return DB::table('tbl_destinations')->insertGetId([
             'slug' => $slug,
             'name' => $name,
             'province' => 'Test',
@@ -26,29 +26,41 @@ class SeasonApiTest extends TestCase
         ]);
     }
 
+    private function month(int $destId, int $month, string $level, ?string $note = null): void
+    {
+        DB::table('tbl_destination_months')->insert([
+            'destinationId' => $destId,
+            'month' => $month,
+            'level' => $level,
+            'note' => $note,
+            'source' => 'manual',
+        ]);
+    }
+
     public function test_month_ngoai_khoang_tra_422(): void
     {
         $this->getJson('/api/v1/seasons?month=13')->assertStatus(422);
         $this->getJson('/api/v1/seasons?month=abc')->assertStatus(422);
     }
 
-    public function test_diem_dep_trong_thang_len_truoc_va_bo_diem_thieu_anh(): void
+    public function test_best_len_truoc_avoid_bi_loai_va_bo_diem_thieu_anh(): void
     {
         Storage::fake('public');
-        Storage::disk('public')->put('discover/destinations/sa-pa.webp', 'x');
-        Storage::disk('public')->put('discover/destinations/ha-noi.webp', 'x');
-
-        $this->destination('ha-noi', 'Hà Nội', 'discover/destinations/ha-noi.webp');
-        $this->destination('sa-pa', 'Sa Pa', 'discover/destinations/sa-pa.webp');
+        foreach (['ha-noi', 'sa-pa', 'da-lat'] as $s) {
+            Storage::disk('public')->put("discover/destinations/{$s}.webp", 'x');
+        }
+        $hn = $this->destination('ha-noi', 'Hà Nội', 'discover/destinations/ha-noi.webp');
+        $sp = $this->destination('sa-pa', 'Sa Pa', 'discover/destinations/sa-pa.webp');
+        $dl = $this->destination('da-lat', 'Đà Lạt', 'discover/destinations/da-lat.webp');
         $this->destination('khong-anh', 'Không ảnh', 'discover/destinations/khong-anh.webp'); // file không tồn tại
 
-        config(['postcards.seasons' => ['sa-pa' => ['m' => [10], 'w' => 'Lúa chín']]]);
+        $this->month($sp, 10, 'best', 'Lúa chín');
+        $this->month($dl, 10, 'avoid');
+        $this->month($hn, 10, 'ok');
 
-        $res = $this->getJson('/api/v1/seasons?month=10')->assertOk();
+        $items = $this->getJson('/api/v1/seasons?month=10')->assertOk()->json('items');
 
-        $items = $res->json('items');
-        $this->assertCount(2, $items);
-        $this->assertSame('sa-pa', $items[0]['slug']);
+        $this->assertSame(['sa-pa', 'ha-noi'], array_column($items, 'slug')); // Đà Lạt (avoid) và điểm thiếu ảnh bị loại
         $this->assertTrue($items[0]['best']);
         $this->assertStringContainsString('tháng 10', $items[0]['why']);
         $this->assertFalse($items[1]['best']);
