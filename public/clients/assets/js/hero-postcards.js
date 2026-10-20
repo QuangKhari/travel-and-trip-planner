@@ -28,7 +28,8 @@
         m3 = false,
         vis = true,
         front = 0;
-    var running = false; /* chỉ một vòng vẽ được chạy */
+    var running = false /* chỉ một vòng vẽ được chạy */,
+        pointerActive = false;
     var mx = 0,
         my = 0,
         hx = 0,
@@ -208,10 +209,24 @@
             running = false;
             return;
         }
+
         cur += (tgt - cur) * K.lag;
-        if (Math.abs(tgt - cur) < 0.0005) cur = tgt;
+
+        var settled = Math.abs(tgt - cur) < 0.0005;
+
+        if (settled) cur = tgt;
+
         render(cur);
         update(Math.round(clamp(cur, 0, cards.length - 1)));
+
+        var pointerMoving =
+            Math.abs(mx - hx) > 0.001 || Math.abs(my - hy) > 0.001;
+
+        if (settled && !pointerActive && !pointerMoving) {
+            running = false;
+            return;
+        }
+
         requestAnimationFrame(tick);
     }
     function onScroll() {
@@ -395,9 +410,24 @@
     });
     q(".hp-stage").addEventListener("pointermove", function (e) {
         if (!canHover || !m3 || W < 1024) return;
+
+        pointerActive = true;
         mx = e.clientX / W - 0.5;
         my = e.clientY / H - 0.5;
+
+        start();
     });
+
+    q(".hp-stage").addEventListener("pointerleave", function () {
+        if (!canHover || !m3 || W < 1024) return;
+
+        pointerActive = false;
+        mx = 0;
+        my = 0;
+
+        start();
+    });
+
     addEventListener("keydown", function (e) {
         if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
         var t = e.target && e.target.tagName;
