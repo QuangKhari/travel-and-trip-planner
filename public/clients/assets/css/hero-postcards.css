@@ -394,6 +394,12 @@ body.tv-home .page-wrapper {
     will-change: transform, opacity;
     backface-visibility: hidden;
 }
+
+.hp--3d .hp-card:first-child {
+    visibility: visible;
+    opacity: 1;
+    transform: translate(-50%, -50%) translate3d(0, 0, -527px) rotateZ(-2.5deg);
+}
 .hp--3d .hp-panel {
     position: absolute;
     z-index: 3;

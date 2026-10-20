@@ -37,10 +37,30 @@
         H = innerHeight,
         top0 = 0,
         added = {},
+        tripStorageKey = "travela:trip-items",
         loading = false;
 
     function clamp(v, a, b) {
         return Math.max(a, Math.min(b, v));
+    }
+    function loadAdded() {
+        try {
+            var raw = localStorage.getItem(tripStorageKey);
+            var data = raw ? JSON.parse(raw) : {};
+            return data && typeof data === "object" ? data : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function saveAdded() {
+        try {
+            localStorage.setItem(tripStorageKey, JSON.stringify(added));
+        } catch (e) {}
+    }
+
+    function addedCount() {
+        return Object.keys(added).length;
     }
     function measure() {
         W = innerWidth;
@@ -98,7 +118,9 @@
         go.href = last ? planner + month : it.url;
         add.hidden = last;
         add.textContent =
-            !last && added[it.slug] ? "✓ Đã thêm" : "+ Thêm vào chuyến đi";
+            !last && added[it.slug]
+                ? "✓ Đã thêm (" + addedCount() + ")"
+                : "+ Thêm vào chuyến đi";
         cr.textContent = "";
         if (!last && it.credit) {
             cr.appendChild(document.createTextNode("Ảnh: "));
@@ -332,12 +354,21 @@
     q(".hp-p-add").addEventListener("click", function () {
         var it = items[idx];
         if (!it) return;
-        added[it.slug] = true;
-        this.textContent = "✓ Đã thêm";
-        /* Khi có khay chuyến đi (tbl_trip_items), lắng nghe sự kiện này để lưu */
+
+        added[it.slug] = {
+            type: "destination",
+            slug: it.slug,
+            name: it.name,
+            url: it.url,
+            addedAt: Date.now(),
+        };
+
+        saveAdded();
+        this.textContent = "✓ Đã thêm (" + addedCount() + ")";
+
         document.dispatchEvent(
             new CustomEvent("travela:trip-add", {
-                detail: { type: "destination", slug: it.slug, name: it.name },
+                detail: added[it.slug],
             }),
         );
     });
@@ -387,6 +418,7 @@
     mqMobile.addEventListener("change", setMode);
     mqReduce.addEventListener("change", setMode);
 
+    added = loadAdded();
     read();
     setMode();
     root.dataset.ready = "1";
