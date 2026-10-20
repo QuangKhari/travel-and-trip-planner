@@ -71,12 +71,13 @@ body.tv-home .page-wrapper {
 }
 .hp-bg {
     position: absolute;
-    inset: -80px;
+    inset: -48px;
     background-size: cover;
     background-position: center;
-    filter: blur(70px) saturate(1.2);
+    filter: blur(40px) saturate(1.15);
     opacity: 0;
     transition: opacity 0.6s;
+    transform: scale(1.08);
 }
 .hp-bg.on {
     opacity: 0.45;
@@ -324,6 +325,19 @@ body.tv-home .page-wrapper {
     opacity: 0;
 }
 
+.hp-notice {
+    position: absolute;
+    z-index: 4;
+    top: 154px;
+    right: clamp(20px, 4vw, 56px);
+    max-width: min(360px, 80vw);
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.82);
+    color: #fff;
+    font-size: 12px;
+}
+
 /* reduced-motion trên desktop: lưới tĩnh 6 bưu ảnh */
 @media (prefers-reduced-motion: reduce) and (min-width: 600px) {
     .hp-world {
@@ -445,4 +459,13 @@ body.tv-home .page-wrapper {
 }
 .hp-search .tv-search {
     box-shadow: 0 14px 40px rgba(15, 23, 42, 0.14);
+}
+
+@media (max-width: 599px) {
+    .hp-notice {
+        top: 150px;
+        left: 20px;
+        right: 20px;
+        max-width: none;
+    }
 }

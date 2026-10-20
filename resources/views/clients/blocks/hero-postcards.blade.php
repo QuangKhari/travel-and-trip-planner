@@ -48,6 +48,7 @@
                         aria-pressed="{{ $m === $month ? 'true' : 'false' }}">Tháng {{ $m }}</button>
                 @endfor
             </div>
+            <div class="hp-notice" role="status" aria-live="polite" hidden></div>
 
             <div class="hp-scene">
                 <div class="hp-world">
@@ -72,7 +73,7 @@
                 </div>
             </div>
 
-            <div class="hp-panel" role="status" aria-live="polite">
+            <div class="hp-panel" role="status" aria-live="off">
                 <h2 class="hp-p-name"></h2>
                 <p class="hp-p-why"></p>
                 <div class="hp-row">

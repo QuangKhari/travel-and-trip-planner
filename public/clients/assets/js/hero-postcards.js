@@ -15,7 +15,7 @@
     var canHover = matchMedia("(hover:hover) and (pointer:fine)").matches;
 
     /* Thông số chuyển động (bảng trong tài liệu). Chỉnh ở đây. */
-    var K = { gap: 620, back: 0.45, R: 0.26, Ry: 0.13, lag: 0.09, rowH: 0.7 };
+    var K = { gap: 620, back: 0.85, R: 0.26, Ry: 0.13, lag: 0.09, rowH: 0.7 };
 
     var month = +root.dataset.month,
         planner = root.dataset.planner,
@@ -77,6 +77,19 @@
 
         chips.scrollLeft =
             on.offsetLeft - chips.clientWidth / 2 + on.offsetWidth / 2;
+    }
+
+    function showNotice(message) {
+        var notice = q(".hp-notice");
+        if (!notice) return;
+
+        notice.textContent = message;
+        notice.hidden = false;
+
+        clearTimeout(showNotice.timer);
+        showNotice.timer = setTimeout(function () {
+            notice.hidden = true;
+        }, 3000);
     }
 
     /* ---- đọc DOM do Blade render ---- */
@@ -218,6 +231,7 @@
 
         render(cur);
         update(Math.round(clamp(cur, 0, cards.length - 1)));
+        q(".hp-panel").setAttribute("aria-live", settled ? "polite" : "off");
 
         var pointerMoving =
             Math.abs(mx - hx) > 0.001 || Math.abs(my - hy) > 0.001;
@@ -328,7 +342,12 @@
                 return r.json();
             })
             .then(function (d) {
-                if (!d.items || d.items.length < 3) throw 0;
+                if (!d.items || d.items.length < 3) {
+                    showNotice(
+                        "Tháng " + m + " hiện chưa có đủ điểm đến nổi bật.",
+                    );
+                    throw 0;
+                }
                 setTimeout(function () {
                     var blank = world.querySelector(".hp-blank");
                     world
