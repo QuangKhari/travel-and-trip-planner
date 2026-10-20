@@ -115,7 +115,7 @@
             add = q(".hp-p-add"),
             cr = q(".hp-p-credit");
         go.textContent = last ? "Lên kế hoạch" : "Xem điểm đến";
-        go.href = last ? planner + month : it.url;
+        go.href = last ? planner : it.url;
         add.hidden = last;
         add.textContent =
             !last && added[it.slug]
@@ -317,10 +317,10 @@
                     month = m;
                     root.dataset.month = m;
                     root.dataset.season = season(m);
-                    blank.href = planner + m;
+                    blank.href = planner;
                     blank.setAttribute(
                         "aria-label",
-                        "Bưu ảnh trắng: lên kế hoạch cho tháng " + m,
+                        "Bưu ảnh trắng: khám phá theo cảm hứng",
                     );
                     root.querySelectorAll(".hp-month").forEach(function (n) {
                         n.textContent = m;

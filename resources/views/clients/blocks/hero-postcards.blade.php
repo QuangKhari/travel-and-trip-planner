@@ -10,13 +10,24 @@
         in_array($month, [8, 9, 10], true) => 'autumn',
         default => 'winter',
     };
-    $plannerUrl = url(config('postcards.planner_url', '/explore')) . '?thang=';
+    $plannerUrl = url(config('postcards.planner_url', '/')) . '#kham-pha';
     $count = count($postcards) + 1; // + bưu ảnh trắng
 @endphp
-<section class="hp" id="hero" style="--n: {{ $count }}" data-month="{{ $month }}" data-season="{{ $season }}"
-    data-planner="{{ $plannerUrl }}" data-api="{{ url('/api/v1/seasons') }}" aria-label="Điểm đến đẹp trong tháng {{ $month }}">
+<section class="hp" id="hero" style="--n: {{ $count }}" data-month="{{ $month }}"
+    data-season="{{ $season }}" data-planner="{{ $plannerUrl }}" data-api="{{ url('/api/v1/seasons') }}"
+    aria-label="Điểm đến đẹp trong tháng {{ $month }}">
     {{-- Chạy đồng bộ trước khi vẽ để không giật bố cục; quá 3 giây mà JS chưa sẵn sàng thì rơi về bản tĩnh --}}
-    <script>(function(s){var m=matchMedia;if(!m('(max-width:599px)').matches&&!m('(prefers-reduced-motion: reduce)').matches){s.classList.add('hp--3d');setTimeout(function(){if(!s.dataset.ready)s.classList.remove('hp--3d')},3000)}})(document.currentScript.parentNode)</script>
+    <script>
+        (function(s) {
+            var m = matchMedia;
+            if (!m('(max-width:599px)').matches && !m('(prefers-reduced-motion: reduce)').matches) {
+                s.classList.add('hp--3d');
+                setTimeout(function() {
+                    if (!s.dataset.ready) s.classList.remove('hp--3d')
+                }, 3000)
+            }
+        })(document.currentScript.parentNode)
+    </script>
     <a class="hp-skip" href="#hp-after">Bỏ qua hero</a>
 
     <div class="hp-track">
@@ -41,10 +52,12 @@
             <div class="hp-scene">
                 <div class="hp-world">
                     @foreach ($postcards as $i => $p)
-                        <a class="hp-card" href="{{ $p['url'] }}" data-name="{{ $p['name'] }}" data-why="{{ $p['why'] }}"
-                            data-credit="{{ $p['credit'] }}" data-credit-url="{{ $p['creditUrl'] }}" data-slug="{{ $p['slug'] }}"
+                        <a class="hp-card" href="{{ $p['url'] }}" data-name="{{ $p['name'] }}"
+                            data-why="{{ $p['why'] }}" data-credit="{{ $p['credit'] }}"
+                            data-credit-url="{{ $p['creditUrl'] }}" data-slug="{{ $p['slug'] }}"
                             aria-label="{{ $p['name'] }}, {{ $p['province'] }}. {{ $p['why'] }}">
-                            <span class="hp-img"><img src="{{ $p['image'] }}" alt="{{ $p['name'] }}, {{ $p['province'] }}"
+                            <span class="hp-img"><img src="{{ $p['image'] }}"
+                                    alt="{{ $p['name'] }}, {{ $p['province'] }}"
                                     @if ($i === 0) fetchpriority="high" @else loading="{{ $i < 3 ? 'eager' : 'lazy' }}" @endif
                                     decoding="async"></span>
                             <span class="hp-cap"><b>{{ $p['name'] }}</b><i>{{ $p['province'] }}</i></span>
@@ -52,9 +65,9 @@
                         </a>
                     @endforeach
                     <a class="hp-card hp-blank" href="{{ $plannerUrl . $month }}" data-blank="1"
-                        aria-label="Bưu ảnh trắng: lên kế hoạch cho tháng {{ $month }}">
+                        aria-label="Bưu ảnh trắng: khám phá theo cảm hứng">
                         <b>Chuyến đi của bạn bắt đầu từ đâu?</b>
-                        <span class="hp-go">Lên kế hoạch cho tháng <span class="hp-month">{{ $month }}</span> →</span>
+                        <span class="hp-go">Khám phá theo cảm hứng →</span>
                     </a>
                 </div>
             </div>
