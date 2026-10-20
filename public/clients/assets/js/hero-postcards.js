@@ -68,6 +68,16 @@
         top0 = track.getBoundingClientRect().top + (window.pageYOffset || 0);
     }
 
+    function centerActiveMonth() {
+        var chips = q(".hp-chips");
+        var on = root.querySelector('.hp-chip[aria-pressed="true"]');
+
+        if (!chips || !on) return;
+
+        chips.scrollLeft =
+            on.offsetLeft - chips.clientWidth / 2 + on.offsetWidth / 2;
+    }
+
     /* ---- đọc DOM do Blade render ---- */
     function read() {
         cards = [].slice.call(world.querySelectorAll(".hp-card"));
@@ -328,6 +338,7 @@
                     root.querySelectorAll(".hp-chip").forEach(function (c) {
                         c.setAttribute("aria-pressed", +c.dataset.month === m);
                     });
+                    centerActiveMonth();
                     read();
                     idx = -1;
                     cur = tgt = 0;
@@ -421,5 +432,6 @@
     added = loadAdded();
     read();
     setMode();
+    centerActiveMonth();
     root.dataset.ready = "1";
 })();
