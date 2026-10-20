@@ -28,6 +28,7 @@ use App\Http\Controllers\clients\ForgotPasswordController;
 use App\Http\Controllers\clients\EmailVerificationController;
 use App\Http\Controllers\clients\EmailChangeController;
 use App\Http\Controllers\clients\ExploreController;
+use App\Http\Controllers\admin\ContentReviewController;
 
 
 
@@ -163,6 +164,13 @@ Route::prefix('admin')->group(function () {
         Route::get('/promotion-edit/{id}', [PromotionManagementController::class, 'getPromotionEdit'])->name('admin.promotion-edit');
         Route::post('/edit-promotion', [PromotionManagementController::class, 'editPromotion'])->name('admin.edit-promotion');
         Route::post('/delete-promotion', [PromotionManagementController::class, 'deletePromotion'])->name('admin.delete-promotion');
+
+        // Duyệt nội dung Khám phá (A7)
+        Route::get('/content/{kind?}', [ContentReviewController::class, 'index'])->name('admin.content');
+        Route::get('/content/{kind}/{id}/edit', [ContentReviewController::class, 'edit'])->whereNumber('id')->name('admin.content.edit');
+        Route::post('/content/{kind}/{id}', [ContentReviewController::class, 'update'])->whereNumber('id')->name('admin.content.update');
+        Route::post('/content/{kind}/{id}/status', [ContentReviewController::class, 'status'])->whereNumber('id')->name('admin.content.status');
+        Route::post('/content/{kind}/bulk', [ContentReviewController::class, 'bulk'])->name('admin.content.bulk');
 
         //Reviews - xóa
         Route::delete('/reviews/{id}', [ReviewManagementController::class, 'destroy'])->name('admin.reviews.destroy');

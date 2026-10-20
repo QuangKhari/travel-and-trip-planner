@@ -28,6 +28,7 @@
         m3 = false,
         vis = true,
         front = 0;
+    var running = false; /* chỉ một vòng vẽ được chạy */
     var mx = 0,
         my = 0,
         hx = 0,
@@ -164,8 +165,17 @@
             "deg)";
         q(".hp-intro").style.opacity = clamp(1 - p * 2, 0, 1);
     }
+    function start() {
+        /* gọi bao nhiêu lần cũng chỉ có một vòng rAF */
+        if (running || !m3 || !vis) return;
+        running = true;
+        requestAnimationFrame(tick);
+    }
     function tick() {
-        if (!vis || !m3) return;
+        if (!vis || !m3) {
+            running = false;
+            return;
+        }
         cur += (tgt - cur) * K.lag;
         if (Math.abs(tgt - cur) < 0.0005) cur = tgt;
         render(cur);
@@ -207,7 +217,7 @@
         if (m3) {
             cur = tgt;
             render(cur);
-            requestAnimationFrame(tick);
+            start();
         }
         idx = -1;
         update(Math.round(clamp(cur, 0, cards.length - 1)));
@@ -372,7 +382,7 @@
     );
     new IntersectionObserver(function (en) {
         vis = en[0].isIntersecting;
-        if (vis && m3) requestAnimationFrame(tick);
+        start();
     }).observe(root);
     mqMobile.addEventListener("change", setMode);
     mqReduce.addEventListener("change", setMode);

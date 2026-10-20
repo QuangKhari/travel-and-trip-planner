@@ -50,8 +50,14 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
 
     <!-- Travel Theme v2: phải nằm CUỐI <head> để đè được CSS cũ -->
-    <link rel="preload" as="image" href="{{ asset('clients/assets/images/hero/hero.webp') }}" type="image/webp"
-        fetchpriority="high">
+    {{-- Chỉ preload ảnh của hero đang hiển thị: hero mới -> ảnh bưu ảnh đầu tiên; hero cũ -> hero.webp --}}
+    @if (isset($postcards) && count($postcards) >= 3)
+        <link rel="preload" as="image" href="{{ $postcards[0]['image'] }}" fetchpriority="high">
+    @else
+        <link rel="preload" as="image" href="{{ asset('clients/assets/images/hero/hero.webp') }}"
+            type="image/webp" fetchpriority="high">
+    @endif
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link

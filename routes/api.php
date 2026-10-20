@@ -5,6 +5,8 @@ use App\Http\Controllers\Api\V1\DestinationController;
 use App\Http\Controllers\Api\V1\InspirationController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\SeasonController;
+use App\Http\Controllers\Api\V1\ContentController;
+
 
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
@@ -33,6 +35,17 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::get('seasons', [SeasonController::class, 'index']);
+
+        // A10: nội dung lớp Khám phá (chỉ published)
+        Route::get('destinations/{slug}/months', [ContentController::class, 'months'])->where('slug', '[a-z0-9-]+');
+        Route::get('destinations/{slug}/foods', [ContentController::class, 'destinationFoods'])->where('slug', '[a-z0-9-]+');
+        Route::get('destinations/{slug}/events', [ContentController::class, 'destinationEvents'])->where('slug', '[a-z0-9-]+');
+        Route::get('foods', [ContentController::class, 'foods']);
+        Route::get('events', [ContentController::class, 'events']);
+        Route::get('guides', [ContentController::class, 'guides']);
+        Route::get('guides/{slug}', [ContentController::class, 'guide'])->where('slug', '[a-z0-9-]+');
+        Route::get('itineraries', [ContentController::class, 'itineraries']);
+        Route::get('itineraries/{slug}', [ContentController::class, 'itinerary'])->where('slug', '[a-z0-9-]+');
     });
 
     // Các endpoint Trip Planner / AI sau này đặt trong nhóm này để dùng chung xác thực:

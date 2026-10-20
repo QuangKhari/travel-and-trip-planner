@@ -52,6 +52,7 @@
                         </li>
                         <li><a href="{{ route('admin.promotion') }}"><i class="fa fa-tags"></i> Quản lý Khuyến mãi</a>
                         </li>
+                        <li><a href="{{ route('admin.content') }}"><i class="fa fa-book"></i> Duyệt nội dung</a></li>
                     @endif
 
                     {{-- Admin và manager --}}
