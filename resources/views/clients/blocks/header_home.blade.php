@@ -71,7 +71,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/hero-postcards.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/hero-postcards.css') }}?v=3">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/explore-kit.css') }}?v=1">
 </head>
 
 <body class="tv-home">

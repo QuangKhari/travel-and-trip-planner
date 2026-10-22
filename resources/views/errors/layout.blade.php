@@ -381,7 +381,7 @@
         @if (in_array($code, ['404', '403'], true))
             <nav class="links" aria-label="Lối tắt">
                 <a href="{{ url('/tours') }}">Tour</a>
-                <a href="{{ url('/destination') }}">Điểm đến</a>
+                <a href="{{ route('destination') }}">Điểm đến</a>
                 <a href="{{ url('/blogs') }}">Blog</a>
                 <a href="{{ url('/contact') }}">Liên hệ</a>
             </nav>

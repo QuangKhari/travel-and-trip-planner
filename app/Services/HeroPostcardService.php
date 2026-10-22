@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Danh sách bưu ảnh cho hero trang chủ (và API GET /api/v1/seasons).
- * v2: mùa đẹp đọc từ tbl_destination_months (level best/ok/avoid), không đọc config nữa.
+ * v3 (thêm thumb cho nền mờ). Mùa đẹp đọc từ tbl_destination_months (level best/ok/avoid), không đọc config nữa.
  * Điểm đến level 'avoid' trong tháng bị loại; 'best' lên trước; còn lại xếp theo điểm cảm hứng cao nhất.
  * Chỉ lấy điểm đến đang bật có ảnh bìa tồn tại thật trên disk.
  */
@@ -19,7 +19,7 @@ class HeroPostcardService
         $month = max(1, min(12, $month));
         $limit = $limit ?? (int) config('postcards.limit', 8);
 
-        return Cache::remember("postcards.v2.m{$month}.l{$limit}", 3600, fn() => $this->build($month, $limit));
+        return Cache::remember("postcards.v3.m{$month}.l{$limit}", 3600, fn() => $this->build($month, $limit));
     }
 
     private function build(int $month, int $limit): array
@@ -58,6 +58,7 @@ class HeroPostcardService
                 'name'      => $r->name,
                 'province'  => $r->province,
                 'image'     => $img,
+                'thumb'     => DiscoverImage::thumbUrl($r->coverImage),
                 'best'      => $best,
                 'why'       => $best
                     ? trim(($r->note ? $r->note . ' · ' : '') . 'đẹp nhất vào tháng ' . $month)

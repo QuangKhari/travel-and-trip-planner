@@ -43,7 +43,8 @@ class DestinationService
     /** @return array<string,array> category => places (đã sắp theo rank) */
     public function places(object $d, ?string $category = null): array
     {
-        $q = DB::table('tbl_external_places')->where('destinationId', $d->destinationId);
+        // Chỉ địa điểm đã duyệt (tài liệu mục 6: chỉ nội dung published mới hiển thị); duyệt ở admin > Duyệt nội dung
+        $q = DB::table('tbl_external_places')->where('destinationId', $d->destinationId)->where('reviewStatus', 'published');
         if ($category !== null) {
             $q->where('category', $category);
         }

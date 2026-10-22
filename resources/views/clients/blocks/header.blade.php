@@ -57,6 +57,8 @@
     <link rel="stylesheet" href="{{ asset('clients/assets/css/css-login/style.css') }}">
     <!-- Custom css -->
     <link rel="stylesheet" href="{{ asset('clients/assets/css/custom-css.css') }}">
+    <!-- Bộ thành phần lớp Khám phá + khay chuyến đi -->
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/explore-kit.css') }}?v=1">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
 

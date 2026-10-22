@@ -267,6 +267,14 @@
             "destination": "can-tho",
             "category": "bánh",
             "wikiTitle": "Bánh pía"
+        },
+        {
+            "slug": "banh-mi-xiu-mai",
+            "name": "Bánh mì xíu mại",
+            "destination": "da-lat",
+            "category": "đặc sản",
+            "wikiTitle": null,
+            "desc": "Viết 2 đến 3 câu của riêng bạn, tối thiểu 30 ký tự."
         }
     ],
     "events": [
@@ -424,6 +432,21 @@
             "dateNote": null,
             "verify": "Đối chiếu ngày với nguồn chính thống trước khi chuyển published",
             "desc": null
+        },
+        {
+            "slug": "ten-le-hoi",
+            "name": "Tên lễ hội",
+            "destination": "can-tho",
+            "isLunar": true,
+            "lunarMonth": 3,
+            "lunarDay": 10,
+            "solarMonth": null,
+            "solarDay": null,
+            "durationDays": 2,
+            "wikiTitle": null,
+            "dateNote": null,
+            "desc": "Mô tả tự viết.",
+            "verify": "Đối chiếu ngày với nguồn chính thống"
         }
     ]
 }

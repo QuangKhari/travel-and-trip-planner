@@ -117,6 +117,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 <script src="{{ asset('clients/assets/js/ux-pass.js') }}?v=3"></script>
+@include('clients.blocks.trip_boot')
 
 </body>
 

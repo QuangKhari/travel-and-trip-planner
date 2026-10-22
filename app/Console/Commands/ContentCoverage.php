@@ -35,7 +35,7 @@ class ContentCoverage extends Command
                 $pub('tbl_foods') . '/' . $all('tbl_foods') . ' (mục tiêu 10)',
                 $pub('tbl_events') . '/' . $all('tbl_events') . ' (mục tiêu 2-3)',
                 DB::table('tbl_itinerary_items')->where('refType', 'destination')->where('refId', $id)->distinct()->count('itineraryId') . ' (mục tiêu 1)',
-                DB::table('tbl_tours')->where('destination', 'like', '%' . $d->name . '%')->count(),
+                DB::table('tbl_tours')->where('destinationId', $id)->count(),
                 $d->coverImage ? 'có' : 'THIẾU',
             ];
         }

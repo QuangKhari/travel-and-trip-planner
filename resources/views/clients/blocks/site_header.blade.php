@@ -38,8 +38,19 @@
                 </div>
             </div>
 
-            <a href="{{ route('destination') }}"
-                class="{{ Request::url() == route('destination') ? 'is-active' : '' }}">Điểm đến</a>
+            <div class="tv-dd">
+                <a href="{{ route('destination') }}"
+                    class="{{ Request::is('diem-den*') || Request::is('am-thuc*') || Request::is('le-hoi*') || Request::is('lich-trinh*') ? 'is-active' : '' }}">
+                    Khám phá <i class="fas fa-chevron-down"></i>
+                </a>
+                <div class="tv-dd__menu">
+                    <a href="{{ route('destination') }}">Điểm đến</a>
+                    <a href="{{ route('foods.index') }}">Ẩm thực</a>
+                    <a href="{{ route('events.index') }}">Lễ hội</a>
+                    <a href="{{ route('itineraries.index') }}">Lịch trình</a>
+                    <a href="{{ route('destinations.list', ['thang' => (int) date('n')]) }}">Đang vào mùa</a>
+                </div>
+            </div>
             <a href="{{ route('blogs') }}" class="{{ Request::url() == route('blogs') ? 'is-active' : '' }}">Blog</a>
             <a href="{{ route('contact') }}" class="{{ Request::url() == route('contact') ? 'is-active' : '' }}">Liên
                 hệ</a>

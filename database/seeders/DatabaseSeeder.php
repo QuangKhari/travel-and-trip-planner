@@ -13,6 +13,12 @@ class DatabaseSeeder extends Seeder
             TourImageSeeder::class,
             TourTimelineSeeder::class,
             UserSeeder::class,
+            // Lớp Khám phá (A11): điểm đến + cảm hứng, mùa đẹp mồi từ config, rồi nội dung đã xuất ra JSON.
+            // Nội dung nạp vào ở trạng thái đã lưu trong tệp (thường là draft): duyệt ở Admin > Duyệt nội dung.
+            DiscoverSeeder::class,
+            DestinationMonthSeeder::class,
+            ContentSeeder::class,
+            ItineraryDraftSeeder::class,
         ]);
     }
 }

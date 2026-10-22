@@ -1,0 +1,77 @@
+{
+    "_ghi_chu": "A8: 4 lịch trình nháp, mỗi điểm đến demo một bản. CHỈ dùng địa điểm và món đã có trong DB (ref = 'overpass:<externalId>' cho địa điểm, slug cho món/điểm đến); không thêm thông tin ngoài dữ liệu. Ghi chú chỉ gợi ý buổi trong ngày. Nạp ở trạng thái draft: đọc, chỉnh rồi duyệt ở Admin > Duyệt nội dung (cần sourceUrl hoặc giấy phép 'Tự viết').",
+    "itineraries": [
+        {
+            "slug": "hoi-an-2-ngay",
+            "title": "Hội An 2 ngày: phố cổ và ẩm thực",
+            "days": 2,
+            "region": "t",
+            "summary": "Hai ngày đi bộ quanh phố cổ Hội An: các điểm di tích ở khu trung tâm, bảo tàng, rồi thử các món đặc sản của phố.",
+            "items": [
+                {"dayNo": 1, "refType": "destination", "ref": "hoi-an", "label": "Hội An", "note": "Bắt đầu buổi sáng ở khu phố cổ"},
+                {"dayNo": 1, "refType": "place", "ref": "overpass:way/39268284", "label": "Chùa Cầu", "note": "Buổi sáng"},
+                {"dayNo": 1, "refType": "place", "ref": "overpass:way/448044645", "label": "Hội quán Triều Châu", "note": "Buổi sáng"},
+                {"dayNo": 1, "refType": "food", "ref": "cao-lau", "label": "Cao lầu", "note": "Bữa trưa"},
+                {"dayNo": 1, "refType": "place", "ref": "overpass:way/565592419", "label": "Bảo tàng Hội An", "note": "Buổi chiều"},
+                {"dayNo": 2, "refType": "place", "ref": "overpass:way/636068988", "label": "Văn chỉ Minh Hương", "note": "Buổi sáng"},
+                {"dayNo": 2, "refType": "place", "ref": "overpass:node/7520818185", "label": "Tháp Bằng An", "note": "Buổi sáng"},
+                {"dayNo": 2, "refType": "food", "ref": "mi-quang", "label": "Mì Quảng", "note": "Bữa trưa"},
+                {"dayNo": 2, "refType": "food", "ref": "banh-mi-hoi-an", "label": "Bánh mì Hội An", "note": "Ăn nhẹ buổi chiều"},
+                {"dayNo": 2, "refType": "event", "ref": "dem-ram-pho-co-hoi-an", "label": "Đêm rằm phố cổ", "note": "Nếu đi đúng ngày 14 âm lịch"}
+            ]
+        },
+        {
+            "slug": "da-lat-2-ngay",
+            "title": "Đà Lạt 2 ngày: đồi, thác và chùa",
+            "days": 2,
+            "region": "t",
+            "summary": "Hai ngày quanh trung tâm Đà Lạt: đồi, thác, ga xe lửa, chùa và vài món đặc sản địa phương.",
+            "items": [
+                {"dayNo": 1, "refType": "destination", "ref": "da-lat", "label": "Đà Lạt", "note": "Bắt đầu ở trung tâm"},
+                {"dayNo": 1, "refType": "place", "ref": "overpass:node/11048391402", "label": "Đồi Cù", "note": "Buổi sáng"},
+                {"dayNo": 1, "refType": "place", "ref": "overpass:relation/17877171", "label": "Ga Đà Lạt", "note": "Buổi sáng"},
+                {"dayNo": 1, "refType": "food", "ref": "banh-can", "label": "Bánh căn", "note": "Bữa trưa"},
+                {"dayNo": 1, "refType": "place", "ref": "overpass:relation/20657435", "label": "Ngôi nhà quái dị", "note": "Buổi chiều"},
+                {"dayNo": 2, "refType": "place", "ref": "overpass:node/4096525696", "label": "Thác Prenn", "note": "Buổi sáng"},
+                {"dayNo": 2, "refType": "place", "ref": "overpass:way/361851927", "label": "Chùa Linh Sơn", "note": "Buổi sáng"},
+                {"dayNo": 2, "refType": "place", "ref": "overpass:node/1152350935", "label": "Thiên Vương Cổ Sát (Chùa Tàu)", "note": "Buổi chiều"},
+                {"dayNo": 2, "refType": "food", "ref": "nem-nuong-da-lat", "label": "Nem nướng Đà Lạt", "note": "Bữa tối"}
+            ]
+        },
+        {
+            "slug": "ha-noi-2-ngay",
+            "title": "Hà Nội 2 ngày: phố cổ và món ngon",
+            "days": 2,
+            "region": "b",
+            "summary": "Hai ngày quanh khu phố cổ Hà Nội, xen kẽ các điểm văn hóa và những món đặc trưng của thủ đô.",
+            "items": [
+                {"dayNo": 1, "refType": "destination", "ref": "ha-noi", "label": "Hà Nội", "note": "Bắt đầu ở khu phố cổ"},
+                {"dayNo": 1, "refType": "food", "ref": "pho-ha-noi", "label": "Phở Hà Nội", "note": "Bữa sáng"},
+                {"dayNo": 1, "refType": "place", "ref": "overpass:node/445345255", "label": "Nhà 48 phố Hàng Ngang", "note": "Buổi sáng"},
+                {"dayNo": 1, "refType": "food", "ref": "bun-cha", "label": "Bún chả", "note": "Bữa trưa"},
+                {"dayNo": 1, "refType": "place", "ref": "overpass:node/4489385889", "label": "Chợ Đêm Hàng Đào – Đồng Xuân", "note": "Buổi tối"},
+                {"dayNo": 2, "refType": "place", "ref": "overpass:node/443033827", "label": "Tượng đài Lý Thái Tổ", "note": "Buổi sáng"},
+                {"dayNo": 2, "refType": "place", "ref": "overpass:node/4499978190", "label": "Bảo tàng Địa chất Việt Nam", "note": "Buổi sáng"},
+                {"dayNo": 2, "refType": "food", "ref": "cha-ca-la-vong", "label": "Chả cá Lã Vọng", "note": "Bữa trưa"},
+                {"dayNo": 2, "refType": "food", "ref": "ca-phe-trung", "label": "Cà phê trứng", "note": "Buổi chiều"}
+            ]
+        },
+        {
+            "slug": "can-tho-2-ngay",
+            "title": "Cần Thơ 2 ngày: sông nước miền Tây",
+            "days": 2,
+            "region": "n",
+            "summary": "Hai ngày quanh Cần Thơ: chợ nổi, nhà cổ, bảo tàng và ẩm thực miền Tây.",
+            "items": [
+                {"dayNo": 1, "refType": "destination", "ref": "can-tho", "label": "Cần Thơ", "note": "Bắt đầu ở bến Ninh Kiều"},
+                {"dayNo": 1, "refType": "place", "ref": "overpass:node/4465710189", "label": "Cầu đi bộ Ninh Kiều", "note": "Buổi sáng"},
+                {"dayNo": 1, "refType": "place", "ref": "overpass:way/89608604", "label": "Bảo tàng thành phố Cần Thơ", "note": "Buổi sáng"},
+                {"dayNo": 1, "refType": "food", "ref": "bun-nuoc-leo", "label": "Bún nước lèo", "note": "Bữa trưa"},
+                {"dayNo": 2, "refType": "place", "ref": "overpass:way/1455066447", "label": "Chợ nổi Cái Răng", "note": "Đi sớm buổi sáng"},
+                {"dayNo": 2, "refType": "food", "ref": "nem-nuong-cai-rang", "label": "Nem nướng Cái Răng", "note": "Bữa trưa"},
+                {"dayNo": 2, "refType": "place", "ref": "overpass:node/1797968016", "label": "Nhà cổ Bình Thủy", "note": "Buổi chiều"},
+                {"dayNo": 2, "refType": "place", "ref": "overpass:way/653726077", "label": "Khu Du Lịch Sinh Thái Mỹ Khánh", "note": "Buổi chiều"}
+            ]
+        }
+    ]
+}

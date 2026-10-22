@@ -79,6 +79,10 @@ body.tv-home .page-wrapper {
     transition: opacity 0.6s;
     transform: scale(1.08);
 }
+/* Bản thu nhỏ (~48 px) phóng to đã tự mờ, chỉ cần blur nhẹ: lớp phủ cả khung nhẹ hơn nhiều so với blur 40 px trên ảnh lớn */
+.hp-bg--thumb {
+    filter: blur(14px) saturate(1.15);
+}
 .hp-bg.on {
     opacity: 0.45;
 }
@@ -409,6 +413,9 @@ body.tv-home .page-wrapper {
     backface-visibility: hidden;
 }
 
+/* Tấm đầu hiện sẵn bằng CSS để ảnh LCP được tính ngay khi tải, không chờ JS ở cuối trang.
+   Vị trí phải khớp frame đầu của JS: z = -(0 + K.back) * K.gap = -0,85 * 620 = -527px, nghiêng Z -2,5°.
+   Đổi K.back hoặc K.gap trong hero-postcards.js thì đổi số này theo. */
 .hp--3d .hp-card:first-child {
     visibility: visible;
     opacity: 1;
@@ -468,4 +475,13 @@ body.tv-home .page-wrapper {
         right: 20px;
         max-width: none;
     }
+}
+
+.hp-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
 }

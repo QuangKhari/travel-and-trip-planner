@@ -28,6 +28,8 @@ use App\Http\Controllers\clients\ForgotPasswordController;
 use App\Http\Controllers\clients\EmailVerificationController;
 use App\Http\Controllers\clients\EmailChangeController;
 use App\Http\Controllers\clients\ExploreController;
+use App\Http\Controllers\clients\ExploreContentController;
+use App\Http\Controllers\clients\MarkController;
 use App\Http\Controllers\admin\ContentReviewController;
 
 
@@ -37,8 +39,28 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/about', [AboutController::class, 'index'])->name('about');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:5,1,contact')->name('contact.send');
-Route::get('/destination', [DestinationController::class, 'index'])->name('destination');
-Route::get('/destination/{slug}', [\App\Http\Controllers\clients\DestinationDetailController::class, 'show'])->where('slug', '[a-z0-9-]+')->middleware('throttle:60,1,destination-detail')->name('destination.show');
+// Lớp Khám phá: URL không dấu theo tài liệu mục 3. Tên route cũ (destination, destination.show) giữ nguyên.
+Route::get('/diem-den', [DestinationController::class, 'index'])->name('destination');
+Route::get('/diem-den/tat-ca', [ExploreContentController::class, 'destinations'])->middleware('throttle:60,1,destination-list')->name('destinations.list');
+Route::get('/diem-den/{slug}', [\App\Http\Controllers\clients\DestinationDetailController::class, 'show'])->where('slug', '[a-z0-9-]+')->middleware('throttle:60,1,destination-detail')->name('destination.show');
+// Đường dẫn cũ /destination chuyển vĩnh viễn sang /diem-den (một URL chuẩn cho mỗi trang)
+Route::permanentRedirect('/destination', '/diem-den');
+Route::get('/destination/{slug}', fn(string $slug) => redirect()->route('destination.show', ['slug' => $slug], 301))->where('slug', '[a-z0-9-]+');
+
+Route::middleware('throttle:60,1,guide-pages')->group(function () {
+    Route::get('/am-thuc', [ExploreContentController::class, 'foods'])->name('foods.index');
+    Route::get('/am-thuc/{slug}', [ExploreContentController::class, 'food'])->where('slug', '[a-z0-9-]+')->name('foods.show');
+    Route::get('/le-hoi', [ExploreContentController::class, 'events'])->name('events.index');
+    Route::get('/le-hoi/lich', [ExploreContentController::class, 'eventCalendar'])->name('events.calendar');
+    Route::get('/le-hoi/{slug}', [ExploreContentController::class, 'event'])->where('slug', '[a-z0-9-]+')->name('events.show');
+    Route::get('/lich-trinh', [ExploreContentController::class, 'itineraries'])->name('itineraries.index');
+    Route::get('/lich-trinh/{slug}', [ExploreContentController::class, 'itinerary'])->where('slug', '[a-z0-9-]+')->name('itineraries.show');
+});
+// Lưu / đã đến / đã thử / đã dự và đồng bộ khay chuyến đi (cần đăng nhập; fetch nhận JSON 401 khi chưa đăng nhập)
+Route::middleware(['checkLoginClient', 'checkUserBlocked', 'throttle:60,1,marks'])->group(function () {
+    Route::post('/danh-dau', [MarkController::class, 'toggle'])->name('marks.toggle');
+    Route::post('/khay-chuyen-di/dong-bo', [MarkController::class, 'syncTray'])->name('trip-tray.sync');
+});
 Route::get('/explore', [ExploreController::class, 'index'])->middleware('throttle:60,1,explore')->name('explore');
 Route::get('/travel-guides', [TravelGuidesController::class, 'index'])->name('team');
 Route::get('/tour-detail/{id}', [TourDetailController::class, 'index'])->whereNumber('id')->name('tour-detail');

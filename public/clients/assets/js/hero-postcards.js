@@ -18,7 +18,7 @@
     var K = { gap: 620, back: 0.85, R: 0.26, Ry: 0.13, lag: 0.09, rowH: 0.7 };
 
     var month = +root.dataset.month,
-        planner = root.dataset.planner,
+        planner = root.dataset.planner || "",
         api = root.dataset.api;
     var cards = [],
         items = [],
@@ -37,31 +37,31 @@
         W = innerWidth,
         H = innerHeight,
         top0 = 0,
-        added = {},
-        tripStorageKey = "travela:trip-items",
         loading = false;
+    /* Khay chuyến đi dùng chung (travela-trip.js). Nếu chưa nạp thì nút ẩn đi, không hứa mà không lưu. */
+    var trip = window.TravelaTrip || null;
 
     function clamp(v, a, b) {
         return Math.max(a, Math.min(b, v));
     }
-    function loadAdded() {
-        try {
-            var raw = localStorage.getItem(tripStorageKey);
-            var data = raw ? JSON.parse(raw) : {};
-            return data && typeof data === "object" ? data : {};
-        } catch (e) {
-            return {};
-        }
+    function inTrip(it) {
+        return !!(trip && it && trip.has("destination", it.slug));
     }
-
-    function saveAdded() {
-        try {
-            localStorage.setItem(tripStorageKey, JSON.stringify(added));
-        } catch (e) {}
+    function addLabel(it) {
+        return inTrip(it)
+            ? "✓ Đã thêm (" + trip.count() + ")"
+            : "+ Thêm vào chuyến đi";
     }
-
-    function addedCount() {
-        return Object.keys(added).length;
+    /* Bưu ảnh trắng: có Planner thì dẫn vào /len-ke-hoach?thang=N, chưa có thì xuống phần chọn cảm hứng ngay trên trang */
+    function plannerHref(m) {
+        return planner
+            ? planner + (planner.indexOf("?") < 0 ? "?" : "&") + "thang=" + m
+            : "#kham-pha";
+    }
+    function plannerLabel() {
+        return planner
+            ? "Lên kế hoạch cho tháng " + month + " →"
+            : "Khám phá theo cảm hứng →";
     }
     function measure() {
         W = innerWidth;
@@ -110,6 +110,7 @@
                     img:
                         c.querySelector("img").currentSrc ||
                         c.querySelector("img").src,
+                    thumb: c.dataset.thumb || "",
                 };
             });
         cards.forEach(function (c, i) {
@@ -133,18 +134,21 @@
             it = items[Math.min(i, items.length - 1)];
         q(".hp-p-name").textContent = last ? "Bưu ảnh trắng" : it.name;
         q(".hp-p-why").textContent = last
-            ? "Viết chuyến đi của riêng bạn cho tháng " + month + "."
+            ? planner
+                ? "Viết chuyến đi của riêng bạn cho tháng " + month + "."
+                : "Chọn một cảm hứng để bắt đầu chuyến đi tháng " + month + "."
             : it.why;
         var go = q(".hp-p-go"),
             add = q(".hp-p-add"),
             cr = q(".hp-p-credit");
-        go.textContent = last ? "Lên kế hoạch" : "Xem điểm đến";
-        go.href = last ? planner : it.url;
-        add.hidden = last;
-        add.textContent =
-            !last && added[it.slug]
-                ? "✓ Đã thêm (" + addedCount() + ")"
-                : "+ Thêm vào chuyến đi";
+        go.textContent = last
+            ? planner
+                ? "Lên kế hoạch"
+                : "Khám phá theo cảm hứng"
+            : "Xem điểm đến";
+        go.href = last ? plannerHref(month) : it.url;
+        add.hidden = last || !trip;
+        if (!last) add.textContent = addLabel(it);
         cr.textContent = "";
         if (!last && it.credit) {
             cr.appendChild(document.createTextNode("Ảnh: "));
@@ -162,7 +166,9 @@
         var on = bgs[front ^ 1],
             off = bgs[front];
         front ^= 1;
-        on.style.backgroundImage = "url('" + it.img + "')";
+        /* nền mờ: ưu tiên bản thu nhỏ (khoảng 48 px) phóng to; chưa có thì dùng ảnh đầy đủ */
+        on.style.backgroundImage = "url('" + (it.thumb || it.img) + "')";
+        on.classList.toggle("hp-bg--thumb", !!it.thumb);
         on.classList.add("on");
         off.classList.remove("on");
     }
@@ -211,6 +217,20 @@
             "deg)";
         q(".hp-intro").style.opacity = clamp(1 - p * 2, 0, 1);
     }
+    /* Vùng đọc riêng cho trình đọc màn hình: chỉ ghi chữ khi đã dừng ở một tấm,
+       nên lướt qua nhiều tấm không bị đọc dồn. Dùng được cả 3D, băng vuốt và lưới tĩnh. */
+    var announcedIdx = -1;
+    function announce() {
+        if (idx < 0 || idx === announcedIdx) return;
+        announcedIdx = idx;
+        var sr = q(".hp-sr");
+        if (!sr) return;
+        var last = idx >= items.length;
+        var it = items[Math.min(idx, items.length - 1)];
+        sr.textContent = last
+            ? "Bưu ảnh trắng. " + q(".hp-p-why").textContent
+            : it.name + ". " + it.why;
+    }
     function start() {
         /* gọi bao nhiêu lần cũng chỉ có một vòng rAF */
         if (running || !m3 || !vis) return;
@@ -231,12 +251,12 @@
 
         render(cur);
         update(Math.round(clamp(cur, 0, cards.length - 1)));
-        q(".hp-panel").setAttribute("aria-live", settled ? "polite" : "off");
+        if (settled) announce();
 
         var pointerMoving =
             Math.abs(mx - hx) > 0.001 || Math.abs(my - hy) > 0.001;
 
-        if (settled && !pointerActive && !pointerMoving) {
+        if (settled && !pointerMoving) {
             running = false;
             return;
         }
@@ -244,12 +264,13 @@
         requestAnimationFrame(tick);
     }
     function onScroll() {
-        if (m3)
-            tgt = clamp(
-                ((window.pageYOffset || 0) - top0) / (H * K.rowH),
-                0,
-                cards.length - 1,
-            );
+        if (!m3) return;
+        tgt = clamp(
+            ((window.pageYOffset || 0) - top0) / (H * K.rowH),
+            0,
+            cards.length - 1,
+        );
+        start(); /* vòng vẽ tự dừng khi đã yên: cuộn là chạy lại */
     }
     function goTo(i) {
         i = clamp(i, 0, cards.length - 1);
@@ -292,6 +313,7 @@
         a.dataset.slug = it.slug;
         a.dataset.name = it.name;
         a.dataset.why = it.why;
+        a.dataset.thumb = it.thumb || "";
         a.dataset.credit = it.credit || "";
         a.dataset.creditUrl = it.creditUrl || "";
         a.setAttribute(
@@ -335,6 +357,7 @@
     function setMonth(m) {
         if (loading || m === month) return;
         loading = true;
+        var told = false;
         root.classList.add("hp--wait");
         fetch(api + "?month=" + m, { headers: { Accept: "application/json" } })
             .then(function (r) {
@@ -343,6 +366,7 @@
             })
             .then(function (d) {
                 if (!d.items || d.items.length < 3) {
+                    told = true;
                     showNotice(
                         "Tháng " + m + " hiện chưa có đủ điểm đến nổi bật.",
                     );
@@ -361,11 +385,13 @@
                     month = m;
                     root.dataset.month = m;
                     root.dataset.season = season(m);
-                    blank.href = planner;
+                    blank.href = plannerHref(m);
                     blank.setAttribute(
                         "aria-label",
-                        "Bưu ảnh trắng: khám phá theo cảm hứng",
+                        "Bưu ảnh trắng: " + plannerLabel().replace(" →", ""),
                     );
+                    var go = blank.querySelector(".hp-go");
+                    if (go) go.textContent = plannerLabel();
                     root.querySelectorAll(".hp-month").forEach(function (n) {
                         n.textContent = m;
                     });
@@ -375,16 +401,24 @@
                     centerActiveMonth();
                     read();
                     idx = -1;
+                    announcedIdx = -1;
                     cur = tgt = 0;
                     if (m3) scrollTo({ top: top0, behavior: "auto" });
                     measure();
                     render(0);
                     update(0);
+                    announce();
                     root.classList.remove("hp--wait");
                     loading = false;
                 }, 300);
             })
             .catch(function () {
+                if (!told)
+                    showNotice(
+                        "Không tải được dữ liệu tháng " +
+                            m +
+                            ", bạn thử lại sau nhé.",
+                    );
                 root.classList.remove("hp--wait");
                 loading = false;
             });
@@ -398,24 +432,22 @@
     });
     q(".hp-p-add").addEventListener("click", function () {
         var it = items[idx];
-        if (!it) return;
-
-        added[it.slug] = {
-            type: "destination",
-            slug: it.slug,
-            name: it.name,
-            url: it.url,
-            addedAt: Date.now(),
-        };
-
-        saveAdded();
-        this.textContent = "✓ Đã thêm (" + addedCount() + ")";
-
-        document.dispatchEvent(
-            new CustomEvent("travela:trip-add", {
-                detail: added[it.slug],
-            }),
-        );
+        if (!it || !trip) return;
+        /* bấm lần nữa thì bỏ khỏi khay (nút bật/tắt) */
+        if (trip.has("destination", it.slug))
+            trip.remove("destination", it.slug);
+        else
+            trip.add({
+                type: "destination",
+                slug: it.slug,
+                name: it.name,
+                url: it.url,
+            });
+        this.textContent = addLabel(it);
+    });
+    document.addEventListener("travela:trip-change", function () {
+        var it = items[idx];
+        if (it && idx < items.length) q(".hp-p-add").textContent = addLabel(it);
     });
     addEventListener("scroll", onScroll, { passive: true });
     addEventListener("resize", function () {
@@ -468,6 +500,8 @@
                     cards.length - 1,
                 ),
             );
+            clearTimeout(announce.t);
+            announce.t = setTimeout(announce, 350); /* đọc sau khi vuốt dừng */
         },
         { passive: true },
     );
@@ -478,9 +512,10 @@
     mqMobile.addEventListener("change", setMode);
     mqReduce.addEventListener("change", setMode);
 
-    added = loadAdded();
     read();
     setMode();
     centerActiveMonth();
+    addEventListener("load", centerActiveMonth);
+    announcedIdx = idx;
     root.dataset.ready = "1";
 })();

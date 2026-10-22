@@ -15,6 +15,19 @@ use Illuminate\Support\Facades\Storage;
  */
 class DiscoverImage
 {
+    /**
+     * Bản thu nhỏ (khoảng 48 px, đuôi -s.webp) do content:import-images --thumb sinh ra, dùng cho nền mờ.
+     * Không có file thì trả null để nơi gọi dùng ảnh đầy đủ.
+     */
+    public static function thumbUrl(?string $path): ?string
+    {
+        if ($path === null || !str_ends_with($path, '.webp')) {
+            return null;
+        }
+
+        return self::url(substr($path, 0, -5) . '-s.webp');
+    }
+
     public static function url(?string $path): ?string
     {
         if ($path === null || $path === '' || str_contains($path, '..')) {

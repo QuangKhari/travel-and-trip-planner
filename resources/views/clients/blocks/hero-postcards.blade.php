@@ -10,7 +10,12 @@
         in_array($month, [8, 9, 10], true) => 'autumn',
         default => 'winter',
     };
-    $plannerUrl = url(config('postcards.planner_url', '/')) . '#kham-pha';
+    // Chưa có Planner (planner_url = null): bưu ảnh trắng dẫn xuống phần chọn cảm hứng ngay trên trang chủ.
+    // Có Planner: dẫn tới {planner_url}?thang=N.
+    $plannerBase = config('postcards.planner_url');
+    $plannerUrl = $plannerBase ? url($plannerBase) : '';
+    $blankUrl = $plannerBase ? $plannerUrl . '?thang=' . $month : '#kham-pha';
+    $blankLabel = $plannerBase ? 'Lên kế hoạch cho tháng ' . $month : 'Khám phá theo cảm hứng';
     $count = count($postcards) + 1; // + bưu ảnh trắng
 @endphp
 <section class="hp" id="hero" style="--n: {{ $count }}" data-month="{{ $month }}"
@@ -54,7 +59,7 @@
                 <div class="hp-world">
                     @foreach ($postcards as $i => $p)
                         <a class="hp-card" href="{{ $p['url'] }}" data-name="{{ $p['name'] }}"
-                            data-why="{{ $p['why'] }}" data-credit="{{ $p['credit'] }}"
+                            data-why="{{ $p['why'] }}" data-credit="{{ $p['credit'] }}" data-thumb="{{ $p['thumb'] ?? '' }}"
                             data-credit-url="{{ $p['creditUrl'] }}" data-slug="{{ $p['slug'] }}"
                             aria-label="{{ $p['name'] }}, {{ $p['province'] }}. {{ $p['why'] }}">
                             <span class="hp-img"><img src="{{ $p['image'] }}"
@@ -65,15 +70,16 @@
                             <span class="hp-stamp" aria-hidden="true">T{{ $month }}</span>
                         </a>
                     @endforeach
-                    <a class="hp-card hp-blank" href="{{ $plannerUrl . $month }}" data-blank="1"
-                        aria-label="Bưu ảnh trắng: khám phá theo cảm hứng">
+                    <a class="hp-card hp-blank" href="{{ $blankUrl }}" data-blank="1"
+                        aria-label="Bưu ảnh trắng: {{ $blankLabel }}">
                         <b>Chuyến đi của bạn bắt đầu từ đâu?</b>
-                        <span class="hp-go">Khám phá theo cảm hứng →</span>
+                        <span class="hp-go">{{ $blankLabel }} →</span>
                     </a>
                 </div>
             </div>
 
-            <div class="hp-panel" role="status" aria-live="off">
+            <div class="hp-sr" aria-live="polite" aria-atomic="true"></div>
+            <div class="hp-panel">
                 <h2 class="hp-p-name"></h2>
                 <p class="hp-p-why"></p>
                 <div class="hp-row">

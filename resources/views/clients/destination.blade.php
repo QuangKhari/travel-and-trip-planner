@@ -33,6 +33,7 @@
             <span class="tvp-eyebrow">Khám phá Việt Nam</span>
             <h1 id="tvfDH1">Điểm đến</h1>
             <p class="tvf-dhero__sub">Những vùng đất tuyệt đẹp đang chờ bạn!</p>
+            <p class="tvf-dhero__sub"><a href="{{ route('destinations.list') }}" style="color:inherit;text-decoration:underline">Xem danh sách có bộ lọc theo miền, tỉnh, tháng đẹp</a></p>
             <form class="tvf-search" id="tvpSearch" role="search" onsubmit="return false">
                 <svg class="tvp-ic" viewBox="0 0 24 24" aria-hidden="true">
                     <circle cx="11" cy="11" r="7" />

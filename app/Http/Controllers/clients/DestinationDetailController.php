@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
+use App\Services\Content\ContentCatalog;
+use App\Services\Content\UserMarks;
 use App\Services\DestinationService;
+use Illuminate\Http\Request;
 
 class DestinationDetailController extends Controller
 {
-    /** GET /destination/{slug} */
-    public function show(string $slug, DestinationService $service)
+    /** GET /diem-den/{slug} */
+    public function show(Request $request, string $slug, DestinationService $service, ContentCatalog $catalog, UserMarks $marks)
     {
         $destination = $service->find($slug);
         if (!$destination) {
@@ -19,6 +22,29 @@ class DestinationDetailController extends Controller
         $data = $service->payload($destination);
         $tours = $service->tours($destination);
 
-        return view('clients.destination-detail', compact('title', 'destination', 'data', 'tours'));
+        // B3: lớp Khám phá (chỉ nội dung published)
+        $id = (int) $destination->destinationId;
+        $months = $catalog->months($id);
+        $foods = $catalog->foodsOf($id, 6);
+        $events = $catalog->eventsOf($id, 4);
+        $itineraries = $catalog->itinerariesOf($id, 3);
+        $nearby = $catalog->nearbyPlaces($destination, 8);
+        $uid = $request->session()->has('userId') ? (int) $request->session()->get('userId') : null;
+        $myMarks = array_fill_keys($uid ? $marks->typesFor($uid, 'destination', $id) : [], true);
+        $bestMonths = collect($months)->where('level', 'best')->pluck('month')->all();
+
+        return view('clients.destination-detail', compact(
+            'title',
+            'destination',
+            'data',
+            'tours',
+            'months',
+            'foods',
+            'events',
+            'itineraries',
+            'nearby',
+            'myMarks',
+            'bestMonths'
+        ));
     }
 }

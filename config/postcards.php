@@ -3,14 +3,18 @@
 /**
  * Hero "Dòng bưu ảnh" (trang chủ).
  *
- * seasons: slug điểm đến (tbl_destinations.slug) => tháng đẹp + một dòng lý do.
- * ĐÂY LÀ DỮ LIỆU TẠM do bạn tự duyệt lại. Khi có bảng tbl_destination_months
- * (giai đoạn C trong tài liệu), service sẽ đọc từ DB và file này bỏ đi.
- * Điểm đến không có trong danh sách vẫn xuất hiện, với dòng "Điểm nổi bật quanh năm".
+ * HeroPostcardService đọc mùa đẹp từ tbl_destination_months, KHÔNG đọc file này lúc chạy.
+ * 'seasons' vẫn cần giữ: đây là dữ liệu mồi do bạn tự duyệt (source = manual), và
+ * DestinationMonthSeeder đọc nó để nạp vào tbl_destination_months. Muốn đổi mùa đẹp của một điểm đến:
+ * sửa ở đây rồi chạy `php artisan db:seed --class=DestinationMonthSeeder`, hoặc sửa thẳng trong màn hình duyệt admin.
+ * Điểm đến không có dòng tháng nào vẫn xuất hiện, với dòng "Điểm nổi bật quanh năm".
+ *
+ * planner_url: null khi chưa có trang Planner. Đặt '/len-ke-hoach' khi có; bưu ảnh trắng sẽ đổi chữ thành
+ * "Lên kế hoạch cho tháng N" và dẫn tới /len-ke-hoach?thang=N.
  */
 return [
     'limit'       => 8,           // số bưu ảnh (không tính bưu ảnh trắng); tài liệu: 8 đến 10
-    'planner_url' => '/explore',  // đổi thành '/len-ke-hoach' khi trang Planner có
+    'planner_url' => null,        // đặt '/len-ke-hoach' khi trang Planner có
 
     'seasons' => [
         'ha-noi'        => ['m' => [9, 10, 11],          'w' => 'Thu Hà Nội, hoa sữa thơm'],
