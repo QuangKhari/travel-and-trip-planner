@@ -1,3 +1,6 @@
+@php
+    $metaDescription = 'Lịch lễ hội Việt Nam theo tháng, đã quy đổi từ âm lịch sang dương lịch.';
+@endphp
 @include('clients.blocks.header')
 {{-- /le-hoi/lich — biến: $days, $year, $month, $daysInMonth, $offset, $prevUrl, $nextUrl --}}
 <main class="gx-page" id="main">

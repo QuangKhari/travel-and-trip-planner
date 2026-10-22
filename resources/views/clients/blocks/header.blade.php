@@ -7,7 +7,31 @@
     <script>
         document.documentElement.classList.add('px-js')
     </script>
-    <meta name="description" content="">
+    @php
+        $__seoDesc = \App\Support\Seo::text($metaDescription ?? \App\Support\Seo::DEFAULT_DESCRIPTION);
+        $__seoUrl = $canonical ?? \App\Support\Seo::canonical();
+        $__seoNoindex = ($noindex ?? false) || \App\Support\Seo::hasFilter($filters ?? null);
+        $__seoTitle = 'Travela - Travel & ' . ($title ?? '');
+        $__seoImage = !empty($metaImage) ? (preg_match('#^https?://#i', $metaImage) ? $metaImage : url($metaImage)) : null;
+    @endphp
+    <meta name="description" content="{{ $__seoDesc }}">
+    <link rel="canonical" href="{{ $__seoUrl }}">
+    @if ($__seoNoindex)
+        <meta name="robots" content="noindex,follow">
+    @endif
+    <meta property="og:site_name" content="Travela">
+    <meta property="og:locale" content="vi_VN">
+    <meta property="og:type" content="{{ $ogType ?? 'website' }}">
+    <meta property="og:title" content="{{ $__seoTitle }}">
+    <meta property="og:description" content="{{ $__seoDesc }}">
+    <meta property="og:url" content="{{ $__seoUrl }}">
+    @if ($__seoImage)
+        <meta property="og:image" content="{{ $__seoImage }}">
+        <meta name="twitter:card" content="summary_large_image">
+    @endif
+    @foreach ($jsonLd ?? [] as $__ld)
+        <script type="application/ld+json">{!! \App\Support\Seo::json($__ld) !!}</script>
+    @endforeach
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
@@ -59,6 +83,8 @@
     <link rel="stylesheet" href="{{ asset('clients/assets/css/custom-css.css') }}">
     <!-- Bộ thành phần lớp Khám phá + khay chuyến đi -->
     <link rel="stylesheet" href="{{ asset('clients/assets/css/explore-kit.css') }}?v=1">
+    <!-- Giai đoạn C: cẩm nang, mùa đẹp, tìm kiếm có gợi ý -->
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/explore-c.css') }}?v=1">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
 
@@ -90,6 +116,10 @@
     <script src="{{ asset('clients/assets/js/travel-motion.js') }}?v=1" defer></script>
     <script src="{{ asset('clients/assets/js/tv-final.js') }}?v=1" defer></script>
     <script src="{{ asset('clients/assets/js/tv-tours-10.js') }}?v=1" defer></script>
+    <script>
+        window.GX_SEARCH = {suggest: @json(url('/api/v1/search/suggest')), page: @json(route('site.search')), tours: @json(route('tours'))};
+    </script>
+    <script src="{{ asset('clients/assets/js/guide-search.js') }}?v=1" defer></script>
 </head>
 
 <body class="tv-sea page-{{ str_replace('.', '-', request()->route()?->getName() ?? 'page') }}">

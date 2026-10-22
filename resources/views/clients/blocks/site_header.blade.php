@@ -40,7 +40,7 @@
 
             <div class="tv-dd">
                 <a href="{{ route('destination') }}"
-                    class="{{ Request::is('diem-den*') || Request::is('am-thuc*') || Request::is('le-hoi*') || Request::is('lich-trinh*') ? 'is-active' : '' }}">
+                    class="{{ Request::is('diem-den*') || Request::is('am-thuc*') || Request::is('le-hoi*') || Request::is('lich-trinh*') || Request::is('dang-vao-mua*') || Request::is('nen-di-thang-nao*') ? 'is-active' : '' }}">
                     Khám phá <i class="fas fa-chevron-down"></i>
                 </a>
                 <div class="tv-dd__menu">
@@ -48,9 +48,11 @@
                     <a href="{{ route('foods.index') }}">Ẩm thực</a>
                     <a href="{{ route('events.index') }}">Lễ hội</a>
                     <a href="{{ route('itineraries.index') }}">Lịch trình</a>
-                    <a href="{{ route('destinations.list', ['thang' => (int) date('n')]) }}">Đang vào mùa</a>
+                    <a href="{{ route('seasons.now') }}">Đang vào mùa</a>
+                    <a href="{{ route('seasons.matrix') }}">Nên đi tháng nào</a>
                 </div>
             </div>
+            <a href="{{ route('guides.index') }}" class="{{ Request::is('cam-nang*') ? 'is-active' : '' }}">Cẩm nang</a>
             <a href="{{ route('blogs') }}" class="{{ Request::url() == route('blogs') ? 'is-active' : '' }}">Blog</a>
             <a href="{{ route('contact') }}" class="{{ Request::url() == route('contact') ? 'is-active' : '' }}">Liên
                 hệ</a>

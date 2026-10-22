@@ -1,3 +1,7 @@
+@php
+    $metaDescription = \App\Support\Seo::text($event->description);
+    $metaImage = $cover;
+@endphp
 @include('clients.blocks.header')
 {{-- /le-hoi/{slug} — biến: $event, $cover, $dates, $foods, $marks, $lunarText --}}
 @php
@@ -14,7 +18,10 @@
     }
     if ($event->destName) {
         $ld['location'] = ['@type' => 'Place', 'name' => $event->destName, 'address' => $event->destProvince];
+    } else {
+        $ld['location'] = ['@type' => 'Place', 'name' => 'Việt Nam', 'address' => ['@type' => 'PostalAddress', 'addressCountry' => 'VN']];
     }
+    $ld['eventStatus'] = 'https://schema.org/EventScheduled';
     if ($cover) {
         $ld['image'] = $cover;
     }

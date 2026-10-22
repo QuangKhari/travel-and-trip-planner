@@ -1,3 +1,6 @@
+@php
+    $metaDescription = 'Lịch trình gợi ý theo số ngày và theo vùng, có bản đồ tuyến đi từng ngày.';
+@endphp
 @include('clients.blocks.header')
 {{-- /lich-trinh — biến: $items, $filters, $total, $regions, $dayOptions --}}
 <main class="gx-page" id="main">

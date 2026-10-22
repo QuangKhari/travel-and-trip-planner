@@ -451,4 +451,50 @@ class ContentCatalog
                 ->where('it.refType', 'destination')->where('it.refId', $destinationId))
             ->orderBy('i.days')->limit($limit)->get()->map(fn($i) => $this->itinCard($i));
     }
+
+    // ------------------------------------------------------------------ Mùa đẹp (C2)
+
+    /**
+     * Ma trận điểm đến x 12 tháng cho trang "Nên đi tháng nào" và API /seasons/matrix.
+     * Chỉ lấy điểm đến đang bật và đã có ít nhất một tháng được đánh giá. level: best | ok | avoid | unknown.
+     *
+     * @return list<array{slug:string,name:string,province:string,domain:string,url:string,months:array<int,string>}>
+     */
+    public function seasonMatrix(?string $region = null): array
+    {
+        $region = self::region($region);
+        $q = DB::table('tbl_destinations')->where('isActive', 1);
+        if ($region) {
+            $q->where('domain', $region);
+        }
+        $dests = $q->orderBy('domain')->orderBy('name')->get(['destinationId', 'slug', 'name', 'province', 'domain']);
+        $levels = DB::table('tbl_destination_months')->whereIn('destinationId', $dests->pluck('destinationId'))
+            ->get(['destinationId', 'month', 'level'])->groupBy('destinationId');
+
+        $rows = [];
+        foreach ($dests as $d) {
+            if (!isset($levels[$d->destinationId])) {
+                continue;
+            }
+            $byMonth = $levels[$d->destinationId]->pluck('level', 'month');
+            $months = [];
+            for ($i = 1; $i <= 12; $i++) {
+                $months[$i] = $byMonth[$i] ?? 'unknown';
+            }
+            $rows[] = ['slug' => $d->slug, 'name' => $d->name, 'province' => $d->province, 'domain' => $d->domain,
+                'url' => route('destination.show', ['slug' => $d->slug]), 'months' => $months];
+        }
+
+        return $rows;
+    }
+
+    public static function validRegion(mixed $v): ?string
+    {
+        return is_string($v) ? self::region($v) : null;
+    }
+
+    public static function validMonth(mixed $v): ?int
+    {
+        return self::month($v);
+    }
 }

@@ -1,3 +1,6 @@
+@php
+    $metaDescription = 'Ẩm thực Việt Nam theo vùng: đặc sản từng nơi, đã biên tập và ghi nguồn.';
+@endphp
 @include('clients.blocks.header')
 {{-- /am-thuc — biến: $items, $filters, $total, $regions, $groups --}}
 <main class="gx-page" id="main">

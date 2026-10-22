@@ -31,6 +31,11 @@ use App\Http\Controllers\clients\ExploreController;
 use App\Http\Controllers\clients\ExploreContentController;
 use App\Http\Controllers\clients\MarkController;
 use App\Http\Controllers\admin\ContentReviewController;
+use App\Http\Controllers\clients\GuidePagesController;
+use App\Http\Controllers\clients\SeasonPagesController;
+use App\Http\Controllers\clients\SiteSearchController;
+use App\Http\Controllers\clients\SeoController;
+use App\Http\Controllers\clients\DataSourcesController;
 
 
 
@@ -55,7 +60,21 @@ Route::middleware('throttle:60,1,guide-pages')->group(function () {
     Route::get('/le-hoi/{slug}', [ExploreContentController::class, 'event'])->where('slug', '[a-z0-9-]+')->name('events.show');
     Route::get('/lich-trinh', [ExploreContentController::class, 'itineraries'])->name('itineraries.index');
     Route::get('/lich-trinh/{slug}', [ExploreContentController::class, 'itinerary'])->where('slug', '[a-z0-9-]+')->name('itineraries.show');
+
+    // C1: cẩm nang
+    Route::get('/cam-nang', [GuidePagesController::class, 'index'])->name('guides.index');
+    Route::get('/cam-nang/{category}', [GuidePagesController::class, 'category'])->where('category', '[a-z0-9-]+')->name('guides.category');
+    Route::get('/cam-nang/{category}/{slug}', [GuidePagesController::class, 'show'])->where(['category' => '[a-z0-9-]+', 'slug' => '[a-z0-9-]+'])->name('guides.show');
+    // C2: đang vào mùa, nên đi tháng nào
+    Route::get('/dang-vao-mua', [SeasonPagesController::class, 'now'])->name('seasons.now');
+    Route::get('/nen-di-thang-nao/{thang?}', [SeasonPagesController::class, 'matrix'])->whereNumber('thang')->name('seasons.matrix');
+    // C3, C5
+    Route::get('/tim-kiem', [SiteSearchController::class, 'index'])->name('site.search');
+    Route::get('/nguon-du-lieu', [DataSourcesController::class, 'index'])->name('data.sources');
 });
+// C4: sitemap.xml và robots.txt động (xóa public/robots.txt vì tệp tĩnh sẽ che route này)
+Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->middleware('throttle:30,1,sitemap')->name('sitemap');
+Route::get('/robots.txt', [SeoController::class, 'robots'])->name('robots');
 // Lưu / đã đến / đã thử / đã dự và đồng bộ khay chuyến đi (cần đăng nhập; fetch nhận JSON 401 khi chưa đăng nhập)
 Route::middleware(['checkLoginClient', 'checkUserBlocked', 'throttle:60,1,marks'])->group(function () {
     Route::post('/danh-dau', [MarkController::class, 'toggle'])->name('marks.toggle');

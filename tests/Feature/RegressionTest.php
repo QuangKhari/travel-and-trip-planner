@@ -129,7 +129,7 @@ class RegressionTest extends TestCase
 
         $this->withSession(['userId' => $owner, 'username' => 'u'])
             ->post('/cancel-booking', ['bookingId' => $result['bookingId']])
-            ->assertRedirect(route('home'));
+            ->assertRedirect(route('my-tours'));
         $this->assertSame(5, $this->quantity($tour));
         $this->assertSame('c', DB::table('tbl_booking')->where('bookingId', $result['bookingId'])->value('bookingStatus'));
     }

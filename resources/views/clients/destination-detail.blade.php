@@ -1,3 +1,20 @@
+@php
+    $__intro = $destination->wikiExtract ?: $destination->description;
+    $metaDescription = \App\Support\Seo::text($__intro);
+    $metaImage = $destination->image;
+    $__img = $destination->image ? (preg_match('#^https?://#i', $destination->image) ? $destination->image : url($destination->image)) : null;
+    $jsonLd = [array_filter([
+        '@context' => 'https://schema.org',
+        '@type' => 'TouristDestination',
+        'name' => $destination->name,
+        'description' => \App\Support\Seo::text($__intro, 300),
+        'url' => url()->current(),
+        'image' => $__img,
+        'address' => ['@type' => 'PostalAddress', 'addressRegion' => $destination->province, 'addressCountry' => 'VN'],
+        'geo' => (isset($destination->latitude, $destination->longitude) && $destination->latitude !== null && $destination->longitude !== null)
+            ? ['@type' => 'GeoCoordinates', 'latitude' => (float) $destination->latitude, 'longitude' => (float) $destination->longitude] : null,
+    ])];
+@endphp
 @include('clients.blocks.header')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/destination-detail.css') }}?v=1">

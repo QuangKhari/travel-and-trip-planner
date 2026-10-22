@@ -7,7 +7,14 @@
     <script>
         document.documentElement.classList.add('px-js')
     </script>
-    <meta name="description" content="">
+    <meta name="description" content="{{ \App\Support\Seo::DEFAULT_DESCRIPTION }}">
+    <link rel="canonical" href="{{ url('/') }}">
+    <meta property="og:site_name" content="Travela">
+    <meta property="og:locale" content="vi_VN">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Travela - Du lịch Việt Nam theo mùa đẹp">
+    <meta property="og:description" content="{{ \App\Support\Seo::DEFAULT_DESCRIPTION }}">
+    <meta property="og:url" content="{{ url('/') }}">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
@@ -71,7 +78,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/hero-postcards.css') }}?v=3">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/hero-postcards.css') }}?v=2">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/explore-kit.css') }}?v=1">
 </head>
 

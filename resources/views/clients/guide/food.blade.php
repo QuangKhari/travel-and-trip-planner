@@ -1,3 +1,7 @@
+@php
+    $metaDescription = \App\Support\Seo::text($food->description);
+    $metaImage = $cover;
+@endphp
 @include('clients.blocks.header')
 {{-- /am-thuc/{slug} — biến: $food, $cover, $sameDest, $variants, $events, $marks --}}
 <main class="gx-page" id="main">

@@ -66,7 +66,7 @@ class ContentReviewController extends Controller
                 'title' => 'title',
                 'body' => 'body',
                 'dest' => false,
-                'fields' => ['title' => ['Tiêu đề', 'text', ['required', 'max:200']], 'body' => ['Nội dung', 'textarea', ['nullable']]] + $legal
+                'fields' => ['title' => ['Tiêu đề', 'text', ['required', 'max:200']], 'body' => ['Nội dung (Markdown: "## " là mục, "> " là hộp lưu ý)', 'textarea', ['nullable']]] + $legal
             ],
             'itineraries' => [
                 'label' => 'Lịch trình',
@@ -169,7 +169,9 @@ class ContentReviewController extends Controller
 
         $data = $request->validate(array_map(fn($f) => $f[2], $cfg['fields']));
         $data = array_map(fn($v) => is_string($v) && trim($v) === '' ? null : $v, $data);
-        DB::table($cfg['table'])->where($cfg['key'], $id)->update($data + ['updatedAt' => now()]);
+        $extra = $kind === 'guides' ? ['updatedOn' => now()->toDateString()] : [];   // C1: dòng "Cập nhật lần cuối" của bài
+        DB::table($cfg['table'])->where($cfg['key'], $id)->update($data + ['updatedAt' => now()] + $extra);
+        self::flushPublicCaches();
 
         // Sửa xong mà không còn đủ điều kiện thì tự hạ về "Đã xem" để không lộ nội dung lỗi ra công khai.
         $fresh = DB::table($cfg['table'])->where($cfg['key'], $id)->first();
@@ -229,7 +231,15 @@ class ContentReviewController extends Controller
             $upd['updatedAt'] = now();
         }
         DB::table($cfg['table'])->where($cfg['key'], $id)->update($upd);
+        self::flushPublicCaches();
 
         return null;
+    }
+
+    /** C3, C4: chỉ mục tìm kiếm và sitemap đang đệm; xóa để nội dung vừa duyệt hiện ra ngay. */
+    private static function flushPublicCaches(): void
+    {
+        \App\Services\Content\SearchCatalog::forget();
+        \Illuminate\Support\Facades\Cache::forget('sitemap.xml.v1');
     }
 }

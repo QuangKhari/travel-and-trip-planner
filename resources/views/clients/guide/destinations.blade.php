@@ -1,3 +1,6 @@
+@php
+    $metaDescription = 'Tất cả điểm đến ở Việt Nam: lọc theo miền, tỉnh, cảm hứng và tháng đẹp nhất để đi.';
+@endphp
 @include('clients.blocks.header')
 {{-- /diem-den/tat-ca — biến: $items (phân trang), $filters, $total, $regions, $provinces, $inspirations, $months --}}
 <main class="gx-page" id="main">

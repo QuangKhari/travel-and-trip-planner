@@ -1,3 +1,6 @@
+@php
+    $metaDescription = 'Lễ hội ở Việt Nam theo tháng và theo vùng, có ngày dương lịch cho vài năm tới.';
+@endphp
 @include('clients.blocks.header')
 {{-- /le-hoi — biến: $items, $filters, $total, $regions, $months --}}
 <main class="gx-page" id="main">

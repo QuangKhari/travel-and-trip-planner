@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\InspirationController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\SeasonController;
 use App\Http\Controllers\Api\V1\ContentController;
+use App\Http\Controllers\Api\V1\SearchController as ApiSearchController;
 
 
 Route::prefix('v1')->group(function () {
@@ -35,6 +36,7 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::get('seasons', [SeasonController::class, 'index']);
+        Route::get('seasons/matrix', [SeasonController::class, 'matrix']);   // C2: ma trận điểm đến x 12 tháng
 
         // A10: nội dung lớp Khám phá (chỉ published)
         Route::get('destinations/{slug}/months', [ContentController::class, 'months'])->where('slug', '[a-z0-9-]+');
@@ -46,6 +48,12 @@ Route::prefix('v1')->group(function () {
         Route::get('guides/{slug}', [ContentController::class, 'guide'])->where('slug', '[a-z0-9-]+');
         Route::get('itineraries', [ContentController::class, 'itineraries']);
         Route::get('itineraries/{slug}', [ContentController::class, 'itinerary'])->where('slug', '[a-z0-9-]+');
+    });
+
+    // C3: tìm kiếm toàn lớp Khám phá. Giới hạn riêng vì gợi ý khi gõ gọi nhiều lần.
+    Route::middleware('throttle:120,1,api-search')->group(function () {
+        Route::get('search', [ApiSearchController::class, 'index']);
+        Route::get('search/suggest', [ApiSearchController::class, 'suggest']);
     });
 
     // Các endpoint Trip Planner / AI sau này đặt trong nhóm này để dùng chung xác thực:

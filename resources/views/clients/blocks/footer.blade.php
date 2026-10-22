@@ -32,6 +32,8 @@
                 <ul>
                     <li><a href="{{ route('tours') }}">Tất cả tour</a></li>
                     <li><a href="{{ route('destination') }}">Điểm đến</a></li>
+                    <li><a href="{{ route('guides.index') }}">Cẩm nang</a></li>
+                    <li><a href="{{ route('data.sources') }}">Nguồn dữ liệu</a></li>
                     <li><a href="{{ route('about') }}">Giới thiệu</a></li>
                     <li><a href="{{ route('contact') }}">Liên hệ</a></li>
                 </ul>

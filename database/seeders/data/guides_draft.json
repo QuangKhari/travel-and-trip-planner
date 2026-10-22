@@ -1,0 +1,85 @@
+{
+  "_ghi_chu": "Bài nháp cẩm nang (7 bài) do Travela biên soạn. Nạp bằng: php artisan db:seed --class=GuideDraftSeeder. Tất cả vào ở trạng thái draft. Trước khi duyệt: đối chiếu mọi thông tin dễ đổi (visa, giấy phép lái xe, giá, số khẩn cấp) với nguồn chính thức rồi cập nhật ngày. Định dạng body: Markdown, '## ' là mục, '> ' là hộp lưu ý.",
+  "categories": [
+    {
+      "slug": "truoc-chuyen-di",
+      "name": "Trước chuyến đi",
+      "displayOrder": 1
+    },
+    {
+      "slug": "di-lai",
+      "name": "Đi lại",
+      "displayOrder": 2
+    },
+    {
+      "slug": "khi-o-viet-nam",
+      "name": "Khi đã ở Việt Nam",
+      "displayOrder": 3
+    }
+  ],
+  "guides": [
+    {
+      "slug": "chuan-bi-hanh-ly-theo-mua",
+      "category": "truoc-chuyen-di",
+      "title": "Chuẩn bị hành lý theo mùa và theo miền",
+      "body": "Việt Nam kéo dài theo chiều bắc nam nên cùng một tháng, ba miền có thể rất khác nhau. Hãy xếp hành lý theo nơi bạn đến, đừng theo tên tháng.\n\n## Món nào cũng nên có\n\n- Áo mưa mỏng hoặc ô gấp, vì mưa rào có thể đến bất chợt ở nhiều vùng.\n- Kem chống nắng, mũ và kính râm.\n- Giày hoặc dép đã đi quen, đế bám tốt cho đường ướt.\n- Ổ cắm chuyển đổi và sạc dự phòng.\n\n## Miền Bắc và vùng núi cao\n\nMùa lạnh cần áo giữ ấm nhiều lớp. Lớp ngoài chắn gió, lớp trong mỏng để dễ cởi khi vào nhà. Vùng núi cao có thể lạnh hơn thành phố nhiều dù cùng tháng.\n\n## Miền Trung và miền Nam\n\nQuần áo thoáng, nhanh khô là đủ cho phần lớn thời gian. Thêm một bộ dự phòng và túi chống nước cho điện thoại, giấy tờ khi đi biển hoặc đi thuyền.\n\n> Xem điểm đến cụ thể ở trang \"Nên đi tháng nào\" để biết mùa đẹp, rồi mới chốt danh sách đồ.\n\n## Mẹo nhỏ\n\nĐể lại một khoảng trống trong vali cho quà và đặc sản mua về. Thuốc cá nhân nên mang theo trong hành lý xách tay cùng đơn thuốc nếu có.",
+      "sourceUrl": null,
+      "license": "Tự viết",
+      "updatedOn": "2026-10-21"
+    },
+    {
+      "slug": "giay-to-va-visa-nhap-canh",
+      "category": "truoc-chuyen-di",
+      "title": "Giấy tờ và visa khi nhập cảnh Việt Nam",
+      "body": "Yêu cầu visa và giấy tờ phụ thuộc quốc tịch của bạn và thay đổi theo thời gian. Bài này chỉ giúp bạn biết cần kiểm tra những gì, còn quy định chính xác phải lấy từ cổng thông tin chính thức.\n\n> Quy định visa có thể đổi bất cứ lúc nào. Hãy kiểm tra cổng thị thực điện tử chính thức trước khi đặt vé, đừng dựa vào bài viết này hay các trang tổng hợp.\n\n## Việc nên làm theo thứ tự\n\n1. Kiểm tra hộ chiếu của bạn còn hạn, và xem yêu cầu thời hạn tối thiểu còn lại khi nhập cảnh.\n2. Tra xem quốc tịch của bạn có được miễn thị thực không, và nếu có thì ở lại tối đa bao lâu.\n3. Nếu cần visa, nộp hồ sơ qua kênh chính thức và lưu lại bản xác nhận.\n4. In hoặc lưu sẵn bản sao hộ chiếu, visa, vé khứ hồi và địa chỉ nơi lưu trú đầu tiên.\n\n## Cẩn thận với trang giả mạo\n\nCó nhiều trang web giả dạng cổng chính thức và thu phí cao hơn. Chỉ làm theo liên kết ghi ở mục \"Nguồn chính thức\" cuối bài.\n\n## Khi đã ở Việt Nam\n\nNhà nghỉ và khách sạn sẽ yêu cầu hộ chiếu để khai báo lưu trú. Hãy luôn giữ bản chính ở nơi an toàn và mang theo bản sao khi đi chơi.",
+      "sourceUrl": "https://evisa.gov.vn/",
+      "license": "Tự viết",
+      "updatedOn": "2026-10-21"
+    },
+    {
+      "slug": "sim-esim-va-ket-noi-mang",
+      "category": "truoc-chuyen-di",
+      "title": "SIM, eSIM và kết nối mạng khi du lịch",
+      "body": "Có mạng ngay khi hạ cánh giúp bạn gọi xe, xem bản đồ và dịch nhanh. Có ba cách phổ biến.\n\n## So sánh nhanh\n\n- **eSIM:** cài trước khi bay, không cần đổi thẻ. Điện thoại phải hỗ trợ eSIM và đã mở khóa mạng.\n- **SIM vật lý:** mua ở sân bay hoặc cửa hàng nhà mạng, thường cần hộ chiếu để đăng ký.\n- **Chuyển vùng quốc tế:** tiện nhất nhưng thường đắt nhất, hãy hỏi nhà mạng của bạn về cước trước.\n\n## Trước khi mua\n\n1. Xem điện thoại có hỗ trợ eSIM và có bị khóa mạng không.\n2. So sánh dung lượng, số ngày và có kèm số điện thoại để nhận mã xác thực hay không.\n3. Chụp màn hình mã QR và hướng dẫn cài đặt để dùng khi chưa có mạng.\n\n> Giá và gói cước đổi thường xuyên. Hãy kiểm tra trên trang chính thức của nhà mạng hoặc nhà cung cấp eSIM bạn chọn.\n\n## Mẹo\n\nTải bản đồ ngoại tuyến cho khu vực bạn đến, phòng khi sóng yếu ở vùng núi hoặc đảo.",
+      "sourceUrl": null,
+      "license": "Tự viết",
+      "updatedOn": "2026-10-21"
+    },
+    {
+      "slug": "di-chuyen-giua-cac-thanh-pho",
+      "category": "di-lai",
+      "title": "Di chuyển giữa các thành phố",
+      "body": "Việt Nam dài và hẹp nên bạn thường cần đi những chặng xa. Mỗi cách đi hợp với một kiểu chuyến đi.\n\n## Các lựa chọn\n\n- **Máy bay:** nhanh nhất cho chặng dài như bắc sang nam. Nên đặt sớm vào mùa cao điểm và dịp lễ.\n- **Tàu hỏa:** chậm hơn nhưng nhìn được cảnh dọc đường, có giường nằm cho chặng đêm.\n- **Xe khách giường nằm:** phổ biến, linh hoạt giờ đi, nhiều hãng và nhiều mức giá.\n- **Thuê xe có tài xế:** hợp nhóm nhỏ và cung đường nhiều điểm dừng.\n\n## Cách chọn\n\n1. Chặng dưới khoảng nửa ngày: xe khách hoặc tàu thường đủ.\n2. Chặng xuyên miền: cân nhắc máy bay để dành thời gian cho điểm đến.\n3. Có hành lý nhiều hoặc đi nhóm: hỏi kỹ quy định hành lý trước khi đặt.\n\n> Lịch chạy và giá vé thay đổi theo mùa. Hãy đặt qua kênh bán vé chính thức của hãng hoặc đơn vị vận tải.\n\n## Đặt vé\n\nĐặt trực tiếp trên trang hoặc ứng dụng của hãng, và giữ lại mã đặt chỗ. Vào dịp Tết, vé đi và về đều kín rất sớm.",
+      "sourceUrl": null,
+      "license": "Tự viết",
+      "updatedOn": "2026-10-21"
+    },
+    {
+      "slug": "thue-xe-may-an-toan",
+      "category": "di-lai",
+      "title": "Thuê xe máy: những điều cần biết",
+      "body": "Xe máy giúp bạn đi những nơi xe lớn khó vào, nhưng giao thông Việt Nam đông và khó đoán với người mới. Hãy cân nhắc kỹ trước khi thuê.\n\n> Quy định về giấy phép lái xe cho người nước ngoài có thể thay đổi. Hãy kiểm tra yêu cầu hiện hành với cơ quan chức năng hoặc công ty bảo hiểm trước khi thuê.\n\n## Trước khi thuê\n\n1. Chỉ thuê nếu bạn đã quen lái xe số hoặc xe tay ga.\n2. Kiểm tra giấy phép lái xe của bạn có hợp lệ để lái xe máy ở Việt Nam không.\n3. Hỏi về bảo hiểm của xe và bảo hiểm du lịch của bạn có bao gồm xe máy không.\n4. Chụp ảnh xe kỹ lưỡng từ mọi phía trước khi nhận để tránh tranh cãi khi trả.\n\n## Khi chạy\n\n- Luôn đội mũ bảo hiểm đạt chuẩn và cài quai.\n- Giữ tốc độ vừa phải, đặc biệt trên đường đèo và khi trời mưa.\n- Không lái khi đã uống rượu bia.\n- Đổ xăng ở trạm có biển rõ ràng.\n\n## Nếu chưa tự tin\n\nGọi xe công nghệ, thuê xe có tài xế hoặc đi tour nhóm cũng là lựa chọn tốt và an toàn.",
+      "sourceUrl": null,
+      "license": "Tự viết",
+      "updatedOn": "2026-10-21"
+    },
+    {
+      "slug": "tien-atm-va-thanh-toan",
+      "category": "khi-o-viet-nam",
+      "title": "Tiền mặt, ATM và thanh toán",
+      "body": "Đồng Việt Nam (VND) là tiền dùng ở mọi nơi. Phần lớn thành phố đã chấp nhận thanh toán bằng mã QR, nhưng tiền mặt vẫn hữu ích ở chợ, quán nhỏ và vùng xa.\n\n## Mang theo gì\n\n- Một ít tiền mặt VND cho ngày đầu, đủ để đi xe và ăn.\n- Thẻ quốc tế để rút tiền ở ATM hoặc thanh toán ở nơi có máy quẹt.\n- Tiền lẻ mệnh giá nhỏ cho xe buýt, nước uống, tiền công đi đò.\n\n## ATM và đổi tiền\n\nATM có nhiều ở thành phố, ít hơn ở vùng núi và đảo. ATM thường giới hạn số tiền mỗi lần rút và có thể tính phí, hãy hỏi ngân hàng của bạn về phí rút tiền nước ngoài.\n\n> Tỷ giá, phí và hạn mức đổi theo thời điểm. Hãy kiểm tra với ngân hàng phát hành thẻ của bạn.\n\n## Thanh toán QR\n\nNhiều quán dùng mã QR của ngân hàng trong nước. Du khách cần có tài khoản hoặc ví phù hợp, nên đừng chỉ trông vào cách này mà không có tiền mặt dự phòng.\n\n## Mẹo\n\nĐếm tiền lại khi nhận và trả, nhất là mệnh giá lớn có màu gần giống nhau.",
+      "sourceUrl": null,
+      "license": "Tự viết",
+      "updatedOn": "2026-10-21"
+    },
+    {
+      "slug": "an-toan-va-tranh-chat-chem",
+      "category": "khi-o-viet-nam",
+      "title": "An toàn và cách tránh bị chặt chém",
+      "body": "Phần lớn người bán và tài xế ở Việt Nam trung thực, nhưng ở nơi đông khách vẫn có người báo giá cao. Vài thói quen nhỏ giúp bạn yên tâm hơn.\n\n## Hỏi giá trước\n\n- Hỏi giá trước khi ăn, uống, đi xe, hoặc chụp ảnh có tính phí.\n- Với taxi, chọn hãng quen thuộc hoặc dùng ứng dụng gọi xe để thấy giá trước chuyến đi.\n- Xem thực đơn có giá, hoặc chụp lại bảng giá nếu có.\n\n## Giữ đồ an toàn\n\n1. Đeo túi phía trước người ở nơi đông, và không để điện thoại ở túi sau.\n2. Khi đi xe máy, cất điện thoại kỹ vì giật đồ có thể xảy ra.\n3. Chia tiền và thẻ ra các chỗ khác nhau.\n\n## Khi có chuyện\n\n> Số điện thoại khẩn cấp có thể thay đổi. Hãy lưu số công an và số cấp cứu từ nguồn chính thức vào điện thoại trước chuyến đi.\n\nNếu bị mất giấy tờ, báo cơ quan công an địa phương và liên hệ đại sứ quán của nước bạn.\n\n## Tinh thần chung\n\nMặc cả lịch sự là chuyện bình thường ở chợ. Giữ bình tĩnh, mỉm cười và sẵn sàng bước đi nếu giá không hợp lý.",
+      "sourceUrl": null,
+      "license": "Tự viết",
+      "updatedOn": "2026-10-21"
+    }
+  ]
+}

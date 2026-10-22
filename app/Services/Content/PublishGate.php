@@ -34,6 +34,9 @@ final class PublishGate
         if (!empty($row->coverImage) && empty($row->imageCredit)) {
             $p[] = 'Có ảnh nhưng thiếu ghi công ảnh';
         }
+        if ($kind === 'guides' && empty($row->updatedOn)) {
+            $p[] = 'Bài cẩm nang phải có ngày "Cập nhật lần cuối" (lưu bài một lần trong màn hình sửa là tự có)';
+        }
         if ($kind === 'foods' && empty($row->destinationId)) {
             $p[] = 'Món ăn phải gắn với một điểm đến';
         }

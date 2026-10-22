@@ -1,3 +1,7 @@
+@php
+    $metaDescription = \App\Support\Seo::text($it->summary);
+    $metaImage = $cover;
+@endphp
 @include('clients.blocks.header')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 {{-- /lich-trinh/{slug} — biến: $it, $days, $points, $cover, $plannerUrl --}}
