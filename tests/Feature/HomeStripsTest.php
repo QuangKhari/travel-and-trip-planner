@@ -26,19 +26,21 @@ class HomeStripsTest extends TestCase
             'coverImage' => $img, 'license' => 'Tự viết', 'reviewStatus' => $status]);
     }
 
-    public function test_dai_am_thuc_chi_hien_mon_published_co_anh(): void
+    public function test_dai_am_thuc_chi_hien_mon_published_va_uu_tien_mon_co_anh(): void
     {
         Storage::fake('public');
-        Storage::disk('public')->put('discover/foods/a.webp', 'x');
-        $this->food('a', 'published', 'discover/foods/a.webp');
+        foreach (['a', 'b', 'c', 'd'] as $s) {
+            Storage::disk('public')->put("discover/foods/{$s}.webp", 'x');
+            $this->food($s, 'published', "discover/foods/{$s}.webp");
+        }
         $this->food('b-nhap', 'draft', 'discover/foods/a.webp');
         $this->food('c-khong-anh', 'published', null);
 
         $html = $this->get('/')->assertOk()->getContent();
         $this->assertStringContainsString('id="am-thuc-nen-thu"', $html);
         $this->assertStringContainsString('Món a', $html);
-        $this->assertStringNotContainsString('Món b-nhap', $html);
-        $this->assertStringNotContainsString('Món c-khong-anh', $html);
+        $this->assertStringNotContainsString('Món b-nhap', $html);      // bản nháp không bao giờ hiện
+        $this->assertStringNotContainsString('Món c-khong-anh', $html); // đủ 4 món có ảnh thì món không ảnh nhường chỗ
     }
 
     public function test_dai_rong_khong_ve_tieu_de(): void
@@ -106,5 +108,24 @@ class HomeStripsTest extends TestCase
         $this->assertSame('best', $j['verdict']['level']);
         $this->assertCount(1, $j['itineraries']);
         $this->assertSame('Sa Pa 3 ngày', $j['itineraries'][0]['title']);
+    }
+
+    public function test_khoi_planner_van_hien_khi_chua_du_anh_cho_hero(): void
+    {
+        Storage::fake('public');
+        $html = $this->get('/')->assertOk()->getContent();
+        $this->assertStringNotContainsString('id="hero"', $html);
+        $this->assertStringContainsString('id="hpl"', $html);
+    }
+
+    public function test_dai_am_thuc_dung_the_thuong_khi_chua_du_mon_co_anh(): void
+    {
+        Storage::fake('public');
+        $this->food('khong-anh-1', 'published', null);
+        $this->food('khong-anh-2', 'published', null);
+
+        $html = $this->get('/')->assertOk()->getContent();
+        $this->assertStringContainsString('Món khong-anh-1', $html);
+        $this->assertStringContainsString('Món khong-anh-2', $html);
     }
 }

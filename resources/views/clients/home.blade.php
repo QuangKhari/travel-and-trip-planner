@@ -5,6 +5,8 @@
     @include('clients.blocks.home_search_strip')
 @else
     @include('clients.blocks.banner_home')
+    {{-- Chưa đủ ảnh cho hero: khối Planner vẫn hiện (D4 không phụ thuộc hero) --}}
+    @include('clients.blocks.home_planner')
 @endif
 
 {{-- Thứ tự dải theo tài liệu mục 4.1: mùa, lễ hội, cảm hứng, ẩm thực, tour, lịch trình, cẩm nang --}}

@@ -32,10 +32,11 @@ class HomeFeedService
         $soon = $events->filter(fn($c) => $c->start && $c->start <= $to)->take(8);
         $events = ($soon->isNotEmpty() ? $soon : $events->take(4))->values()->all();
 
-        // Ẩm thực: chỉ món có ảnh; thứ tự đổi theo ngày nhưng ổn định trong ngày (cache được)
+        // Ẩm thực (tài liệu mục 2): ưu tiên món có ảnh; chưa đủ 4 món có ảnh thì dùng thẻ thường cho mọi món đã duyệt
         $day = date('Ymd');
-        $foods = collect($this->catalog->foods([], 1, 60)['items']->items())
-            ->filter(fn($c) => !empty($c->image))
+        $allFoods = collect($this->catalog->foods([], 1, 60)['items']->items());
+        $withImg = $allFoods->filter(fn($c) => !empty($c->image));
+        $foods = ($withImg->count() >= 4 ? $withImg : $allFoods)
             ->sortBy(fn($c) => crc32($c->slug . $day))
             ->take(8)->values()->all();
 
