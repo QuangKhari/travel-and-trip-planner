@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\SeasonController;
 use App\Http\Controllers\Api\V1\ContentController;
 use App\Http\Controllers\Api\V1\SearchController as ApiSearchController;
+use App\Http\Controllers\Api\V1\PlannerPreviewController;
 
 
 Route::prefix('v1')->group(function () {
@@ -37,6 +38,7 @@ Route::prefix('v1')->group(function () {
 
         Route::get('seasons', [SeasonController::class, 'index']);
         Route::get('seasons/matrix', [SeasonController::class, 'matrix']);   // C2: ma trận điểm đến x 12 tháng
+        Route::get('planner-preview', [PlannerPreviewController::class, 'index']);   // D4: xem trước Planner ở trang chủ
 
         // A10: nội dung lớp Khám phá (chỉ published)
         Route::get('destinations/{slug}/months', [ContentController::class, 'months'])->where('slug', '[a-z0-9-]+');

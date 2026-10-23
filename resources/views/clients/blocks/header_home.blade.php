@@ -80,6 +80,7 @@
         rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/hero-postcards.css') }}?v=2">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/explore-kit.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/home-strips.css') }}?v=1">
 </head>
 
 <body class="tv-home">

@@ -1,0 +1,275 @@
+/* D2 + D4: dải trang chủ và khối Planner. Dùng biến --gx-* của explore-kit.css. Tiền tố hs- (dải), hpl- (Planner). */
+.hs {
+    padding: 56px 0 8px;
+    background: var(--gx-cream, #f8f6f0);
+    color: var(--gx-ink, #334155);
+}
+.hs-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+.hs-eyebrow {
+    margin: 0;
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--gx-tqd, #087f7b);
+}
+.hs-head h2 {
+    margin: 4px 0 4px;
+    font-size: clamp(24px, 3vw, 34px);
+    line-height: 1.2;
+    color: var(--gx-navy, #0f172a);
+}
+.hs-lead {
+    margin: 0;
+    max-width: 62ch;
+    line-height: 1.55;
+}
+.hs-tools {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.hs-cta {
+    padding: 9px 16px;
+    border-radius: 99px;
+    background: var(--gx-tqd, #087f7b);
+    color: #fff;
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none;
+}
+.hs-cta:hover {
+    background: var(--gx-navy, #0f172a);
+    color: #fff;
+}
+.hs-arrows {
+    display: none;
+    gap: 8px;
+}
+.hs-arrow {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid var(--gx-line, #e2e8f0);
+    background: #fff;
+    font-size: 22px;
+    line-height: 1;
+    color: var(--gx-navy, #0f172a);
+    cursor: pointer;
+}
+.hs-arrow:hover {
+    border-color: var(--gx-tq, #0d9488);
+    color: var(--gx-tqd, #087f7b);
+}
+.hs-arrow:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+@media (hover: hover) and (pointer: fine) and (min-width: 900px) {
+    .hs-arrows {
+        display: inline-flex;
+    }
+}
+.hs-rail {
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+}
+.hs-more {
+    margin: 4px 0 0;
+    text-align: right;
+}
+.hs-more a {
+    color: var(--gx-tqd, #087f7b);
+    font-weight: 600;
+    text-decoration: none;
+}
+.hs-more a:hover {
+    text-decoration: underline;
+}
+.hs :focus-visible,
+.hpl :focus-visible {
+    outline: 3px solid var(--gx-tqd, #087f7b);
+    outline-offset: 2px;
+}
+
+/* khung tải: chỉ chạy khi có JS và ảnh chưa tải xong; không JS thì ảnh hiện bình thường */
+.px-js .hs .gx-card__img:not(.is-loaded) {
+    background: linear-gradient(90deg, #eceff3 25%, #f6f7f9 37%, #eceff3 63%);
+    background-size: 400% 100%;
+    animation: gx-sh 1.4s infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+    .px-js .hs .gx-card__img:not(.is-loaded) {
+        animation: none;
+    }
+    .hs-rail {
+        scroll-behavior: auto;
+    }
+}
+
+/* thẻ tối cuối dải lịch trình */
+.hs-ai {
+    flex: 0 0 min(280px, 78vw);
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    justify-content: center;
+    padding: 22px;
+    border-radius: 14px;
+    background: var(--gx-navy, #0f172a);
+    color: #e2e8f0;
+    text-decoration: none;
+    min-height: 260px;
+}
+.hs-ai__k {
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gx-sand, #e9c46a);
+    font-weight: 600;
+}
+.hs-ai b {
+    font-size: 20px;
+    line-height: 1.25;
+    color: #fff;
+}
+.hs-ai i {
+    font-style: normal;
+    font-weight: 600;
+    color: var(--gx-sand, #e9c46a);
+    margin-top: auto;
+}
+.hs-ai:hover {
+    background: #0b3b3a;
+    color: #e2e8f0;
+}
+
+/* D4: khối Planner */
+.hpl {
+    padding: 28px 0 8px;
+    background: var(--gx-cream, #f8f6f0);
+}
+.hpl-title {
+    margin: 0 0 12px;
+    font-size: clamp(20px, 2.4vw, 26px);
+    color: var(--gx-navy, #0f172a);
+}
+.hpl-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 12px;
+    padding: 16px 18px;
+    border: 1px solid var(--gx-line, #e2e8f0);
+    border-radius: 16px;
+    background: #fff;
+    font-size: 17px;
+}
+.hpl-form label {
+    margin: 0;
+    color: var(--gx-mute, #64748b);
+}
+.hpl-form select {
+    padding: 8px 12px;
+    border: 1px solid var(--gx-line, #e2e8f0);
+    border-radius: 10px;
+    font-size: 16px;
+    color: var(--gx-navy, #0f172a);
+    background: #fff;
+    max-width: 100%;
+}
+.hpl-go {
+    margin-left: auto;
+    padding: 10px 20px;
+    border: 0;
+    border-radius: 99px;
+    background: var(--gx-tqd, #087f7b);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+}
+.hpl-go:hover {
+    background: var(--gx-navy, #0f172a);
+}
+.hpl-out {
+    margin-top: 12px;
+    padding: 16px 18px;
+    border-radius: 16px;
+    background: #fff;
+    border: 1px solid var(--gx-line, #e2e8f0);
+}
+.hpl-out h3 {
+    margin: 0 0 8px;
+    font-size: 18px;
+    color: var(--gx-navy, #0f172a);
+}
+.hpl-verdict {
+    margin: 0 0 12px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: #ecfdf5;
+    color: #065f46;
+}
+.hpl-verdict.is-ok {
+    background: #fefce8;
+    color: #713f12;
+}
+.hpl-verdict.is-avoid {
+    background: #fef2f2;
+    color: #991b1b;
+}
+.hpl-cols {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+.hpl-cols h4 {
+    margin: 0 0 6px;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--gx-tqd, #087f7b);
+}
+.hpl-cols ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 8px;
+}
+.hpl-cols a {
+    color: var(--gx-navy, #0f172a);
+    font-weight: 600;
+    text-decoration: none;
+}
+.hpl-cols a:hover {
+    color: var(--gx-tqd, #087f7b);
+    text-decoration: underline;
+}
+.hpl-cols small {
+    display: block;
+    color: var(--gx-mute, #64748b);
+    font-weight: 400;
+}
+.hpl-note {
+    margin: 10px 0 0;
+    font-size: 13px;
+    color: var(--gx-mute, #64748b);
+}
+@media (max-width: 599px) {
+    .hpl-go {
+        width: 100%;
+        margin-left: 0;
+    }
+    .hs {
+        padding-top: 40px;
+    }
+}

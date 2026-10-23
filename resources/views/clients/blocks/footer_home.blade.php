@@ -170,7 +170,8 @@
         <script src="{{ asset('clients/assets/js/custom-js.js') }}"></script>
         <script src="{{ asset('clients/assets/js/travel-theme.js') }}?v=2"></script>
         @include('clients.blocks.trip_boot')
-        <script src="{{ asset('clients/assets/js/hero-postcards.js') }}?v=3"></script>
+        <script src="{{ asset('clients/assets/js/hero-postcards.js') }}?v=4"></script>
+        <script src="{{ asset('clients/assets/js/home-strips.js') }}?v=1" defer></script>
 
         <script src="{{ asset('clients/assets/js/jquery.datetimepicker.full.min.js') }}"></script>
 

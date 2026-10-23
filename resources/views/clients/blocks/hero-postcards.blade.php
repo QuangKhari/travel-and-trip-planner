@@ -58,7 +58,7 @@
             <div class="hp-scene">
                 <div class="hp-world">
                     @foreach ($postcards as $i => $p)
-                        <a class="hp-card" href="{{ $p['url'] }}" data-name="{{ $p['name'] }}"
+                        <a class="hp-card" href="{{ $p['url'] }}" data-type="{{ $p['type'] ?? 'destination' }}" data-name="{{ $p['name'] }}"
                             data-why="{{ $p['why'] }}" data-credit="{{ $p['credit'] }}" data-thumb="{{ $p['thumb'] ?? '' }}"
                             data-credit-url="{{ $p['creditUrl'] }}" data-slug="{{ $p['slug'] }}"
                             aria-label="{{ $p['name'] }}, {{ $p['province'] }}. {{ $p['why'] }}">

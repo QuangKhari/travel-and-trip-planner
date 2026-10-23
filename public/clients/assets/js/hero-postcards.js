@@ -45,7 +45,7 @@
         return Math.max(a, Math.min(b, v));
     }
     function inTrip(it) {
-        return !!(trip && it && trip.has("destination", it.slug));
+        return !!(trip && it && trip.has(it.type || "destination", it.slug));
     }
     function addLabel(it) {
         return inTrip(it)
@@ -101,6 +101,7 @@
             })
             .map(function (c) {
                 return {
+                    type: c.dataset.type || "destination",
                     slug: c.dataset.slug,
                     name: c.dataset.name,
                     why: c.dataset.why,
@@ -145,7 +146,9 @@
             ? planner
                 ? "Lên kế hoạch"
                 : "Khám phá theo cảm hứng"
-            : "Xem điểm đến";
+            : it.type === "event"
+              ? "Xem lễ hội"
+              : "Xem điểm đến";
         go.href = last ? plannerHref(month) : it.url;
         add.hidden = last || !trip;
         if (!last) add.textContent = addLabel(it);
@@ -310,6 +313,7 @@
         var a = document.createElement("a");
         a.className = "hp-card";
         a.href = it.url;
+        a.dataset.type = it.type || "destination";
         a.dataset.slug = it.slug;
         a.dataset.name = it.name;
         a.dataset.why = it.why;
@@ -434,11 +438,10 @@
         var it = items[idx];
         if (!it || !trip) return;
         /* bấm lần nữa thì bỏ khỏi khay (nút bật/tắt) */
-        if (trip.has("destination", it.slug))
-            trip.remove("destination", it.slug);
+        if (trip.has(it.type, it.slug)) trip.remove(it.type, it.slug);
         else
             trip.add({
-                type: "destination",
+                type: it.type,
                 slug: it.slug,
                 name: it.name,
                 url: it.url,
