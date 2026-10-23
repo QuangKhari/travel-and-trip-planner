@@ -19,7 +19,7 @@ class SeoController extends Controller
         $disallow = ['/admin', '/login', '/register', '/logout', '/user-profile', '/change-password-profile', '/change-avatar-profile',
             '/create-booking', '/apply-coupon', '/checkBooking', '/tour-booked', '/cancel-booking', '/my-tours', '/reviews',
             '/xac-thuc-email', '/xac-thuc-email-moi', '/dat-lai-mat-khau', '/doi-mat-khau', '/quen-mat-khau',
-            '/danh-dau', '/khay-chuyen-di', '/search', '/search-voice-text', '/filter-tours', '/api/'];
+            '/danh-dau', '/khay-chuyen-di', '/so-tay-du-hanh', '/search', '/search-voice-text', '/filter-tours', '/api/'];
         $txt = "User-agent: *\n" . implode("\n", array_map(fn($p) => 'Disallow: ' . $p, $disallow)) . "\n\nSitemap: " . url('/sitemap.xml') . "\n";
 
         return response($txt, 200, ['Content-Type' => 'text/plain; charset=UTF-8']);

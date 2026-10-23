@@ -1,0 +1,157 @@
+/* E3 — Thanh tab đáy + tờ trượt khay chuyến đi trên điện thoại (dưới 600px). Tiền tố gx- (cùng bộ explore-kit.css).
+   Nạp SAU explore-kit.css để ghi đè quy tắc .gx-tray mobile có sẵn. */
+.gx-tabbar,
+.gx-tray-backdrop {
+    display: none;
+}
+
+@media (max-width: 599px) {
+    /* chỉ bật khi travela-trip.js gắn has-tabbar; chừa chỗ để thanh không che nội dung cuối trang */
+    body.has-tabbar {
+        padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    }
+    body.has-tabbar .gx-tabbar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1030; /* dưới backdrop/tờ trượt (1040/1041), trên bong bóng chat (950) */
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        align-items: end;
+        padding: 0 4px env(safe-area-inset-bottom, 0px);
+        background: #fff;
+        border-top: 1px solid var(--gx-line, #e2e8f0);
+        box-shadow: 0 -6px 20px rgba(15, 23, 42, 0.08);
+    }
+    .gx-tab {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        min-height: 56px; /* vùng chạm từ 44px trở lên */
+        padding: 6px 2px;
+        border: 0;
+        background: none;
+        color: var(--gx-mute, #64748b);
+        font: inherit;
+        font-size: 11px;
+        line-height: 1.2;
+        text-decoration: none;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .gx-tab i {
+        font-size: 20px;
+    }
+    .gx-tab.is-active {
+        color: var(--gx-tqd, #087f7b);
+        font-weight: 700;
+        box-shadow: inset 0 3px 0 var(--gx-tqd, #087f7b);
+    }
+    .gx-tab:focus-visible {
+        outline: 3px solid var(--gx-tqd, #087f7b);
+        outline-offset: -3px;
+    }
+
+    /* nút giữa: tròn, nổi lên khỏi thanh */
+    .gx-tab--plan {
+        color: var(--gx-navy, #0f172a);
+        font-weight: 600;
+    }
+    .gx-tab__bubble {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 48px;
+        height: 48px;
+        margin-top: -22px;
+        border-radius: 50%;
+        border: 3px solid #fff;
+        background: var(--gx-tqd, #087f7b);
+        color: #fff;
+        box-shadow: 0 8px 18px rgba(8, 127, 123, 0.4);
+    }
+    .gx-tab--plan[aria-expanded="true"] .gx-tab__bubble {
+        background: var(--gx-navy, #0f172a);
+    }
+    .gx-tab-count {
+        position: absolute;
+        right: -6px;
+        top: -6px;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 5px;
+        border-radius: 99px;
+        background: var(--gx-sand, #e9c46a);
+        color: var(--gx-navy, #0f172a);
+        font-size: 11px;
+        line-height: 20px;
+        text-align: center;
+    }
+    .gx-tab-count[hidden] {
+        display: none;
+    }
+
+    /* đã có thanh tab thì ẩn nút nổi cũ và nâng bong bóng chat lên trên thanh */
+    body.has-tabbar .gx-tray-fab {
+        display: none;
+    }
+    body.has-tabbar .tc-widget {
+        bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* tờ trượt */
+    .gx-tray-backdrop:not([hidden]) {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 1040;
+        background: rgba(15, 23, 42, 0.45);
+    }
+    .gx-tray {
+        max-height: 80vh;
+        animation: gx-sheet-in 0.25s ease-out;
+    }
+    .gx-tray-head {
+        position: relative;
+        padding-top: 22px;
+    }
+    .gx-tray-head::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 8px;
+        width: 40px;
+        height: 4px;
+        transform: translateX(-50%);
+        border-radius: 99px;
+        background: #cbd5e1;
+    }
+    .gx-tray-x {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    .gx-tray-rm {
+        min-height: 44px;
+        padding: 0 8px;
+    }
+    .gx-tray-foot {
+        padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+@keyframes gx-sheet-in {
+    from {
+        transform: translateY(100%);
+    }
+    to {
+        transform: none;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .gx-tray {
+        animation: none !important;
+    }
+}

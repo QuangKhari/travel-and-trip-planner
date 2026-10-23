@@ -113,6 +113,8 @@
     <link rel="stylesheet" href="{{ asset('clients/assets/css/ux-watercolor.css') }}?v=1">
     {{-- Thiết kế lại trang /tours (hero, tìm kiếm, thẻ tour, CTA). Phải nằm SAU tv-sort.css và ux-watercolor.css --}}
     <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-tours-v2.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/journal.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/mobile-nav.css') }}?v=1">
     <script src="{{ asset('clients/assets/js/travel-motion.js') }}?v=1" defer></script>
     <script src="{{ asset('clients/assets/js/tv-final.js') }}?v=1" defer></script>
     <script src="{{ asset('clients/assets/js/tv-tours-10.js') }}?v=1" defer></script>

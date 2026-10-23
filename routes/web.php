@@ -36,6 +36,7 @@ use App\Http\Controllers\clients\SeasonPagesController;
 use App\Http\Controllers\clients\SiteSearchController;
 use App\Http\Controllers\clients\SeoController;
 use App\Http\Controllers\clients\DataSourcesController;
+use App\Http\Controllers\clients\JournalController;
 
 
 
@@ -148,6 +149,7 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::post('/cancel-booking', [TourBookedController::class, 'cancelBooking'])->name('cancel-booking');
     Route::post('/reviews', [TourDetailController::class, 'reviews'])->middleware('throttle:10,1,reviews')->name('reviews');
     Route::get('/my-tours', [MyTourController::class, 'index'])->name('my-tours');
+    Route::get('/so-tay-du-hanh', [JournalController::class, 'index'])->name('journal');
 });
 
 //admin

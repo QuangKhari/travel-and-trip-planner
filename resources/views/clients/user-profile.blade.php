@@ -31,6 +31,7 @@
         <nav class="pf-tabs" aria-label="Các phần của trang">
             <a href="#thong-tin">Thông tin cá nhân</a>
             <a href="#bao-mat">Mật khẩu</a>
+            <a href="{{ route('journal') }}">Sổ tay du hành</a>
             @if ($total > 0)
                 <a href="{{ route('my-tours') }}">Tour đã đặt</a>
             @endif
@@ -75,6 +76,13 @@
                             @endif
                         </span>
                     </p>
+                </section>
+
+                <section class="pf-card" aria-labelledby="pfJnH">
+                    <h2 id="pfJnH" class="pf-card__t">Sổ tay du hành</h2>
+                    <p class="pf-hint">Nơi đã đến, món đã thử và huy hiệu của bạn.</p>
+                    <a class="pf-btn pf-btn--ghost pf-btn--block" href="{{ route('journal') }}"><i
+                            class="fal fa-book-open" aria-hidden="true"></i> Mở sổ tay</a>
                 </section>
 
                 <section class="pf-card" aria-labelledby="pfBookH">

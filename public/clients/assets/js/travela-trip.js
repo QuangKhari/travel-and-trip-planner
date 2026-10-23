@@ -179,31 +179,53 @@
         sheet.appendChild(head);
         sheet.appendChild(body);
         sheet.appendChild(foot);
+        var backdrop = el("div", "gx-tray-backdrop"); /* lớp mờ phía sau tờ trượt; CSS chỉ hiện trên điện thoại */
+        backdrop.hidden = true;
         document.body.appendChild(fab);
+        document.body.appendChild(backdrop);
         document.body.appendChild(sheet);
 
-        function open(v) {
+        var opener = null; /* nút đã mở khay (nút nổi hoặc tab "Kế hoạch"), để trả focus khi đóng */
+        function open(v, from) {
+            if (v && sheet.hidden) opener = from || document.activeElement;
             sheet.hidden = !v;
+            backdrop.hidden = !v;
+            sheet.setAttribute("aria-modal", v && window.matchMedia("(max-width: 599px)").matches ? "true" : "false");
             fab.setAttribute("aria-expanded", v ? "true" : "false");
-            if (v) close.focus();
-            else fab.focus();
+            [].forEach.call(document.querySelectorAll("[data-tray-open]"), function (b) {
+                b.setAttribute("aria-expanded", v ? "true" : "false");
+            });
+            if (v) {
+                close.focus();
+            } else {
+                var back = opener && document.body.contains(opener) ? opener : fab;
+                opener = null;
+                back.focus();
+            }
         }
         fab.addEventListener("click", function () {
-            open(sheet.hidden);
+            open(sheet.hidden, fab);
         });
         close.addEventListener("click", function () {
+            open(false);
+        });
+        backdrop.addEventListener("click", function () {
             open(false);
         });
         document.addEventListener("keydown", function (e) {
             if (e.key === "Escape" && !sheet.hidden) open(false);
         });
-        ui = { fab: fab, badge: badge, body: body, foot: foot, sheet: sheet };
+        ui = { fab: fab, badge: badge, body: body, foot: foot, sheet: sheet, backdrop: backdrop, open: open };
     }
     function renderTray() {
         if (!ui) return;
         var n = count();
         ui.badge.textContent = n;
         ui.fab.classList.toggle("has-items", n > 0);
+        [].forEach.call(document.querySelectorAll("[data-tray-count]"), function (b) {
+            b.textContent = n > 99 ? "99+" : n;
+            b.hidden = n === 0;
+        });
         ui.body.textContent = "";
         if (!n) {
             ui.body.appendChild(el("p", "gx-tray-empty", "Chưa có gì. Bấm “Thêm vào chuyến đi” ở điểm đến, món ăn hay lễ hội bạn thích."));
@@ -238,7 +260,11 @@
             var go = el("a", "gx-btn", "Lên kế hoạch với các điểm này");
             go.href = cfg.plannerUrl + "?diem=" + encodeURIComponent(list().map(function (x) { return x.type + ":" + x.slug; }).join(","));
             ui.foot.appendChild(go);
-        } else if (!cfg.plannerUrl) {
+        } else if (cfg.plannerUrl) {
+            var open2 = el("a", "gx-btn", "Mở trình lên kế hoạch");
+            open2.href = cfg.plannerUrl;
+            ui.foot.appendChild(open2);
+        } else {
             ui.foot.appendChild(el("p", "gx-tray-note", "Trình lên kế hoạch sắp ra mắt. Các điểm bạn chọn được giữ lại để dùng khi đó."));
         }
         if (!cfg.loggedIn && n) {
@@ -297,9 +323,27 @@
         }
     });
 
-    window.TravelaTrip = { add: add, remove: remove, has: has, count: count, list: list, clear: clear };
+    document.addEventListener("click", function (e) {
+        var t = e.target.closest ? e.target.closest("[data-tray-open]") : null;
+        if (!t || !ui) return;
+        e.preventDefault();
+        ui.open(ui.sheet.hidden, t);
+    });
+
+    window.TravelaTrip = {
+        add: add,
+        remove: remove,
+        has: has,
+        count: count,
+        list: list,
+        clear: clear,
+        open: function () {
+            if (ui) ui.open(true);
+        },
+    };
     load();
     function boot() {
+        document.body.classList.toggle("has-tabbar", !!document.querySelector(".gx-tabbar") && !document.querySelector(".td-mbar, .bk-bar"));
         buildUi();
         refresh();
         if (cfg.loggedIn) sync();

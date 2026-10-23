@@ -92,6 +92,7 @@
                         <a href="{{ route('user-profile') }}"><i class="bx bx-user"></i><span>Thông tin cá
                                 nhân</span></a>
                         <a href="{{ route('my-tours') }}"><i class="bx bx-map"></i><span>Tour đã đặt</span></a>
+                        <a href="{{ route('journal') }}"><i class="bx bx-book-open"></i><span>Sổ tay du hành</span></a>
                         <form action="{{ route('logout') }}" method="POST">
                             @csrf
                             <button type="submit"><i class="bx bx-log-out"></i><span>Đăng xuất</span></button>

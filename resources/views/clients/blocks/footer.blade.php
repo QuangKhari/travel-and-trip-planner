@@ -45,6 +45,7 @@
                     @if (session()->has('username'))
                         <li><a href="{{ route('user-profile') }}">Thông tin cá nhân</a></li>
                         <li><a href="{{ route('my-tours') }}">Tour đã đặt</a></li>
+                        <li><a href="{{ route('journal') }}">Sổ tay du hành</a></li>
                     @else
                         <li><a href="{{ route('login') }}">Đăng nhập / Đăng ký</a></li>
                         <li><a href="{{ route('password.request') }}">Quên mật khẩu</a></li>
@@ -119,6 +120,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 <script src="{{ asset('clients/assets/js/ux-pass.js') }}?v=3"></script>
+@include('clients.blocks.mobile_tabbar')
 @include('clients.blocks.trip_boot')
 
 </body>

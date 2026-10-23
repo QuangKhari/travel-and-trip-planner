@@ -1,0 +1,318 @@
+/* E1/E2 — Sổ tay du hành (/so-tay-du-hanh). Tiền tố jn-. Dùng biến --gx-* của explore-kit.css (đã nạp ở header). */
+.jn {
+    padding: 28px 0 80px;
+    color: var(--gx-ink, #334155);
+    background: var(--gx-cream, #f8f6f0);
+}
+.jn-head h1 {
+    margin: 0 0 4px;
+    font-size: clamp(26px, 3.4vw, 36px);
+    font-weight: 800;
+    color: var(--gx-navy, #0f172a);
+}
+.jn-head p {
+    margin: 0 0 20px;
+    color: var(--gx-mute, #64748b);
+}
+
+/* bộ đếm */
+.jn-counters {
+    list-style: none;
+    margin: 0 0 24px;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+.jn-counters li {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 16px 8px;
+    background: #fff;
+    border: 1px solid var(--gx-line, #e2e8f0);
+    border-radius: 18px;
+    text-align: center;
+}
+.jn-counters b {
+    font-size: 30px;
+    line-height: 1.1;
+    color: var(--gx-tqd, #087f7b);
+}
+.jn-counters span:last-child {
+    font-size: 13px;
+    color: var(--gx-mute, #64748b);
+}
+.jn-counters__ico {
+    font-size: 20px;
+}
+
+/* bố cục hai cột; điện thoại xếp một cột */
+.jn-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+.jn-col {
+    display: grid;
+    gap: 18px;
+}
+.jn-card {
+    background: #fff;
+    border: 1px solid var(--gx-line, #e2e8f0);
+    border-radius: 22px;
+    padding: 20px 22px;
+    box-shadow: 0 4px 16px rgba(8, 79, 76, 0.05);
+}
+.jn-card h2 {
+    margin: 0 0 14px;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gx-navy, #0f172a);
+}
+.jn-card h3 {
+    margin: 14px 0 6px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gx-mute, #64748b);
+}
+.jn-count {
+    margin-left: 6px;
+    padding: 2px 10px;
+    border-radius: 99px;
+    background: var(--gx-sand, #e9c46a);
+    color: var(--gx-navy, #0f172a);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+/* bản đồ: tái dùng SVG hình dáng cả nước của trang Điểm đến (.tvx-map__* trong inspiration.css) */
+.jn-map {
+    --rgb: 13, 148, 136;
+    position: relative;
+    aspect-ratio: 800 / 952.8;
+    overflow: hidden;
+    border-radius: 20px;
+    background: linear-gradient(170deg, #eaf6f3, #dff0ee);
+}
+.jn-map__pins {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+.jn-pin {
+    position: absolute;
+    width: 11%;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+}
+.jn-pin::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 22%;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 0 2px currentColor;
+}
+.jn-pin--done {
+    color: #087f7b;
+    background: radial-gradient(circle, rgba(13, 148, 136, 0.62) 0%, rgba(13, 148, 136, 0.38) 45%, rgba(13, 148, 136, 0) 72%);
+}
+.jn-pin--planned {
+    color: #b7791f;
+    background: radial-gradient(circle, rgba(233, 196, 106, 0.7) 0%, rgba(233, 196, 106, 0.4) 45%, rgba(233, 196, 106, 0) 72%);
+}
+.jn-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin: 10px 0 0;
+    font-size: 13px;
+    color: var(--gx-mute, #64748b);
+}
+.jn-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 4px;
+    border-radius: 50%;
+    vertical-align: -1px;
+}
+.jn-dot--done {
+    background: #0d9488;
+}
+.jn-dot--planned {
+    background: #e9c46a;
+}
+.jn-prov {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+}
+.jn-prov li {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 12px;
+    border-radius: 12px;
+    border-left: 4px solid var(--gx-line, #e2e8f0);
+    background: #f8fafc;
+}
+.jn-prov--done {
+    border-left-color: #0d9488 !important;
+}
+.jn-prov--planned {
+    border-left-color: #e9c46a !important;
+}
+.jn-prov small {
+    color: var(--gx-mute, #64748b);
+}
+
+/* huy hiệu */
+.jn-badges {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+.jn-badge {
+    display: flex;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid var(--gx-line, #e2e8f0);
+    border-radius: 16px;
+    background: #f8fafc;
+}
+.jn-badge__ico {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    font-size: 24px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    filter: grayscale(1);
+    opacity: 0.6;
+}
+.jn-badge b {
+    display: block;
+    font-size: 15px;
+    color: var(--gx-navy, #0f172a);
+}
+.jn-badge small {
+    display: block;
+    font-size: 12.5px;
+    color: var(--gx-mute, #64748b);
+}
+.jn-badge.is-earned {
+    background: #fff;
+    border-color: var(--gx-sand, #e9c46a);
+    box-shadow: 0 2px 10px rgba(233, 196, 106, 0.28);
+}
+.jn-badge.is-earned .jn-badge__ico {
+    filter: none;
+    opacity: 1;
+    background: #fdf3d4;
+}
+.jn-badge__ok {
+    display: inline-block;
+    margin-top: 4px;
+    font-style: normal;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--gx-tqd, #087f7b);
+}
+.jn-bar {
+    display: block;
+    height: 6px;
+    margin: 6px 0 2px;
+    border-radius: 99px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+.jn-bar i {
+    display: block;
+    height: 100%;
+    background: var(--gx-tq, #0d9488);
+}
+.jn-badge__n {
+    font-variant-numeric: tabular-nums;
+}
+
+/* tour */
+.jn-trips {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.jn-trips li + li {
+    border-top: 1px solid #f1f5f9;
+}
+.jn-trips a {
+    display: block;
+    padding: 10px 0;
+    text-decoration: none;
+    color: var(--gx-navy, #0f172a);
+}
+.jn-trips small {
+    display: block;
+    color: var(--gx-mute, #64748b);
+}
+.jn-trips a:hover b {
+    color: var(--gx-tqd, #087f7b);
+}
+
+.jn-empty {
+    margin: 0 0 12px;
+    color: var(--gx-mute, #64748b);
+}
+.jn-btn {
+    display: inline-block;
+    padding: 10px 18px;
+    border-radius: 99px;
+    background: var(--gx-tqd, #087f7b);
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+}
+.jn-btn:hover {
+    color: #fff;
+    filter: brightness(1.08);
+}
+.jn a:focus-visible {
+    outline: 3px solid var(--gx-tqd, #087f7b);
+    outline-offset: 2px;
+}
+
+@media (max-width: 991px) {
+    .jn-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .jn-map {
+        max-width: 420px;
+        margin: 0 auto;
+    }
+}
+@media (max-width: 599px) {
+    .jn-counters {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .jn-badges {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .jn-card {
+        padding: 16px;
+    }
+}
