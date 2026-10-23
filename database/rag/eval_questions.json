@@ -1,0 +1,364 @@
+{
+  "_ghi_chu": "Điền {dest} {dest2} {food} {event} bằng dữ liệu demo (rag:eval --dest= --event= ...). Sửa anyOf cho khớp nội dung bài thật của bạn. Nhóm nodata: kiểm tra các nội dung đó KHÔNG có trong DB, nếu có thì đổi câu khác.",
+  "questions": [
+    {
+      "group": "guide",
+      "q": "Thuê xe máy cần giấy tờ gì?",
+      "expect": {
+        "urlContains": [
+          "/cam-nang/"
+        ],
+        "anyOf": [
+          "bằng lái",
+          "giấy phép lái xe",
+          "hộ chiếu"
+        ]
+      }
+    },
+    {
+      "group": "guide",
+      "q": "Dùng eSIM ở Việt Nam thế nào?",
+      "expect": {
+        "urlContains": [
+          "/cam-nang/"
+        ],
+        "anyOf": [
+          "esim",
+          "qr"
+        ]
+      }
+    },
+    {
+      "group": "guide",
+      "q": "Người nước ngoài có cần visa để vào Việt Nam không?",
+      "expect": {
+        "urlContains": [
+          "/cam-nang/"
+        ],
+        "anyOf": [
+          "visa",
+          "thị thực"
+        ]
+      }
+    },
+    {
+      "group": "guide",
+      "q": "Đổi tiền ở đâu cho tiện khi mới đến Việt Nam?",
+      "expect": {
+        "urlContains": [
+          "/cam-nang/"
+        ],
+        "anyOf": [
+          "đổi tiền",
+          "atm",
+          "tiền mặt"
+        ]
+      }
+    },
+    {
+      "group": "guide",
+      "q": "Từ sân bay về trung tâm thành phố đi bằng gì?",
+      "expect": {
+        "urlContains": [
+          "/cam-nang/"
+        ],
+        "anyOf": [
+          "taxi",
+          "xe buýt",
+          "grab",
+          "xe"
+        ]
+      }
+    },
+    {
+      "group": "guide",
+      "q": "Làm sao tránh bị chặt chém khi đi du lịch?",
+      "expect": {
+        "urlContains": [
+          "/cam-nang/"
+        ],
+        "anyOf": [
+          "giá",
+          "hỏi giá",
+          "chặt chém"
+        ]
+      }
+    },
+    {
+      "group": "guide",
+      "q": "Nên mang theo những gì khi đi du lịch Việt Nam?",
+      "expect": {
+        "urlContains": [
+          "/cam-nang/"
+        ],
+        "anyOf": [
+          "hành lý",
+          "mang",
+          "chuẩn bị"
+        ]
+      }
+    },
+    {
+      "group": "guide",
+      "q": "Có an toàn khi đi một mình ở Việt Nam không?",
+      "expect": {
+        "urlContains": [
+          "/cam-nang/"
+        ],
+        "anyOf": [
+          "an toàn",
+          "cẩn thận",
+          "lưu ý"
+        ]
+      }
+    },
+    {
+      "group": "season",
+      "q": "Tháng 10 đi {dest} có hợp không?",
+      "expect": {
+        "urlContains": [
+          "/diem-den/{destSlug}"
+        ],
+        "anyOf": [
+          "tháng 10"
+        ]
+      }
+    },
+    {
+      "group": "season",
+      "q": "Nên đi {dest} vào tháng nào?",
+      "expect": {
+        "urlContains": [
+          "/diem-den/{destSlug}"
+        ],
+        "anyOf": [
+          "tháng"
+        ]
+      }
+    },
+    {
+      "group": "season",
+      "q": "Tháng 7 đi {dest} được không?",
+      "expect": {
+        "urlContains": [
+          "/diem-den/{destSlug}"
+        ],
+        "anyOf": [
+          "tháng 7"
+        ]
+      }
+    },
+    {
+      "group": "season",
+      "q": "{dest} đẹp nhất vào mùa nào?",
+      "expect": {
+        "urlContains": [
+          "/diem-den/{destSlug}"
+        ],
+        "anyOf": [
+          "tháng"
+        ]
+      }
+    },
+    {
+      "group": "season",
+      "q": "Tháng 12 đi {dest2} có hợp không?",
+      "expect": {
+        "urlContains": [
+          "/diem-den/"
+        ],
+        "anyOf": [
+          "tháng 12"
+        ]
+      }
+    },
+    {
+      "group": "season",
+      "q": "Đi {dest} có gì hay?",
+      "expect": {
+        "urlContains": [
+          "/diem-den/{destSlug}"
+        ],
+        "anyOf": [
+          "{dest}"
+        ]
+      }
+    },
+    {
+      "group": "season",
+      "q": "Thời tiết {dest} tháng 3 thế nào?",
+      "expect": {
+        "urlContains": [
+          "/diem-den/{destSlug}"
+        ],
+        "anyOf": [
+          "tháng 3"
+        ]
+      }
+    },
+    {
+      "group": "event_food",
+      "q": "Lễ hội nào diễn ra vào tháng 9?",
+      "expect": {
+        "urlContains": [
+          "/le-hoi"
+        ],
+        "anyOf": [
+          "tháng 9",
+          "9/"
+        ]
+      }
+    },
+    {
+      "group": "event_food",
+      "q": "Lễ hội nào ở {dest}?",
+      "expect": {
+        "urlContains": [
+          "/le-hoi",
+          "/diem-den/{destSlug}"
+        ],
+        "anyOf": [
+          "lễ hội",
+          "hội"
+        ]
+      }
+    },
+    {
+      "group": "event_food",
+      "q": "{event} là lễ hội gì?",
+      "expect": {
+        "urlContains": [
+          "/le-hoi/{eventSlug}"
+        ],
+        "anyOf": [
+          "{event}"
+        ]
+      }
+    },
+    {
+      "group": "event_food",
+      "q": "{food} ăn ở đâu?",
+      "expect": {
+        "urlContains": [
+          "/am-thuc/{foodSlug}"
+        ],
+        "anyOf": [
+          "{food}"
+        ]
+      }
+    },
+    {
+      "group": "event_food",
+      "q": "{food} là món gì?",
+      "expect": {
+        "urlContains": [
+          "/am-thuc/{foodSlug}"
+        ],
+        "anyOf": [
+          "{food}"
+        ]
+      }
+    },
+    {
+      "group": "event_food",
+      "q": "{dest} có món gì nên thử?",
+      "expect": {
+        "urlContains": [
+          "/am-thuc/",
+          "/diem-den/{destSlug}"
+        ],
+        "anyOf": [
+          "{dest}",
+          "món"
+        ]
+      }
+    },
+    {
+      "group": "exact",
+      "q": "Lễ hội {event} năm 2026 diễn ra ngày nào?",
+      "expect": {
+        "urlContains": [
+          "/le-hoi/{eventSlug}"
+        ],
+        "eventDate": {
+          "event": "{eventSlug}",
+          "year": 2026
+        }
+      }
+    },
+    {
+      "group": "exact",
+      "q": "Lễ hội {event} năm 2027 diễn ra ngày nào?",
+      "expect": {
+        "urlContains": [
+          "/le-hoi/{eventSlug}"
+        ],
+        "eventDate": {
+          "event": "{eventSlug}",
+          "year": 2027
+        }
+      }
+    },
+    {
+      "group": "exact",
+      "q": "Ngày diễn ra {event} năm 2028 là khi nào?",
+      "expect": {
+        "urlContains": [
+          "/le-hoi/{eventSlug}"
+        ],
+        "eventDate": {
+          "event": "{eventSlug}",
+          "year": 2028
+        }
+      }
+    },
+    {
+      "group": "exact",
+      "q": "Khi nào thì có {event} năm 2029?",
+      "expect": {
+        "urlContains": [
+          "/le-hoi/{eventSlug}"
+        ],
+        "eventDate": {
+          "event": "{eventSlug}",
+          "year": 2029
+        }
+      }
+    },
+    {
+      "group": "nodata",
+      "q": "Giá vé vào cổng Vinpearl Safari Phú Quốc là bao nhiêu?",
+      "expect": {
+        "refusal": true
+      }
+    },
+    {
+      "group": "nodata",
+      "q": "Số điện thoại cứu hộ biển ở Cửa Lò là gì?",
+      "expect": {
+        "refusal": true
+      }
+    },
+    {
+      "group": "nodata",
+      "q": "Lịch bay Vietjet từ Hà Nội đi Cần Thơ ngày mai?",
+      "expect": {
+        "refusal": true
+      }
+    },
+    {
+      "group": "nodata",
+      "q": "Quán chay nào ở Đà Lạt mở cửa sau 11 giờ đêm?",
+      "expect": {
+        "refusal": true
+      }
+    },
+    {
+      "group": "nodata",
+      "q": "Giá thuê homestay ở Mù Cang Chải tháng 9 là bao nhiêu?",
+      "expect": {
+        "refusal": true
+      }
+    }
+  ]
+}

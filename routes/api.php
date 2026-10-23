@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\SeasonController;
 use App\Http\Controllers\Api\V1\ContentController;
 use App\Http\Controllers\Api\V1\SearchController as ApiSearchController;
 use App\Http\Controllers\Api\V1\PlannerPreviewController;
+use App\Http\Controllers\Api\V1\AskController;
 
 
 Route::prefix('v1')->group(function () {
@@ -57,6 +58,8 @@ Route::prefix('v1')->group(function () {
         Route::get('search', [ApiSearchController::class, 'index']);
         Route::get('search/suggest', [ApiSearchController::class, 'suggest']);
     });
+
+    Route::post('ask', [AskController::class, 'ask'])->middleware(['auth:api', 'api.active', 'throttle:10,1,api-ask']);
 
     // Các endpoint Trip Planner / AI sau này đặt trong nhóm này để dùng chung xác thực:
     // Route::middleware(['auth:api', 'api.active'])->group(function () { ... });

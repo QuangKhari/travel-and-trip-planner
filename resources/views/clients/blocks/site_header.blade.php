@@ -52,7 +52,9 @@
                     <a href="{{ route('seasons.matrix') }}">Nên đi tháng nào</a>
                 </div>
             </div>
-            <a href="{{ route('guides.index') }}" class="{{ Request::is('cam-nang*') ? 'is-active' : '' }}">Cẩm nang</a>
+            <a href="{{ route('guides.index') }}" class="{{ Request::is('cam-nang*') ? 'is-active' : '' }}">Cẩm
+                nang</a>
+            <a href="{{ route('ask.index') }}" class="{{ Request::is('hoi-dap*') ? 'is-active' : '' }}">Hỏi đáp</a>
             <a href="{{ route('blogs') }}" class="{{ Request::url() == route('blogs') ? 'is-active' : '' }}">Blog</a>
             <a href="{{ route('contact') }}" class="{{ Request::url() == route('contact') ? 'is-active' : '' }}">Liên
                 hệ</a>
@@ -92,7 +94,8 @@
                         <a href="{{ route('user-profile') }}"><i class="bx bx-user"></i><span>Thông tin cá
                                 nhân</span></a>
                         <a href="{{ route('my-tours') }}"><i class="bx bx-map"></i><span>Tour đã đặt</span></a>
-                        <a href="{{ route('journal') }}"><i class="bx bx-book-open"></i><span>Sổ tay du hành</span></a>
+                        <a href="{{ route('journal') }}"><i class="bx bx-book-open"></i><span>Sổ tay du
+                                hành</span></a>
                         <form action="{{ route('logout') }}" method="POST">
                             @csrf
                             <button type="submit"><i class="bx bx-log-out"></i><span>Đăng xuất</span></button>

@@ -37,6 +37,7 @@ use App\Http\Controllers\clients\SiteSearchController;
 use App\Http\Controllers\clients\SeoController;
 use App\Http\Controllers\clients\DataSourcesController;
 use App\Http\Controllers\clients\JournalController;
+use App\Http\Controllers\clients\AskPageController;
 
 
 
@@ -81,6 +82,11 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked', 'throttle:60,1,marks'
     Route::post('/danh-dau', [MarkController::class, 'toggle'])->name('marks.toggle');
     Route::post('/khay-chuyen-di/dong-bo', [MarkController::class, 'syncTray'])->name('trip-tray.sync');
 });
+
+//hỏi đáp du lịch (trang công khai; gửi câu hỏi cần đăng nhập và có giới hạn lượt)
+Route::get('/hoi-dap', [AskPageController::class, 'index'])->middleware('throttle:60,1,ask-page')->name('ask.index');
+Route::post('/hoi-dap/hoi', [AskPageController::class, 'ask'])->middleware(['checkLoginClient', 'checkUserBlocked', 'throttle:10,1,ask-send'])->name('ask.send');
+
 Route::get('/explore', [ExploreController::class, 'index'])->middleware('throttle:60,1,explore')->name('explore');
 Route::get('/travel-guides', [TravelGuidesController::class, 'index'])->name('team');
 Route::get('/tour-detail/{id}', [TourDetailController::class, 'index'])->whereNumber('id')->name('tour-detail');

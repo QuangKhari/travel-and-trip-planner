@@ -2,18 +2,36 @@
     $__intro = $destination->wikiExtract ?: $destination->description;
     $metaDescription = \App\Support\Seo::text($__intro);
     $metaImage = $destination->image;
-    $__img = $destination->image ? (preg_match('#^https?://#i', $destination->image) ? $destination->image : url($destination->image)) : null;
-    $jsonLd = [array_filter([
-        '@context' => 'https://schema.org',
-        '@type' => 'TouristDestination',
-        'name' => $destination->name,
-        'description' => \App\Support\Seo::text($__intro, 300),
-        'url' => url()->current(),
-        'image' => $__img,
-        'address' => ['@type' => 'PostalAddress', 'addressRegion' => $destination->province, 'addressCountry' => 'VN'],
-        'geo' => (isset($destination->latitude, $destination->longitude) && $destination->latitude !== null && $destination->longitude !== null)
-            ? ['@type' => 'GeoCoordinates', 'latitude' => (float) $destination->latitude, 'longitude' => (float) $destination->longitude] : null,
-    ])];
+    $__img = $destination->image
+        ? (preg_match('#^https?://#i', $destination->image)
+            ? $destination->image
+            : url($destination->image))
+        : null;
+    $jsonLd = [
+        array_filter([
+            '@context' => 'https://schema.org',
+            '@type' => 'TouristDestination',
+            'name' => $destination->name,
+            'description' => \App\Support\Seo::text($__intro, 300),
+            'url' => url()->current(),
+            'image' => $__img,
+            'address' => [
+                '@type' => 'PostalAddress',
+                'addressRegion' => $destination->province,
+                'addressCountry' => 'VN',
+            ],
+            'geo' =>
+                isset($destination->latitude, $destination->longitude) &&
+                $destination->latitude !== null &&
+                $destination->longitude !== null
+                    ? [
+                        '@type' => 'GeoCoordinates',
+                        'latitude' => (float) $destination->latitude,
+                        'longitude' => (float) $destination->longitude,
+                    ]
+                    : null,
+        ]),
+    ];
 @endphp
 @include('clients.blocks.header')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -39,11 +57,15 @@
             <span aria-current="page">{{ $destination->name }}</span>
         </nav>
         @php
-            $__ld = ['@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => [
-                ['@type' => 'ListItem', 'position' => 1, 'name' => 'Trang chủ', 'item' => route('home')],
-                ['@type' => 'ListItem', 'position' => 2, 'name' => 'Điểm đến', 'item' => route('destination')],
-                ['@type' => 'ListItem', 'position' => 3, 'name' => $destination->name],
-            ]];
+            $__ld = [
+                '@context' => 'https://schema.org',
+                '@type' => 'BreadcrumbList',
+                'itemListElement' => [
+                    ['@type' => 'ListItem', 'position' => 1, 'name' => 'Trang chủ', 'item' => route('home')],
+                    ['@type' => 'ListItem', 'position' => 2, 'name' => 'Điểm đến', 'item' => route('destination')],
+                    ['@type' => 'ListItem', 'position' => 3, 'name' => $destination->name],
+                ],
+            ];
         @endphp
         <script type="application/ld+json">{!! json_encode($__ld, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) !!}</script>
         <p class="dd-hero__eyebrow"><i class="fas fa-map-marker-alt"></i> {{ $destination->province }} ·
@@ -71,9 +93,26 @@
             <div class="gx-stat"><b>{{ $tours->count() }}</b><span>Tour đang mở</span></div>
         </div>
         <div class="gx-actions">
-            @include('clients.partials.gx.tripbtn', ['type' => 'destination', 'slug' => $destination->slug, 'name' => $destination->name, 'url' => $destination->url])
-            @include('clients.partials.gx.marks', ['refType' => 'destination', 'slug' => $destination->slug, 'mark' => 'saved', 'on' => isset($myMarks['saved']), 'labels' => ['Lưu', '✓ Đã lưu']])
-            @include('clients.partials.gx.marks', ['refType' => 'destination', 'slug' => $destination->slug, 'mark' => 'visited', 'on' => isset($myMarks['visited']), 'labels' => ['Tôi đã đến', '✓ Đã đến']])
+            @include('clients.partials.gx.tripbtn', [
+                'type' => 'destination',
+                'slug' => $destination->slug,
+                'name' => $destination->name,
+                'url' => $destination->url,
+            ])
+            @include('clients.partials.gx.marks', [
+                'refType' => 'destination',
+                'slug' => $destination->slug,
+                'mark' => 'saved',
+                'on' => isset($myMarks['saved']),
+                'labels' => ['Lưu', '✓ Đã lưu'],
+            ])
+            @include('clients.partials.gx.marks', [
+                'refType' => 'destination',
+                'slug' => $destination->slug,
+                'mark' => 'visited',
+                'on' => isset($myMarks['visited']),
+                'labels' => ['Tôi đã đến', '✓ Đã đến'],
+            ])
             <a class="gx-btn2" href="#thang">Nên đi tháng nào</a>
         </div>
         <nav class="gx-toc" aria-label="Mục lục" style="position:static;margin:0 0 18px">
@@ -82,9 +121,15 @@
                 <li><a href="#thang">Khi nào nên đi</a></li>
                 <li><a href="#gioi-thieu">Giới thiệu</a></li>
                 <li><a href="#gan-day">Địa điểm gần đây</a></li>
-                @if ($foods->isNotEmpty())<li><a href="#mon">Món nên thử</a></li>@endif
-                @if ($events->isNotEmpty())<li><a href="#le-hoi">Lễ hội</a></li>@endif
-                @if ($itineraries->isNotEmpty())<li><a href="#lich-trinh">Lịch trình mẫu</a></li>@endif
+                @if ($foods->isNotEmpty())
+                    <li><a href="#mon">Món nên thử</a></li>
+                @endif
+                @if ($events->isNotEmpty())
+                    <li><a href="#le-hoi">Lễ hội</a></li>
+                @endif
+                @if ($itineraries->isNotEmpty())
+                    <li><a href="#lich-trinh">Lịch trình mẫu</a></li>
+                @endif
                 <li><a href="#tour">Tour</a></li>
             </ol>
         </nav>
@@ -96,13 +141,20 @@
                     <li class="gx-m gx-m--{{ $m['level'] }}">
                         <b>T{{ $m['month'] }}</b>
                         <span>{{ ['best' => 'Đẹp nhất', 'ok' => 'Đi được', 'avoid' => 'Nên tránh', 'unknown' => 'Chưa rõ'][$m['level']] }}</span>
-                        @if ($m['tMax'] !== null)<small>{{ (int) $m['tMin'] }}–{{ (int) $m['tMax'] }}°C · {{ (int) $m['rainMm'] }} mm</small>@endif
+                        @if ($m['tMax'] !== null)
+                            <small>{{ (int) $m['tMin'] }}–{{ (int) $m['tMax'] }}°C · {{ (int) $m['rainMm'] }}
+                                mm</small>
+                        @endif
                     </li>
                 @endforeach
             </ul>
             <p class="gx-legend">
-                <span><i style="background:#0d6f6a"></i>Đẹp nhất</span><span><i style="background:#e6f4f1;border:1px solid #b9ddd7"></i>Đi được</span><span><i style="background:#f3f4f6;border:1px solid #d1d5db"></i>Nên tránh</span>
-                <span>Nhiệt độ thấp–cao và lượng mưa trung bình: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo.com</a> (CC BY 4.0). Mức tháng do luật khí hậu cộng chỉnh tay.</span>
+                <span><i style="background:#0d6f6a"></i>Đẹp nhất</span><span><i
+                        style="background:#e6f4f1;border:1px solid #b9ddd7"></i>Đi được</span><span><i
+                        style="background:#f3f4f6;border:1px solid #d1d5db"></i>Nên tránh</span>
+                <span>Nhiệt độ thấp–cao và lượng mưa trung bình: <a href="https://open-meteo.com/" target="_blank"
+                        rel="noopener noreferrer">Open-Meteo.com</a> (CC BY 4.0). Mức tháng do luật khí hậu cộng chỉnh
+                    tay.</span>
             </p>
         </article>
 
@@ -144,7 +196,8 @@
                     </div>
                     @if (empty($data['places']))
                         <p class="dd-empty">Chưa có địa điểm nào được duyệt. Quản trị viên nạp bằng <code>php artisan
-                                discover:sync-places --slug={{ $destination->slug }}</code> rồi duyệt ở Admin &gt; Duyệt nội dung.</p>
+                                discover:sync-places --slug={{ $destination->slug }}</code> rồi duyệt ở Admin &gt;
+                            Duyệt nội dung.</p>
                     @else
                         <ul class="dd-places" id="ddPlaces">
                             @foreach ($cats as $k => $label)
@@ -243,7 +296,8 @@
 
                 <article class="dd-card dd-mapcard">
                     <h2>Bản đồ</h2>
-                    <div id="ddMap" class="dd-map" role="application" aria-label="Bản đồ {{ $destination->name }}">
+                    <div id="ddMap" class="dd-map" role="application"
+                        aria-label="Bản đồ {{ $destination->name }}">
                     </div>
                     <p class="dd-attr">Bản đồ © <a href="https://www.openstreetmap.org/copyright" target="_blank"
                             rel="noopener noreferrer">OpenStreetMap</a> contributors</p>
@@ -257,21 +311,37 @@
                 <p class="gx-empty">Chưa có địa điểm đã duyệt quanh {{ $destination->name }}.</p>
             @else
                 <table class="gx-table">
-                    <thead><tr><th>Địa điểm</th><th>Loại</th><th>Cách trung tâm</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>Địa điểm</th>
+                            <th>Loại</th>
+                            <th>Cách trung tâm</th>
+                        </tr>
+                    </thead>
                     <tbody>
                         @foreach ($nearby as $p)
-                            <tr><td>{{ $p['name'] }}</td><td>{{ ['see' => 'Tham quan', 'culture' => 'Văn hoá', 'eat' => 'Ăn uống'][$p['category']] ?? $p['category'] }}</td><td>{{ number_format($p['km'], 1, ',', '.') }} km</td></tr>
+                            <tr>
+                                <td>{{ $p['name'] }}</td>
+                                <td>{{ ['see' => 'Tham quan', 'culture' => 'Văn hoá', 'eat' => 'Ăn uống'][$p['category']] ?? $p['category'] }}
+                                </td>
+                                <td>{{ number_format($p['km'], 1, ',', '.') }} km</td>
+                            </tr>
                         @endforeach
                     </tbody>
                 </table>
-                <p class="gx-credit">Khoảng cách theo đường chim bay, tính từ tọa độ điểm đến. Dữ liệu địa điểm © OpenStreetMap contributors (ODbL).</p>
+                <p class="gx-credit">Khoảng cách theo đường chim bay, tính từ tọa độ điểm đến. Dữ liệu địa điểm ©
+                    OpenStreetMap contributors (ODbL).</p>
             @endif
         </section>
 
         @if ($foods->isNotEmpty())
             <section class="gx-box" id="mon">
                 <h2>Món nên thử ở {{ $destination->name }}</h2>
-                <div class="gx-rail">@foreach ($foods as $c) @include('clients.partials.gx.card', ['c' => $c]) @endforeach</div>
+                <div class="gx-rail">
+                    @foreach ($foods as $c)
+                        @include('clients.partials.gx.card', ['c' => $c])
+                    @endforeach
+                </div>
                 <p><a href="{{ route('foods.index', ['diemden' => $destination->slug]) }}">Xem tất cả món →</a></p>
             </section>
         @endif
@@ -279,17 +349,26 @@
         @if ($events->isNotEmpty())
             <section class="gx-box" id="le-hoi">
                 <h2>Lễ hội</h2>
-                <div class="gx-rail">@foreach ($events as $c) @include('clients.partials.gx.card', ['c' => $c]) @endforeach</div>
+                <div class="gx-rail">
+                    @foreach ($events as $c)
+                        @include('clients.partials.gx.card', ['c' => $c])
+                    @endforeach
+                </div>
             </section>
         @endif
 
         @if ($itineraries->isNotEmpty())
             <section class="gx-box" id="lich-trinh">
                 <h2>Lịch trình mẫu</h2>
-                <div class="gx-rail">@foreach ($itineraries as $c) @include('clients.partials.gx.card', ['c' => $c]) @endforeach</div>
+                <div class="gx-rail">
+                    @foreach ($itineraries as $c)
+                        @include('clients.partials.gx.card', ['c' => $c])
+                    @endforeach
+                </div>
             </section>
         @endif
 
+        @include('clients.blocks.ask_quick', ['destination' => $destination])
         <section class="dd-tours" id="tour">
             <h2>Tour tại {{ $destination->name }}</h2>
             @if ($tours->isEmpty())
