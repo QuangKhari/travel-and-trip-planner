@@ -8,10 +8,10 @@
 @if ($which === 'season')
     @include('clients.blocks.home_rail', [
         'id' => 'dang-vao-mua',
-        'eyebrow' => 'Đang vào mùa',
-        'title' => 'Tháng ' . $month . ' nên đi đâu?',
-        'lead' => 'Những điểm đến đang đẹp nhất trong tháng này.',
-        'items' => $feed['season'],
+        'eyebrow' => 'Đang diễn ra',
+        'title' => 'Đang vào mùa',
+        'lead' => 'Điểm đến đẹp nhất và lễ hội sắp tới trong tháng ' . $month . '. Ngày lễ hội đã quy đổi từ lịch âm, kiểm tra lại nguồn chính thức trước khi đi.',
+        'items' => !empty($feed['seasonMix']) ? $feed['seasonMix'] : $feed['season'],
         'cta' => ['url' => $monthHref, 'label' => $plannerBase ? 'Lên kế hoạch cho tháng này' : 'Xem tất cả tháng ' . $month],
         'moreUrl' => route('seasons.matrix'),
         'moreLabel' => 'Bảng "Nên đi tháng nào" cả năm',
@@ -27,10 +27,7 @@
         'moreLabel' => 'Tất cả lễ hội',
     ])
 @elseif ($which === 'foods')
-    @include('clients.blocks.home_rail', [
-        'id' => 'am-thuc-nen-thu',
-        'eyebrow' => 'Ẩm thực',
-        'title' => 'Món nên thử',
+    @include('clients.blocks.home_food_accordion', [
         'items' => $feed['foods'],
         'moreUrl' => route('foods.index'),
         'moreLabel' => 'Tất cả món ăn',

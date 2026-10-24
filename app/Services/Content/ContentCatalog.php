@@ -82,7 +82,7 @@ class ContentCatalog
         }
         $total = (clone $q)->count();
         $rows = $q->orderBy('d.name')->forPage($page, $perPage)
-            ->get(['d.destinationId', 'd.slug', 'd.name', 'd.province', 'd.domain', 'd.description', 'd.coverImage', 'd.imageCredit']);
+            ->get(['d.destinationId', 'd.slug', 'd.name', 'd.province', 'd.domain', 'd.description', 'd.coverImage', 'd.imageCredit', 'd.isMustTry']);
 
         $items = $rows->map(fn($d) => (object) [
             'kind' => 'destination',
@@ -93,6 +93,7 @@ class ContentCatalog
             'text' => $d->description,
             'image' => DiscoverImage::url($d->coverImage),
             'credit' => $d->imageCredit,
+            'must' => (bool) ($d->isMustTry ?? false),
             'url' => route('destination.show', ['slug' => $d->slug]),
         ]);
 
@@ -125,6 +126,7 @@ class ContentCatalog
             'text' => $f->description,
             'image' => DiscoverImage::url($f->coverImage),
             'credit' => $f->imageCredit,
+            'must' => (bool) ($f->isMustTry ?? false),
             'url' => route('foods.show', ['slug' => $f->slug]),
         ];
     }
@@ -135,9 +137,13 @@ class ContentCatalog
             'mien' => self::region($in['mien'] ?? null),
             'nhom' => is_string($in['nhom'] ?? null) ? mb_substr($in['nhom'], 0, 40) : null,
             'diemden' => is_string($in['diemden'] ?? null) && preg_match('/^[a-z0-9-]{1,80}$/', $in['diemden']) ? $in['diemden'] : null,
+            'tinh' => is_string($in['tinh'] ?? null) ? mb_substr($in['tinh'], 0, 120) : null,
             'q' => is_string($in['q'] ?? null) ? trim($in['q']) : '',
         ];
         $q = $this->foodsBase();
+        if ($f['tinh']) {
+            $q->where('d.province', $f['tinh']);
+        }
         if ($f['mien']) {
             $q->where('d.domain', $f['mien']);
         }
@@ -159,6 +165,39 @@ class ContentCatalog
     public function foodGroups(): array
     {
         return DB::table('tbl_foods')->where('reviewStatus', 'published')->whereNotNull('category')->distinct()->orderBy('category')->pluck('category')->all();
+    }
+
+    /** Số món theo nhóm (cho chip lọc có số lượng). Áp miền/tỉnh đang chọn, không áp nhóm. @return array<string,int> */
+    public function foodGroupCounts(?string $mien = null, ?string $tinh = null): array
+    {
+        $q = DB::table('tbl_foods as f')->leftJoin('tbl_destinations as d', 'd.destinationId', '=', 'f.destinationId')
+            ->where('f.reviewStatus', 'published')->whereNotNull('f.category');
+        if (self::region($mien)) {
+            $q->where('d.domain', $mien);
+        }
+        if ($tinh) {
+            $q->where('d.province', $tinh);
+        }
+
+        return $q->groupBy('f.category')->orderBy('f.category')->selectRaw('f.category as name, COUNT(*) as n')
+            ->pluck('n', 'name')->map(fn($n) => (int) $n)->all();
+    }
+
+    /** Tỉnh/thành có ít nhất một món đã duyệt (cho ô lọc tỉnh ở /am-thuc). */
+    public function foodProvinces(): array
+    {
+        return DB::table('tbl_foods as f')->join('tbl_destinations as d', 'd.destinationId', '=', 'f.destinationId')
+            ->where('f.reviewStatus', 'published')->distinct()->orderBy('d.province')->pluck('d.province')->all();
+    }
+
+    /** 3 món cho hero: món có ảnh, ưu tiên "Phải thử", xoay theo ngày. */
+    public function featuredFoods(int $n = 3): Collection
+    {
+        $day = date('Ymd');
+
+        return $this->foodsBase()->whereNotNull('f.coverImage')->limit(60)->get()
+            ->sortBy(fn($r) => [-(int) ($r->isMustTry ?? 0), crc32($r->slug . $day)])
+            ->take($n)->values()->map(fn($r) => $this->foodCard($r))->filter(fn($c) => !empty($c->image))->values();
     }
 
     public function food(string $slug): ?object

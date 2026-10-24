@@ -3,12 +3,17 @@
     $ld = [
         '@context' => 'https://schema.org',
         '@type' => 'BreadcrumbList',
-        'itemListElement' => collect($crumbs)->values()->map(fn($c, $i) => array_filter([
-            '@type' => 'ListItem',
-            'position' => $i + 1,
-            'name' => $c[0],
-            'item' => $c[1] ?? null,
-        ]))->all(),
+        'itemListElement' => collect($crumbs)
+            ->values()
+            ->map(
+                fn($c, $i) => array_filter([
+                    '@type' => 'ListItem',
+                    'position' => $i + 1,
+                    'name' => $c[0],
+                    'item' => $c[1] ?? null,
+                ]),
+            )
+            ->all(),
     ];
 @endphp
 <nav aria-label="breadcrumb">

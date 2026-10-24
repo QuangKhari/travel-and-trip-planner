@@ -85,6 +85,7 @@
     <link rel="stylesheet" href="{{ asset('clients/assets/css/explore-kit.css') }}?v=1">
     <!-- Giai đoạn C: cẩm nang, mùa đẹp, tìm kiếm có gợi ý -->
     <link rel="stylesheet" href="{{ asset('clients/assets/css/explore-c.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/gx-discover.css') }}?v=1">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
 

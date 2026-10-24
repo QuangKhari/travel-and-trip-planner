@@ -173,6 +173,7 @@
         @include('clients.blocks.trip_boot')
         <script src="{{ asset('clients/assets/js/hero-postcards.js') }}?v=4"></script>
         <script src="{{ asset('clients/assets/js/home-strips.js') }}?v=1" defer></script>
+        <script src="{{ asset('clients/assets/js/gx-discover.js') }}?v=1" defer></script>
 
         <script src="{{ asset('clients/assets/js/jquery.datetimepicker.full.min.js') }}"></script>
 

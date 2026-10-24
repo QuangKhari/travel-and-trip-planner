@@ -62,8 +62,13 @@ class ExploreContentController extends Controller
     {
         $res = $this->catalog->foods($r->query(), $this->page($r));
         $groups = $this->catalog->foodGroups();
+        $groupCounts = $this->catalog->foodGroupCounts($res['filters']['mien'], $res['filters']['tinh']);
+        $provinces = $this->catalog->foodProvinces();
 
         return view('clients.guide.foods', [
+            'hero' => $this->catalog->featuredFoods(3),
+            'groupCounts' => $groupCounts,
+            'provinces' => array_combine($provinces, $provinces),
             'title' => 'Ẩm thực',
             'items' => $res['items'],
             'filters' => $res['filters'],

@@ -9,11 +9,17 @@
             <img src="{{ $c->image }}" alt="{{ $c->title }}" loading="{{ $loading }}" decoding="async" width="640"
                 height="400">
         @endif
+        @if (!empty($c->must))
+            <span class="gx-card__must">Phải thử</span>
+        @endif
         @if ($c->badge)
             <span class="gx-card__badge">{{ $c->badge }}</span>
         @endif
     </span>
     <div class="gx-card__body">
+        @if (!empty($c->chip))
+            <p class="gx-card__chip">{{ $c->chip }}</p>
+        @endif
         <h3 class="gx-card__title"><a href="{{ $c->url }}">{{ $c->title }}</a></h3>
         @if ($c->meta)
             <p class="gx-card__meta">{{ $c->meta }}</p>

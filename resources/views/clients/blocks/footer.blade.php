@@ -120,6 +120,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 <script src="{{ asset('clients/assets/js/ux-pass.js') }}?v=3"></script>
+<script src="{{ asset('clients/assets/js/gx-discover.js') }}?v=1" defer></script>
 @include('clients.blocks.mobile_tabbar')
 @include('clients.blocks.trip_boot')
 

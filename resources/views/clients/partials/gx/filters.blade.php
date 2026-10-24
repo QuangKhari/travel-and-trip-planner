@@ -5,6 +5,11 @@
             <input type="search" name="q" value="{{ $filters['q'] ?? '' }}" maxlength="60" autocomplete="off">
         </label>
     @endif
+    @foreach ($hidden ?? [] as $hk => $hv)
+        @if ($hv !== null && $hv !== '')
+            <input type="hidden" name="{{ $hk }}" value="{{ $hv }}">
+        @endif
+    @endforeach
     @foreach ($fields as [$name, $label, $options])
         <label>{{ $label }}
             <select name="{{ $name }}" onchange="this.form.submit()">

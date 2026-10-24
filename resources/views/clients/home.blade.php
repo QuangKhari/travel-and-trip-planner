@@ -11,7 +11,8 @@
 
 {{-- Thứ tự dải theo tài liệu mục 4.1: mùa, lễ hội, cảm hứng, ẩm thực, tour, lịch trình, cẩm nang --}}
 @include('clients.blocks.home_strips', ['which' => 'season'])
-@include('clients.blocks.home_strips', ['which' => 'events'])
+{{-- Lễ hội đã gộp vào dải "Đang vào mùa" (seasonMix). Muốn tách lại: bỏ comment dòng dưới. --}}
+{{-- @include('clients.blocks.home_strips', ['which' => 'events']) --}}
 @include('clients.blocks.interest_section')
 @include('clients.blocks.home_strips', ['which' => 'foods'])
 @include('clients.blocks.tour_featured')
