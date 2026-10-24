@@ -52,8 +52,32 @@
                     <a href="{{ route('seasons.matrix') }}">Nên đi tháng nào</a>
                 </div>
             </div>
-            <a href="{{ route('guides.index') }}" class="{{ Request::is('cam-nang*') ? 'is-active' : '' }}">Cẩm
-                nang</a>
+            @php $guideMenu = app(\App\Services\Content\GuideCatalog::class)->menu(); @endphp
+            <div class="tv-dd tv-mega">
+                <a href="{{ route('guides.index') }}" class="{{ Request::is('cam-nang*') ? 'is-active' : '' }}">
+                    Cẩm nang <i class="fas fa-chevron-down"></i>
+                </a>
+                @if (count($guideMenu))
+                    <div class="tv-mega__panel">
+                        <div class="tv-mega__card">
+                            <div class="tv-mega__cols">
+                                @foreach ($guideMenu as $grp)
+                                    <div>
+                                        <p class="tv-mega__h">{{ $grp['name'] }}</p>
+                                        @foreach ($grp['items'] as $it)
+                                            <a class="tv-mega__item" href="{{ $it['url'] }}">
+                                                <i class="bx {{ $it['icon'] }}" aria-hidden="true"></i>
+                                                <span><b>{{ $it['title'] }}</b><small>{{ $it['desc'] }}</small></span>
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                @endforeach
+                            </div>
+                            <a class="tv-mega__all" href="{{ route('guides.index') }}">Xem toàn bộ cẩm nang →</a>
+                        </div>
+                    </div>
+                @endif
+            </div>
             <a href="{{ route('ask.index') }}" class="{{ Request::is('hoi-dap*') ? 'is-active' : '' }}">Hỏi đáp</a>
             <a href="{{ route('blogs') }}" class="{{ Request::url() == route('blogs') ? 'is-active' : '' }}">Blog</a>
             <a href="{{ route('contact') }}" class="{{ Request::url() == route('contact') ? 'is-active' : '' }}">Liên

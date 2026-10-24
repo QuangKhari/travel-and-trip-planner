@@ -241,5 +241,6 @@ class ContentReviewController extends Controller
     {
         \App\Services\Content\SearchCatalog::forget();
         \Illuminate\Support\Facades\Cache::forget('sitemap.xml.v1');
+        \App\Services\Content\GuideCatalog::forgetMenu();
     }
 }

@@ -7,6 +7,7 @@ use App\Support\Seo;
 use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -19,6 +20,49 @@ class GuideCatalog
     /** Bài chưa gán danh mục được gom vào danh mục ảo này. */
     public const OTHER_SLUG = 'khac';
     public const OTHER_NAME = 'Khác';
+
+    /** Biểu tượng boxicons theo slug bài; thiếu thì lấy theo danh mục; thiếu nữa thì bx-book-open. */
+    private const ICONS = [
+        'giay-to-va-visa-nhap-canh' => 'bx-id-card',
+        'chuan-bi-hanh-ly-theo-mua' => 'bx-briefcase',
+        'sim-esim-va-ket-noi-mang' => 'bx-wifi',
+        'di-chuyen-giua-cac-thanh-pho' => 'bx-train',
+        'thue-xe-may-an-toan' => 'bx-cycling',
+        'tien-atm-va-thanh-toan' => 'bx-wallet',
+        'an-toan-va-tranh-chat-chem' => 'bx-shield-quarter',
+    ];
+    private const CAT_ICONS = [
+        'truoc-chuyen-di' => 'bx-calendar-check',
+        'di-lai' => 'bx-map-alt',
+        'khi-o-viet-nam' => 'bx-compass',
+    ];
+    public const MENU_CACHE_KEY = 'guides.menu.v1';
+
+    public static function icon(object $g): string
+    {
+        return self::ICONS[$g->slug] ?? self::CAT_ICONS[$g->catSlug ?? ''] ?? 'bx-book-open';
+    }
+
+    /** Dữ liệu cho mega-menu "Cẩm nang" (3 cột theo danh mục). Cache 10 phút; duyệt bài thì xóa qua forgetMenu(). */
+    public function menu(): array
+    {
+        try {
+            return Cache::remember(self::MENU_CACHE_KEY, 600, function () {
+                return array_map(fn($g) => [
+                    'name' => $g['category']->name,
+                    'slug' => $g['category']->slug,
+                    'items' => $g['items']->map(fn($c) => ['title' => $c->title, 'url' => $c->url, 'desc' => $c->desc, 'icon' => $c->icon])->all(),
+                ], $this->groups(6));
+            });
+        } catch (\Throwable) {
+            return [];   // menu hỏng không được làm sập cả trang
+        }
+    }
+
+    public static function forgetMenu(): void
+    {
+        Cache::forget(self::MENU_CACHE_KEY);
+    }
 
     private function base()
     {
@@ -53,6 +97,8 @@ class GuideCatalog
             'badge' => $g->catName ?: self::OTHER_NAME,
             'meta' => $g->updatedOn ? 'Cập nhật ' . Carbon::parse($g->updatedOn)->format('d/m/Y') : null,
             'text' => self::excerpt($g->body),
+            'desc' => self::excerpt($g->body, 96),
+            'icon' => self::icon($g),
             'image' => DiscoverImage::url($g->coverImage),
             'credit' => $g->imageCredit,
             'url' => $this->url($g),

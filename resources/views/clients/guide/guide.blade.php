@@ -37,13 +37,22 @@
             <p class="gx-eyebrow">{{ $catName }}</p>
             <h1>{{ $g->title }}</h1>
             <p class="gx-lead">{{ $desc }}</p>
-            @if ($g->updatedOn)
-                <p class="gx-updated {{ $stale ? 'is-stale' : '' }}">
-                    Cập nhật lần cuối: <time datetime="{{ \Carbon\Carbon::parse($g->updatedOn)->toDateString() }}">{{ \Carbon\Carbon::parse($g->updatedOn)->format('d/m/Y') }}</time>
-                    @if ($stale)
-                        <span>. Bài đã hơn 12 tháng, hãy đối chiếu lại với nguồn chính thức.</span>
+            @php $hasSource = !empty($g->sourceUrl) && preg_match('#^https?://#i', $g->sourceUrl); @endphp
+            @if ($g->updatedOn || $hasSource)
+                <div class="gx-status">
+                    @if ($g->updatedOn)
+                        <p class="gx-status__upd {{ $stale ? 'is-stale' : '' }}">
+                            <i class="bx {{ $stale ? 'bx-error-circle' : 'bx-check-circle' }}" aria-hidden="true"></i>
+                            <span>Cập nhật lần cuối: <time datetime="{{ \Carbon\Carbon::parse($g->updatedOn)->toDateString() }}">{{ \Carbon\Carbon::parse($g->updatedOn)->format('d/m/Y') }}</time>, thông tin đổi theo nguồn chính thức.@if ($stale) Bài đã hơn 12 tháng, hãy đối chiếu lại với nguồn chính thức.@endif</span>
+                        </p>
                     @endif
-                </p>
+                    @if ($hasSource)
+                        <div class="gx-status__src" id="nguon">
+                            <b>Nguồn chính thức</b>
+                            <p>Thông tin dễ thay đổi trong bài được đối chiếu với <a href="{{ $g->sourceUrl }}" target="_blank" rel="noopener noreferrer">{{ parse_url($g->sourceUrl, PHP_URL_HOST) }}</a>. Hãy kiểm tra lại trước khi đi.</p>
+                        </div>
+                    @endif
+                </div>
             @endif
         </header>
 
@@ -57,14 +66,6 @@
                     {!! $html !!}
                     @include('clients.partials.gx.attribution', ['row' => $g])
                 </article>
-
-                @if (!empty($g->sourceUrl) && preg_match('#^https?://#i', $g->sourceUrl))
-                    <section class="gx-box" id="nguon">
-                        <h2>Nguồn chính thức</h2>
-                        <p>Thông tin dễ thay đổi trong bài này nên được đối chiếu với nguồn sau, hãy kiểm tra lại trước khi đi:
-                            <a href="{{ $g->sourceUrl }}" target="_blank" rel="noopener noreferrer">{{ parse_url($g->sourceUrl, PHP_URL_HOST) }}</a>.</p>
-                    </section>
-                @endif
 
                 <section class="gx-box gx-cta" id="tiep-theo">
                     <h2>Bước tiếp theo</h2>
@@ -89,7 +90,7 @@
                     @foreach ($toc as $t)
                         <li><a href="#{{ $t['id'] }}">{{ $t['text'] }}</a></li>
                     @endforeach
-                    @if (!empty($g->sourceUrl))<li><a href="#nguon">Nguồn chính thức</a></li>@endif
+                    @if (!empty($hasSource))<li><a href="#nguon">Nguồn chính thức</a></li>@endif
                     <li><a href="#tiep-theo">Bước tiếp theo</a></li>
                     @if ($related->isNotEmpty())<li><a href="#bai-lien-quan">Bài liên quan</a></li>@endif
                 </ol>

@@ -82,6 +82,7 @@
     <link rel="stylesheet" href="{{ asset('clients/assets/css/explore-kit.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/home-strips.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/gx-discover.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/gx-guide.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/mobile-nav.css') }}?v=1">
 </head>
 
