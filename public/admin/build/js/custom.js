@@ -2368,6 +2368,8 @@ function init_SmartWizard() {
                 tourId: isUpdate ? tourId : undefined,
                 name: $("input[name='name']").val(),
                 destination: $("input[name='destination']").val(),
+                destinationId: $("#destinationId").val(),
+                video_url: $("input[name='video_url']").val(),
                 domain: $("#domain").val(),
                 number: $("input[name='number']").val(),
                 price_adult: $("input[name='price_adult']").val(),

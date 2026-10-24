@@ -52,7 +52,19 @@
                         </li>
                         <li><a href="{{ route('admin.promotion') }}"><i class="fa fa-tags"></i> Quản lý Khuyến mãi</a>
                         </li>
-                        <li><a href="{{ route('admin.content') }}"><i class="fa fa-book"></i> Duyệt nội dung</a></li>
+                        <li><a><i class="fa fa-book"></i> Nội dung Khám phá <span class="fa fa-chevron-down"></span></a>
+                            <ul class="nav child_menu">
+                                <li><a href="{{ route('admin.content.overview') }}">Tổng quan</a></li>
+                                <li><a href="{{ route('admin.content') }}">Duyệt nội dung</a></li>
+                                <li><a href="{{ route('admin.destinations') }}">Điểm đến</a></li>
+                                <li><a href="{{ route('admin.inspirations') }}">Cảm hứng</a></li>
+                                <li><a href="{{ route('admin.guide-categories') }}">Danh mục cẩm nang</a></li>
+                                <li><a href="{{ route('admin.blog') }}">Blog</a></li>
+                            </ul>
+                        </li>
+                        <li><a href="{{ route('admin.contact') }}"><i class="fa fa-envelope"></i> Hộp thư liên hệ</a>
+                        </li>
+                        <li><a href="{{ route('admin.chat') }}"><i class="fa fa-comments"></i> Nhật ký Hỏi đáp</a></li>
                     @endif
 
                     {{-- Admin và manager --}}

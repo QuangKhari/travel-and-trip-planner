@@ -35,7 +35,7 @@ class HeroPostcardService
             ->where('d.isActive', 1)
             ->whereNotNull('d.coverImage')
             ->where(fn($q) => $q->whereNull('dm.level')->orWhere('dm.level', '!=', 'avoid'))
-            ->groupBy('d.destinationId', 'd.slug', 'd.name', 'd.province', 'd.coverImage', 'd.imageCredit', 'd.imageSourceUrl', 'dm.level', 'dm.note')
+            ->groupBy('d.destinationId', 'd.slug', 'd.name', 'd.province', 'd.coverImage', 'd.imageCredit', 'd.imageSourceUrl', 'dm.level', 'dm.note', 'd.isHero')
             ->get([
                 'd.slug',
                 'd.name',
@@ -45,6 +45,7 @@ class HeroPostcardService
                 'd.imageSourceUrl',
                 'dm.level',
                 'dm.note',
+                'd.isHero',
                 DB::raw('COALESCE(MAX(di.score), 0) as topScore'),
             ]);
 
@@ -71,10 +72,11 @@ class HeroPostcardService
                 'credit'    => $r->imageCredit,
                 'creditUrl' => $r->imageSourceUrl,
                 'score'     => (int) $r->topScore,
+                'hero' => (bool) $r->isHero,
             ];
         }
 
-        usort($items, fn($a, $b) => [$b['best'], $b['score'], $a['name']] <=> [$a['best'], $a['score'], $b['name']]);
+        usort($items, fn($a, $b) => [$b['hero'], $b['best'], $b['score'], $a['name']] <=> [$a['hero'], $a['best'], $a['score'], $b['name']]);
 
         // Xen tối đa 3 lễ hội sắp diễn ra vào các vị trí 2, 5, 7 (đếm từ 1) để dải không toàn điểm đến
         foreach (array_slice($this->upcomingEvents(), 0, 3) as $i => $ev) {
@@ -91,8 +93,20 @@ class HeroPostcardService
         $to = (new DateTimeImmutable('today'))->modify('+30 days')->format('Y-m-d');
         $rows = DB::table('tbl_events as e')->leftJoin('tbl_destinations as d', 'd.destinationId', '=', 'e.destinationId')
             ->where('e.reviewStatus', 'published')->whereNotNull('e.coverImage')
-            ->get(['e.slug', 'e.name', 'e.isLunar', 'e.lunarMonth', 'e.lunarDay', 'e.solarMonth', 'e.solarDay', 'e.durationDays',
-                'e.coverImage', 'e.imageCredit', 'e.imageSourceUrl', 'd.name as destName']);
+            ->get([
+                'e.slug',
+                'e.name',
+                'e.isLunar',
+                'e.lunarMonth',
+                'e.lunarDay',
+                'e.solarMonth',
+                'e.solarDay',
+                'e.durationDays',
+                'e.coverImage',
+                'e.imageCredit',
+                'e.imageSourceUrl',
+                'd.name as destName'
+            ]);
         $out = [];
         foreach ($rows as $e) {
             $img = DiscoverImage::url($e->coverImage);

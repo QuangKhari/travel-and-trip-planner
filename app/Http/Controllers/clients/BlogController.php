@@ -19,7 +19,7 @@ class BlogController extends Controller
         $title = 'Blog';
 
         // Bài mới nhất luôn đứng đầu (trước đây theo thứ tự khai báo trong file config)
-        $all = collect(config('blog.posts', []))->sortByDesc('date')->values();
+        $all = app(\App\Services\BlogRepository::class)->all()->sortByDesc('date')->values();
         $cat = trim((string) $request->query('cat', ''));
         $q = trim(mb_substr((string) $request->query('q', ''), 0, 100));
         $page = max(1, (int) $request->query('page', 1));

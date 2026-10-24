@@ -129,6 +129,22 @@
                                         </div>
                                     </div>
                                     <div class="field item form-group">
+                                        <label class="col-form-label col-md-3 col-sm-3  label-align">Gắn với điểm
+                                            đến</label>
+                                        <div class="col-md-6 col-sm-6">
+                                            <select class="form-control" name="destinationId" id="destinationId">
+                                                <option value="">-- Chưa gắn --</option>
+                                                @foreach ($destinations as $d)
+                                                    <option value="{{ $d->destinationId }}"
+                                                        data-name="{{ $d->name }}"
+                                                        data-domain="{{ $d->domain }}">{{ $d->name }}</option>
+                                                @endforeach
+                                            </select>
+                                            <small class="text-muted">Dùng cho lọc theo cảm hứng, bản đồ và gợi ý tour
+                                                trong Trip Planner.</small>
+                                        </div>
+                                    </div>
+                                    <div class="field item form-group">
                                         <label class="col-form-label col-md-3 col-sm-3  label-align">Link video</label>
                                         <div class="col-md-6 col-sm-6">
                                             <input class="form-control" type="url" name="video_url" maxlength="255"

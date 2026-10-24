@@ -16,6 +16,21 @@ use App\Http\Controllers\clients\SearchController;
 use App\Http\Controllers\clients\UserProfileController;
 use App\Http\Controllers\clients\TourBookedController;
 use App\Http\Controllers\clients\MyTourController;
+use App\Http\Controllers\clients\ForgotPasswordController;
+use App\Http\Controllers\clients\EmailVerificationController;
+use App\Http\Controllers\clients\EmailChangeController;
+use App\Http\Controllers\clients\ExploreController;
+use App\Http\Controllers\clients\ExploreContentController;
+use App\Http\Controllers\clients\MarkController;
+use App\Http\Controllers\clients\GuidePagesController;
+use App\Http\Controllers\clients\SeasonPagesController;
+use App\Http\Controllers\clients\SiteSearchController;
+use App\Http\Controllers\clients\SeoController;
+use App\Http\Controllers\clients\DataSourcesController;
+use App\Http\Controllers\clients\JournalController;
+use App\Http\Controllers\clients\AskPageController;
+
+
 use App\Http\Controllers\admin\LoginAdminController;
 use App\Http\Controllers\admin\ToursManagementController;
 use App\Http\Controllers\admin\UserManagementController;
@@ -24,20 +39,15 @@ use App\Http\Controllers\admin\BookingManagementController;
 use App\Http\Controllers\admin\ReviewManagementController;
 use App\Http\Controllers\admin\AdminManagementController;
 use App\Http\Controllers\admin\PromotionManagementController;
-use App\Http\Controllers\clients\ForgotPasswordController;
-use App\Http\Controllers\clients\EmailVerificationController;
-use App\Http\Controllers\clients\EmailChangeController;
-use App\Http\Controllers\clients\ExploreController;
-use App\Http\Controllers\clients\ExploreContentController;
-use App\Http\Controllers\clients\MarkController;
+use App\Http\Controllers\admin\ItineraryItemsController;
+use App\Http\Controllers\admin\DestinationManagementController;
+use App\Http\Controllers\admin\InspirationManagementController;
+use App\Http\Controllers\admin\GuideCategoryController;
+use App\Http\Controllers\admin\ContactInboxController;
+use App\Http\Controllers\admin\ChatLogController;
+use App\Http\Controllers\admin\ContentOverviewController;
+use App\Http\Controllers\admin\BlogAdminController;
 use App\Http\Controllers\admin\ContentReviewController;
-use App\Http\Controllers\clients\GuidePagesController;
-use App\Http\Controllers\clients\SeasonPagesController;
-use App\Http\Controllers\clients\SiteSearchController;
-use App\Http\Controllers\clients\SeoController;
-use App\Http\Controllers\clients\DataSourcesController;
-use App\Http\Controllers\clients\JournalController;
-use App\Http\Controllers\clients\AskPageController;
 
 
 
@@ -214,12 +224,57 @@ Route::prefix('admin')->group(function () {
         Route::post('/edit-promotion', [PromotionManagementController::class, 'editPromotion'])->name('admin.edit-promotion');
         Route::post('/delete-promotion', [PromotionManagementController::class, 'deletePromotion'])->name('admin.delete-promotion');
 
-        // Duyệt nội dung Khám phá (A7)
+        // Duyệt & quản lý nội dung Khám phá
+        Route::get('/content-overview', [ContentOverviewController::class, 'index'])->name('admin.content.overview');
+        Route::get('/content-lookup', [ItineraryItemsController::class, 'lookup'])->name('admin.content.lookup');
+        Route::post('/content/rag-rebuild', [ContentReviewController::class, 'rebuildRag'])->name('admin.content.rag');
         Route::get('/content/{kind?}', [ContentReviewController::class, 'index'])->name('admin.content');
-        Route::get('/content/{kind}/{id}/edit', [ContentReviewController::class, 'edit'])->whereNumber('id')->name('admin.content.edit');
-        Route::post('/content/{kind}/{id}', [ContentReviewController::class, 'update'])->whereNumber('id')->name('admin.content.update');
-        Route::post('/content/{kind}/{id}/status', [ContentReviewController::class, 'status'])->whereNumber('id')->name('admin.content.status');
+        Route::get('/content/{kind}/create', [ContentReviewController::class, 'create'])->name('admin.content.create');
         Route::post('/content/{kind}/bulk', [ContentReviewController::class, 'bulk'])->name('admin.content.bulk');
+        Route::post('/content/{kind}', [ContentReviewController::class, 'store'])->name('admin.content.store');
+        Route::get('/content/{kind}/{id}/edit', [ContentReviewController::class, 'edit'])->whereNumber('id')->name('admin.content.edit');
+        Route::get('/content/{kind}/{id}/preview', [ContentReviewController::class, 'preview'])->whereNumber('id')->name('admin.content.preview');
+        Route::post('/content/{kind}/{id}/status', [ContentReviewController::class, 'status'])->whereNumber('id')->name('admin.content.status');
+        Route::post('/content/{kind}/{id}/reject', [ContentReviewController::class, 'reject'])->whereNumber('id')->name('admin.content.reject');
+        Route::post('/content/{kind}/{id}/delete', [ContentReviewController::class, 'destroy'])->whereNumber('id')->name('admin.content.destroy');
+        Route::post('/content/{kind}/{id}', [ContentReviewController::class, 'update'])->whereNumber('id')->name('admin.content.update');
+
+        Route::get('/itinerary/{id}/items', [ItineraryItemsController::class, 'edit'])->whereNumber('id')->name('admin.itinerary.items');
+        Route::post('/itinerary/{id}/items', [ItineraryItemsController::class, 'save'])->whereNumber('id')->name('admin.itinerary.items.save');
+
+        Route::get('/destinations', [DestinationManagementController::class, 'index'])->name('admin.destinations');
+        Route::get('/destinations/create', [DestinationManagementController::class, 'create'])->name('admin.destinations.create');
+        Route::post('/destinations', [DestinationManagementController::class, 'store'])->name('admin.destinations.store');
+        Route::get('/destinations/{id}/edit', [DestinationManagementController::class, 'edit'])->whereNumber('id')->name('admin.destinations.edit');
+        Route::post('/destinations/{id}', [DestinationManagementController::class, 'update'])->whereNumber('id')->name('admin.destinations.update');
+        Route::post('/destinations/{id}/months', [DestinationManagementController::class, 'months'])->whereNumber('id')->name('admin.destinations.months');
+        Route::post('/destinations/{id}/inspirations', [DestinationManagementController::class, 'inspirations'])->whereNumber('id')->name('admin.destinations.inspirations');
+        Route::post('/destinations/{id}/delete', [DestinationManagementController::class, 'destroy'])->whereNumber('id')->name('admin.destinations.destroy');
+
+        Route::get('/inspirations', [InspirationManagementController::class, 'index'])->name('admin.inspirations');
+        Route::post('/inspirations', [InspirationManagementController::class, 'store'])->name('admin.inspirations.store');
+        Route::post('/inspirations/{id}', [InspirationManagementController::class, 'update'])->whereNumber('id')->name('admin.inspirations.update');
+        Route::post('/inspirations/{id}/delete', [InspirationManagementController::class, 'destroy'])->whereNumber('id')->name('admin.inspirations.destroy');
+
+        Route::get('/guide-categories', [GuideCategoryController::class, 'index'])->name('admin.guide-categories');
+        Route::post('/guide-categories', [GuideCategoryController::class, 'store'])->name('admin.guide-categories.store');
+        Route::post('/guide-categories/{id}', [GuideCategoryController::class, 'update'])->whereNumber('id')->name('admin.guide-categories.update');
+        Route::post('/guide-categories/{id}/delete', [GuideCategoryController::class, 'destroy'])->whereNumber('id')->name('admin.guide-categories.destroy');
+
+        Route::get('/contact-inbox', [ContactInboxController::class, 'index'])->name('admin.contact');
+        Route::post('/contact-inbox/{id}', [ContactInboxController::class, 'update'])->whereNumber('id')->name('admin.contact.update');
+        Route::post('/contact-inbox/{id}/delete', [ContactInboxController::class, 'destroy'])->whereNumber('id')->name('admin.contact.destroy');
+
+        Route::get('/chat-logs', [ChatLogController::class, 'index'])->name('admin.chat');
+        Route::get('/chat-logs/export', [ChatLogController::class, 'export'])->name('admin.chat.export');
+
+        Route::get('/blog-posts', [BlogAdminController::class, 'index'])->name('admin.blog');
+        Route::get('/blog-posts/create', [BlogAdminController::class, 'create'])->name('admin.blog.create');
+        Route::post('/blog-posts/import', [BlogAdminController::class, 'importConfig'])->name('admin.blog.import');
+        Route::post('/blog-posts', [BlogAdminController::class, 'store'])->name('admin.blog.store');
+        Route::get('/blog-posts/{id}/edit', [BlogAdminController::class, 'edit'])->whereNumber('id')->name('admin.blog.edit');
+        Route::post('/blog-posts/{id}', [BlogAdminController::class, 'update'])->whereNumber('id')->name('admin.blog.update');
+        Route::post('/blog-posts/{id}/delete', [BlogAdminController::class, 'destroy'])->whereNumber('id')->name('admin.blog.destroy');
 
         //Reviews - xóa
         Route::delete('/reviews/{id}', [ReviewManagementController::class, 'destroy'])->name('admin.reviews.destroy');

@@ -83,7 +83,7 @@ class ClimateBuildMonths extends Command
             $this->line('(dry-run: chưa ghi DB)');
         } elseif (!$this->option('compare')) {
             for ($m = 1; $m <= 12; $m++) {      // hero cache kết quả từng tháng 1 giờ
-                Cache::forget("postcards.v3.m{$m}.l" . (int) config('postcards.limit', 8));
+                Cache::forget("postcards.v4.m{$m}.l" . (int) config('postcards.limit', 8));
             }
         }
 

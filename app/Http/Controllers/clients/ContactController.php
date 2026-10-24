@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class ContactController extends Controller
 {
@@ -88,6 +89,18 @@ class ContactController extends Controller
         $topicKey = $data['topic'] ?? 'other';
         $topicLabel = self::TOPICS[$topicKey] ?? self::TOPICS['other'];
         $code = $data['booking_code'] ?? '';
+        $messageId = DB::table('tbl_contact_messages')->insertGetId([
+            'userId' => $this->getUserId() ?: null,
+            'name' => $name,
+            'phone' => $data['phone_number'],
+            'email' => $data['email'],
+            'topic' => $topicKey,
+            'bookingCode' => $code !== '' ? $code : null,
+            'message' => $data['message'],
+            'status' => 'new',
+            'mailSent' => 0,
+            'createdAt' => now(),
+        ], 'messageId');
 
         $body = "Chủ đề: {$topicLabel}\n"
             . ($code !== '' ? "Mã đơn: {$code}\n" : '')
@@ -105,20 +118,10 @@ class ContactController extends Controller
                     ->replyTo($data['email'], $name)
                     ->subject("[{$topicLabel}] Liên hệ mới từ {$name}");
             });
+            DB::table('tbl_contact_messages')->where('messageId', $messageId)->update(['mailSent' => 1]);
         } catch (\Throwable $e) {
-            Log::error('Gửi mail liên hệ thất bại.', [
-                'email' => $data['email'],
-                'name' => $name,
-                'exception' => $e->getMessage(),
-            ]);
-
-            if ($request->expectsJson()) {
-                return response()->json(['success' => false, 'message' => 'Không thể gửi liên hệ lúc này. Vui lòng thử lại sau.'], 500);
-            }
-
-            return redirect(route('contact') . '#ctForm')
-                ->with('contact_failed', 'Chưa gửi được tin nhắn lúc này. Dữ liệu của bạn vẫn còn nguyên, bạn thử gửi lại sau ít phút hoặc liên hệ trực tiếp qua điện thoại/Zalo nhé.')
-                ->withInput();
+            // Tin đã được lưu trong hộp thư admin nên không báo lỗi cho khách; chỉ ghi log để nhân viên xử lý.
+            Log::error('Gửi mail liên hệ thất bại (tin vẫn lưu trong DB).', ['messageId' => $messageId, 'exception' => $e->getMessage()]);
         }
 
         // Thư xác nhận cho khách: họ biết tin nhắn đã đến nơi và có bản sao nội dung đã gửi.

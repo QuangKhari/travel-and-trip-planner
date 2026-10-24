@@ -140,6 +140,7 @@ $(document).ready(function () {
                     // Điền dữ liệu vào các field
                     $("input[name='name']").val(tour.title);
                     $("input[name='destination']").val(tour.destination);
+                    $("#destinationId").val(tour.destinationId || "");
                     $("input[name='video_url']").val(tour.video_url || "");
                     $("select[name='domain']").val(tour.domain);
                     $("input[name='number']").val(tour.quantity);
@@ -316,6 +317,7 @@ $(document).ready(function () {
             tourId: tourIdSendingImage,
             name: $("input[name='name']").val(),
             destination: $("input[name='destination']").val(),
+            destinationId: $("#destinationId").val(),
             video_url: $("input[name='video_url']").val(),
             domain: $("#domain").val(),
             number: $("input[name='number']").val(),
@@ -1193,7 +1195,12 @@ $(document).ready(function () {
         }
     });
 
-    /********************************************
-     * DASHBOARD                                  *
-     ********************************************/
+    $(document).on("change", "#destinationId", function () {
+        var opt = $(this).find("option:selected");
+        if (!opt.val()) return;
+        var txt = $("input[name='destination']");
+        if (!txt.val().trim()) txt.val(opt.data("name"));
+        var dom = $("#domain");
+        if (dom.length && !dom.val()) dom.val(opt.data("domain"));
+    });
 });

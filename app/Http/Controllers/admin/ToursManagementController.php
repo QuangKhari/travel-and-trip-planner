@@ -30,16 +30,16 @@ class ToursManagementController extends Controller
     public function index()
     {
         $title = 'Quản lý Tours';
-
         $tours = $this->tours->getAllTours();
-        return view('admin.tours', compact('title', 'tours'));
+        $destinations = DB::table('tbl_destinations')->where('isActive', 1)->orderBy('name')->get(['destinationId', 'name', 'domain']);
+        return view('admin.tours', compact('title', 'tours', 'destinations'));
     }
 
     public function pageAddTours()
     {
         $title = 'Thêm Tours';
-
-        return view('admin.add-tours', compact('title'));
+        $destinations = DB::table('tbl_destinations')->where('isActive', 1)->orderBy('name')->get(['destinationId', 'name', 'domain']);
+        return view('admin.add-tours', compact('title', 'destinations'));
     }
 
     /**
@@ -53,6 +53,7 @@ class ToursManagementController extends Controller
         $validator = Validator::make($request->all(), [
             'name'        => 'required|string|max:255',
             'destination' => 'required|string|max:255',
+            'destinationId' => 'required|integer|exists:tbl_destinations,destinationId',
             'domain'      => 'required|in:b,t,n',
             'number'      => 'required|integer|min:1|max:100000',
             'price_adult' => 'required|numeric|min:0|max:999999999999',
@@ -68,6 +69,8 @@ class ToursManagementController extends Controller
         ], [
             'name.required'        => 'Vui lòng nhập tên tour.',
             'destination.required' => 'Vui lòng nhập điểm đến.',
+            'destinationId.required' => 'Vui lòng chọn điểm đến từ danh sách.',
+            'destinationId.exists'   => 'Điểm đến không tồn tại.',
             'domain.required'      => 'Vui lòng chọn khu vực.',
             'domain.in'            => 'Khu vực không hợp lệ.',
             'number.required'      => 'Vui lòng nhập số lượng.',
@@ -118,6 +121,7 @@ class ToursManagementController extends Controller
             'priceAdult'  => $request->input('price_adult'),
             'priceChild'  => $request->input('price_child'),
             'destination' => $request->input('destination'),
+            'destinationId' => (int) $request->input('destinationId'),
             'domain'      => $request->input('domain'),
             'startDate'   => $start->format('Y-m-d'),
             'endDate'     => $end->format('Y-m-d'),
@@ -542,6 +546,7 @@ class ToursManagementController extends Controller
             'tourId'      => 'required|integer|exists:tbl_tours,tourId',
             'name'        => 'required|string|max:255',
             'destination' => 'required|string|max:255',
+            'destinationId' => 'nullable|integer|exists:tbl_destinations,destinationId',
             'domain'      => 'required|in:b,t,n',
             'number'      => 'required|integer|min:0|max:100000',
             'original_number' => 'nullable|integer|min:0',
@@ -608,6 +613,7 @@ class ToursManagementController extends Controller
             'priceAdult'  => $request->input('price_adult'),
             'priceChild'  => $request->input('price_child'),
             'destination' => $request->input('destination'),
+            'destinationId' => $request->input('destinationId') ?: null,
             'domain'      => $request->input('domain'),
             'startDate'   => $start->format('Y-m-d'),
             'endDate'     => $end->format('Y-m-d'),

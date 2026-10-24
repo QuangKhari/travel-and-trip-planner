@@ -127,6 +127,7 @@ class ContentCatalog
             'image' => DiscoverImage::url($f->coverImage),
             'credit' => $f->imageCredit,
             'must' => (bool) ($f->isMustTry ?? false),
+            'featured' => (bool) ($f->isFeatured ?? false),
             'url' => route('foods.show', ['slug' => $f->slug]),
         ];
     }
@@ -196,7 +197,7 @@ class ContentCatalog
         $day = date('Ymd');
 
         return $this->foodsBase()->whereNotNull('f.coverImage')->limit(60)->get()
-            ->sortBy(fn($r) => [-(int) ($r->isMustTry ?? 0), crc32($r->slug . $day)])
+            ->sortBy(fn($r) => [-(int) ($r->isFeatured ?? 0), -(int) ($r->isMustTry ?? 0), crc32($r->slug . $day)])
             ->take($n)->values()->map(fn($r) => $this->foodCard($r))->filter(fn($c) => !empty($c->image))->values();
     }
 
@@ -520,8 +521,14 @@ class ContentCatalog
             for ($i = 1; $i <= 12; $i++) {
                 $months[$i] = $byMonth[$i] ?? 'unknown';
             }
-            $rows[] = ['slug' => $d->slug, 'name' => $d->name, 'province' => $d->province, 'domain' => $d->domain,
-                'url' => route('destination.show', ['slug' => $d->slug]), 'months' => $months];
+            $rows[] = [
+                'slug' => $d->slug,
+                'name' => $d->name,
+                'province' => $d->province,
+                'domain' => $d->domain,
+                'url' => route('destination.show', ['slug' => $d->slug]),
+                'months' => $months
+            ];
         }
 
         return $rows;

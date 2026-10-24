@@ -12,7 +12,7 @@ class BlogDetailController extends Controller
 {
     public function index($slug = null)
     {
-        $all = collect(config('blog.posts', []))->values();
+        $all = app(\App\Services\BlogRepository::class)->all();
 
         $post = $slug
             ? $all->firstWhere('slug', $slug)

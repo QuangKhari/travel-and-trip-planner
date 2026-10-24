@@ -6,7 +6,15 @@
         <td>{{ $tour->quantity }}</td>
         <td>{{ number_format($tour->priceAdult, 0, ',', '.') }}</td>
         <td>{{ number_format($tour->priceChild, 0, ',', '.') }}</td>
-        <td>{{ $tour->destination }}</td>
+        <td>{{ $tour->destination }}
+            @if (empty($tour->destinationId))
+                <br><span class="badge badge-warning"
+                    title="Chưa gắn điểm đến: không lọc được theo cảm hứng, không đếm trên bản đồ">chưa gắn điểm
+                    đến</span>
+            @else
+                <br><small class="text-muted">→ {{ $tour->destName }}</small>
+            @endif
+        </td>
         <td>
             <a href="{{ route('admin.toggle-tour') }}" data-tourId="{{ $tour->tourId }}" class="toggle-tour"
                 title="Bấm để đổi trạng thái">
@@ -20,8 +28,9 @@
         <td>{{ date('d-m-Y', strtotime($tour->startDate)) }}</td>
         <td>{{ date('d-m-Y', strtotime($tour->endDate)) }}</td>
         <td>
-            <button type="button" class="btn-action-listTours edit-tour" data-toggle="modal" data-target="#edit-tour-modal"
-                data-tourId="{{ $tour->tourId }}" data-urledit = "{{ route('admin.tour-edit') }}">
+            <button type="button" class="btn-action-listTours edit-tour" data-toggle="modal"
+                data-target="#edit-tour-modal" data-tourId="{{ $tour->tourId }}"
+                data-urledit = "{{ route('admin.tour-edit') }}">
                 <span class="glyphicon glyphicon-edit" style="color: #26B99A; font-size:24px" aria-hidden="true"></span>
             </button>
         </td>

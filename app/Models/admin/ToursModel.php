@@ -16,8 +16,10 @@ class ToursModel extends Model
 
     public function getAllTours()
     {
-        return DB::table($this->table)
-            ->orderBy('tourId', 'DESC')
+        return DB::table($this->table . ' as t')
+            ->leftJoin('tbl_destinations as d', 'd.destinationId', '=', 't.destinationId')
+            ->select('t.*', 'd.name as destName')
+            ->orderBy('t.tourId', 'DESC')
             ->get();
     }
 

@@ -37,7 +37,7 @@ class HomeFeedService
         $allFoods = collect($this->catalog->foods([], 1, 60)['items']->items());
         $withImg = $allFoods->filter(fn($c) => !empty($c->image));
         $foods = ($withImg->count() >= 4 ? $withImg : $allFoods)
-            ->sortBy(fn($c) => crc32($c->slug . $day))
+            ->sortBy(fn($c) => [-(int) ($c->featured ?? 0), crc32($c->slug . $day)])
             ->take(8)->values()->all();
 
         $seasonMix = $this->seasonMix($month, $season, $events);
