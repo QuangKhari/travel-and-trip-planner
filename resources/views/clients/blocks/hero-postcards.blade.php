@@ -44,14 +44,27 @@
             <div class="hp-intro">
                 <p class="hp-eyebrow">Dòng bưu ảnh</p>
                 <h1>Tháng <span class="hp-month">{{ $month }}</span>, Việt Nam đang đẹp ở đâu?</h1>
-                <p class="hp-lead">Cuộn xuống để đi dọc dải bưu ảnh.</p>
+                <p class="hp-lead">Chọn một tháng để xem những nơi đẹp nhất, rồi đi dọc dải bưu ảnh.</p>
             </div>
 
-            <div class="hp-chips" role="group" aria-label="Chọn tháng">
-                @for ($m = 1; $m <= 12; $m++)
-                    <button type="button" class="hp-chip" data-month="{{ $m }}"
-                        aria-pressed="{{ $m === $month ? 'true' : 'false' }}">Tháng {{ $m }}</button>
-                @endfor
+            {{-- Bộ chọn tháng: đủ 12 tháng hiện cùng lúc (không phải kéo ngang), ô lớn dễ bấm, có thanh trượt báo tháng đang chọn.
+                 Giữ class hp-chip / data-month / aria-pressed vì hero-postcards.js đọc các thuộc tính này. --}}
+            @php $nowMonth = (int) now()->format('n'); @endphp
+            <div class="hp-rail" role="group" aria-label="Chọn tháng">
+                <span class="hp-rail__label" aria-hidden="true">Tháng</span>
+                <button type="button" class="hp-rail__nav" data-dir="-1" aria-label="Tháng trước"><i
+                        class="fas fa-chevron-left" aria-hidden="true"></i></button>
+                <div class="hp-chips" role="group" aria-label="Danh sách tháng">
+                    <span class="hp-chips__thumb" aria-hidden="true"></span>
+                    @for ($m = 1; $m <= 12; $m++)
+                        <button type="button" class="hp-chip{{ $m === $nowMonth ? ' is-now' : '' }}"
+                            data-month="{{ $m }}" aria-pressed="{{ $m === $month ? 'true' : 'false' }}"
+                            aria-label="Tháng {{ $m }}{{ $m === $nowMonth ? ' (tháng hiện tại)' : '' }}"
+                            @if ($m === $nowMonth) title="Tháng hiện tại" @endif>{{ $m }}</button>
+                    @endfor
+                </div>
+                <button type="button" class="hp-rail__nav" data-dir="1" aria-label="Tháng sau"><i
+                        class="fas fa-chevron-right" aria-hidden="true"></i></button>
             </div>
             <div class="hp-notice" role="status" aria-live="polite" hidden></div>
 

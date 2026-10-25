@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * C1: bài cẩm nang (tbl_guides, tbl_guide_categories). CHỈ trả bài reviewStatus = 'published'.
+ * bài cẩm nang (tbl_guides, tbl_guide_categories). CHỈ trả bài reviewStatus = 'published'.
  * Nội dung bài (cột body) viết bằng Markdown: "## " là mục (sinh mục lục), "> " là hộp lưu ý.
  */
 class GuideCatalog
@@ -47,13 +47,23 @@ class GuideCatalog
     public function menu(): array
     {
         try {
-            return Cache::remember(self::MENU_CACHE_KEY, 600, function () {
-                return array_map(fn($g) => [
-                    'name' => $g['category']->name,
-                    'slug' => $g['category']->slug,
-                    'items' => $g['items']->map(fn($c) => ['title' => $c->title, 'url' => $c->url, 'desc' => $c->desc, 'icon' => $c->icon])->all(),
-                ], $this->groups(6));
-            });
+            $menu = Cache::get(self::MENU_CACHE_KEY);
+            if (is_array($menu) && $menu !== []) {
+                return $menu;
+            }
+
+            $menu = array_map(fn($g) => [
+                'name' => $g['category']->name,
+                'slug' => $g['category']->slug,
+                'items' => $g['items']->map(fn($c) => ['title' => $c->title, 'url' => $c->url, 'desc' => $c->desc, 'icon' => $c->icon])->all(),
+            ], $this->groups(6));
+
+            // Chỉ nhớ khi có dữ liệu: menu rỗng mà bị cache sẽ làm "Cẩm nang" im lặng thêm 10 phút sau khi đã có bài.
+            if ($menu !== []) {
+                Cache::put(self::MENU_CACHE_KEY, $menu, 600);
+            }
+
+            return $menu;
         } catch (\Throwable) {
             return [];   // menu hỏng không được làm sập cả trang
         }

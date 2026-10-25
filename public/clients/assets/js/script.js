@@ -489,7 +489,7 @@
         
         
         // ## Nice Select
-        $('select').niceSelect();
+        $('select').not('.no-nice').niceSelect();
         
         
         // ## AOS Animation

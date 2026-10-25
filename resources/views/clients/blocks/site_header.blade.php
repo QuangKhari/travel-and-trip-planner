@@ -54,7 +54,7 @@
                 </div>
             </div>
             @php $guideMenu = app(\App\Services\Content\GuideCatalog::class)->menu(); @endphp
-            <div class="tv-dd tv-mega">
+            <div class="tv-dd {{ count($guideMenu) ? 'tv-mega' : '' }}">
                 <a href="{{ route('guides.index') }}" class="{{ Request::is('cam-nang*') ? 'is-active' : '' }}">
                     Cẩm nang <i class="fas fa-chevron-down"></i>
                 </a>
@@ -76,6 +76,14 @@
                             </div>
                             <a class="tv-mega__all" href="{{ route('guides.index') }}">Xem toàn bộ cẩm nang →</a>
                         </div>
+                    </div>
+                @else
+                    {{-- Chưa có bài đã duyệt (hoặc lỗi đọc dữ liệu): vẫn hiện menu thả xuống như "Khám phá" và "Tours" thay vì im lặng --}}
+                    <div class="tv-dd__menu">
+                        <a href="{{ route('guides.index') }}">Tất cả cẩm nang</a>
+                        <a href="{{ route('seasons.matrix') }}">Nên đi tháng nào</a>
+                        <a href="{{ route('itineraries.index') }}">Lịch trình gợi ý</a>
+                        <a href="{{ route('ask.index') }}">Hỏi đáp</a>
                     </div>
                 @endif
             </div>

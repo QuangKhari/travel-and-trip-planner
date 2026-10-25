@@ -1,11 +1,11 @@
 {{-- Tour nổi bật — dùng biến $tours do HomeController truyền vào --}}
 <section class="tv-featured">
     <div class="container">
-        <span class="tv-tag"><i class="fas fa-suitcase-rolling"></i> Tour nổi bật</span>
+        <span class="tv-tag"><i class="fas fa-suitcase-rolling"></i> Đặt chỗ ngay</span>
         <div class="tv-head" data-aos="fade-up" data-aos-duration="900" data-aos-offset="30">
             <div>
-                <h2>Những hành trình được yêu thích nhất</h2>
-                <p>Hàng nghìn du khách đã lựa chọn và trải nghiệm. Bạn thì sao?</p>
+                <h2>Tour sắp khởi hành, còn chỗ</h2>
+                <p>Các chuyến đang mở bán với giá và số chỗ cập nhật trực tiếp từ hệ thống.</p>
             </div>
             <a href="{{ route('tours') }}" class="tv-all">Xem tất cả tour <i class="fal fa-arrow-right"></i></a>
         </div>
@@ -20,7 +20,7 @@
                     } elseif ($daysLeft <= 14) {
                         $badge = ['Sắp khởi hành', ''];
                     } else {
-                        $badge = ['Nổi bật', 'is-green'];
+                        $badge = ['Đang mở bán', 'is-green'];
                     }
                 @endphp
 

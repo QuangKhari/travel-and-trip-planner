@@ -7,6 +7,7 @@
     var q = function (s) {
         return root.querySelector(s);
     };
+    var introEl = q(".hp-intro");
     var world = q(".hp-world"),
         track = q(".hp-track"),
         bgs = root.querySelectorAll(".hp-bg");
@@ -29,7 +30,9 @@
         vis = true,
         front = 0;
     var running = false /* chỉ một vòng vẽ được chạy */,
-        pointerActive = false;
+        pointerActive = false,
+        lastT = 0 /* mốc thời gian khung hình trước, để làm mượt theo thời gian thay vì theo số khung */,
+        lastP = NaN /* vị trí cuộn đã vẽ lần cuối: không đổi thì khỏi ghi lại style của từng bưu ảnh */;
     var mx = 0,
         my = 0,
         hx = 0,
@@ -67,16 +70,55 @@
         W = innerWidth;
         H = innerHeight;
         top0 = track.getBoundingClientRect().top + (window.pageYOffset || 0);
+        lastP = NaN;
     }
 
-    function centerActiveMonth() {
-        var chips = q(".hp-chips");
+    /* ---- bộ chọn tháng ---- */
+    var railEl = q(".hp-rail"),
+        chipsEl = q(".hp-chips"),
+        thumbEl = q(".hp-chips__thumb");
+    var target = month /* tháng người dùng vừa chọn (có thể đang tải) */,
+        pending = 0 /* tháng bấm tiếp trong lúc đang tải */,
+        cache = {};
+
+    /* Thanh trượt nằm đúng dưới chip đang chọn; lưới 2 hàng trên điện thoại cũng đúng vì dùng cả offsetLeft lẫn offsetTop */
+    function syncRail(instant) {
+        if (!chipsEl || !thumbEl) return;
         var on = root.querySelector('.hp-chip[aria-pressed="true"]');
-
-        if (!chips || !on) return;
-
-        chips.scrollLeft =
-            on.offsetLeft - chips.clientWidth / 2 + on.offsetWidth / 2;
+        if (!on || !on.offsetWidth) return;
+        chipsEl.classList.add("has-thumb");
+        if (instant) thumbEl.style.transition = "none";
+        thumbEl.style.width = on.offsetWidth + "px";
+        thumbEl.style.height = on.offsetHeight + "px";
+        thumbEl.style.transform =
+            "translate(" + on.offsetLeft + "px," + on.offsetTop + "px)";
+        thumbEl.style.opacity = "1";
+        if (instant) {
+            void thumbEl.offsetWidth;
+            thumbEl.style.transition = "";
+        }
+    }
+    /* Tô sáng ngay khi bấm, không chờ mạng: trước đây chip chỉ đổi sau khi tải xong nên cảm giác như bấm không ăn */
+    function markPressed(m) {
+        root.querySelectorAll(".hp-chip").forEach(function (c) {
+            c.setAttribute("aria-pressed", +c.dataset.month === m ? "true" : "false");
+        });
+        syncRail();
+    }
+    function fetchMonth(m) {
+        if (!cache[m])
+            cache[m] = fetch(api + "?month=" + m, {
+                headers: { Accept: "application/json" },
+            })
+                .then(function (r) {
+                    if (!r.ok) throw 0;
+                    return r.json();
+                })
+                .catch(function (e) {
+                    delete cache[m]; /* lỗi thì cho thử lại lần sau */
+                    throw e;
+                });
+        return cache[m];
     }
 
     function showNotice(message) {
@@ -125,6 +167,7 @@
             };
         });
         root.style.setProperty("--n", cards.length);
+        lastP = NaN;
     }
 
     /* ---- bảng thông tin + nền mờ + bộ đếm ---- */
@@ -179,46 +222,49 @@
     /* ---- vẽ 3D ---- */
     function render(p) {
         if (!m3) return;
-        var R = W * K.R * (W < 1024 ? 0.7 : 1),
-            Ry = H * K.Ry;
-        var sx = R * Math.sin(1.05 * p),
-            sy = Ry * Math.sin(0.7 * p + 1);
-        for (var i = 0; i < cards.length; i++) {
-            var c = cards[i],
-                d = i - p;
-            var o = d < 0 ? 1 + d / 0.8 : d > 4 ? 1 - (d - 4) / 2.5 : 1;
-            o = clamp(o, 0, 1);
-            if (o < 0.02) {
-                c.style.visibility = "hidden";
-                continue;
+        /* Chỉ ghi lại transform/opacity của từng bưu ảnh khi vị trí cuộn thật sự đổi.
+           Di chuột chỉ nghiêng cả "thế giới" (một transform duy nhất), nên mượt hơn nhiều so với ghi lại cả chục thẻ mỗi khung hình. */
+        if (p !== lastP) {
+            lastP = p;
+            var R = W * K.R * (W < 1024 ? 0.7 : 1),
+                Ry = H * K.Ry;
+            var sx = R * Math.sin(1.05 * p),
+                sy = Ry * Math.sin(0.7 * p + 1);
+            for (var i = 0; i < cards.length; i++) {
+                var c = cards[i],
+                    d = i - p;
+                var o = d < 0 ? 1 + d / 0.8 : d > 4 ? 1 - (d - 4) / 2.5 : 1;
+                o = clamp(o, 0, 1);
+                if (o < 0.02) {
+                    if (c.style.visibility !== "hidden") c.style.visibility = "hidden";
+                    continue;
+                }
+                var x = R * Math.sin(1.05 * i) - sx,
+                    y = Ry * Math.sin(0.7 * i + 1) - sy,
+                    z = -(d + K.back) * K.gap;
+                c.style.visibility = "visible";
+                c.style.opacity = o.toFixed(3);
+                c.style.transform =
+                    "translate(-50%,-50%) translate3d(" +
+                    x.toFixed(1) +
+                    "px," +
+                    y.toFixed(1) +
+                    "px," +
+                    z.toFixed(1) +
+                    "px) rotateY(" +
+                    ((-x / R) * 22).toFixed(2) +
+                    "deg) rotateZ(" +
+                    c.dataset.rz +
+                    "deg)";
             }
-            var x = R * Math.sin(1.05 * i) - sx,
-                y = Ry * Math.sin(0.7 * i + 1) - sy,
-                z = -(d + K.back) * K.gap;
-            c.style.visibility = "visible";
-            c.style.opacity = o.toFixed(3);
-            c.style.transform =
-                "translate(-50%,-50%) translate3d(" +
-                x.toFixed(1) +
-                "px," +
-                y.toFixed(1) +
-                "px," +
-                z.toFixed(1) +
-                "px) rotateY(" +
-                ((-x / R) * 22).toFixed(2) +
-                "deg) rotateZ(" +
-                c.dataset.rz +
-                "deg)";
+            introEl.style.opacity = clamp(1 - p * 2, 0, 1);
         }
-        hx += (mx - hx) * 0.08;
-        hy += (my - hy) * 0.08;
         world.style.transform =
             "rotateX(" +
             (-hy * 4).toFixed(2) +
             "deg) rotateY(" +
             (hx * 6).toFixed(2) +
             "deg)";
-        q(".hp-intro").style.opacity = clamp(1 - p * 2, 0, 1);
     }
     /* Vùng đọc riêng cho trình đọc màn hình: chỉ ghi chữ khi đã dừng ở một tấm,
        nên lướt qua nhiều tấm không bị đọc dồn. Dùng được cả 3D, băng vuốt và lưới tĩnh. */
@@ -238,26 +284,36 @@
         /* gọi bao nhiêu lần cũng chỉ có một vòng rAF */
         if (running || !m3 || !vis) return;
         running = true;
+        lastT = 0;
         requestAnimationFrame(tick);
     }
-    function tick() {
+    /* Làm mượt theo thời gian thực (không theo số khung): màn 60Hz, 120Hz hay máy yếu bị tụt khung đều chuyển động như nhau */
+    function damp(rate, dt) {
+        return 1 - Math.pow(1 - rate, dt / 16.667);
+    }
+    function tick(t) {
         if (!vis || !m3) {
             running = false;
             return;
         }
+        var dt = lastT ? Math.min(t - lastT, 64) : 16.667;
+        lastT = t;
 
-        cur += (tgt - cur) * K.lag;
+        cur += (tgt - cur) * damp(K.lag, dt);
 
         var settled = Math.abs(tgt - cur) < 0.0005;
 
         if (settled) cur = tgt;
+
+        hx += (mx - hx) * damp(0.1, dt);
+        hy += (my - hy) * damp(0.1, dt);
 
         render(cur);
         update(Math.round(clamp(cur, 0, cards.length - 1)));
         if (settled) announce();
 
         var pointerMoving =
-            Math.abs(mx - hx) > 0.001 || Math.abs(my - hy) > 0.001;
+            Math.abs(mx - hx) > 0.0005 || Math.abs(my - hy) > 0.0005;
 
         if (settled && !pointerMoving) {
             running = false;
@@ -295,7 +351,7 @@
                 c.style.cssText = "";
             });
             world.style.transform = "";
-            q(".hp-intro").style.opacity = "";
+            introEl.style.opacity = "";
         }
         measure();
         onScroll();
@@ -358,73 +414,90 @@
                 ? "autumn"
                 : "winter";
     }
+    function applyMonth(m, d) {
+        var blank = world.querySelector(".hp-blank");
+        world.querySelectorAll(".hp-card:not(.hp-blank)").forEach(function (n) {
+            n.remove();
+        });
+        d.items.forEach(function (it, i) {
+            world.insertBefore(make(it, i, m), blank);
+        });
+        month = m;
+        root.dataset.month = m;
+        root.dataset.season = season(m);
+        blank.href = plannerHref(m);
+        blank.setAttribute(
+            "aria-label",
+            "Bưu ảnh trắng: " + plannerLabel().replace(" →", ""),
+        );
+        var go = blank.querySelector(".hp-go");
+        if (go) go.textContent = plannerLabel();
+        root.querySelectorAll(".hp-month").forEach(function (n) {
+            n.textContent = m;
+        });
+        markPressed(m);
+        read();
+        idx = -1;
+        announcedIdx = -1;
+        cur = tgt = 0;
+        if (m3) scrollTo({ top: top0, behavior: "auto" });
+        measure();
+        render(0);
+        update(0);
+        announce();
+    }
+    function finishMonth() {
+        loading = false;
+        root.classList.remove("hp--wait");
+        if (railEl) {
+            railEl.classList.remove("is-loading");
+            railEl.removeAttribute("aria-busy");
+        }
+        if (pending && pending !== month) {
+            var n = pending;
+            pending = 0;
+            setMonth(n);
+        } else pending = 0;
+    }
     function setMonth(m) {
-        if (loading || m === month) return;
+        m = ((m - 1 + 12) % 12) + 1; /* cho phép vòng 12 -> 1 và 1 -> 12 */
+        target = m;
+        markPressed(m); /* phản hồi tức thì */
+        if (loading) {
+            pending = m; /* bấm liên tiếp: nhớ tháng cuối, không bỏ rơi lần bấm */
+            return;
+        }
+        if (m === month) return;
         loading = true;
-        var told = false;
         root.classList.add("hp--wait");
-        fetch(api + "?month=" + m, { headers: { Accept: "application/json" } })
-            .then(function (r) {
-                if (!r.ok) throw 0;
-                return r.json();
+        if (railEl) {
+            railEl.classList.add("is-loading");
+            railEl.setAttribute("aria-busy", "true");
+        }
+        fetchMonth(m)
+            .then(function (d) {
+                if (!d.items || d.items.length < 3)
+                    throw { msg: "Tháng " + m + " hiện chưa có đủ điểm đến nổi bật." };
+                /* chờ hiệu ứng mờ dần của dải ảnh cũ xong rồi mới thay */
+                return new Promise(function (res) {
+                    setTimeout(function () {
+                        res(d);
+                    }, 220);
+                });
             })
             .then(function (d) {
-                if (!d.items || d.items.length < 3) {
-                    told = true;
-                    showNotice(
-                        "Tháng " + m + " hiện chưa có đủ điểm đến nổi bật.",
-                    );
-                    throw 0;
-                }
-                setTimeout(function () {
-                    var blank = world.querySelector(".hp-blank");
-                    world
-                        .querySelectorAll(".hp-card:not(.hp-blank)")
-                        .forEach(function (n) {
-                            n.remove();
-                        });
-                    d.items.forEach(function (it, i) {
-                        world.insertBefore(make(it, i, m), blank);
-                    });
-                    month = m;
-                    root.dataset.month = m;
-                    root.dataset.season = season(m);
-                    blank.href = plannerHref(m);
-                    blank.setAttribute(
-                        "aria-label",
-                        "Bưu ảnh trắng: " + plannerLabel().replace(" →", ""),
-                    );
-                    var go = blank.querySelector(".hp-go");
-                    if (go) go.textContent = plannerLabel();
-                    root.querySelectorAll(".hp-month").forEach(function (n) {
-                        n.textContent = m;
-                    });
-                    root.querySelectorAll(".hp-chip").forEach(function (c) {
-                        c.setAttribute("aria-pressed", +c.dataset.month === m);
-                    });
-                    centerActiveMonth();
-                    read();
-                    idx = -1;
-                    announcedIdx = -1;
-                    cur = tgt = 0;
-                    if (m3) scrollTo({ top: top0, behavior: "auto" });
-                    measure();
-                    render(0);
-                    update(0);
-                    announce();
-                    root.classList.remove("hp--wait");
-                    loading = false;
-                }, 300);
+                applyMonth(m, d);
+                finishMonth();
             })
-            .catch(function () {
-                if (!told)
-                    showNotice(
-                        "Không tải được dữ liệu tháng " +
-                            m +
-                            ", bạn thử lại sau nhé.",
-                    );
-                root.classList.remove("hp--wait");
-                loading = false;
+            .catch(function (e) {
+                showNotice(
+                    e && e.msg
+                        ? e.msg
+                        : "Không tải được dữ liệu tháng " + m + ", bạn thử lại sau nhé.",
+                );
+                target = month;
+                markPressed(month);
+                finishMonth();
             });
     }
 
@@ -433,6 +506,25 @@
         c.addEventListener("click", function () {
             setMonth(+c.dataset.month);
         });
+        /* Tải trước dữ liệu khi rê chuột/focus: lúc bấm thì đã có sẵn, đổi tháng gần như tức thì */
+        var warm = function () {
+            if (+c.dataset.month !== month)
+                fetchMonth(+c.dataset.month).catch(function () {});
+        };
+        c.addEventListener("pointerenter", warm);
+        c.addEventListener("focus", warm);
+    });
+    root.querySelectorAll(".hp-rail__nav").forEach(function (b) {
+        b.addEventListener("click", function () {
+            setMonth(target + +b.dataset.dir);
+        });
+    });
+    syncRail(true);
+    addEventListener("load", function () {
+        syncRail(true);
+    });
+    addEventListener("resize", function () {
+        syncRail(true);
     });
     q(".hp-p-add").addEventListener("click", function () {
         var it = items[idx];
@@ -483,6 +575,22 @@
     });
 
     addEventListener("keydown", function (e) {
+        /* Đang ở trong bộ chọn tháng: mũi tên di chuyển giữa các tháng, không lật bưu ảnh */
+        var chip = e.target && e.target.closest ? e.target.closest(".hp-chip") : null;
+        if (chip) {
+            var list = [].slice.call(root.querySelectorAll(".hp-chip")),
+                at = list.indexOf(chip),
+                to = -1;
+            if (e.key === "ArrowRight" || e.key === "ArrowDown") to = (at + 1) % list.length;
+            else if (e.key === "ArrowLeft" || e.key === "ArrowUp") to = (at - 1 + list.length) % list.length;
+            else if (e.key === "Home") to = 0;
+            else if (e.key === "End") to = list.length - 1;
+            if (to >= 0) {
+                e.preventDefault();
+                list[to].focus();
+            }
+            return;
+        }
         if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
         var t = e.target && e.target.tagName;
         if (t === "INPUT" || t === "SELECT" || t === "TEXTAREA") return;
@@ -517,8 +625,6 @@
 
     read();
     setMode();
-    centerActiveMonth();
-    addEventListener("load", centerActiveMonth);
     announcedIdx = idx;
     root.dataset.ready = "1";
 })();

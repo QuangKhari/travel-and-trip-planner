@@ -78,7 +78,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/hero-postcards.css') }}?v=2">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/hero-postcards.css') }}?v=3">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/explore-kit.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/home-strips.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/gx-discover.css') }}?v=1">
@@ -86,6 +86,8 @@
     <link rel="stylesheet" href="{{ asset('clients/assets/css/gx-pages.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/home-unify.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/mobile-nav.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/site-ux.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/home-ux.css') }}?v=2">
 </head>
 
 <body class="tv-home">

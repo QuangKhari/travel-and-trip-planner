@@ -14,9 +14,6 @@
             ->sortByDesc(fn($d) => $d['scores'][$slug])
             ->values();
     };
-
-    // Hàng "yêu thích": nhiều tour đang mở bán nhất, bằng nhau thì hợp nhiều cảm hứng nhất
-    $tvhFav = $tvhDest->sortByDesc(fn($d) => $d['tourCount'] * 100 + count($d['scores']))->take(4)->values();
 @endphp
 
 @if (count($tvhIns))
@@ -33,7 +30,9 @@
             {{-- Tiêu đề + tranh "Việt Nam đẹp lắm!" --}}
             <header class="tvh-head" id="tvhChon">
                 <div class="tvh-head__text" data-aos="fade-up" data-aos-duration="800">
-                    <p class="tvh-eyebrow"><i class="fas fa-water" aria-hidden="true"></i> Đi đâu? Khám phá theo cảm hứng</p>
+                    <p class="tvh-eyebrow">
+                        <<i class="fas fa-water" aria-hidden="true"></i> Khám phá theo cảm hứng
+                    </p>
                     <h2 id="tvhTitle">Bạn đang muốn một chuyến đi như thế nào?</h2>
                     <p class="tvh-lead">Mỗi người đều có một lý do để đi. Chọn cảm hứng của bạn, chúng tôi sẽ gợi ý
                         những
@@ -159,7 +158,7 @@
 
                     <div class="tvh-map__inner">
                         <div class="tvh-map__intro">
-                            <h3>Cảm hứng của bạn đang dẫn đi đâu?</h3>
+                            <h3>Những nơi hợp với cảm hứng này</h3>
                             <p>Dựa trên cảm hứng “<span id="tvhMapIns">{{ $tvhFirst['name'] }}</span>”, chúng tôi đã
                                 chọn ra
                                 những điểm đến hợp nhất cho bạn.</p>
@@ -193,7 +192,7 @@
                         </div>
 
                         <div class="tvh-map__side">
-                            <h3>Những nơi có thể bạn sẽ yêu thích</h3>
+                            <h3>Gợi ý cho bạn</h3>
                             <p class="tvh-sub" id="tvhBandSub"></p>
                             <div class="tvh-band" id="tvhBand"></div>
 
@@ -221,54 +220,6 @@
                     </div>
                 </div>
             </div>
-
-            {{-- Hàng điểm đến nhiều tour nhất --}}
-            @if ($tvhFav->count())
-                <div class="tvh-fav">
-                    <div class="tvh-fav__head">
-                        <div>
-                            <p class="tvh-eyebrow">Điểm đến được yêu thích</p>
-                            <h3>Hành trình được yêu thích nhất</h3>
-                            <p class="tvh-sub">Những điểm đến đang có nhiều tour mở bán nhất.</p>
-                        </div>
-                        <a class="tvh-outline" href="{{ route('tours') }}">Xem tất cả tour <i
-                                class="fas fa-arrow-right" aria-hidden="true"></i></a>
-                    </div>
-                    <div class="tvh-fav__grid">
-                        @foreach ($tvhFav as $d)
-                            @php($lead = collect($d['scores'])->sortDesc()->keys()->first())
-                            <article class="tvh-fcard{{ $d['image'] ? ' has-photo' : '' }}"
-                                data-ins="{{ $lead }}">
-                                @if ($d['image'])
-                                    <img src="{{ $d['image'] }}" alt="" loading="lazy" decoding="async">
-                                @else
-                                    <svg viewBox="0 0 300 280" preserveAspectRatio="xMidYMax slice"
-                                        aria-hidden="true" focusable="false">
-                                        <circle cx="230" cy="70" r="26" fill="#FBE7A8" />
-                                        <path class="tvh-fa" opacity="0.7"
-                                            d="M0 170 C60 120 130 130 190 160 S270 120 300 140 V280 H0Z" />
-                                        <path class="tvh-fb"
-                                            d="M0 212 C70 180 140 200 210 214 S270 190 300 204 V280 H0Z" />
-                                    </svg>
-                                @endif
-                                <span class="tvh-fcard__where"><i class="fas fa-map-marker-alt"
-                                        aria-hidden="true"></i>
-                                    <span><strong>{{ $d['name'] }}</strong>{{ $d['province'] }}</span></span>
-                                <span class="tvh-fcard__tags">
-                                    @if ($d['tourCount'] > 0)
-                                        {{ $d['tourCount'] }} tour đang mở bán
-                                    @else
-                                        Sắp có tour
-                                    @endif
-                                </span>
-                                <a class="tvh-fcard__go" href="{{ $d['url'] }}"
-                                    aria-label="Xem {{ $d['tourCount'] > 0 ? 'tour tại' : 'điểm đến' }} {{ $d['name'] }}"><i
-                                        class="fas fa-arrow-right" aria-hidden="true"></i></a>
-                            </article>
-                        @endforeach
-                    </div>
-                </div>
-            @endif
         </div>
 
         <script type="application/json" id="tvhData">@json($inspirationMap)</script>

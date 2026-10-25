@@ -49,4 +49,26 @@ final class PublishGate
 
         return $p;
     }
+
+    /**
+     * Điều kiện RIÊNG để một bản ghi đã published được Planner chọn (mục 0.1-K). Không chặn việc publish để hiển thị.
+     * Hiện chỉ áp dụng cho trải nghiệm: cần độ khó (để loại theo "không thích") và thời lượng số (để xếp quỹ thời gian).
+     *
+     * @return list<string>
+     */
+    public static function plannerProblems(string $kind, object $row): array
+    {
+        if ($kind !== 'experiences') {
+            return [];
+        }
+        $p = [];
+        if (empty($row->difficulty)) {
+            $p[] = 'Thiếu độ khó (difficulty)';
+        }
+        if (empty($row->durationMin)) {
+            $p[] = 'Thiếu thời lượng số (durationMin, phút)';
+        }
+
+        return $p;
+    }
 }

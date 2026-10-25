@@ -1,13 +1,7 @@
 @include('clients.blocks.header_home')
 {{--
-  Mạch trang chủ (mỗi phần trả lời một câu hỏi; giao diện thống nhất bởi home-unify.css):
-    Khi nào   : hero "Tháng N đang đẹp ở đâu?"
-    Bắt đầu   : MỘT thẻ .hq-card gồm Lên kế hoạch + Tìm tour theo ngày (bưu ảnh trắng của hero dẫn xuống #hpl)
-    Đi đâu    : Khám phá theo cảm hứng
-    Đang diễn ra: điểm đến + lễ hội trong tháng (bỏ điểm đã có trên hero)
-    Ăn gì / Làm gì: Món ngon nên thử, Trải nghiệm đáng thử
-    Đi thế nào: Lịch trình gợi ý -> Tour nổi bật
-    Chuẩn bị  : Cẩm nang
+  Mạch trang chủ: GỢI CẢM HỨNG TRƯỚC, bán tour sau.
+  Khối nào chưa có dữ liệu thì tự ẩn (xem home_rail.blade.php).
 --}}
 @if (count($postcards) >= 3)
     @include('clients.blocks.hero-postcards')
@@ -15,7 +9,16 @@
     @include('clients.blocks.banner_home')
 @endif
 
-<section class="hq" aria-label="Bắt đầu chuyến đi">
+@include('clients.blocks.home_strips', ['which' => 'season'])
+@include('clients.blocks.interest_section')
+@include('clients.blocks.home_strips', ['which' => 'foods'])
+@include('clients.blocks.home_strips', ['which' => 'experiences'])
+@include('clients.blocks.home_strips', ['which' => 'events'])
+@include('clients.blocks.home_strips', ['which' => 'itineraries'])
+@include('clients.blocks.home_strips', ['which' => 'guides'])
+
+{{-- Cuối trang: chuyển cảm hứng thành hành động. #hpl là đích của "bưu ảnh trắng" trong hero. --}}
+<section class="hq hq--end" aria-label="Bắt đầu chuyến đi">
     <div class="container">
         <div class="hq-card">
             @include('clients.blocks.home_planner')
@@ -25,13 +28,6 @@
         </div>
     </div>
 </section>
-
-@include('clients.blocks.interest_section')
-@include('clients.blocks.home_strips', ['which' => 'season'])
-@include('clients.blocks.home_strips', ['which' => 'foods'])
-@include('clients.blocks.home_strips', ['which' => 'experiences'])
-@include('clients.blocks.home_strips', ['which' => 'itineraries'])
 @include('clients.blocks.tour_featured')
-@include('clients.blocks.home_strips', ['which' => 'guides'])
 
 @include('clients.blocks.footer_home')
