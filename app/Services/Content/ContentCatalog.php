@@ -127,6 +127,7 @@ class ContentCatalog
             'image' => DiscoverImage::url($f->coverImage),
             'credit' => $f->imageCredit,
             'must' => (bool) ($f->isMustTry ?? false),
+            'featured' => (bool) ($f->isFeatured ?? false),
             'url' => route('foods.show', ['slug' => $f->slug]),
         ];
     }
@@ -444,7 +445,10 @@ class ContentCatalog
             ->filter()->map(fn($v) => (int) $v)->unique()->values()->all();
 
         return [
-            'itinerary' => $i, 'days' => $days, 'points' => $points, 'destIds' => $destIds,
+            'itinerary' => $i,
+            'days' => $days,
+            'points' => $points,
+            'destIds' => $destIds,
             'stats' => $this->itineraryStats($i, $items->count(), $destIds),
         ];
     }
@@ -582,8 +586,14 @@ class ContentCatalog
             for ($i = 1; $i <= 12; $i++) {
                 $months[$i] = $byMonth[$i] ?? 'unknown';
             }
-            $rows[] = ['slug' => $d->slug, 'name' => $d->name, 'province' => $d->province, 'domain' => $d->domain,
-                'url' => route('destination.show', ['slug' => $d->slug]), 'months' => $months];
+            $rows[] = [
+                'slug' => $d->slug,
+                'name' => $d->name,
+                'province' => $d->province,
+                'domain' => $d->domain,
+                'url' => route('destination.show', ['slug' => $d->slug]),
+                'months' => $months
+            ];
         }
 
         return $rows;

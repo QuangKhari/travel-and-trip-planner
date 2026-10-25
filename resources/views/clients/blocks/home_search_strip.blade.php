@@ -1,7 +1,7 @@
 {{-- Thanh tìm tour ngay dưới hero. Giữ nguyên id: search_form, destination, start_date, end_date (custom-js.js đang dùng). --}}
 <section class="hp-search" aria-label="Tìm tour">
     <div class="container">
-        <p class="hp-search__lead">Đã thích một lịch trình? Tìm tour có ngày khởi hành phù hợp.</p>
+        <p class="hp-search__lead">Đã chọn được nơi muốn đến? Tìm tour theo ngày đi.</p>
         <form action="{{ route('search') }}" method="GET" id="search_form">
             <div class="tv-search">
                 <div class="tv-field" style="flex:1.5">

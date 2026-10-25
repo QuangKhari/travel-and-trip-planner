@@ -40,6 +40,7 @@ class ExperienceCatalog
             'image' => DiscoverImage::url($e->coverImage),
             'credit' => $e->imageCredit,
             'must' => (bool) $e->isMustTry,
+            'featured' => (bool) ($e->isFeatured ?? false),
             'url' => route('experiences.show', ['slug' => $e->slug]),
         ];
     }

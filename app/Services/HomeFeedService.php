@@ -37,7 +37,7 @@ class HomeFeedService
         $allFoods = collect($this->catalog->foods([], 1, 60)['items']->items());
         $withImg = $allFoods->filter(fn($c) => !empty($c->image));
         $foods = ($withImg->count() >= 4 ? $withImg : $allFoods)
-            ->sortBy(fn($c) => crc32($c->slug . $day))
+            ->sortBy(fn($c) => [-(int) ($c->featured ?? 0), -(int) ($c->must ?? 0), crc32($c->slug . $day)])   // chọn tay trước, còn lại xoay theo ngày
             ->take(8)->values()->all();
 
         $seasonMix = $this->seasonMix($month, $season, $events);
@@ -46,7 +46,7 @@ class HomeFeedService
         $experiences = [];
         try {
             $experiences = collect(app(\App\Services\Content\ExperienceCatalog::class)->list([], 1, 40)['items']->items())
-                ->sortBy(fn($c) => [-(int) $c->must, crc32($c->slug . $day)])->take(8)->values()->all();
+                ->sortBy(fn($c) => [-(int) ($c->featured ?? 0), -(int) $c->must, crc32($c->slug . $day)])->take(8)->values()->all();
         } catch (\Throwable) {
         }
 
