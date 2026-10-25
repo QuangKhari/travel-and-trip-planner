@@ -14,7 +14,7 @@
  */
 return [
     'limit'       => 8,           // số bưu ảnh (không tính bưu ảnh trắng); tài liệu: 8 đến 10
-    'planner_url' => null,        // đặt '/len-ke-hoach' khi trang Planner có
+    'planner_url' => '/len-ke-hoach',   // trang Planner đã có
 
     'seasons' => [
         'ha-noi'        => ['m' => [9, 10, 11],          'w' => 'Thu Hà Nội, hoa sữa thơm'],

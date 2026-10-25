@@ -1,6 +1,6 @@
 {{-- Một component thẻ cho mọi loại nội dung. $c: kind, slug, title, badge, meta, text, image, credit, url. --}}
 @php
-    $tripTypes = ['destination', 'food', 'event'];
+    $tripTypes = ['destination', 'food', 'event', 'experience'];
     $loading = $loading ?? 'lazy';
 @endphp
 <article class="gx-card">

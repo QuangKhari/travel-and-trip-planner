@@ -29,6 +29,7 @@ use App\Http\Controllers\clients\SeoController;
 use App\Http\Controllers\clients\DataSourcesController;
 use App\Http\Controllers\clients\JournalController;
 use App\Http\Controllers\clients\AskPageController;
+use App\Http\Controllers\clients\PlannerController;
 
 
 use App\Http\Controllers\admin\LoginAdminController;
@@ -99,6 +100,9 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked', 'throttle:60,1,marks'
 Route::get('/hoi-dap', [AskPageController::class, 'index'])->middleware('throttle:60,1,ask-page')->name('ask.index');
 Route::post('/hoi-dap/hoi', [AskPageController::class, 'ask'])->middleware(['checkLoginClient', 'checkUserBlocked', 'throttle:10,1,ask-send'])->name('ask.send');
 
+// Bản chỉ đọc của chuyến đi được chia sẻ (công khai, không đưa vào chỉ mục)
+Route::get('/chuyen-di/{token}', [PlannerController::class, 'shared'])->where('token', '[A-Za-z0-9]{32}')->middleware('throttle:60,1,trip-share')->name('planner.shared');
+
 Route::get('/explore', [ExploreController::class, 'index'])->middleware('throttle:60,1,explore')->name('explore');
 Route::get('/travel-guides', [TravelGuidesController::class, 'index'])->name('team');
 Route::get('/tour-detail/{id}', [TourDetailController::class, 'index'])->whereNumber('id')->name('tour-detail');
@@ -168,6 +172,14 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::post('/reviews', [TourDetailController::class, 'reviews'])->middleware('throttle:10,1,reviews')->name('reviews');
     Route::get('/my-tours', [MyTourController::class, 'index'])->name('my-tours');
     Route::get('/so-tay-du-hanh', [JournalController::class, 'index'])->name('journal');
+
+    // Trip Planner (tuần 5-7)
+    Route::get('/len-ke-hoach', [PlannerController::class, 'index'])->name('planner');
+    Route::post('/len-ke-hoach', [PlannerController::class, 'store'])->middleware('throttle:20,1,planner-store')->name('planner.store');
+    Route::get('/len-ke-hoach/{id}', [PlannerController::class, 'edit'])->whereNumber('id')->name('planner.edit');
+    Route::post('/len-ke-hoach/{id}/luu', [PlannerController::class, 'save'])->whereNumber('id')->middleware('throttle:60,1,planner-save')->name('planner.save');
+    Route::post('/len-ke-hoach/{id}/chia-se', [PlannerController::class, 'share'])->whereNumber('id')->middleware('throttle:30,1,planner-share')->name('planner.share');
+    Route::post('/len-ke-hoach/{id}/xoa', [PlannerController::class, 'destroy'])->whereNumber('id')->middleware('throttle:20,1,planner-del')->name('planner.destroy');
 });
 
 //admin

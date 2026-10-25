@@ -10,7 +10,7 @@
     "use strict";
     var cfg = window.TRAVELA_TRIP || {};
     var KEY = "travela:trip-items";
-    var TYPES = { destination: "Điểm đến", food: "Món ăn", event: "Lễ hội" };
+    var TYPES = { destination: "Điểm đến", food: "Món ăn", event: "Lễ hội", experience: "Trải nghiệm" };
     var items = {}; /* "type:slug" -> {type, slug, name, url} */
     var removed = {}; /* đã bỏ khi chưa kịp đồng bộ */
     var memoryOnly = false;

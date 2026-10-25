@@ -18,7 +18,7 @@ class UserMarks
         'attended' => ['event'],
     ];
 
-    private const TABLE = ['destination' => ['tbl_destinations', 'destinationId'], 'food' => ['tbl_foods', 'foodId'], 'event' => ['tbl_events', 'eventId']];
+    private const TABLE = ['destination' => ['tbl_destinations', 'destinationId'], 'food' => ['tbl_foods', 'foodId'], 'event' => ['tbl_events', 'eventId'], 'experience' => ['tbl_experiences', 'experienceId']];
 
     public static function allowed(string $type, string $refType): bool
     {

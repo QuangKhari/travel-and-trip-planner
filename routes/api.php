@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\V1\ContentController;
 use App\Http\Controllers\Api\V1\SearchController as ApiSearchController;
 use App\Http\Controllers\Api\V1\PlannerPreviewController;
 use App\Http\Controllers\Api\V1\AskController;
+use App\Http\Controllers\Api\V1\TripController;
+use App\Http\Controllers\Api\V1\AdviceController;
 
 
 Route::prefix('v1')->group(function () {
@@ -43,6 +45,7 @@ Route::prefix('v1')->group(function () {
 
         // A10: nội dung lớp Khám phá (chỉ published)
         Route::get('destinations/{slug}/months', [ContentController::class, 'months'])->where('slug', '[a-z0-9-]+');
+        Route::get('destinations/{slug}/advice', [AdviceController::class, 'show'])->where('slug', '[a-z0-9-]+');   // Thời điểm đi
         Route::get('destinations/{slug}/foods', [ContentController::class, 'destinationFoods'])->where('slug', '[a-z0-9-]+');
         Route::get('destinations/{slug}/events', [ContentController::class, 'destinationEvents'])->where('slug', '[a-z0-9-]+');
         Route::get('foods', [ContentController::class, 'foods']);
@@ -61,6 +64,12 @@ Route::prefix('v1')->group(function () {
 
     Route::post('ask', [AskController::class, 'ask'])->middleware(['auth:api', 'api.active', 'throttle:10,1,api-ask']);
 
-    // Các endpoint Trip Planner / AI sau này đặt trong nhóm này để dùng chung xác thực:
-    // Route::middleware(['auth:api', 'api.active'])->group(function () { ... });
+    // Trip Planner (tuần 5-7): chỉ chủ chuyến mới đọc/sửa/xóa được
+    Route::middleware(['auth:api', 'api.active', 'throttle:60,1,api-trips'])->group(function () {
+        Route::get('trips', [TripController::class, 'index']);
+        Route::post('trips', [TripController::class, 'store']);
+        Route::get('trips/{id}', [TripController::class, 'show'])->whereNumber('id');
+        Route::put('trips/{id}', [TripController::class, 'update'])->whereNumber('id');
+        Route::delete('trips/{id}', [TripController::class, 'destroy'])->whereNumber('id');
+    });
 });

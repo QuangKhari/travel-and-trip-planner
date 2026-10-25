@@ -37,6 +37,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/destination-detail.css') }}?v=1">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-weather.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=1">
 
 {{-- /destination/{slug} — biến: $destination, $data (DestinationService::payload), $tours --}}
 @php
@@ -157,6 +158,8 @@
                     tay.</span>
             </p>
         </article>
+
+        @include('clients.partials.gx.travel-advice', ['advice' => $advice, 'adviceBest' => $adviceBest, 'destination' => $destination])
 
         <div class="dd-grid">
             <div class="dd-col">
@@ -404,6 +407,7 @@
 <script type="application/json" id="ddData">@json($ddJson)</script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="{{ asset('clients/assets/js/destination-detail.js') }}?v=1" defer></script>
+<script src="{{ asset('clients/assets/js/travel-advice.js') }}?v=1" defer></script>
 
 @include('clients.blocks.new_letter')
 @include('clients.blocks.footer')
