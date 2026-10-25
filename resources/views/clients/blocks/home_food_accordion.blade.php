@@ -8,7 +8,7 @@
         <div class="container">
             <header class="hs-head">
                 <div>
-                    <p class="hs-eyebrow">Ẩm thực</p>
+                    <p class="hs-eyebrow">Ăn gì</p>
                     <h2 id="am-thuc-nen-thu-h">Món ngon nên thử</h2>
                 </div>
                 @isset($moreUrl)

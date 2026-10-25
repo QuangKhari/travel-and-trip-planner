@@ -6,12 +6,19 @@
 @endphp
 
 @if ($which === 'season')
+    @php
+        // Hero đã khoe các điểm đến đẹp trong tháng; dải này bổ sung lễ hội và điểm khác, không lặp lại. Còn quá ít thì giữ nguyên danh sách.
+        $heroSlugs = collect($postcards ?? [])->pluck('slug')->filter()->all();
+        $mixAll = collect(!empty($feed['seasonMix']) ? $feed['seasonMix'] : $feed['season']);
+        $mixDedup = $mixAll->reject(fn($c) => ($c->kind ?? '') === 'destination' && in_array($c->slug, $heroSlugs, true))->values();
+        $seasonItems = $mixDedup->count() >= 3 ? $mixDedup->all() : $mixAll->all();
+    @endphp
     @include('clients.blocks.home_rail', [
         'id' => 'dang-vao-mua',
         'eyebrow' => 'Đang diễn ra',
         'title' => 'Đang vào mùa',
         'lead' => 'Điểm đến đẹp nhất và lễ hội sắp tới trong tháng ' . $month . '. Ngày lễ hội đã quy đổi từ lịch âm, kiểm tra lại nguồn chính thức trước khi đi.',
-        'items' => !empty($feed['seasonMix']) ? $feed['seasonMix'] : $feed['season'],
+        'items' => $seasonItems,
         'cta' => ['url' => $monthHref, 'label' => $plannerBase ? 'Lên kế hoạch cho tháng này' : 'Xem tất cả tháng ' . $month],
         'moreUrl' => route('seasons.matrix'),
         'moreLabel' => 'Bảng "Nên đi tháng nào" cả năm',
@@ -32,10 +39,20 @@
         'moreUrl' => route('foods.index'),
         'moreLabel' => 'Tất cả món ăn',
     ])
+@elseif ($which === 'experiences')
+    @include('clients.blocks.home_rail', [
+        'id' => 'lam-gi',
+        'eyebrow' => 'Làm gì',
+        'title' => 'Trải nghiệm đáng thử',
+        'lead' => 'Những việc đáng làm khi đến từng nơi: đi thuyền, học nấu ăn, xem biểu diễn, ngắm cảnh.',
+        'items' => $feed['experiences'] ?? [],
+        'moreUrl' => \Illuminate\Support\Facades\Route::has('experiences.index') ? route('experiences.index') : null,
+        'moreLabel' => 'Tất cả trải nghiệm',
+    ])
 @elseif ($which === 'itineraries')
     @include('clients.blocks.home_rail', [
         'id' => 'lich-trinh-goi-y',
-        'eyebrow' => 'Lịch trình gợi ý',
+        'eyebrow' => 'Đi thế nào',
         'title' => 'Đi mấy ngày, đi những đâu?',
         'lead' => 'Lịch trình mẫu theo ngày, dùng làm điểm xuất phát để chỉnh lại theo ý bạn.',
         'items' => $feed['itins'],
@@ -47,7 +64,7 @@
 @elseif ($which === 'guides')
     @include('clients.blocks.home_rail', [
         'id' => 'cam-nang-moi',
-        'eyebrow' => 'Cẩm nang',
+        'eyebrow' => 'Chuẩn bị',
         'title' => 'Cẩm nang và tin mới',
         'items' => $feed['guides'],
         'moreUrl' => route('guides.index'),

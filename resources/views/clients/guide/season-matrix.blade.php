@@ -30,6 +30,9 @@
             </div>
         </nav>
 
+        @include('clients.partials.gx.season-heatmap', ['summary' => $summary, 'month' => $month, 'region' => $region])
+
+        <h2 class="hm-sub">Chi tiết từng điểm đến</h2>
         <ul class="gx-legend" aria-label="Chú giải">
             @foreach ($lbl as $k => $t)
                 <li><span class="gx-sm gx-sm--{{ $k }}" aria-hidden="true">{{ $sym[$k] }}</span> {{ ucfirst($t) }}</li>

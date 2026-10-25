@@ -4,7 +4,7 @@
 @endphp
 @include('clients.blocks.header')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-{{-- /lich-trinh/{slug} — biến: $it, $days, $points, $cover, $plannerUrl --}}
+{{-- /lich-trinh/{slug} — biến: $it, $days, $points, $cover, $plannerUrl, $stats, $tours --}}
 <main class="gx-page" id="main">
     <div class="gx-wrap">
         @include('clients.partials.gx.crumb', ['crumbs' => [['Trang chủ', route('home')], ['Lịch trình', route('itineraries.index')], [$it->title, null]]])
@@ -16,6 +16,21 @@
         @if ($cover)
             <figure class="gx-cover"><img src="{{ $cover }}" alt="{{ $it->title }}" fetchpriority="high"></figure>
             @include('clients.partials.gx.attribution', ['row' => $it])
+        @endif
+        @php
+            $facts = array_filter([
+                'Thời gian' => !empty($stats['days']) ? $stats['days'] . ' ngày' : null,
+                'Điểm dừng' => $stats['stops'] ?? null,
+                'Tỉnh thành' => $stats['provinces'] ?? null,
+                'Thời điểm đẹp' => $stats['best'] ?? null,
+            ]);
+        @endphp
+        @if ($facts)
+            <dl class="ex-facts">
+                @foreach ($facts as $k => $v)
+                    <div><dt>{{ $k }}</dt><dd>{{ $v }}</dd></div>
+                @endforeach
+            </dl>
         @endif
         <div class="gx-actions">
             @if ($plannerUrl)
@@ -44,6 +59,21 @@
             @empty
                 <p>Lịch trình này chưa có điểm dừng.</p>
             @endforelse
+        </section>
+
+        {{-- Nối sang đặt tour: tour còn chỗ, sắp khởi hành tại các điểm đến của lịch trình --}}
+        <section class="gx-box ex-tours" id="tour-khop">
+            <h2>Tour khớp với lịch trình này</h2>
+            @if ($tours)
+                <ul class="ex-tour-list">
+                    @foreach ($tours as $t)
+                        <li><a href="{{ $t['url'] }}"><b>{{ $t['title'] }}</b><span>Khởi hành {{ $t['start'] }} · từ {{ $t['price'] }}</span></a></li>
+                    @endforeach
+                </ul>
+                <p class="gx-more"><a href="{{ route('tours') }}">Xem tất cả tour →</a></p>
+            @else
+                <p>Hiện chưa có tour sắp khởi hành tại các điểm đến này. <a href="{{ route('tours') }}">Xem tất cả tour</a>.</p>
+            @endif
         </section>
     </div>
 </main>

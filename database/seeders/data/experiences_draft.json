@@ -1,0 +1,53 @@
+{
+  "_ghi_chu": "Ý TƯỞNG trải nghiệm ở trạng thái draft: chỉ có tên, loại, điểm đến. Mô tả, thời lượng, ảnh, nguồn, giấy phép do người biên tập bổ sung tại /admin/content/experiences rồi mới xuất bản. Không ghi giá hay giờ giấc khi chưa kiểm chứng.",
+  "experiences": [
+    {
+      "slug": "di-thuyen-thung-rung-dua-bay-mau",
+      "name": "Đi thuyền thúng ở rừng dừa Bảy Mẫu",
+      "destination": "hoi-an",
+      "category": "Thiên nhiên & thuyền"
+    },
+    {
+      "slug": "lop-hoc-nau-an-hoi-an",
+      "name": "Lớp học nấu ăn ở Hội An",
+      "destination": "hoi-an",
+      "category": "Lớp học & làng nghề"
+    },
+    {
+      "slug": "tha-den-hoa-dang-song-hoai",
+      "name": "Thả đèn hoa đăng trên sông Hoài",
+      "destination": "hoi-an",
+      "category": "Văn hóa & biểu diễn"
+    },
+    {
+      "slug": "cho-noi-cai-rang-buoi-sang",
+      "name": "Đi chợ nổi Cái Răng buổi sáng",
+      "destination": "can-tho",
+      "category": "Thiên nhiên & thuyền"
+    },
+    {
+      "slug": "xem-mua-roi-nuoc-ha-noi",
+      "name": "Xem múa rối nước ở Hà Nội",
+      "destination": "ha-noi",
+      "category": "Văn hóa & biểu diễn"
+    },
+    {
+      "slug": "dao-pho-co-ha-noi",
+      "name": "Dạo bộ khu phố cổ Hà Nội",
+      "destination": "ha-noi",
+      "category": "Ngắm cảnh & dạo bộ"
+    },
+    {
+      "slug": "dap-xe-quanh-ho-xuan-huong",
+      "name": "Đạp xe quanh hồ Xuân Hương",
+      "destination": "da-lat",
+      "category": "Ngắm cảnh & dạo bộ"
+    },
+    {
+      "slug": "san-may-ngam-binh-minh-da-lat",
+      "name": "Săn mây và ngắm bình minh ở Đà Lạt",
+      "destination": "da-lat",
+      "category": "Ngắm cảnh & dạo bộ"
+    }
+  ]
+}

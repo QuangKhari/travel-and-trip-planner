@@ -1,0 +1,150 @@
+/* ==========================================================================
+   Trang chủ: đồng bộ từ hero tới mục "Cảm hứng của bạn đang dẫn đi đâu?"
+   Nạp SAU cùng (header_home.blade.php). Chỉ ghi đè, không sửa file CSS cũ.
+   Một bộ biến, một kiểu tiêu đề, một nền kem liên tục, một nhịp khoảng cách.
+   ========================================================================== */
+body.tv-home {
+    --h-navy: #0f172a;
+    --h-teal: #087f7b;
+    --h-cream: #f8f6f0;
+    --h-sand: #e9c46a;
+    --h-line: #e2e8f0;
+    --h-serif: "Fraunces", Georgia, serif;
+    --h-sans: "Be Vietnam Pro", system-ui, sans-serif;
+    --h-sec: clamp(48px, 6vw, 80px); /* nhịp dọc giữa các khối */
+    --h-r: 24px; /* bo góc khối lớn */
+}
+
+/* 1. Một nền kem + một phông chữ cho mọi khối dưới hero */
+body.tv-home .hq,
+body.tv-home .hs,
+body.tv-home .tvh {
+    background: var(--h-cream);
+    font-family: var(--h-sans);
+}
+body.tv-home .tvh {
+    --tvh-ink: var(--h-navy);
+    --tvh-teal: var(--h-teal);
+    padding: var(--h-sec) 0;
+}
+body.tv-home .hs {
+    padding: var(--h-sec) 0 8px;
+}
+
+/* 2. Tiêu đề: cùng phông serif với hero, cùng cỡ, cùng độ đậm */
+body.tv-home .hq-title,
+body.tv-home .hs-head h2,
+body.tv-home .tvh-head h2,
+body.tv-home .tvh-fav h3 {
+    margin: 4px 0 8px;
+    font: 600 clamp(26px, 3.2vw, 38px) / 1.15 var(--h-serif);
+    letter-spacing: -0.01em;
+    color: var(--h-navy);
+}
+/* tiêu đề cấp dưới (khối bản đồ) nhỏ hơn một bậc nhưng cùng phông */
+body.tv-home .tvh-map__intro h3 {
+    font: 600 clamp(22px, 2.4vw, 28px) / 1.2 var(--h-serif);
+    letter-spacing: -0.01em;
+}
+
+/* 3. Eyebrow: một kiểu duy nhất */
+body.tv-home .hq-eyebrow,
+body.tv-home .hs-eyebrow,
+body.tv-home .tvh-eyebrow {
+    margin: 0;
+    font: 700 12px / 1.4 var(--h-sans);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--h-teal);
+}
+
+/* 4. Khối "Lên kế hoạch": planner + tìm tour gộp thành MỘT thẻ, nối hero với phần kem */
+.hq {
+    position: relative;
+    padding: 0 0 8px;
+}
+.hq::before {
+    /* dải navy kéo dài từ hero, cạnh dưới bo cong để chuyển sang nền kem */
+    content: "";
+    display: block;
+    height: 64px;
+    background: var(--h-navy);
+    border-radius: 0 0 50% 50% / 0 0 100% 100%;
+}
+.hq-card {
+    position: relative;
+    margin-top: -36px;
+    padding: clamp(20px, 3vw, 32px);
+    background: #fff;
+    border: 1px solid var(--h-line);
+    border-radius: var(--h-r);
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.1);
+}
+.hq-card .container {
+    padding: 0;
+    max-width: none;
+}
+.hq-card .hpl,
+.hq-card .hp-search {
+    padding: 0;
+    background: transparent;
+}
+.hq-card .hpl-title {
+    margin: 4px 0 14px;
+    font: 600 clamp(22px, 2.6vw, 30px) / 1.2 var(--h-serif);
+    color: var(--h-navy);
+}
+.hq-card .hpl-form {
+    padding: 14px 16px;
+    border: 0;
+    border-radius: 16px;
+    background: var(--h-cream);
+}
+.hq-card .hpl-go,
+.hq-card .tv-search .theme-btn {
+    background: var(--h-teal);
+}
+.hq-card .hp-search {
+    margin-top: 24px;
+    padding-top: 22px;
+    border-top: 1px dashed var(--h-line);
+}
+.hq-card .hp-search__lead {
+    margin: 0 0 12px;
+    font-size: 15px;
+    color: #475569;
+}
+.hq-card .tv-search {
+    max-width: none;
+    box-shadow: none;
+    border: 1px solid var(--h-line);
+}
+
+/* 5. Thẻ và khối lớn dùng chung độ bo góc */
+body.tv-home .hs .gx-card,
+body.tv-home .hs-ai {
+    border-radius: 20px;
+}
+body.tv-home .tvh-map {
+    border-radius: 28px;
+}
+body.tv-home .tvh-fav {
+    margin-top: var(--h-sec);
+}
+
+@media (max-width: 767px) {
+    .hq::before {
+        height: 44px;
+    }
+    .hq-card {
+        margin-top: -24px;
+    }
+    .hq-card .tv-search {
+        border-radius: 24px;
+    }
+}
+
+/* 6. "Đang vào mùa" nằm ngay sau mục cảm hứng: bỏ padding đôi giữa hai khối */
+body.tv-home .tvh + .hs {
+    padding-top: 0;
+}

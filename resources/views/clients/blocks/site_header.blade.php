@@ -46,6 +46,7 @@
                 <div class="tv-dd__menu">
                     <a href="{{ route('destination') }}">Điểm đến</a>
                     <a href="{{ route('foods.index') }}">Ẩm thực</a>
+                    <a href="{{ route('experiences.index') }}">Trải nghiệm</a>
                     <a href="{{ route('events.index') }}">Lễ hội</a>
                     <a href="{{ route('itineraries.index') }}">Lịch trình</a>
                     <a href="{{ route('seasons.now') }}">Đang vào mùa</a>

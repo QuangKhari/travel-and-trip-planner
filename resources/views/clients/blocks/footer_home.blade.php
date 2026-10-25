@@ -115,6 +115,7 @@
                     </div>
                 </div>
             </div>
+            <div class="container">@include('clients.partials.site-stats')</div>
             <div class="footer-bottom pt-20 pb-5">
                 <div class="container">
                     <div class="row">

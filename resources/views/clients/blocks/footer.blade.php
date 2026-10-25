@@ -75,6 +75,7 @@
             </div>
         </div>
 
+        @include('clients.partials.site-stats')
         <div class="tv-footer__bottom">
             <span>&copy; {{ date('Y') }} {{ config('site.name') }}. Mọi quyền được bảo lưu.</span>
         </div>

@@ -192,6 +192,8 @@ class ExploreContentController extends Controller
             'days' => $data['days'],
             'points' => $data['points'],
             'cover' => \App\Support\DiscoverImage::url($data['itinerary']->coverImage),
+            'stats' => $data['stats'],
+            'tours' => app(\App\Services\Content\TourMatcher::class)->forDestinations($data['destIds'], 3),
             'plannerUrl' => config('postcards.planner_url') ? url(config('postcards.planner_url')) : null,
         ]);
     }

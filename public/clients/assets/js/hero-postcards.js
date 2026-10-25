@@ -52,16 +52,16 @@
             ? "✓ Đã thêm (" + trip.count() + ")"
             : "+ Thêm vào chuyến đi";
     }
-    /* Bưu ảnh trắng: có Planner thì dẫn vào /len-ke-hoach?thang=N, chưa có thì xuống phần chọn cảm hứng ngay trên trang */
+    /* Bưu ảnh trắng: có Planner thì dẫn vào /len-ke-hoach?thang=N, chưa có thì xuống khối lên kế hoạch ngay dưới hero */
     function plannerHref(m) {
         return planner
             ? planner + (planner.indexOf("?") < 0 ? "?" : "&") + "thang=" + m
-            : "#kham-pha";
+            : "#hpl";
     }
     function plannerLabel() {
         return planner
             ? "Lên kế hoạch cho tháng " + month + " →"
-            : "Khám phá theo cảm hứng →";
+            : "Lên kế hoạch ngay bên dưới →";
     }
     function measure() {
         W = innerWidth;

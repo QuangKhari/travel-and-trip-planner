@@ -33,7 +33,7 @@
             {{-- Tiêu đề + tranh "Việt Nam đẹp lắm!" --}}
             <header class="tvh-head" id="tvhChon">
                 <div class="tvh-head__text" data-aos="fade-up" data-aos-duration="800">
-                    <p class="tvh-eyebrow"><i class="fas fa-water" aria-hidden="true"></i> Khám phá theo cảm hứng</p>
+                    <p class="tvh-eyebrow"><i class="fas fa-water" aria-hidden="true"></i> Đi đâu? Khám phá theo cảm hứng</p>
                     <h2 id="tvhTitle">Bạn đang muốn một chuyến đi như thế nào?</h2>
                     <p class="tvh-lead">Mỗi người đều có một lý do để đi. Chọn cảm hứng của bạn, chúng tôi sẽ gợi ý
                         những

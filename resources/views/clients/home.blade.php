@@ -1,22 +1,31 @@
 @include('clients.blocks.header_home')
+{{--
+  Mạch trang chủ (một câu chuyện, không phải nhiều cửa vào song song):
+    Khi nào  : hero "Tháng N đang đẹp ở đâu?"
+    Bắt đầu  : khối lên kế hoạch ngay dưới hero (bưu ảnh trắng cũng dẫn xuống đây)
+    Có gì    : Đang vào mùa (điểm đến + lễ hội, bỏ điểm đã có trên hero)
+    Đi đâu   : Khám phá theo cảm hứng
+    Ăn gì    : Món ngon nên thử
+    Làm gì   : Trải nghiệm đáng thử
+    Đi thế nào: Lịch trình gợi ý -> tìm tour theo ngày -> tour nổi bật
+    Chuẩn bị : Cẩm nang
+--}}
 @if (count($postcards) >= 3)
     @include('clients.blocks.hero-postcards')
-    @include('clients.blocks.home_planner')
-    @include('clients.blocks.home_search_strip')
 @else
     @include('clients.blocks.banner_home')
-    {{-- Chưa đủ ảnh cho hero: khối Planner vẫn hiện (D4 không phụ thuộc hero) --}}
-    @include('clients.blocks.home_planner')
 @endif
+@include('clients.blocks.home_planner')
 
-{{-- Thứ tự dải theo tài liệu mục 4.1: mùa, lễ hội, cảm hứng, ẩm thực, tour, lịch trình, cẩm nang --}}
 @include('clients.blocks.home_strips', ['which' => 'season'])
-{{-- Lễ hội đã gộp vào dải "Đang vào mùa" (seasonMix). Muốn tách lại: bỏ comment dòng dưới. --}}
-{{-- @include('clients.blocks.home_strips', ['which' => 'events']) --}}
 @include('clients.blocks.interest_section')
 @include('clients.blocks.home_strips', ['which' => 'foods'])
-@include('clients.blocks.tour_featured')
+@include('clients.blocks.home_strips', ['which' => 'experiences'])
 @include('clients.blocks.home_strips', ['which' => 'itineraries'])
+@if (count($postcards) >= 3)
+    @include('clients.blocks.home_search_strip')
+@endif
+@include('clients.blocks.tour_featured')
 @include('clients.blocks.home_strips', ['which' => 'guides'])
 
 @include('clients.blocks.footer_home')

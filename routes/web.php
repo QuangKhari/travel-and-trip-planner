@@ -67,6 +67,8 @@ Route::get('/destination/{slug}', fn(string $slug) => redirect()->route('destina
 Route::middleware('throttle:60,1,guide-pages')->group(function () {
     Route::get('/am-thuc', [ExploreContentController::class, 'foods'])->name('foods.index');
     Route::get('/am-thuc/{slug}', [ExploreContentController::class, 'food'])->where('slug', '[a-z0-9-]+')->name('foods.show');
+    Route::get('/trai-nghiem', [\App\Http\Controllers\clients\ExperienceController::class, 'index'])->name('experiences.index');
+    Route::get('/trai-nghiem/{slug}', [\App\Http\Controllers\clients\ExperienceController::class, 'show'])->where('slug', '[a-z0-9-]+')->name('experiences.show');
     Route::get('/le-hoi', [ExploreContentController::class, 'events'])->name('events.index');
     Route::get('/le-hoi/lich', [ExploreContentController::class, 'eventCalendar'])->name('events.calendar');
     Route::get('/le-hoi/{slug}', [ExploreContentController::class, 'event'])->where('slug', '[a-z0-9-]+')->name('events.show');

@@ -19,7 +19,7 @@ class HomeFeedService
     {
         $month = max(1, min(12, $month));
 
-        return Cache::remember('homefeed.v2.m' . $month . '.' . date('Ymd'), 600, fn() => $this->build($month));
+        return Cache::remember('homefeed.v3.m' . $month . '.' . date('Ymd'), 600, fn() => $this->build($month));
     }
 
     private function build(int $month): array
@@ -37,10 +37,18 @@ class HomeFeedService
         $allFoods = collect($this->catalog->foods([], 1, 60)['items']->items());
         $withImg = $allFoods->filter(fn($c) => !empty($c->image));
         $foods = ($withImg->count() >= 4 ? $withImg : $allFoods)
-            ->sortBy(fn($c) => [-(int) ($c->featured ?? 0), crc32($c->slug . $day)])
+            ->sortBy(fn($c) => crc32($c->slug . $day))
             ->take(8)->values()->all();
 
         $seasonMix = $this->seasonMix($month, $season, $events);
+
+        // Trải nghiệm: bảng chỉ có sau khi migrate, lỗi thì bỏ qua dải này chứ không làm sập trang chủ
+        $experiences = [];
+        try {
+            $experiences = collect(app(\App\Services\Content\ExperienceCatalog::class)->list([], 1, 40)['items']->items())
+                ->sortBy(fn($c) => [-(int) $c->must, crc32($c->slug . $day)])->take(8)->values()->all();
+        } catch (\Throwable) {
+        }
 
         $itins = collect($this->catalog->itineraries([], 1, 8)['items']->items())->take(6)->values()->all();
 
@@ -51,7 +59,7 @@ class HomeFeedService
             ->get(['g.*', 'c.slug as catSlug', 'c.name as catName'])
             ->map(fn($g) => $this->guides->card($g))->values()->all();
 
-        return compact('season', 'events', 'seasonMix', 'foods', 'itins', 'guides');
+        return compact('season', 'events', 'seasonMix', 'experiences', 'foods', 'itins', 'guides');
     }
 
     /**

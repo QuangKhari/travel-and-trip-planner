@@ -40,6 +40,9 @@ final class PublishGate
         if ($kind === 'foods' && empty($row->destinationId)) {
             $p[] = 'Món ăn phải gắn với một điểm đến';
         }
+        if ($kind === 'experiences' && empty($row->destinationId)) {
+            $p[] = 'Trải nghiệm phải gắn với một điểm đến';
+        }
         if ($kind === 'events' && !(new EventDateService())->upcoming($row, new \DateTimeImmutable('today'), 1)) {
             $p[] = 'Quy tắc ngày không tính ra được ngày nào (kiểm tra tháng/ngày âm hoặc dương)';
         }

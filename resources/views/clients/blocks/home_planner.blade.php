@@ -6,6 +6,7 @@
 <section class="hpl" id="hpl" aria-labelledby="hpl-h" data-api="{{ url('/api/v1/planner-preview') }}"
     data-has-planner="{{ $plannerBase ? 1 : 0 }}">
     <div class="container">
+        <p class="hs-eyebrow">Bắt đầu</p>
         <h2 id="hpl-h" class="hpl-title">Điền một câu, xem chuyến đi của bạn</h2>
         <form class="hpl-form" method="GET" action="{{ $action }}">
             <label for="hpl-dest">Tôi muốn đi</label>

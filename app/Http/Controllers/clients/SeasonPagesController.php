@@ -32,6 +32,73 @@ class SeasonPagesController extends Controller
         ]);
     }
 
+    /**
+     * Gộp mức đẹp của từng điểm đến thành 1 hàng cho cả miền (heatmap 3 màu): điểm best = 2, ok = 1, avoid = 0, bỏ qua
+     * "chưa có dữ liệu". Một tháng chỉ được xếp loại khi có dữ liệu của ít nhất nửa số điểm đến trong miền.
+     * best nếu trung bình >= 1,4; ok nếu >= 0,8; còn lại avoid.
+     *
+     * @param \Illuminate\Support\Collection $groups domain => các dòng ['months' => [1..12 => level]]
+     */
+    private function summarize($groups): array
+    {
+        $out = [];
+        foreach (ContentCatalog::REGIONS as $key => $label) {
+            $rows = $groups->get($key);
+            if (!$rows || $rows->isEmpty()) {
+                continue;
+            }
+            $need = max(1, (int) ceil($rows->count() / 2));
+            $levels = [];
+            for ($m = 1; $m <= 12; $m++) {
+                $b = $o = $a = 0;
+                foreach ($rows as $r) {
+                    match ($r['months'][$m] ?? 'unknown') {
+                        'best' => $b++,
+                        'ok' => $o++,
+                        'avoid' => $a++,
+                        default => null,
+                    };
+                }
+                $known = $b + $o + $a;
+                if ($known < $need) {
+                    $levels[$m] = 'unknown';
+                    continue;
+                }
+                $avg = (2 * $b + $o) / $known;
+                $levels[$m] = $avg >= 1.4 ? 'best' : ($avg >= 0.8 ? 'ok' : 'avoid');
+            }
+            $out[$key] = [
+                'label' => $label,
+                'n' => $rows->count(),
+                'levels' => $levels,
+                'best' => self::runs($levels, 'best'),
+                'avoid' => self::runs($levels, 'avoid'),
+            ];
+        }
+
+        return $out;
+    }
+
+    /** [9 best, 10 best, 11 best, 3 best, 4 best] -> "3–4, 9–11". */
+    private static function runs(array $levels, string $lv): string
+    {
+        $runs = [];
+        $start = null;
+        for ($m = 1; $m <= 13; $m++) {
+            $on = $m <= 12 && ($levels[$m] ?? '') === $lv;
+            if ($on && $start === null) {
+                $start = $m;
+            }
+            if (!$on && $start !== null) {
+                $end = $m - 1;
+                $runs[] = $start === $end ? (string) $start : $start . '–' . $end;
+                $start = null;
+            }
+        }
+
+        return implode(', ', $runs);
+    }
+
     // GET /nen-di-thang-nao  và  /nen-di-thang-nao/{thang}
     public function matrix(Request $r, ?int $thang = null)
     {
@@ -43,6 +110,7 @@ class SeasonPagesController extends Controller
         return view('clients.guide.season-matrix', [
             'title' => $thang ? 'Nên đi tháng ' . $thang . ' ở đâu' : 'Nên đi tháng nào',
             'groups' => $rows,
+            'summary' => $this->summarize($rows),
             'regions' => ContentCatalog::REGIONS,
             'region' => $region,
             'month' => $thang,

@@ -87,6 +87,7 @@
     <link rel="stylesheet" href="{{ asset('clients/assets/css/explore-c.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/gx-discover.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/gx-guide.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/gx-pages.css') }}?v=1">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
 

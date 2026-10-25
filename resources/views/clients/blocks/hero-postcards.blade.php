@@ -10,12 +10,12 @@
         in_array($month, [8, 9, 10], true) => 'autumn',
         default => 'winter',
     };
-    // Chưa có Planner (planner_url = null): bưu ảnh trắng dẫn xuống phần chọn cảm hứng ngay trên trang chủ.
+    // Chưa có Planner (planner_url = null): bưu ảnh trắng dẫn xuống khối lên kế hoạch ngay dưới hero (#hpl).
     // Có Planner: dẫn tới {planner_url}?thang=N.
     $plannerBase = config('postcards.planner_url');
     $plannerUrl = $plannerBase ? url($plannerBase) : '';
-    $blankUrl = $plannerBase ? $plannerUrl . '?thang=' . $month : '#kham-pha';
-    $blankLabel = $plannerBase ? 'Lên kế hoạch cho tháng ' . $month : 'Khám phá theo cảm hứng';
+    $blankUrl = $plannerBase ? $plannerUrl . '?thang=' . $month : '#hpl';
+    $blankLabel = $plannerBase ? 'Lên kế hoạch cho tháng ' . $month : 'Lên kế hoạch ngay bên dưới';
     $count = count($postcards) + 1; // + bưu ảnh trắng
 @endphp
 <section class="hp" id="hero" style="--n: {{ $count }}" data-month="{{ $month }}"

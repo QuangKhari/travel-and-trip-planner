@@ -1,0 +1,74 @@
+/* Heatmap "Nên đi tháng nào" theo miền (hm-) và trang Trải nghiệm (ex-). Màu có giá trị dự phòng. */
+
+/* ---------- heatmap 3 màu ---------- */
+.hm { margin: 18px 0 8px; }
+.hm-title, .hm-sub { margin: 26px 0 12px; font-size: clamp(20px, 2.4vw, 26px); color: var(--gx-navy, #0f172a); }
+.hm-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 14px; }
+.hm-scroll:focus-visible { outline: 3px solid var(--gx-tqd, #087f7b); outline-offset: 2px; }
+.hm-grid { width: 100%; min-width: 680px; border-collapse: separate; border-spacing: 4px; font-size: 14px; }
+.hm-grid th { font-weight: 700; color: var(--gx-navy, #0f172a); }
+.hm-grid thead th a { display: block; padding: 6px 0; border-radius: 8px; color: inherit; text-decoration: none; }
+.hm-grid thead th a:hover { background: rgba(8, 127, 123, 0.1); }
+.hm-grid thead th.is-now a { box-shadow: inset 0 -3px 0 #c2410c; }
+.hm-grid thead th.is-sel a { background: #d7ecea; }
+.hm-grid tbody th { width: 96px; padding-right: 8px; text-align: left; white-space: nowrap; }
+.hm-c { height: 40px; border-radius: 8px; }
+.hm-c.is-now { outline: 2px solid #c2410c; outline-offset: 1px; }
+.hm-c--best { background: #15803d; }
+.hm-c--ok { background: #bbf7d0; }
+.hm-c--avoid {
+    background: repeating-linear-gradient(135deg, #fecaca 0 5px, #fff 5px 10px);
+    box-shadow: inset 0 0 0 1px #fca5a5;
+}
+.hm-c--unknown { background: #f1f5f9; box-shadow: inset 0 0 0 1px #e2e8f0; }
+.hm-legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 14px 0 0; padding: 0; list-style: none; font-size: 14px; color: var(--gx-mute, #475569); }
+.hm-legend li { display: flex; align-items: center; gap: 8px; }
+.hm-sw { display: inline-block; width: 18px; height: 18px; border-radius: 5px; }
+.hm-notes { margin: 14px 0 0; display: grid; gap: 6px; font-size: 15px; line-height: 1.6; }
+.hm-notes p { margin: 0; }
+.hm-foot { margin-top: 6px !important; font-size: 13px; color: var(--gx-mute, #64748b); }
+
+/* ---------- trang Trải nghiệm ---------- */
+.ex-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin: 18px 0 8px;
+}
+.ex-facts div { padding: 12px 16px; background: #fff; border: 1px solid var(--gx-line, #e2e8f0); border-radius: 14px; }
+.ex-facts dt { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gx-mute, #64748b); }
+.ex-facts dd { margin: 4px 0 0; font-size: 16px; font-weight: 700; color: var(--gx-navy, #0f172a); }
+.ex-tour-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.ex-tour-list a {
+    display: grid;
+    gap: 2px;
+    padding: 12px 16px;
+    border: 1px solid var(--gx-line, #e2e8f0);
+    border-radius: 12px;
+    color: inherit;
+    text-decoration: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.ex-tour-list a:hover { border-color: var(--gx-tq, #0d9488); box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08); }
+.ex-tour-list b { color: var(--gx-navy, #0f172a); }
+.ex-tour-list span { font-size: 14px; color: var(--gx-mute, #64748b); }
+
+@media (max-width: 720px) {
+    .hm-grid tbody th { width: 76px; font-size: 13px; }
+    .hm-c { height: 34px; }
+}
+
+/* ---------- con số tổng ở chân trang ---------- */
+.tv-stats {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 22px;
+    margin: 0 0 18px;
+    padding: 14px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.78);
+}
+.tv-stats b { color: #fff; font-size: 18px; }

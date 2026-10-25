@@ -127,7 +127,6 @@ class ContentCatalog
             'image' => DiscoverImage::url($f->coverImage),
             'credit' => $f->imageCredit,
             'must' => (bool) ($f->isMustTry ?? false),
-            'featured' => (bool) ($f->isFeatured ?? false),
             'url' => route('foods.show', ['slug' => $f->slug]),
         ];
     }
@@ -197,7 +196,7 @@ class ContentCatalog
         $day = date('Ymd');
 
         return $this->foodsBase()->whereNotNull('f.coverImage')->limit(60)->get()
-            ->sortBy(fn($r) => [-(int) ($r->isFeatured ?? 0), -(int) ($r->isMustTry ?? 0), crc32($r->slug . $day)])
+            ->sortBy(fn($r) => [-(int) ($r->isMustTry ?? 0), crc32($r->slug . $day)])
             ->take($n)->values()->map(fn($r) => $this->foodCard($r))->filter(fn($c) => !empty($c->image))->values();
     }
 
@@ -440,7 +439,69 @@ class ContentCatalog
         }
         ksort($days);
 
-        return ['itinerary' => $i, 'days' => $days, 'points' => $points];
+        // Điểm đến liên quan: điểm đến trực tiếp + điểm đến của món/lễ hội trong lịch trình (dùng cho số liệu và "Tour khớp")
+        $destIds = collect($dest->keys())->merge($food->pluck('destinationId'))->merge($event->pluck('destinationId'))
+            ->filter()->map(fn($v) => (int) $v)->unique()->values()->all();
+
+        return [
+            'itinerary' => $i, 'days' => $days, 'points' => $points, 'destIds' => $destIds,
+            'stats' => $this->itineraryStats($i, $items->count(), $destIds),
+        ];
+    }
+
+    /** 4 ô số liệu đầu trang lịch trình: số ngày, điểm dừng, số tỉnh/thành, thời điểm đẹp (từ tbl_destination_months). */
+    private function itineraryStats(object $i, int $stops, array $destIds): array
+    {
+        $provinces = 0;
+        $months = [];
+        if ($destIds) {
+            $provinces = DB::table('tbl_destinations')->whereIn('destinationId', $destIds)->whereNotNull('province')->distinct()->count('province');
+            $by = DB::table('tbl_destination_months')->whereIn('destinationId', $destIds)->get(['month', 'level'])->groupBy('month');
+            for ($m = 1; $m <= 12; $m++) {
+                $g = $by->get($m);
+                $known = $g ? $g->whereIn('level', ['best', 'ok', 'avoid'])->count() : 0;
+                if ($known > 0 && $g->where('level', 'best')->count() / $known >= 0.5) {
+                    $months[] = $m;
+                }
+            }
+        }
+
+        return [
+            'days' => (int) $i->days,
+            'stops' => $stops,
+            'provinces' => $provinces,
+            'region' => self::REGIONS[$i->region ?? ''] ?? null,
+            'best' => self::monthRuns($months),
+        ];
+    }
+
+    /** [11,12,1,2,3,4] -> "Tháng 11–4" (gộp đợt vắt qua cuối năm); [3,4,9,10] -> "Tháng 3–4, 9–10". */
+    private static function monthRuns(array $months): ?string
+    {
+        if (!$months) {
+            return null;
+        }
+        sort($months);
+        $runs = [];
+        $s = $p = null;
+        foreach ($months as $m) {
+            if ($s === null) {
+                $s = $p = $m;
+            } elseif ($m === $p + 1) {
+                $p = $m;
+            } else {
+                $runs[] = [$s, $p];
+                $s = $p = $m;
+            }
+        }
+        $runs[] = [$s, $p];
+        if (count($runs) > 1 && $runs[0][0] === 1 && end($runs)[1] === 12) {
+            $first = array_shift($runs);
+            $last = array_pop($runs);
+            $runs[] = [$last[0], $first[1]];
+        }
+
+        return 'Tháng ' . implode(', ', array_map(fn($r) => $r[0] === $r[1] ? (string) $r[0] : $r[0] . '–' . $r[1], $runs));
     }
 
     // ------------------------------------------------------------------ Chi tiết điểm đến (B3)
@@ -521,14 +582,8 @@ class ContentCatalog
             for ($i = 1; $i <= 12; $i++) {
                 $months[$i] = $byMonth[$i] ?? 'unknown';
             }
-            $rows[] = [
-                'slug' => $d->slug,
-                'name' => $d->name,
-                'province' => $d->province,
-                'domain' => $d->domain,
-                'url' => route('destination.show', ['slug' => $d->slug]),
-                'months' => $months
-            ];
+            $rows[] = ['slug' => $d->slug, 'name' => $d->name, 'province' => $d->province, 'domain' => $d->domain,
+                'url' => route('destination.show', ['slug' => $d->slug]), 'months' => $months];
         }
 
         return $rows;

@@ -27,6 +27,7 @@ class ImportImages extends Command
     private const MAP = [
         'destinations' => ['table' => 'tbl_destinations', 'key' => 'destinationId', 'dir' => 'discover/destinations'],
         'foods'        => ['table' => 'tbl_foods', 'key' => 'foodId', 'dir' => 'discover/foods'],
+        'experiences'  => ['table' => 'tbl_experiences', 'key' => 'experienceId', 'dir' => 'discover/experiences'],
         'events'       => ['table' => 'tbl_events', 'key' => 'eventId', 'dir' => 'discover/events'],
     ];
 
