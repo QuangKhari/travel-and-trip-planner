@@ -20,6 +20,7 @@ class ItineraryItemsController extends Controller
         'place' => ['tbl_external_places', 'placeId'],
         'food' => ['tbl_foods', 'foodId'],
         'event' => ['tbl_events', 'eventId'],
+        'experience' => ['tbl_experiences', 'experienceId'],
     ];
 
     public function edit(int $id)

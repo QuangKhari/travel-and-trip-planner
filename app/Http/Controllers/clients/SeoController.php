@@ -39,7 +39,7 @@ class SeoController extends Controller
             $urls[] = ['loc' => $loc, 'lastmod' => $lastmod ? date('Y-m-d', strtotime((string) $lastmod)) : null, 'freq' => $freq, 'prio' => $prio];
         };
 
-        foreach ([['home', '1.0'], ['destination', '0.9'], ['foods.index', '0.8'], ['events.index', '0.8'], ['itineraries.index', '0.8'],
+        foreach ([['home', '1.0'], ['destination', '0.9'], ['foods.index', '0.8'], ['experiences.index', '0.8'], ['mustdo.index', '0.7'], ['events.index', '0.8'], ['itineraries.index', '0.8'],
             ['guides.index', '0.8'], ['seasons.now', '0.7'], ['seasons.matrix', '0.7'], ['tours', '0.8'], ['data.sources', '0.3']] as [$name, $prio]) {
             $add(route($name), null, 'weekly', $prio);
         }
@@ -51,6 +51,9 @@ class SeoController extends Controller
         }
         foreach (DB::table('tbl_foods')->where('reviewStatus', 'published')->get() as $r) {
             $add(route('foods.show', ['slug' => $r->slug]), $r->updatedAt ?? $r->createdAt ?? null, 'monthly', '0.6');
+        }
+        foreach (DB::table('tbl_experiences')->where('reviewStatus', 'published')->get() as $r) {
+            $add(route('experiences.show', ['slug' => $r->slug]), $r->updatedAt ?? $r->createdAt ?? null, 'monthly', '0.6');
         }
         foreach (DB::table('tbl_events')->where('reviewStatus', 'published')->get() as $r) {
             $add(route('events.show', ['slug' => $r->slug]), $r->updatedAt ?? $r->createdAt ?? null, 'monthly', '0.6');

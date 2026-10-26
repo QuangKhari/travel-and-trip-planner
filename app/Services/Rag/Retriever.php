@@ -164,6 +164,7 @@ class Retriever
             'destination' => ['tbl_destinations', 'destinationId', 'isActive', 1],
             'food' => ['tbl_foods', 'foodId', 'reviewStatus', 'published'],
             'event' => ['tbl_events', 'eventId', 'reviewStatus', 'published'],
+            'experience' => ['tbl_experiences', 'experienceId', 'reviewStatus', 'published'],
             'itinerary' => ['tbl_itineraries', 'itineraryId', 'reviewStatus', 'published'],
         ];
         $byType = [];

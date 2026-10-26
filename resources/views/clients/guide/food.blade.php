@@ -38,6 +38,26 @@
                         <p><a href="{{ route('destination.show', ['slug' => $food->destSlug]) }}">{{ $food->destName }}</a>, {{ $food->destProvince }}.</p>
                     </section>
                 @endif
+                @php
+                    $foodSeason = (!empty($food->monthFrom) && !empty($food->monthTo))
+                        ? ((int) $food->monthFrom === (int) $food->monthTo ? 'Tháng ' . (int) $food->monthFrom : 'Tháng ' . (int) $food->monthFrom . '–' . (int) $food->monthTo)
+                        : null;
+                @endphp
+                @if ($foodSeason || !empty($food->whereToTry) || !empty($food->place))
+                    <section class="gx-box" id="noi-nen-thu">
+                        <h2>Mùa ngon và nơi nên thử</h2>
+                        @if ($foodSeason)
+                            <p><b>Mùa ngon:</b> {{ $foodSeason }}.</p>
+                        @endif
+                        @if (!empty($food->whereToTry))
+                            <p><b>Nơi nên thử:</b> {{ $food->whereToTry }}</p>
+                        @endif
+                        @if (!empty($food->place))
+                            <p><b>Địa điểm trên bản đồ:</b> {{ $food->place->name }}@if ($food->place->address), {{ $food->place->address }}@endif
+                                (dữ liệu © OpenStreetMap contributors, ODbL).</p>
+                        @endif
+                    </section>
+                @endif
                 @if ($sameDest->isNotEmpty())
                     <section class="gx-box" id="cung-diem-den">
                         <h2>Món khác ở {{ $food->destName }}</h2>

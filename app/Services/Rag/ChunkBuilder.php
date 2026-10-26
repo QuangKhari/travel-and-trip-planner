@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
  */
 class ChunkBuilder
 {
-    public const TYPES = ['guide', 'destination', 'food', 'event', 'itinerary'];
+    public const TYPES = ['guide', 'destination', 'food', 'experience', 'event', 'itinerary'];
 
     public function __construct(private Chunker $chunker, private EventDateService $dates) {}
 
@@ -123,6 +123,44 @@ class ChunkBuilder
             $url = route('foods.show', ['slug' => $f->slug], false);
             $upd = self::day($f->updatedAt ?? null) ?? self::day($f->createdAt ?? null);
             array_push($out, ...$this->pack('food', (int) $f->foodId, 'Món ' . $f->name, $text . ($facts ? "\n" . implode(' ', $facts) : ''), $url, $f->destinationId ? (int) $f->destinationId : null, null, $upd));
+        }
+
+        return $out;
+    }
+
+    /** Tháng phù hợp của trải nghiệm viết thành câu (chỉ khi có đủ monthFrom và monthTo). */
+    private static function seasonSentence(object $x): ?string
+    {
+        if (empty($x->monthFrom) || empty($x->monthTo)) {
+            return null;
+        }
+
+        return $x->monthFrom === $x->monthTo ? 'Phù hợp nhất vào tháng ' . $x->monthFrom . '.' : 'Phù hợp từ tháng ' . $x->monthFrom . ' đến tháng ' . $x->monthTo . '.';
+    }
+
+    private function fromExperience(): array
+    {
+        $out = [];
+        $rows = DB::table('tbl_experiences as x')->leftJoin('tbl_destinations as d', 'd.destinationId', '=', 'x.destinationId')
+            ->where('x.reviewStatus', 'published')->orderBy('x.experienceId')->get(['x.*', 'd.name as destName']);
+        $level = ['easy' => 'dễ', 'medium' => 'vừa sức', 'hard' => 'khó'];
+        foreach ($rows as $x) {
+            $text = self::plain($x->description);
+            if ($text === '') {
+                continue;
+            }
+            $facts = array_filter([
+                $x->category ? 'Loại: ' . $x->category . '.' : null,
+                $x->destName ? 'Địa điểm: ' . $x->destName . '.' : null,
+                $x->duration ? 'Thời lượng: ' . $x->duration . '.' : ($x->durationMinutes ? 'Thời lượng khoảng ' . $x->durationMinutes . ' phút.' : null),
+                !empty($x->difficulty) ? 'Độ khó: ' . ($level[$x->difficulty] ?? $x->difficulty) . '.' : null,
+                $x->indoor === null ? null : ($x->indoor ? 'Diễn ra trong nhà.' : 'Diễn ra ngoài trời.'),
+                self::seasonSentence($x),
+                !empty($x->priceNote) ? 'Giá (tham khảo): ' . $x->priceNote . '.' : null,
+            ]);
+            $url = route('experiences.show', ['slug' => $x->slug], false);
+            $upd = self::day($x->updatedAt ?? null) ?? self::day($x->createdAt ?? null);
+            array_push($out, ...$this->pack('experience', (int) $x->experienceId, $x->name, $text . ($facts ? "\n" . implode(' ', $facts) : ''), $url, $x->destinationId ? (int) $x->destinationId : null, null, $upd));
         }
 
         return $out;

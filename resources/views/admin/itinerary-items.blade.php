@@ -45,7 +45,7 @@
     var DAYS = {{ (int) $it->days }};
     var LOOKUP = @json(route('admin.content.lookup'));
     var items = @json($items);
-    var TYPES = {'': 'Chữ tự do', destination: 'Điểm đến', place: 'Địa điểm', food: 'Món ăn', event: 'Lễ hội'};
+    var TYPES = {'': 'Chữ tự do', destination: 'Điểm đến', place: 'Địa điểm', food: 'Món ăn', experience: 'Trải nghiệm', event: 'Lễ hội'};
     var root = document.getElementById('days');
 
     function el(tag, attrs, kids) {

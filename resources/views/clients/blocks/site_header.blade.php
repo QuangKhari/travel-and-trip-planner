@@ -40,17 +40,19 @@
 
             <div class="tv-dd">
                 <a href="{{ route('destination') }}"
-                    class="{{ Request::is('diem-den*') || Request::is('am-thuc*') || Request::is('le-hoi*') || Request::is('lich-trinh*') || Request::is('dang-vao-mua*') || Request::is('nen-di-thang-nao*') ? 'is-active' : '' }}">
+                    class="{{ Request::is('diem-den*') || Request::is('am-thuc*') || Request::is('trai-nghiem*') || Request::is('phai-thu*') || Request::is('le-hoi*') || Request::is('lich-trinh*') || Request::is('dang-vao-mua*') || Request::is('nen-di-thang-nao*') ? 'is-active' : '' }}">
                     Khám phá <i class="fas fa-chevron-down"></i>
                 </a>
                 <div class="tv-dd__menu">
                     <a href="{{ route('destination') }}">Điểm đến</a>
                     <a href="{{ route('foods.index') }}">Ẩm thực</a>
                     <a href="{{ route('experiences.index') }}">Trải nghiệm</a>
+                    <a href="{{ route('mustdo.index') }}">Phải thử</a>
                     <a href="{{ route('events.index') }}">Lễ hội</a>
                     <a href="{{ route('itineraries.index') }}">Lịch trình</a>
                     <a href="{{ route('seasons.now') }}">Đang vào mùa</a>
                     <a href="{{ route('seasons.matrix') }}">Nên đi tháng nào</a>
+                    <a href="{{ route('planner') }}">Lên kế hoạch chuyến đi</a>
                 </div>
             </div>
             @php $guideMenu = app(\App\Services\Content\GuideCatalog::class)->menu(); @endphp

@@ -357,3 +357,142 @@
 .hq.hq--end::before {
     display: none;
 } /* dải navy nối từ hero chỉ dành cho vị trí ngay dưới hero */
+
+/* ---------- Tab trong thẻ cuối trang ---------- */
+.hq.hq--end .hq-card {
+    margin-top: 0;
+}
+.hq-tabs {
+    display: inline-flex;
+    gap: 4px;
+    margin: 0 0 20px;
+    padding: 4px;
+    border-radius: 99px;
+    background: #eef3f2;
+}
+.hq-tab {
+    padding: 10px 20px;
+    border: 0;
+    border-radius: 99px;
+    background: transparent;
+    cursor: pointer;
+    font: 600 15px/1 var(--h-sans, "Be Vietnam Pro", sans-serif);
+    color: #475569;
+    transition:
+        background 0.2s,
+        color 0.2s,
+        box-shadow 0.2s;
+}
+.hq-tab:hover {
+    color: var(--h-navy, #0f172a);
+}
+.hq-tab[aria-selected="true"] {
+    background: #fff;
+    color: var(--h-teal, #087f7b);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+}
+.hq-tab:focus-visible {
+    outline: 3px solid var(--h-sand, #e9c46a);
+    outline-offset: 2px;
+}
+.hq-pane[hidden] {
+    display: none;
+}
+.hq-card .hq-pane .hp-search {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+}
+@media (max-width: 480px) {
+    .hq-tabs {
+        display: flex;
+    }
+    .hq-tab {
+        flex: 1;
+        padding: 10px 8px;
+        font-size: 14px;
+    }
+}
+
+/* ---------- Khối "Khám phá theo cảm hứng": bớt chi tiết (chỉ ẩn bằng CSS, JS bản đồ vẫn chạy) ---------- */
+body.tv-home .tvh #tvhDetailWx,
+body.tv-home .tvh #tvhDetailCta,
+body.tv-home .tvh #tvhDetailSoon,
+body.tv-home .tvh .tvh-legend__note,
+body.tv-home .tvh .tvh-doms {
+    display: none !important;
+}
+body.tv-home .tvh #tvhDetailMore.tvh-btn.is-ghost {
+    background: var(--tvh-teal, #087f7b);
+    color: #fff;
+    border-color: transparent;
+}
+body.tv-home .tvh .tvh-detail__desc {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* ---------- Thẻ trong các hàng ở trang chủ: ảnh dẫn dắt, chữ ngắn ---------- */
+body.tv-home .hs .gx-card {
+    position: relative;
+}
+body.tv-home .hs .gx-card__text {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+body.tv-home .hs .gx-card__credit {
+    font-size: 11px;
+    opacity: 0.6;
+}
+body.tv-home .hs .gx-card__foot {
+    position: static;
+    min-height: 0;
+}
+body.tv-home .hs .gx-add {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 3;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-indent: -9999px;
+    border-radius: 50%;
+    border: 0;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--h-teal, #087f7b);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+    transition:
+        transform 0.2s,
+        background 0.2s;
+}
+body.tv-home .hs .gx-add::before {
+    content: "+";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    text-indent: 0;
+    font: 400 24px/1 var(--h-sans, "Be Vietnam Pro", sans-serif);
+}
+body.tv-home .hs .gx-add:hover {
+    transform: scale(1.08);
+    background: #fff;
+}
+body.tv-home .hs .gx-add.is-on {
+    background: var(--h-teal, #087f7b);
+    color: #fff;
+}
+body.tv-home .hs .gx-add.is-on::before {
+    content: "\2713";
+    font-size: 18px;
+}
+body.tv-home .hs .gx-card__badge {
+    max-width: calc(100% - 70px);
+}

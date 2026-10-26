@@ -90,7 +90,9 @@
         <div class="gx-stats">
             <div class="gx-stat"><b>{{ collect($data['places'])->flatten(1)->count() }}</b><span>Địa điểm</span></div>
             <div class="gx-stat"><b>{{ $foods->count() }}</b><span>Món đặc sản</span></div>
+            <div class="gx-stat"><b>{{ $experiences->count() }}</b><span>Trải nghiệm</span></div>
             <div class="gx-stat"><b>{{ $events->count() }}</b><span>Lễ hội</span></div>
+            <div class="gx-stat"><b>{{ $must['total'] }}</b><span>Mục phải thử</span></div>
             <div class="gx-stat"><b>{{ $tours->count() }}</b><span>Tour đang mở</span></div>
         </div>
         <div class="gx-actions">
@@ -121,9 +123,15 @@
             <ol>
                 <li><a href="#thang">Khi nào nên đi</a></li>
                 <li><a href="#gioi-thieu">Giới thiệu</a></li>
+                @if ($must['total'] > 0)
+                    <li><a href="#phai-thu">Điểm phải thử</a></li>
+                @endif
                 <li><a href="#gan-day">Địa điểm gần đây</a></li>
                 @if ($foods->isNotEmpty())
                     <li><a href="#mon">Món nên thử</a></li>
+                @endif
+                @if ($experiences->isNotEmpty())
+                    <li><a href="#trai-nghiem">Trải nghiệm</a></li>
                 @endif
                 @if ($events->isNotEmpty())
                     <li><a href="#le-hoi">Lễ hội</a></li>
@@ -132,6 +140,7 @@
                     <li><a href="#lich-trinh">Lịch trình mẫu</a></li>
                 @endif
                 <li><a href="#tour">Tour</a></li>
+                <li><a href="#nguon">Nguồn dữ liệu</a></li>
             </ol>
         </nav>
 
@@ -209,7 +218,10 @@
                                         <button type="button" class="dd-place">
                                             <span class="dd-place__dot dd-place__dot--{{ $k }}"></span>
                                             <span class="dd-place__tx"><strong>{{ $p['name'] }}</strong>
-                                                <small>{{ $label }}@if ($p['address'])
+                                                <small>{{ $label }}@if (\App\Support\PlaceKind::label($p['kind'] ?? null))
+                                                        · {{ \App\Support\PlaceKind::label($p['kind'] ?? null) }}
+                                                    @endif
+                                                    @if ($p['address'])
                                                         · {{ $p['address'] }}
                                                     @endif
                                                 </small></span>
@@ -308,6 +320,20 @@
             </aside>
         </div>
 
+        @if ($must['total'] > 0)
+            <section class="gx-box" id="phai-thu">
+                <h2>Điểm phải thử ở {{ $destination->name }}</h2>
+                <p class="gx-lead">Do biên tập chọn. <a href="{{ route('mustdo.index', ['diemden' => $destination->slug]) }}">Xem trang Phải thử →</a></p>
+                <div class="gx-rail">
+                    @foreach ($must['groups'] as $items)
+                        @foreach ($items as $c)
+                            @include('clients.partials.gx.card', ['c' => $c])
+                        @endforeach
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
         <section class="gx-box" id="gan-day">
             <h2>Địa điểm gần đây</h2>
             @if (empty($nearby))
@@ -325,7 +351,9 @@
                         @foreach ($nearby as $p)
                             <tr>
                                 <td>{{ $p['name'] }}</td>
-                                <td>{{ ['see' => 'Tham quan', 'culture' => 'Văn hoá', 'eat' => 'Ăn uống'][$p['category']] ?? $p['category'] }}
+                                <td>{{ ['see' => 'Tham quan', 'culture' => 'Văn hoá', 'eat' => 'Ăn uống'][$p['category']] ?? $p['category'] }}@if (!empty($p['kindLabel']))
+                                        · {{ $p['kindLabel'] }}
+                                    @endif
                                 </td>
                                 <td>{{ number_format($p['km'], 1, ',', '.') }} km</td>
                             </tr>
@@ -346,6 +374,22 @@
                     @endforeach
                 </div>
                 <p><a href="{{ route('foods.index', ['diemden' => $destination->slug]) }}">Xem tất cả món →</a></p>
+            </section>
+        @endif
+
+        @if ($experiences->isNotEmpty())
+            <section class="gx-box" id="trai-nghiem">
+                <h2>Trải nghiệm đáng thử ở {{ $destination->name }}</h2>
+                <div class="gx-rail">
+                    @foreach ($experiences as $c)
+                        @include('clients.partials.gx.card', ['c' => $c])
+                    @endforeach
+                </div>
+                <p><a href="{{ route('experiences.index', ['tinh' => $destination->province]) }}">Xem tất cả trải nghiệm →</a>
+                    @if ($itineraries->isNotEmpty())
+                        · <a href="#lich-trinh">Lịch trình mẫu</a>
+                    @endif
+                    · <a href="#tour">Tour tại đây</a></p>
             </section>
         @endif
 
@@ -370,6 +414,8 @@
                 </div>
             </section>
         @endif
+
+        @include('clients.partials.gx.provenance', ['sources' => $provenance['sources'], 'updated' => $provenance['updated']])
 
         @include('clients.blocks.ask_quick', ['destination' => $destination])
         <section class="dd-tours" id="tour">

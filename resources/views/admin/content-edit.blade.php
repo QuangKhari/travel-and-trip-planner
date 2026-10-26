@@ -52,6 +52,9 @@
                         @empty
                             <div class="text-success">Đủ điều kiện xuất bản.</div>
                         @endforelse
+                        @if (!empty($plannerProblems))
+                            <div class="alert alert-info" style="margin-top:8px"><strong>Chưa vào được Planner</strong> (vẫn xuất bản để hiển thị được): {{ implode('; ', $plannerProblems) }}</div>
+                        @endif
 
                         <div style="margin-top:12px">
                             <form method="POST" action="{{ route('admin.content.status', [$kind, $id]) }}" class="form-inline" style="display:inline">

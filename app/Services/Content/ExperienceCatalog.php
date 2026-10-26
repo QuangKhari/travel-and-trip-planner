@@ -99,6 +99,39 @@ class ExperienceCatalog
             ->where('e.reviewStatus', 'published')->distinct()->orderBy('d.province')->pluck('d.province')->all();
     }
 
+    /** Trải nghiệm đã duyệt của một điểm đến cho trang điểm đến; dòng meta của thẻ là các thông tin Planner dùng (độ khó, trong/ngoài nhà, mùa). */
+    public function ofDestination(int $destinationId, int $limit = 6): Collection
+    {
+        return $this->base()->where('e.destinationId', $destinationId)->orderByDesc('e.isMustTry')->orderBy('e.name')
+            ->limit($limit)->get()->map(function ($r) {
+                $c = $this->card($r);
+                $c->meta = self::facts($r) ?: $c->meta;
+
+                return $c;
+            });
+    }
+
+    /** "Vừa sức · Ngoài trời · Tháng 11–3 · Hợp: gia đình"; chỉ ghép những gì có dữ liệu. */
+    public static function facts(object $e): string
+    {
+        $level = ['easy' => 'Dễ', 'medium' => 'Vừa sức', 'hard' => 'Khó'];
+        $p = [];
+        if (!empty($e->difficulty)) {
+            $p[] = $level[$e->difficulty] ?? (string) $e->difficulty;
+        }
+        if (($e->indoor ?? null) !== null) {
+            $p[] = $e->indoor ? 'Trong nhà' : 'Ngoài trời';
+        }
+        if (!empty($e->monthFrom) && !empty($e->monthTo)) {
+            $p[] = (int) $e->monthFrom === (int) $e->monthTo ? 'Tháng ' . (int) $e->monthFrom : 'Tháng ' . (int) $e->monthFrom . '–' . (int) $e->monthTo;
+        }
+        if (!empty($e->suitableFor)) {
+            $p[] = 'Hợp: ' . $e->suitableFor;
+        }
+
+        return implode(' · ', $p);
+    }
+
     /** 3 trải nghiệm cho hero: có ảnh, ưu tiên "Phải thử", xoay theo ngày. */
     public function featured(int $n = 3): Collection
     {

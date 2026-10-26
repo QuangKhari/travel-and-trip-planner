@@ -4,10 +4,15 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-/** Tuần 1 (mục 2 và 0.1-C/D/K): cột còn thiếu của tbl_experiences để Planner, bản đồ và ngân sách dùng được. */
+/**
+ * Tuần 1 (mục 0.1-C/D): cột còn thiếu của tbl_experiences. Migration 2026_10_26_000001_link_content_and_planner đã thêm
+ * durationMinutes, indoor, difficulty (easy/medium/hard), priceLevel, monthFrom, monthTo nên KHÔNG thêm lại ở đây
+ * (bản trước của gói này có durationMin và setting, trùng nghĩa với durationMinutes và indoor, đã bỏ).
+ * Chạy lại được: mỗi cột kiểm tra hasColumn.
+ */
 return new class extends Migration
 {
-    private const COLUMNS = ['monthFrom', 'monthTo', 'priceNote', 'priceMin', 'priceMax', 'durationMin', 'difficulty', 'setting', 'suitableFor', 'imageSourceUrl', 'latitude', 'longitude'];
+    private const COLUMNS = ['priceNote', 'priceMin', 'priceMax', 'suitableFor', 'imageSourceUrl', 'latitude', 'longitude'];
 
     public function up(): void
     {
@@ -16,17 +21,12 @@ return new class extends Migration
         }
         Schema::table('tbl_experiences', function (Blueprint $t) {
             $add = fn (string $c) => !Schema::hasColumn('tbl_experiences', $c);
-            $add('monthFrom') && $t->unsignedTinyInteger('monthFrom')->nullable();
-            $add('monthTo') && $t->unsignedTinyInteger('monthTo')->nullable();
-            $add('priceNote') && $t->string('priceNote', 160)->nullable();           // chữ để hiển thị
-            $add('priceMin') && $t->decimal('priceMin', 14, 2)->nullable();          // số, chỉ nhập khi có nguồn
+            $add('priceNote') && $t->string('priceNote', 160)->nullable();                // chữ để hiển thị, chỉ khi có nguồn
+            $add('priceMin') && $t->decimal('priceMin', 14, 2)->nullable();               // số, chỉ nhập khi có nguồn
             $add('priceMax') && $t->decimal('priceMax', 14, 2)->nullable();
-            $add('durationMin') && $t->unsignedSmallInteger('durationMin')->nullable(); // phút; cột chữ `duration` giữ để hiển thị
-            $add('difficulty') && $t->enum('difficulty', ['easy', 'moderate', 'hard'])->nullable();
-            $add('setting') && $t->enum('setting', ['indoor', 'outdoor', 'both'])->nullable();
-            $add('suitableFor') && $t->string('suitableFor', 160)->nullable();
+            $add('suitableFor') && $t->string('suitableFor', 160)->nullable();           // vd "Gia đình, cặp đôi"
             $add('imageSourceUrl') && $t->string('imageSourceUrl', 255)->nullable();
-            $add('latitude') && $t->decimal('latitude', 9, 6)->nullable();           // chỉ có khi xác minh được vị trí riêng
+            $add('latitude') && $t->decimal('latitude', 9, 6)->nullable();                // chỉ có khi xác minh được vị trí riêng
             $add('longitude') && $t->decimal('longitude', 9, 6)->nullable();
         });
     }

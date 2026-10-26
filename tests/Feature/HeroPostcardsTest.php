@@ -35,6 +35,7 @@ class HeroPostcardsTest extends TestCase
 
     public function test_trang_chu_blank_card_khong_con_tham_so_vo_nghia(): void
     {
+        config(['postcards.planner_url' => null]); // chưa bật Planner thì thẻ trống trỏ về #kham-pha
         $this->seedThree(true);
         $html = $this->get('/')->assertOk()->getContent();
         $this->assertStringContainsString('data-thumb="', $html);

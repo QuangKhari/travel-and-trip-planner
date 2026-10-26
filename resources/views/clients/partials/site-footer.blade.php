@@ -78,6 +78,7 @@
                     <li><a href="{{ route('destination') }}">Điểm đến</a></li>
                     <li><a href="{{ route('foods.index') }}">Ẩm thực</a></li>
                     <li><a href="{{ route('experiences.index') }}">Trải nghiệm</a></li>
+                    <li><a href="{{ route('mustdo.index') }}">Phải thử</a></li>
                     <li><a href="{{ route('events.index') }}">Lễ hội</a></li>
                     <li><a href="{{ route('itineraries.index') }}">Lịch trình</a></li>
                     <li><a href="{{ route('seasons.matrix') }}">Nên đi tháng nào</a></li>

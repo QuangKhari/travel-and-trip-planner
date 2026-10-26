@@ -4,6 +4,9 @@ namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
 use App\Services\Content\ContentCatalog;
+use App\Services\Content\DestinationProvenance;
+use App\Services\Content\ExperienceCatalog;
+use App\Services\Content\MustDoCatalog;
 use App\Services\Content\TravelAdvice;
 use App\Services\Content\UserMarks;
 use App\Services\DestinationService;
@@ -12,7 +15,7 @@ use Illuminate\Http\Request;
 class DestinationDetailController extends Controller
 {
     /** GET /diem-den/{slug} */
-    public function show(Request $request, string $slug, DestinationService $service, ContentCatalog $catalog, UserMarks $marks, TravelAdvice $travelAdvice)
+    public function show(Request $request, string $slug, DestinationService $service, ContentCatalog $catalog, UserMarks $marks, TravelAdvice $travelAdvice, ExperienceCatalog $experienceCatalog, MustDoCatalog $mustDoCatalog, DestinationProvenance $provenanceService)
     {
         $destination = $service->find($slug);
         if (!$destination) {
@@ -29,6 +32,9 @@ class DestinationDetailController extends Controller
         $foods = $catalog->foodsOf($id, 6);
         $events = $catalog->eventsOf($id, 4);
         $itineraries = $catalog->itinerariesOf($id, 3);
+        $experiences = $experienceCatalog->ofDestination($id, 6);
+        $must = $mustDoCatalog->forDestination($id, 4);
+        $provenance = $provenanceService->forDestination($destination);
         $nearby = $catalog->nearbyPlaces($destination, 8);
         $uid = $request->session()->has('userId') ? (int) $request->session()->get('userId') : null;
         $myMarks = array_fill_keys($uid ? $marks->typesFor($uid, 'destination', $id) : [], true);
@@ -43,6 +49,9 @@ class DestinationDetailController extends Controller
             'tours',
             'months',
             'foods',
+            'experiences',
+            'must',
+            'provenance',
             'events',
             'itineraries',
             'nearby',

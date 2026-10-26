@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * C3: tìm kiếm toàn lớp Khám phá (điểm đến, món, lễ hội, lịch trình, cẩm nang). CHỈ nội dung published.
+ * C3: tìm kiếm toàn lớp Khám phá (điểm đến, món, trải nghiệm, lễ hội, lịch trình, cẩm nang). CHỈ nội dung published.
  *
  * Cách làm: nạp một bản chỉ mục nhỏ (tên + mô tả) vào bộ nhớ đệm 10 phút, bỏ dấu và chữ hoa/thường rồi so khớp
  * theo đầu từ. Chọn cách này thay cho FULLTEXT của MySQL vì: (1) FULLTEXT mặc định bỏ từ ngắn dưới 3 ký tự
@@ -21,12 +21,13 @@ class SearchCatalog
     public const TYPES = [
         'destination' => 'Điểm đến',
         'food' => 'Ẩm thực',
+        'experience' => 'Trải nghiệm',
         'event' => 'Lễ hội',
         'itinerary' => 'Lịch trình',
         'guide' => 'Cẩm nang',
     ];
 
-    private const CACHE_KEY = 'search.index.v1';
+    private const CACHE_KEY = 'search.index.v2';
 
     public function __construct(private GuideCatalog $guides) {}
 
@@ -71,6 +72,11 @@ class SearchCatalog
             ->where('f.reviewStatus', 'published')->get(['f.*', 'd.name as destName']);
         foreach ($foods as $f) {
             $add('food', $f->slug, $f->name, $f->category, $f->destName, $f->description, $f->coverImage, $f->imageCredit, route('foods.show', ['slug' => $f->slug]));
+        }
+        $exps = DB::table('tbl_experiences as x')->leftJoin('tbl_destinations as d', 'd.destinationId', '=', 'x.destinationId')
+            ->where('x.reviewStatus', 'published')->get(['x.*', 'd.name as destName']);
+        foreach ($exps as $x) {
+            $add('experience', $x->slug, $x->name, $x->category, $x->destName, $x->description, $x->coverImage, $x->imageCredit, route('experiences.show', ['slug' => $x->slug]));
         }
         $events = DB::table('tbl_events as e')->leftJoin('tbl_destinations as d', 'd.destinationId', '=', 'e.destinationId')
             ->where('e.reviewStatus', 'published')->get(['e.*', 'd.name as destName']);

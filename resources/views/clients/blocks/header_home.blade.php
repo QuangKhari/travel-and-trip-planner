@@ -87,7 +87,7 @@
     <link rel="stylesheet" href="{{ asset('clients/assets/css/home-unify.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/mobile-nav.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/site-ux.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/home-ux.css') }}?v=2">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/home-ux.css') }}?v=3">
 </head>
 
 <body class="tv-home">

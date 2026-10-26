@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 
 class ContentCoverage extends Command
 {
-    protected $signature = 'content:coverage {--demo : Chỉ 4 điểm đến demo trong demo_content.json}';
+    protected $signature = 'content:coverage {--demo : Chỉ 4 điểm đến demo trong demo_content.json} {--core : Chỉ các điểm đến lõi khai báo trong config/core_destinations.php}';
 
     protected $description = 'A2/8.4-bước 7: bảng mức đủ nội dung của từng điểm đến (tháng, địa điểm, món, lễ hội, lịch trình, tour)';
 
@@ -17,6 +17,14 @@ class ContentCoverage extends Command
         if ($this->option('demo')) {
             $d = json_decode((string) @file_get_contents(database_path('seeders/data/demo_content.json')), true);
             $slugs = array_column($d['destinations'] ?? [], 'slug');
+        }
+        if ($this->option('core')) {
+            $slugs = (array) config('core_destinations.slugs', []);
+            if (!$slugs) {
+                $this->error('config/core_destinations.php chưa khai báo điểm đến lõi (mảng slugs đang rỗng).');
+
+                return self::FAILURE;
+            }
         }
         $q = DB::table('tbl_destinations')->where('isActive', 1)->orderBy('name');
         if ($slugs) {
@@ -33,13 +41,14 @@ class ContentCoverage extends Command
                 DB::table('tbl_destination_months')->where('destinationId', $id)->count() . '/12',
                 $pub('tbl_external_places') . '/' . $all('tbl_external_places') . ' (đã duyệt/tổng, mục tiêu ~30)',
                 $pub('tbl_foods') . '/' . $all('tbl_foods') . ' (mục tiêu 10)',
+                $pub('tbl_experiences') . '/' . $all('tbl_experiences') . ', đủ độ khó+phút: ' . DB::table('tbl_experiences')->where('destinationId', $id)->where('reviewStatus', 'published')->whereNotNull('difficulty')->whereNotNull('durationMinutes')->count() . ' (Planner-ready: >=4)',
                 $pub('tbl_events') . '/' . $all('tbl_events') . ' (mục tiêu 2-3)',
                 DB::table('tbl_itinerary_items')->where('refType', 'destination')->where('refId', $id)->distinct()->count('itineraryId') . ' (mục tiêu 1)',
                 DB::table('tbl_tours')->where('destinationId', $id)->count(),
                 $d->coverImage ? 'có' : 'THIẾU',
             ];
         }
-        $this->table(['slug', 'tháng', 'địa điểm', 'món', 'lễ hội', 'lịch trình', 'tour', 'ảnh bìa'], $rows);
+        $this->table(['slug', 'tháng', 'địa điểm', 'món', 'trải nghiệm', 'lễ hội', 'lịch trình', 'tour', 'ảnh bìa'], $rows);
 
         return self::SUCCESS;
     }

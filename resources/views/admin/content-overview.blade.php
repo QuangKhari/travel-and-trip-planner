@@ -10,10 +10,10 @@
         @foreach ($byStatus as $k => $r)<tr><td><a href="{{ route('admin.content', $k) }}">{{ $r['label'] }}</a></td><td>{{ $r['draft'] ?? 0 }}</td><td>{{ $r['reviewed'] ?? 0 }}</td><td>{{ $r['published'] ?? 0 }}</td></tr>@endforeach
         </tbody></table></div></div>
     <div class="x_panel"><div class="x_title"><h2>Độ phủ theo điểm đến (chỉ tính đã xuất bản)</h2><div class="clearfix"></div></div><div class="x_content">
-        <table class="table table-condensed table-striped"><thead><tr><th>Điểm đến</th><th>Món</th><th>Lễ hội</th><th>Địa điểm</th><th>Mùa đẹp</th><th>Tour</th></tr></thead><tbody>
+        <table class="table table-condensed table-striped"><thead><tr><th>Điểm đến</th><th>Món</th><th>Trải nghiệm</th><th>Lễ hội</th><th>Địa điểm</th><th>Mùa đẹp</th><th>Tour</th></tr></thead><tbody>
         @foreach ($coverage as $c)<tr>
             <td><a href="{{ route('admin.destinations.edit', $c->destinationId) }}">{{ $c->name }}</a></td>
-            @foreach (['foods', 'events', 'places'] as $k)<td class="{{ $c->$k == 0 ? 'text-danger' : '' }}">{{ $c->$k }}</td>@endforeach
+            @foreach (['foods', 'experiences', 'events', 'places'] as $k)<td class="{{ $c->$k == 0 ? 'text-danger' : '' }}">{{ $c->$k }}</td>@endforeach
             <td class="{{ $c->months < 12 ? 'text-danger' : '' }}">{{ $c->months }}/12</td><td class="{{ $c->tours == 0 ? 'text-danger' : '' }}">{{ $c->tours }}</td></tr>@endforeach
         </tbody></table></div></div>
     <div class="x_panel"><div class="x_title"><h2>Cẩm nang quá {{ $staleDays }} ngày chưa cập nhật</h2><div class="clearfix"></div></div><div class="x_content">

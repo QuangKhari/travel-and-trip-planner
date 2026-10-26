@@ -15,7 +15,7 @@ class TripTray
 {
     public const TITLE = 'Khay chuyến đi';
     public const MAX_ITEMS = 60;
-    private const TABLE = ['destination' => ['tbl_destinations', 'destinationId'], 'food' => ['tbl_foods', 'foodId'], 'event' => ['tbl_events', 'eventId']];
+    private const TABLE = ['destination' => ['tbl_destinations', 'destinationId'], 'food' => ['tbl_foods', 'foodId'], 'event' => ['tbl_events', 'eventId'], 'experience' => ['tbl_experiences', 'experienceId']];
 
     private function findTrayId(int $userId): ?int
     {
@@ -108,6 +108,7 @@ class TripTray
                 'url' => match ($r->refType) {
                     'destination' => route('destination.show', ['slug' => $row->slug]),
                     'food' => route('foods.show', ['slug' => $row->slug]),
+                    'experience' => route('experiences.show', ['slug' => $row->slug]),
                     default => route('events.show', ['slug' => $row->slug]),
                 },
             ];

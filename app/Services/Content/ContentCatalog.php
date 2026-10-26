@@ -203,7 +203,12 @@ class ContentCatalog
 
     public function food(string $slug): ?object
     {
-        return $this->foodsBase()->where('f.slug', $slug)->first();
+        $f = $this->foodsBase()->where('f.slug', $slug)->first();
+        if ($f && !empty($f->placeId)) {   // địa điểm ăn uống đã duyệt, có tọa độ: "nơi nên thử" có bản đồ; không có thì chỉ hiện chữ whereToTry
+            $f->place = DB::table('tbl_external_places')->where('placeId', $f->placeId)->where('reviewStatus', 'published')->first(['placeId', 'name', 'address', 'kind', 'latitude', 'longitude']);
+        }
+
+        return $f;
     }
 
     public function foodsOf(int $destinationId, int $limit = 12, ?int $exceptId = null): Collection
@@ -418,6 +423,7 @@ class ContentCatalog
         $place = DB::table('tbl_external_places')->whereIn('placeId', $ids('place'))->get()->keyBy('placeId');
         $food = DB::table('tbl_foods')->where('reviewStatus', 'published')->whereIn('foodId', $ids('food'))->get()->keyBy('foodId');
         $event = DB::table('tbl_events')->where('reviewStatus', 'published')->whereIn('eventId', $ids('event'))->get()->keyBy('eventId');
+        $exp = DB::table('tbl_experiences')->where('reviewStatus', 'published')->whereIn('experienceId', $ids('experience'))->get()->keyBy('experienceId');
 
         $days = [];
         $points = [];
@@ -434,6 +440,11 @@ class ContentCatalog
                 $url = route('foods.show', ['slug' => $food[$it->refId]->slug]);
             } elseif ($it->refType === 'event' && isset($event[$it->refId])) {
                 $url = route('events.show', ['slug' => $event[$it->refId]->slug]);
+            } elseif ($it->refType === 'experience' && isset($exp[$it->refId])) {
+                $url = route('experiences.show', ['slug' => $exp[$it->refId]->slug]);
+                if ($exp[$it->refId]->latitude !== null && $exp[$it->refId]->longitude !== null) {   // chỉ dùng tọa độ riêng đã xác minh
+                    [$lat, $lng] = [(float) $exp[$it->refId]->latitude, (float) $exp[$it->refId]->longitude];
+                }
             }
             $row = ['label' => $it->label, 'note' => $it->note, 'refType' => $it->refType, 'url' => $url, 'lat' => $lat, 'lng' => $lng];
             $days[$it->dayNo][] = $row;
@@ -443,7 +454,72 @@ class ContentCatalog
         }
         ksort($days);
 
-        return ['itinerary' => $i, 'days' => $days, 'points' => $points];
+        // Điểm đến liên quan: điểm đến trực tiếp + điểm đến của món/lễ hội trong lịch trình (dùng cho số liệu và "Tour khớp")
+        $destIds = collect($dest->keys())->merge($food->pluck('destinationId'))->merge($event->pluck('destinationId'))
+            ->filter()->map(fn($v) => (int) $v)->unique()->values()->all();
+
+        return [
+            'itinerary' => $i,
+            'days' => $days,
+            'points' => $points,
+            'destIds' => $destIds,
+            'stats' => $this->itineraryStats($i, $items->count(), $destIds),
+        ];
+    }
+
+    /** 4 ô số liệu đầu trang lịch trình: số ngày, điểm dừng, số tỉnh/thành, thời điểm đẹp (từ tbl_destination_months). */
+    private function itineraryStats(object $i, int $stops, array $destIds): array
+    {
+        $provinces = 0;
+        $months = [];
+        if ($destIds) {
+            $provinces = DB::table('tbl_destinations')->whereIn('destinationId', $destIds)->whereNotNull('province')->distinct()->count('province');
+            $by = DB::table('tbl_destination_months')->whereIn('destinationId', $destIds)->get(['month', 'level'])->groupBy('month');
+            for ($m = 1; $m <= 12; $m++) {
+                $g = $by->get($m);
+                $known = $g ? $g->whereIn('level', ['best', 'ok', 'avoid'])->count() : 0;
+                if ($known > 0 && $g->where('level', 'best')->count() / $known >= 0.5) {
+                    $months[] = $m;
+                }
+            }
+        }
+
+        return [
+            'days' => (int) $i->days,
+            'stops' => $stops,
+            'provinces' => $provinces,
+            'region' => self::REGIONS[$i->region ?? ''] ?? null,
+            'best' => self::monthRuns($months),
+        ];
+    }
+
+    /** [11,12,1,2,3,4] -> "Tháng 11–4" (gộp đợt vắt qua cuối năm); [3,4,9,10] -> "Tháng 3–4, 9–10". */
+    private static function monthRuns(array $months): ?string
+    {
+        if (!$months) {
+            return null;
+        }
+        sort($months);
+        $runs = [];
+        $s = $p = null;
+        foreach ($months as $m) {
+            if ($s === null) {
+                $s = $p = $m;
+            } elseif ($m === $p + 1) {
+                $p = $m;
+            } else {
+                $runs[] = [$s, $p];
+                $s = $p = $m;
+            }
+        }
+        $runs[] = [$s, $p];
+        if (count($runs) > 1 && $runs[0][0] === 1 && end($runs)[1] === 12) {
+            $first = array_shift($runs);
+            $last = array_pop($runs);
+            $runs[] = [$last[0], $first[1]];
+        }
+
+        return 'Tháng ' . implode(', ', array_map(fn($r) => $r[0] === $r[1] ? (string) $r[0] : $r[0] . '–' . $r[1], $runs));
     }
 
     // ------------------------------------------------------------------ Chi tiết điểm đến (B3)
@@ -479,7 +555,7 @@ class ContentCatalog
         foreach ($rows as $p) {
             $km = Geo::distanceKm((float) $d->latitude, (float) $d->longitude, (float) $p->latitude, (float) $p->longitude);
             if ($km <= $radiusKm) {
-                $out[] = ['name' => $p->name, 'category' => $p->category, 'address' => $p->address, 'km' => round($km, 1), 'rank' => (int) $p->rank];
+                $out[] = ['name' => $p->name, 'category' => $p->category, 'kindLabel' => \App\Support\PlaceKind::label($p->kind), 'address' => $p->address, 'km' => round($km, 1), 'rank' => (int) $p->rank];
             }
         }
         usort($out, fn($a, $b) => [$a['km'], -$a['rank']] <=> [$b['km'], -$b['rank']]);
