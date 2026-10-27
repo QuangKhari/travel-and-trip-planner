@@ -2,16 +2,18 @@
 
 namespace App\Console\Commands;
 
+use App\Services\Content\CoverageHistory;
+use App\Services\Content\CoverageScorer;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 
+/** Bảng mức đủ nội dung. Dùng CoverageScorer, cùng một logic với trang Admin "Chất lượng nội dung". */
 class ContentCoverage extends Command
 {
-    protected $signature = 'content:coverage {--demo : Chỉ 4 điểm đến demo trong demo_content.json} {--core : Chỉ các điểm đến lõi khai báo trong config/core_destinations.php}';
+    protected $signature = 'content:coverage {--demo : Chỉ 4 điểm đến demo trong demo_content.json} {--core : Chỉ các điểm đến lõi khai báo trong config/core_destinations.php} {--save : Lưu mốc hôm nay vào lịch sử Coverage}';
 
-    protected $description = 'A2/8.4-bước 7: bảng mức đủ nội dung của từng điểm đến (tháng, địa điểm, món, lễ hội, lịch trình, tour)';
+    protected $description = 'Bảng mức đủ nội dung của từng điểm đến: điểm %, Planner-ready, số lượng từng loại (dùng CoverageScorer)';
 
-    public function handle(): int
+    public function handle(CoverageScorer $scorer, CoverageHistory $history): int
     {
         $slugs = null;
         if ($this->option('demo')) {
@@ -26,29 +28,40 @@ class ContentCoverage extends Command
                 return self::FAILURE;
             }
         }
-        $q = DB::table('tbl_destinations')->where('isActive', 1)->orderBy('name');
-        if ($slugs) {
-            $q->whereIn('slug', $slugs);
-        }
 
+        $scores = $scorer->scoreAll($slugs ?: null);
         $rows = [];
-        foreach ($q->get() as $d) {
-            $id = $d->destinationId;
-            $pub = fn(string $t) => DB::table($t)->where('destinationId', $id)->where('reviewStatus', 'published')->count();
-            $all = fn(string $t) => DB::table($t)->where('destinationId', $id)->count();
+        foreach ($scores as $s) {
+            $n = $s['counts'];
             $rows[] = [
-                $d->slug,
-                DB::table('tbl_destination_months')->where('destinationId', $id)->count() . '/12',
-                $pub('tbl_external_places') . '/' . $all('tbl_external_places') . ' (đã duyệt/tổng, mục tiêu ~30)',
-                $pub('tbl_foods') . '/' . $all('tbl_foods') . ' (mục tiêu 10)',
-                $pub('tbl_experiences') . '/' . $all('tbl_experiences') . ', đủ độ khó+phút: ' . DB::table('tbl_experiences')->where('destinationId', $id)->where('reviewStatus', 'published')->whereNotNull('difficulty')->whereNotNull('durationMinutes')->count() . ' (Planner-ready: >=4)',
-                $pub('tbl_events') . '/' . $all('tbl_events') . ' (mục tiêu 2-3)',
-                DB::table('tbl_itinerary_items')->where('refType', 'destination')->where('refId', $id)->distinct()->count('itineraryId') . ' (mục tiêu 1)',
-                DB::table('tbl_tours')->where('destinationId', $id)->count(),
-                $d->coverImage ? 'có' : 'THIẾU',
+                $s['slug'],
+                $s['percent'] . '%',
+                $s['plannerReady'] ? 'ĐẠT' : 'chưa',
+                $n['months'] . '/12',
+                $n['places'] . ' (tọa độ ' . $n['placesCoords'] . ', ăn ' . $n['placesEat'] . ')',
+                (string) $n['foods'],
+                $n['experiences'] . ' (đủ độ khó+phút ' . $n['experiencesReady'] . ')',
+                $n['events'] . ' (có ngày ' . $n['eventsDated'] . ')',
+                (string) $n['itineraries'],
+                (string) $n['tours'],
+                $s['hasCover'] ? ($s['hasCredit'] ? 'có' : 'thiếu ghi công') : 'THIẾU',
             ];
         }
-        $this->table(['slug', 'tháng', 'địa điểm', 'món', 'trải nghiệm', 'lễ hội', 'lịch trình', 'tour', 'ảnh bìa'], $rows);
+        $this->table(['slug', 'điểm', 'Planner', 'tháng', 'địa điểm đã duyệt', 'món', 'trải nghiệm', 'lễ hội', 'lịch trình', 'tour', 'ảnh bìa'], $rows);
+
+        if ($scores) {
+            $ready = count(array_filter($scores, fn($s) => $s['plannerReady']));
+            $avg = (int) round(array_sum(array_column($scores, 'percent')) / count($scores));
+            $this->line("Trung bình {$avg}% · Planner-ready {$ready}/" . count($scores) . ' điểm đến. Mục tiêu: Planner-ready ở tuần 4, Coverage ≥80% khi đóng băng nội dung.');
+            foreach ($scores as $s) {
+                if (!$s['plannerReady'] && $slugs) {
+                    $this->line('  - ' . $s['slug'] . ' còn thiếu: ' . implode('; ', $s['plannerMissing']));
+                }
+            }
+        }
+        if ($this->option('save')) {
+            $this->info('Đã lưu mốc ' . date('d/m/Y') . ' cho ' . $history->snapshot($scores) . ' điểm đến.');
+        }
 
         return self::SUCCESS;
     }

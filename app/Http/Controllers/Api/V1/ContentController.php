@@ -249,7 +249,7 @@ class ContentController extends Controller
         $items = DB::table('tbl_itinerary_items')->where('itineraryId', $i->itineraryId)->orderBy('dayNo')->orderBy('orderNo')->get();
         $days = [];
         foreach ($items as $it) {
-            $days[$it->dayNo][] = ['order' => (int) $it->orderNo, 'refType' => $it->refType, 'refId' => $it->refId, 'label' => $it->label, 'note' => $it->note];
+            $days[$it->dayNo][] = ['order' => (int) $it->orderNo, 'refType' => $it->refType, 'refId' => $it->refId, 'label' => $it->label, 'note' => $it->note, 'slot' => $it->slot ?? null, 'durationMin' => isset($it->durationMin) ? (int) $it->durationMin : null];
         }
         ksort($days);
 

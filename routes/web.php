@@ -47,6 +47,7 @@ use App\Http\Controllers\admin\GuideCategoryController;
 use App\Http\Controllers\admin\ContactInboxController;
 use App\Http\Controllers\admin\ChatLogController;
 use App\Http\Controllers\admin\ContentOverviewController;
+use App\Http\Controllers\admin\ContentQualityController;
 use App\Http\Controllers\admin\BlogAdminController;
 use App\Http\Controllers\admin\ContentReviewController;
 
@@ -241,6 +242,8 @@ Route::prefix('admin')->group(function () {
 
         // Duyệt & quản lý nội dung Khám phá
         Route::get('/content-overview', [ContentOverviewController::class, 'index'])->name('admin.content.overview');
+        Route::get('/content-quality', [ContentQualityController::class, 'index'])->name('admin.content.quality');
+        Route::post('/content-quality/snapshot', [ContentQualityController::class, 'snapshot'])->middleware('throttle:10,1')->name('admin.content.quality.snapshot');
         Route::get('/content-lookup', [ItineraryItemsController::class, 'lookup'])->name('admin.content.lookup');
         Route::post('/content/rag-rebuild', [ContentReviewController::class, 'rebuildRag'])->name('admin.content.rag');
         Route::get('/content/{kind?}', [ContentReviewController::class, 'index'])->name('admin.content');

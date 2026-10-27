@@ -426,6 +426,7 @@ class ContentCatalog
         $exp = DB::table('tbl_experiences')->where('reviewStatus', 'published')->whereIn('experienceId', $ids('experience'))->get()->keyBy('experienceId');
 
         $days = [];
+        $dayMinutes = [];
         $points = [];
         foreach ($items as $it) {
             $url = null;
@@ -446,8 +447,16 @@ class ContentCatalog
                     [$lat, $lng] = [(float) $exp[$it->refId]->latitude, (float) $exp[$it->refId]->longitude];
                 }
             }
-            $row = ['label' => $it->label, 'note' => $it->note, 'refType' => $it->refType, 'url' => $url, 'lat' => $lat, 'lng' => $lng];
+            $slot = !empty($it->slot) ? (string) $it->slot : null;
+            $minutes = isset($it->durationMin) && $it->durationMin !== null ? (int) $it->durationMin : null;
+            $row = [
+                'label' => $it->label, 'note' => $it->note, 'refType' => $it->refType, 'url' => $url, 'lat' => $lat, 'lng' => $lng,
+                'slot' => $slot, 'slotLabel' => ItineraryValidator::slotLabel($slot), 'durationMin' => $minutes,
+            ];
             $days[$it->dayNo][] = $row;
+            if ($minutes) {
+                $dayMinutes[$it->dayNo] = ($dayMinutes[$it->dayNo] ?? 0) + $minutes;
+            }
             if ($lat !== null) {
                 $points[] = ['day' => (int) $it->dayNo, 'label' => $it->label, 'lat' => $lat, 'lng' => $lng];
             }
@@ -461,9 +470,10 @@ class ContentCatalog
         return [
             'itinerary' => $i,
             'days' => $days,
+            'dayMinutes' => $dayMinutes,
             'points' => $points,
             'destIds' => $destIds,
-            'stats' => $this->itineraryStats($i, $items->count(), $destIds),
+            'stats' => $this->itineraryStats($i, $items->where('refType', '!=', 'transport')->count(), $destIds),
         ];
     }
 

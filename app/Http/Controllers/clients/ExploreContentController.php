@@ -190,6 +190,7 @@ class ExploreContentController extends Controller
             'title' => $data['itinerary']->title,
             'it' => $data['itinerary'],
             'days' => $data['days'],
+            'dayMinutes' => $data['dayMinutes'] ?? [],
             'points' => $data['points'],
             'cover' => \App\Support\DiscoverImage::url($data['itinerary']->coverImage),
             'stats' => $data['stats'],

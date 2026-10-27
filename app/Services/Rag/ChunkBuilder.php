@@ -207,7 +207,11 @@ class ChunkBuilder
             $lines = [self::plain($i->summary)];
             $dest = null;
             foreach ($items->groupBy('dayNo') as $day => $its) {
-                $lines[] = 'Ngày ' . $day . ': ' . $its->pluck('label')->implode(', ') . '.';
+                $lines[] = 'Ngày ' . $day . ': ' . $its->map(function ($x) {
+                    $slot = \App\Services\Content\ItineraryValidator::slotLabel($x->slot ?? null);
+
+                    return ($slot ? mb_strtolower($slot) . ': ' : '') . $x->label;
+                })->implode(', ') . '.';
                 $dest ??= optional($its->firstWhere('refType', 'destination'))->refId;
             }
             $text = trim(implode("\n", array_filter($lines)));

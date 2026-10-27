@@ -55,6 +55,7 @@
                         <li><a><i class="fa fa-book"></i> Nội dung Khám phá <span class="fa fa-chevron-down"></span></a>
                             <ul class="nav child_menu">
                                 <li><a href="{{ route('admin.content.overview') }}">Tổng quan</a></li>
+                                <li><a href="{{ route('admin.content.quality') }}">Chất lượng nội dung</a></li>
                                 <li><a href="{{ route('admin.content') }}">Duyệt nội dung</a></li>
                                 <li><a href="{{ route('admin.destinations') }}">Điểm đến</a></li>
                                 <li><a href="{{ route('admin.inspirations') }}">Cảm hứng</a></li>

@@ -52,7 +52,7 @@ class ContentExporter
                     'event' => $eventSlug[$it->refId] ?? null, 'place' => $placeKey[$it->refId] ?? null, default => null,
                 };
 
-                return ['dayNo' => $it->dayNo, 'orderNo' => $it->orderNo, 'refType' => $it->refType, 'ref' => $ref, 'label' => $it->label, 'note' => $it->note];
+                return ['dayNo' => $it->dayNo, 'orderNo' => $it->orderNo, 'refType' => $it->refType, 'ref' => $ref, 'label' => $it->label, 'note' => $it->note, 'slot' => $it->slot ?? null, 'durationMin' => isset($it->durationMin) ? (int) $it->durationMin : null];
             })->all();
             $itins[] = $pick($i, self::ITIN) + ['items' => $items];
         }

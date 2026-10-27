@@ -4,7 +4,8 @@
 @endphp
 @include('clients.blocks.header')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-{{-- /lich-trinh/{slug} — biến: $it, $days, $points, $cover, $plannerUrl, $stats, $tours --}}
+<link rel="stylesheet" href="{{ asset('clients/assets/css/itinerary-day.css') }}?v=1">
+{{-- /lich-trinh/{slug} — biến: $it, $days, $dayMinutes, $points, $cover, $plannerUrl, $stats, $tours --}}
 <main class="gx-page" id="main">
     <div class="gx-wrap">
         @include('clients.partials.gx.crumb', ['crumbs' => [['Trang chủ', route('home')], ['Lịch trình', route('itineraries.index')], [$it->title, null]]])
@@ -45,16 +46,36 @@
         @endif
         <section class="gx-box">
             @forelse ($days as $no => $stops)
+                @php
+                    // Nhóm theo khung giờ khi ngày có chọn khung giờ; không có thì giữ nguyên thứ tự biên tập.
+                    $hasSlot = collect($stops)->contains(fn($s) => !empty($s['slot']));
+                    $groups = $hasSlot
+                        ? collect($stops)->groupBy(fn($s) => $s['slot'] ?? '_')->sortBy(fn($g, $k) => \App\Services\Content\ItineraryValidator::slotRank($k === '_' ? null : $k))
+                        : collect(['_' => collect($stops)]);
+                    $mins = (int) ($dayMinutes[$no] ?? 0);
+                    $real = collect($stops)->where('refType', '!=', 'transport')->count();
+                    $dur = $mins >= 60 ? floor($mins / 60) . ' giờ' . ($mins % 60 ? ' ' . ($mins % 60) . ' phút' : '') : $mins . ' phút';
+                    $total = $real . ' điểm dừng' . ($mins ? ' · khoảng ' . $dur : '');
+                @endphp
                 <div class="gx-day" id="ngay-{{ $no }}">
-                    <h3>Ngày {{ $no }}</h3>
-                    <ul class="gx-stops">
-                        @foreach ($stops as $s)
-                            <li>
-                                @if ($s['url'])<a href="{{ $s['url'] }}">{{ $s['label'] }}</a>@else<strong>{{ $s['label'] }}</strong>@endif
-                                @if ($s['note'])<small>{{ $s['note'] }}</small>@endif
-                            </li>
-                        @endforeach
-                    </ul>
+                    <div class="gx-day-head">
+                        <h3>Ngày {{ $no }}</h3>
+                        <span class="gx-day-total">{{ $total }}</span>
+                    </div>
+                    @foreach ($groups as $key => $list)
+                        <div class="gx-slot">
+                            @if ($hasSlot)<span class="gx-slot-name">{{ $key === '_' ? 'Trong ngày' : (config('itinerary.slots')[$key][0] ?? $key) }}</span>@endif
+                            <ul class="gx-stops">
+                                @foreach ($list as $s)
+                                    <li class="{{ $s['refType'] === 'transport' ? 'is-transport' : '' }}">
+                                        @if ($s['url'])<a href="{{ $s['url'] }}">{{ $s['label'] }}</a>@elseif ($s['refType'] === 'transport'){{ $s['label'] }}@else<strong>{{ $s['label'] }}</strong>@endif
+                                        @if (!empty($s['durationMin']))<span class="gx-stop-min">{{ $s['durationMin'] }} phút</span>@endif
+                                        @if ($s['note'])<small>{{ $s['note'] }}</small>@endif
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endforeach
                 </div>
             @empty
                 <p>Lịch trình này chưa có điểm dừng.</p>

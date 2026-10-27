@@ -43,7 +43,7 @@
                             <h4>Ngày {{ $no }}</h4>
                             <ol>
                                 @foreach ($items as $it)
-                                    <li>{{ $it->label }}@if ($it->note) <span class="text-muted">· {{ $it->note }}</span>@endif</li>
+                                    <li>@if (!empty($it->slot))<b>{{ \App\Services\Content\ItineraryValidator::slotLabel($it->slot) }}</b> · @endif{{ $it->label }}@if (!empty($it->durationMin)) <span class="text-muted">({{ $it->durationMin }} phút)</span>@endif @if ($it->note) <span class="text-muted">· {{ $it->note }}</span>@endif</li>
                                 @endforeach
                             </ol>
                         @empty

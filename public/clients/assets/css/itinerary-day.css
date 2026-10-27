@@ -1,0 +1,43 @@
+/* Lịch trình theo ngày: khung giờ, thời lượng, mục di chuyển (tuần 3). Dùng biến màu của explore-kit.css. */
+.gx-day-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 12px;
+    margin: 0 0 8px;
+}
+.gx-day-head h3 {
+    margin: 0;
+}
+.gx-day-total {
+    color: var(--gx-mute);
+    font-size: 14px;
+}
+.gx-slot {
+    margin: 10px 0 4px;
+}
+.gx-slot-name {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--gx-tqd);
+    margin: 0 0 4px;
+}
+.gx-stop-min {
+    margin-left: 8px;
+    font-size: 13px;
+    color: var(--gx-mute);
+    white-space: nowrap;
+}
+.gx-stops li.is-transport {
+    color: var(--gx-mute);
+    font-style: italic;
+}
+.gx-stops li.is-transport::before {
+    background: transparent;
+    border: 2px solid var(--gx-tqd);
+    width: 6px;
+    height: 6px;
+}
