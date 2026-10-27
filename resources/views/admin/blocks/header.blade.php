@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -7,7 +7,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" href="images/favicon.ico" type="image/ico" />
+    <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/ico" />
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
 
@@ -56,6 +56,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap"
         rel="stylesheet">
     <link href="{{ asset('admin/assets/css/admin-theme.css') }}?v=2" rel="stylesheet" />
+    <link href="{{ asset('admin/assets/css/admin-ui.css') }}?v=1" rel="stylesheet" />
 </head>
 
 <body class="nav-md">

@@ -67,6 +67,81 @@ class BookingManagementController extends Controller
         return view('admin.booking', compact('title', 'list_booking'));
     }
 
+    /**
+     * Xuất danh sách đơn ra CSV (mở được bằng Excel, có BOM để không lỗi tiếng Việt).
+     * Lọc: ?status=n|y|f|c  ?from=YYYY-MM-DD  ?to=YYYY-MM-DD (theo ngày đặt).
+     * Route nằm trong nhóm admin,manager vì file chứa họ tên, email, số điện thoại khách.
+     */
+    public function export(Request $request)
+    {
+        $f = $request->validate([
+            'status' => ['nullable', 'in:n,y,f,c'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+        ]);
+
+        $rows = collect($this->booking->getBooking())->filter(function ($b) use ($f) {
+            if (!empty($f['status']) && $b->bookingStatus !== $f['status']) {
+                return false;
+            }
+            $day = date('Y-m-d', strtotime((string) $b->bookingDate));
+            if (!empty($f['from']) && $day < $f['from']) {
+                return false;
+            }
+            if (!empty($f['to']) && $day > $f['to']) {
+                return false;
+            }
+
+            return true;
+        });
+
+        $status = ['n' => 'Chưa xác nhận', 'y' => 'Đã xác nhận', 'f' => 'Đã hoàn thành', 'c' => 'Đã hủy'];
+        // Chống "CSV injection": ô bắt đầu bằng = + - @ bị Excel hiểu là công thức
+        $safe = fn($v) => is_string($v) && $v !== '' && strpbrk($v[0], "=+-@\t\r") !== false ? "'" . $v : $v;
+
+        return response()->streamDownload(function () use ($rows, $status, $safe) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, [
+                'Mã đơn',
+                'Mã booking',
+                'Tour',
+                'Khách hàng',
+                'Email',
+                'Số điện thoại',
+                'Địa chỉ',
+                'Ngày đặt',
+                'Người lớn',
+                'Trẻ em',
+                'Tổng tiền',
+                'Trạng thái đơn',
+                'Phương thức TT',
+                'Thanh toán'
+            ]);
+            foreach ($rows as $b) {
+                fputcsv($out, [
+                    $b->bookingId,
+                    $b->bookingCode,
+                    $safe($b->title),
+                    $safe($b->fullName),
+                    $safe($b->email),
+                    $safe($b->phoneNumber),
+                    $safe($b->address),
+                    $b->bookingDate,
+                    $b->numAdults,
+                    $b->numChildren,
+                    (int) $b->totalPrice,
+                    $status[$b->bookingStatus] ?? $b->bookingStatus,
+                    $b->paymentMethod,
+                    $b->paymentStatus === 'y' ? 'Đã thanh toán' : 'Chưa thanh toán',
+                ]);
+            }
+            fclose($out);
+        }, 'don-dat-tour-' . now()->format('Ymd-His') . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+
+
     /** Từ chối nghiệp vụ: HTTP 200 + success=false để JS admin hiện đúng thông báo */
     private function refuse(string $message)
     {

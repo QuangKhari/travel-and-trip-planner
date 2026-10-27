@@ -142,6 +142,8 @@ $(document).ready(function () {
                     $("input[name='destination']").val(tour.destination);
                     $("#destinationId").val(tour.destinationId || "");
                     $("input[name='video_url']").val(tour.video_url || "");
+                    $("textarea[name='includes']").val(tour.includes || "");
+                    $("textarea[name='excludes']").val(tour.excludes || "");
                     $("select[name='domain']").val(tour.domain);
                     $("input[name='number']").val(tour.quantity);
                     originalQuantity = tour.quantity;
@@ -319,6 +321,8 @@ $(document).ready(function () {
             destination: $("input[name='destination']").val(),
             destinationId: $("#destinationId").val(),
             video_url: $("input[name='video_url']").val(),
+            includes: $("textarea[name='includes']").val(),
+            excludes: $("textarea[name='excludes']").val(),
             domain: $("#domain").val(),
             number: $("input[name='number']").val(),
             original_number: originalQuantity,

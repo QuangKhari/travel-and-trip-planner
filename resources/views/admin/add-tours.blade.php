@@ -123,6 +123,23 @@
                                                 </div>
                                             </div>
                                             <div class="field item form-group">
+                                                <label class="col-form-label col-md-3 col-sm-3  label-align">Giá tour
+                                                    bao gồm</label>
+                                                <div class="col-md-6 col-sm-6">
+                                                    <textarea class="form-control" name="includes" rows="4" maxlength="3000"
+                                                        placeholder="Mỗi dòng một mục, ví dụ:&#10;Xe đưa đón&#10;Khách sạn 3 sao"></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="field item form-group">
+                                                <label class="col-form-label col-md-3 col-sm-3  label-align">Không bao
+                                                    gồm</label>
+                                                <div class="col-md-6 col-sm-6">
+                                                    <textarea class="form-control" name="excludes" rows="3" maxlength="3000"
+                                                        placeholder="Mỗi dòng một mục, ví dụ:&#10;Chi phí cá nhân&#10;Vé tham quan ngoài chương trình"></textarea>
+                                                </div>
+                                            </div>
+
+                                            <div class="field item form-group">
                                                 <label class="col-form-label col-md-3 col-sm-3  label-align">Khu
                                                     vực<span>*</span></label>
                                                 <div class="col-md-6 col-sm-6">
@@ -138,7 +155,8 @@
                                                 <label class="col-form-label col-md-3 col-sm-3  label-align">Số lượng
                                                     <span>*</span></label>
                                                 <div class="col-md-6 col-sm-6">
-                                                    <input class="form-control" type="number" name="number" required>
+                                                    <input class="form-control" type="number" name="number"
+                                                        required>
                                                 </div>
                                             </div>
                                             <div class="field item form-group">

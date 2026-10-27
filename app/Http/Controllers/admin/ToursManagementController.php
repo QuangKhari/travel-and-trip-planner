@@ -126,8 +126,27 @@ class ToursManagementController extends Controller
             'startDate'   => $start->format('Y-m-d'),
             'endDate'     => $end->format('Y-m-d'),
             'video_url'   => \App\Support\TourVideo::normalize($request->input('video_url')),
+            $this->extraTourFields($request),
         ], null];
     }
+
+    /** Bao gồm / Không bao gồm: chỉ ghi khi đã chạy migration 2026_10_15_000001 (cột includes, excludes). */
+    private function extraTourFields(Request $request): array
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('tbl_tours', 'includes')) {
+            return [];
+        }
+        $clean = function ($v) {
+            $lines = preg_split('/\R/u', (string) $v) ?: [];
+            $lines = array_filter(array_map(fn($l) => mb_substr(trim(strip_tags($l)), 0, 200), $lines), fn($l) => $l !== '');
+
+            return $lines ? implode("\n", array_slice(array_values($lines), 0, 30)) : null;
+        };
+
+        return ['includes' => $clean($request->input('includes')), 'excludes' => $clean($request->input('excludes'))];
+    }
+
+
 
     public function addTours(Request $request)
     {
@@ -619,6 +638,7 @@ class ToursManagementController extends Controller
             'endDate'     => $end->format('Y-m-d'),
             'time'        => "{$days} ngày {$nights} đêm",
             'video_url'   => \App\Support\TourVideo::normalize($request->input('video_url')),
+            $this->extraTourFields($request),
         ];
 
         $images = $request->input('images');

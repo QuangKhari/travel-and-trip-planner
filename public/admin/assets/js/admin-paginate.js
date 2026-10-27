@@ -1,32 +1,27 @@
-/* Admin — phân trang + tìm nhanh phía trình duyệt cho các bảng danh sách.
+/* Admin — phân trang + tìm nhanh + lọc trạng thái phía trình duyệt cho các bảng danh sách.
  * Áp dụng cho: #datatable-listTours, #datatable-booking, #datatable-promotion
  * Các thao tác Thêm/Sửa/Xóa/Xác nhận trong admin thay lại nội dung <tbody> bằng AJAX; script này tự
- * phân trang lại (giữ nguyên trang đang xem nếu còn) mà không cần sửa code cũ. */
+ * phân trang lại (giữ nguyên trang đang xem nếu còn) mà không cần sửa code cũ.
+ * v2: thêm lọc theo thuộc tính data-status / data-pay của <tr> (xem chip trong booking.blade.php):
+ *     table.__adSetStatus('n' | 'y' | 'f' | 'c' | 'unpaid' | '') */
 (function () {
     "use strict";
-    var IDS = [
-        "datatable-listTours",
-        "datatable-booking",
-        "datatable-promotion",
-    ];
+    var IDS = ["datatable-listTours", "datatable-booking", "datatable-promotion"];
 
     IDS.forEach(function (id) {
         var table = document.getElementById(id);
         if (!table || !table.tBodies.length) return;
         var tbody = table.tBodies[0];
-        var state = { page: 1, size: 10, q: "" };
+        var state = { page: 1, size: 10, q: "", status: "" };
 
-        // thanh công cụ phía trên bảng
         var tools = document.createElement("div");
         tools.className = "tv-admin-tools";
         tools.innerHTML =
             '<input type="search" class="form-control" placeholder="Tìm trong danh sách…" aria-label="Tìm trong danh sách">' +
             '<label>Hiển thị <select class="form-control"><option>10</option><option>25</option><option>50</option></select> dòng</label>';
-        // thanh phân trang phía dưới bảng
         var foot = document.createElement("div");
         foot.className = "tv-admin-pager";
-        foot.innerHTML =
-            '<span class="tv-admin-pager__info"></span><div class="tv-admin-pager__btns"></div>';
+        foot.innerHTML = '<span class="tv-admin-pager__info"></span><div class="tv-admin-pager__btns"></div>';
 
         var host = table.closest(".table-responsive") || table;
         host.parentNode.insertBefore(tools, host);
@@ -41,11 +36,17 @@
             return Array.prototype.slice.call(tbody.rows);
         }
 
+        function statusOk(r) {
+            if (!state.status) return true;
+            if (state.status === "unpaid") return r.dataset.pay === "n" && r.dataset.status !== "c";
+            return r.dataset.status === state.status;
+        }
+
         function render() {
             var q = state.q.toLowerCase();
             var all = rows();
             var match = all.filter(function (r) {
-                return !q || r.textContent.toLowerCase().indexOf(q) !== -1;
+                return statusOk(r) && (!q || r.textContent.toLowerCase().indexOf(q) !== -1);
             });
             var pages = Math.max(1, Math.ceil(match.length / state.size));
             if (state.page > pages) state.page = pages;
@@ -60,25 +61,12 @@
             });
 
             info.textContent = match.length
-                ? "Hiển thị " +
-                  (from + 1) +
-                  "–" +
-                  Math.min(to, match.length) +
-                  " / " +
-                  match.length +
-                  " dòng"
+                ? "Hiển thị " + (from + 1) + "–" + Math.min(to, match.length) + " / " + match.length + " dòng"
                 : "Không có dòng nào";
 
             var html = "";
             var add = function (label, p, cls) {
-                html +=
-                    '<button type="button" class="' +
-                    (cls || "") +
-                    '" data-p="' +
-                    p +
-                    '">' +
-                    label +
-                    "</button>";
+                html += '<button type="button" class="' + (cls || "") + '" data-p="' + p + '">' + label + "</button>";
             };
             if (pages > 1) {
                 if (state.page > 1) add("‹", state.page - 1);
@@ -88,8 +76,7 @@
                     add("1", 1);
                     if (s > 2) html += "<span>…</span>";
                 }
-                for (var p = s; p <= e; p++)
-                    add(p, p, p === state.page ? "is-active" : "");
+                for (var p = s; p <= e; p++) add(p, p, p === state.page ? "is-active" : "");
                 if (e < pages) {
                     if (e < pages - 1) html += "<span>…</span>";
                     add(pages, pages);
@@ -117,7 +104,13 @@
             render();
         });
 
-        // AJAX thay <tbody> => phân trang lại (chỉ nghe thay đổi con của tbody, nên việc ẩn/hiện dòng không gây vòng lặp)
+        table.__adSetStatus = function (s) {
+            state.status = s || "";
+            state.page = 1;
+            render();
+        };
+
+        // AJAX thay <tbody> => phân trang lại (chỉ nghe thay đổi con của tbody nên việc ẩn/hiện dòng không gây vòng lặp)
         new MutationObserver(render).observe(tbody, { childList: true });
         render();
     });

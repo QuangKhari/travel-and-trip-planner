@@ -69,7 +69,9 @@
 <!-- Custom Scripts By DevDien -->
 <script src="{{ asset('admin/assets/js/custom-js.js') }}"></script>
 
-<script src="{{ asset('admin/assets/js/admin-paginate.js') }}?v=1"></script>
+<script src="{{ asset('admin/assets/js/admin-paginate.js') }}?v=2"></script>
+<script src="{{ asset('admin/assets/js/admin-ui.js') }}?v=1"></script>
+@stack('scripts')
 
 </body>
 

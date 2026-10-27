@@ -2370,6 +2370,8 @@ function init_SmartWizard() {
                 destination: $("input[name='destination']").val(),
                 destinationId: $("#destinationId").val(),
                 video_url: $("input[name='video_url']").val(),
+                includes: $("textarea[name='includes']").val(),
+                excludes: $("textarea[name='excludes']").val(),
                 domain: $("#domain").val(),
                 number: $("input[name='number']").val(),
                 price_adult: $("input[name='price_adult']").val(),

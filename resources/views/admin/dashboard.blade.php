@@ -1,250 +1,155 @@
 @include('admin.blocks.header')
-
+@php
+    $money = fn($v) => number_format((float) $v, 0, ',', '.');
+    $maxRev = max(1, max($revenue));
+    $monthTotal = array_sum($revenue);
+    $regionTotal = max(1, array_sum(array_column($regions, 'n')));
+@endphp
 <div class="container body">
     <div class="main_container">
         @include('admin.blocks.sidebar')
 
-
-        <!-- page content -->
         <div class="right_col" role="main">
-            <!-- top tiles -->
-            <div class="row" style="display: inline-block;width: 100%">
-                <div class="tile_count">
-                    <div class="col-md-3 col-sm-4  tile_stats_count">
-                        <span class="count_top"><i class="fa fa-user"></i> Tổng số tours đang hoạt động</span>
-                        <div class="count green"><i class="fa fa-sort-asc"></i> {{ $summary['tourWorking'] }}</div>
-                    </div>
-                    <div class="col-md-3 col-sm-4  tile_stats_count">
-                        <span class="count_top"><i class="fa fa-clock-o"></i> Tổng số lượt booking</span>
-                        <div class="count green"><i class="fa fa-sort-asc"></i> {{ $summary['countBooking'] }}</div>
-                    </div>
-                    <div class="col-md-3 col-sm-4  tile_stats_count">
-                        <span class="count_top"><i class="fa fa-user"></i> Số người dùng đăng ký</span>
-                        <div class="count green"><i class="fa fa-sort-asc"></i> 2,500</div>
-                    </div>
-                    <div class="col-md-3 col-sm-4  tile_stats_count">
-                        <span class="count_top"><i class="fa fa-user"></i> Tổng doanh thu</span>
-                        <div class="count red">{{ number_format($summary['totalAmount'], 0, ',', '.') }} vnđ</div>
-                        <span class="sparkline_two" style="height: 160px;"><canvas width="196" height="40"
-                                style="display: inline-block; width: 196px; height: 40px; vertical-align: top;"></canvas></span>
-                    </div>
+            @include('admin.partials.flash')
+
+            <div class="ad-head">
+                <div>
+                    <h1>Tổng quan</h1>
+                    <p>Hôm nay {{ now()->format('d/m/Y') }} · những việc cần làm và số liệu chính của hệ thống.</p>
+                </div>
+                <div class="ad-actions">
+                    <a class="ad-btn" href="{{ route('admin.booking') }}"><i class="fa fa-ticket"></i> Xem đơn đặt tour</a>
+                    <a class="ad-btn ad-btn--primary" href="{{ route('admin.page-add-tours') }}"><i class="fa fa-plus"></i> Thêm tour</a>
                 </div>
             </div>
 
-
-
-            <div class="row">
-                <div class="col-md-6 col-sm-4 ">
-                    <div class="x_panel tile fixed_height_320 overflow_hidden">
-                        <div class="x_title">
-                            <h2>Điểm đến </h2>
-                            <ul class="nav navbar-right panel_toolbox">
-                                <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
-                                </li>
-                                <li class="dropdown">
-                                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
-                                        aria-expanded="false"><i class="fa fa-wrench"></i></a>
-                                </li>
-                                <li><a class="close-link"><i class="fa fa-close"></i></a>
-                                </li>
-                            </ul>
-                            <div class="clearfix"></div>
-                        </div>
-                        <div class="x_content">
-                            <table class="" style="width:100%">
-                                <tr>
-                                    <th style="width:37%;">
-                                        <p>Tổng hợp danh sách tours</p>
-                                    </th>
-                                    <th>
-                                        <div class="col-lg-7 col-md-7 col-sm-7 ">
-                                            <p class="">Tên</p>
-                                        </div>
-                                        <div class="col-lg-5 col-md-5 col-sm-5 " style="text-align: center">
-                                            <p class="">Số lượng</p>
-                                        </div>
-                                    </th>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <canvas class="canvasDoughnut" height="140" width="140"
-                                            style="margin: 15px 10px 10px 0"
-                                            data-chart-values="{{ json_encode($dataDomain['values']) }}"></canvas>
-                                    </td>
-                                    <td>
-                                        <table class="tile_info">
-                                            <tr>
-                                                <td>
-                                                    <p><i class="fa fa-square red"></i>Miền Bắc </p>
-                                                </td>
-                                                <td>{{ $dataDomain['values'][0] }}</td>
-                                            </tr>
-                                            <tr>
-                                                <td>
-                                                    <p><i class="fa fa-square green"></i>Miền Trung </p>
-                                                </td>
-                                                <td>{{ $dataDomain['values'][1] }}</td>
-                                            </tr>
-                                            <tr>
-                                                <td>
-                                                    <p><i class="fa fa-square purple"></i>Miền Nam </p>
-                                                </td>
-                                                <td>{{ $dataDomain['values'][2] }}</td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                </tr>
-                            </table>
-                        </div>
-                    </div>
+            {{-- Chỉ số chính --}}
+            <div class="ad-kpis">
+                <a class="ad-kpi" href="{{ route('admin.tours') }}">
+                    <div class="ad-kpi__ic ad-kpi__ic--teal"><i class="fa fa-suitcase"></i></div>
+                    <div><div class="ad-kpi__l">Tour đang hiển thị</div><div class="ad-kpi__v">{{ $summary['tourWorking'] }}</div>
+                        <div class="ad-kpi__h">{{ $todo['toursHidden'] }} tour đang ẩn</div></div>
+                </a>
+                <a class="ad-kpi" href="{{ route('admin.booking') }}">
+                    <div class="ad-kpi__ic ad-kpi__ic--blue"><i class="fa fa-ticket"></i></div>
+                    <div><div class="ad-kpi__l">Đơn đặt tour (chưa hủy)</div><div class="ad-kpi__v">{{ $summary['countBooking'] }}</div>
+                        <div class="ad-kpi__h">{{ $todo['booking'] }} đơn chờ xác nhận</div></div>
+                </a>
+                <a class="ad-kpi" href="{{ route('admin.users') }}">
+                    <div class="ad-kpi__ic ad-kpi__ic--green"><i class="fa fa-users"></i></div>
+                    <div><div class="ad-kpi__l">Người dùng</div><div class="ad-kpi__v">{{ $money($users['total']) }}</div>
+                        <div class="ad-kpi__h">+{{ $users['new30'] }} trong 30 ngày qua</div></div>
+                </a>
+                <div class="ad-kpi">
+                    <div class="ad-kpi__ic ad-kpi__ic--sand"><i class="fa fa-money"></i></div>
+                    <div><div class="ad-kpi__l">Doanh thu đã thu</div><div class="ad-kpi__v">{{ $money($summary['totalAmount']) }} <small>đ</small></div>
+                        <div class="ad-kpi__h">Đơn đã thanh toán, chưa hủy</div></div>
                 </div>
+                <a class="ad-kpi" href="{{ route('admin.trips') }}">
+                    <div class="ad-kpi__ic ad-kpi__ic--teal"><i class="fa fa-road"></i></div>
+                    <div><div class="ad-kpi__l">Chuyến đi đã lập (Planner)</div><div class="ad-kpi__v">{{ $trips }}</div>
+                        <div class="ad-kpi__h">Do khách tự lên kế hoạch</div></div>
+                </a>
+            </div>
 
-                <div class="col-md-6 col-sm-4  ">
-                    <div class="x_panel">
-                        <div class="x_title">
-                            <h2>Đặt tour</h2>
-                            <ul class="nav navbar-right panel_toolbox">
-                                <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
-                                </li>
-                                <li class="dropdown">
-                                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
-                                        aria-expanded="false"><i class="fa fa-wrench"></i></a>
-                                </li>
-                                <li><a class="close-link"><i class="fa fa-close"></i></a>
-                                </li>
-                            </ul>
-                            <div class="clearfix"></div>
-                        </div>
-                        <div class="x_content">
-
-                            <div id="echart_donut" data-payment-method='{{ json_encode($paymentStatus) }}'
-                                style="height: 350px; -webkit-tap-highlight-color: transparent; user-select: none; position: relative; background-color: transparent;"
-                                _echarts_instance_="ec_1733563825119">
-                                <div
-                                    style="position: relative; overflow: hidden; width: 380px; height: 350px; cursor: default;">
-                                    <canvas width="380" height="350" data-zr-dom-id="zr_0"
-                                        style="position: absolute; left: 0px; top: 0px; width: 380px; height: 350px; user-select: none; -webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></canvas>
+            <div class="ad-grid ad-grid--21">
+                {{-- Doanh thu theo tháng --}}
+                <div class="ad-card">
+                    <div class="ad-card__head">
+                        <h2>Doanh thu theo tháng <small>· {{ $money($monthTotal) }} đ trong {{ $year }}</small></h2>
+                        <form method="GET" action="{{ route('admin.dashboard') }}">
+                            <select name="year" class="ad-field" onchange="this.form.submit()" aria-label="Chọn năm">
+                                @foreach ($years as $y)<option value="{{ $y }}" @selected($y === $year)>Năm {{ $y }}</option>@endforeach
+                            </select>
+                        </form>
+                    </div>
+                    <div class="ad-card__body">
+                        <div class="ad-bars" role="img" aria-label="Doanh thu 12 tháng năm {{ $year }}">
+                            @foreach ($revenue as $i => $v)
+                                <div class="ad-bars__c" title="Tháng {{ $i + 1 }}: {{ $money($v) }} đ">
+                                    <div class="ad-bars__v">{{ $v > 0 ? round($v / 1000000, 1) . ' tr' : '' }}</div>
+                                    <div class="ad-bars__b {{ $v > 0 ? '' : 'is-zero' }}" style="height:{{ $v > 0 ? max(4, round($v / $maxRev * 150)) : 3 }}px"></div>
+                                    <div class="ad-bars__m">T{{ $i + 1 }}</div>
                                 </div>
+                            @endforeach
+                        </div>
+                        <p class="ad-note" style="margin:10px 0 0">Tính theo ngày thanh toán, chỉ đơn đã thanh toán và chưa hủy. Đơn vị cột: triệu đồng.</p>
+                    </div>
+                </div>
+
+                {{-- Việc cần xử lý --}}
+                <div class="ad-card">
+                    <div class="ad-card__head"><h2>Việc cần xử lý</h2></div>
+                    <ul class="ad-todo">
+                        <li><a href="{{ route('admin.booking') }}"><span class="ad-todo__n {{ $todo['booking'] ? 'is-hot' : '' }}">{{ $todo['booking'] }}</span>
+                            <span class="ad-todo__t">Đơn chờ xác nhận<small>Xác nhận hoặc hủy để giải phóng chỗ</small></span><i class="fa fa-angle-right"></i></a></li>
+                        <li><a href="{{ route('admin.booking') }}"><span class="ad-todo__n {{ $todo['unpaid'] ? 'is-hot' : '' }}">{{ $todo['unpaid'] }}</span>
+                            <span class="ad-todo__t">Đã xác nhận, chưa thu tiền<small>Theo dõi thanh toán</small></span><i class="fa fa-angle-right"></i></a></li>
+                        <li><a href="{{ route('admin.contact', ['status' => 'new']) }}"><span class="ad-todo__n {{ $todo['contact'] ? 'is-hot' : '' }}">{{ $todo['contact'] }}</span>
+                            <span class="ad-todo__t">Tin liên hệ mới<small>Phản hồi khách</small></span><i class="fa fa-angle-right"></i></a></li>
+                        <li><a href="{{ route('admin.content', ['foods', 'status' => 'reviewed']) }}"><span class="ad-todo__n {{ $todo['reviewed'] ? 'is-hot' : '' }}">{{ $todo['reviewed'] }}</span>
+                            <span class="ad-todo__t">Nội dung chờ xuất bản<small>{{ $todo['draft'] }} bài còn ở trạng thái nháp</small></span><i class="fa fa-angle-right"></i></a></li>
+                        <li><a href="{{ route('admin.tours') }}"><span class="ad-todo__n {{ $todo['toursNoDest'] ? 'is-hot' : '' }}">{{ $todo['toursNoDest'] }}</span>
+                            <span class="ad-todo__t">Tour chưa gắn điểm đến<small>Không lọc được theo cảm hứng</small></span><i class="fa fa-angle-right"></i></a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="ad-grid ad-grid--21">
+                {{-- Đơn mới --}}
+                <div class="ad-card">
+                    <div class="ad-card__head"><h2>Đơn đặt mới <small>· chờ xác nhận</small></h2><a class="ad-btn ad-btn--sm" href="{{ route('admin.booking') }}">Xem tất cả</a></div>
+                    <div class="ad-tablewrap">
+                        @if (count($newBooking))
+                            <table class="ad-table">
+                                <thead><tr><th>Mã</th><th>Khách</th><th>Tour</th><th class="num">Tổng tiền</th></tr></thead>
+                                <tbody>
+                                @foreach ($newBooking as $b)
+                                    <tr>
+                                        <td><a href="{{ route('admin.booking-detail', ['id' => $b->bookingId]) }}">#{{ $b->bookingId }}</a></td>
+                                        <td>{{ $b->fullName }}</td>
+                                        <td>{{ \Illuminate\Support\Str::limit($b->tour_name, 42) }}</td>
+                                        <td class="num">{{ $money($b->totalPrice) }} đ</td>
+                                    </tr>
+                                @endforeach
+                                </tbody>
+                            </table>
+                        @else
+                            <div class="ad-empty"><i class="fa fa-check-circle"></i>Không có đơn nào đang chờ xác nhận.</div>
+                        @endif
+                    </div>
+                </div>
+
+                {{-- Tour được đặt nhiều --}}
+                <div class="ad-card">
+                    <div class="ad-card__head"><h2>Tour được đặt nhiều nhất</h2></div>
+                    <div class="ad-card__body">
+                        @forelse ($toursBooked as $t)
+                            @php $total = max(1, (int) $t->booked_quantity + (int) $t->quantity); @endphp
+                            <div class="ad-meter">
+                                <div class="ad-meter__top"><span>{{ \Illuminate\Support\Str::limit($t->title, 34) }}</span><b>{{ $t->booked_quantity }} chỗ</b></div>
+                                <div class="ad-meter__bar"><i style="width:{{ round($t->booked_quantity / $total * 100) }}%"></i></div>
                             </div>
-
-                        </div>
+                        @empty
+                            <div class="ad-empty" style="padding:20px 0"><i class="fa fa-suitcase"></i>Chưa có dữ liệu đặt tour.</div>
+                        @endforelse
                     </div>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-md-6 col-sm-6  ">
-                    <div class="x_panel">
-                        <div class="x_title">
-                            <h2>Tours <small>được đặt nhiều nhất</small></h2>
-                            <ul class="nav navbar-right panel_toolbox">
-                                <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
-                                </li>
-                                <li><a class="close-link"><i class="fa fa-close"></i></a>
-                                </li>
-                            </ul>
-                            <div class="clearfix"></div>
-                        </div>
-                        <div class="x_content">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Tên</th>
-                                        <th>Số chỗ đã đặt</th>
-                                        <th>Số chỗ còn trống</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($toursBooked as $item)
-                                        <tr>
-                                            <th scope="row">{{ $item->tourId }}</th>
-                                            <td>{{ $item->title }}</td>
-                                            <td>{{ $item->booked_quantity }}</td>
-                                            <td>{{ $item->quantity }}</td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
 
+            {{-- Tour theo miền --}}
+            <div class="ad-card">
+                <div class="ad-card__head"><h2>Tour theo miền</h2><small>{{ array_sum(array_column($regions, 'n')) }} tour</small></div>
+                <div class="ad-card__body">
+                    @foreach ($regions as $r)
+                        <div class="ad-meter">
+                            <div class="ad-meter__top"><span>{{ $r['label'] }}</span><b>{{ $r['n'] }}</b></div>
+                            <div class="ad-meter__bar"><i style="width:{{ round($r['n'] / $regionTotal * 100) }}%"></i></div>
                         </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-sm-6  ">
-                    <div class="x_panel">
-                        <div class="x_title">
-                            <h2>Đơn đặt mới</h2>
-                            <ul class="nav navbar-right panel_toolbox">
-                                <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
-                                </li>
-                                <li><a class="close-link"><i class="fa fa-close"></i></a>
-                                </li>
-                            </ul>
-                            <div class="clearfix"></div>
-                        </div>
-                        <div class="x_content">
-
-                            <table class="table table-bordered">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Họ và tên</th>
-                                        <th>Tên tours</th>
-                                        <th>Tổng tiền</th>
-                                        <th>Trạng thái</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($newBooking as $item)
-                                        <tr>
-                                            <th scope="row">
-                                                <a href="{{ route('admin.booking-detail',['id' => $item->bookingId]) }}">{{ $item->bookingId }}</a>
-                                            </th>
-                                            <td>{{ $item->fullName }}</td>
-                                            <td>{{ $item->tour_name }}</td>
-                                            <td>{{ number_format($item->totalPrice, 0, ',', '.') }}</td>
-                                            <td>
-                                                <span class="badge badge-warning">Chưa xác nhận</span>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-
-                        </div>
-                    </div>
+                    @endforeach
                 </div>
             </div>
-            {{-- <div class="row">
-                <div class="col-md-12 col-sm-12 ">
-
-                    <div class="x_panel">
-                        <div class="x_title">
-                            <h2>Doanh thu theo tháng</h2>
-                            <ul class="nav navbar-right panel_toolbox">
-                                <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
-                                </li>
-                                <li class="dropdown">
-                                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
-                                        aria-expanded="false"><i class="fa fa-wrench"></i></a>
-                                </li>
-                                <li><a class="close-link"><i class="fa fa-close"></i></a>
-                                </li>
-                            </ul>
-                            <div class="clearfix"></div>
-                        </div>
-                        <div class="x_content">
-                            <canvas id="lineChart" data-revenue-per-month = {{ json_encode($revenue)}}></canvas>
-                        </div>
-
-                    </div>
-
-                    <div class="clearfix"></div>
-                </div>
-
-            </div> --}}
         </div>
-        <!-- /page content -->
     </div>
 </div>
-
 @include('admin.blocks.footer')

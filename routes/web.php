@@ -50,6 +50,8 @@ use App\Http\Controllers\admin\ContentOverviewController;
 use App\Http\Controllers\admin\ContentQualityController;
 use App\Http\Controllers\admin\BlogAdminController;
 use App\Http\Controllers\admin\ContentReviewController;
+use App\Http\Controllers\admin\TripAdminController;
+use App\Http\Controllers\admin\SystemController;
 
 
 
@@ -301,6 +303,14 @@ Route::prefix('admin')->group(function () {
         Route::get('/admin', [AdminManagementController::class, 'index'])->name('admin.admin');
         Route::post('/add-staff', [AdminManagementController::class, 'addStaff'])->name('admin.add-staff');
         Route::post('/delete-staff', [AdminManagementController::class, 'deleteStaff'])->name('admin.delete-staff');
+
+        // Admin v2
+        Route::get('/booking-export', [BookingManagementController::class, 'export'])->name('admin.booking.export');
+        Route::get('/trips', [TripAdminController::class, 'index'])->name('admin.trips');
+        Route::post('/trips/{id}/delete', [TripAdminController::class, 'destroy'])->whereNumber('id')->name('admin.trips.destroy');
+        Route::get('/system', [SystemController::class, 'index'])->name('admin.system');
+        Route::post('/system/flush-content', [SystemController::class, 'flushContent'])->name('admin.system.flush');
+        Route::post('/system/clear-views', [SystemController::class, 'clearViews'])->name('admin.system.views');
     });
 
     // Chỉ admin

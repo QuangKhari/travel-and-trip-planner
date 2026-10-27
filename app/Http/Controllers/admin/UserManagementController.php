@@ -3,125 +3,111 @@
 namespace App\Http\Controllers\admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\admin\UserModel;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class UserManagementController extends Controller
 {
-    private $users;
+    private UserModel $users;
+
+    /** Bộ lọc trạng thái: khóa => nhãn */
+    private const FILTERS = [
+        'all' => 'Tất cả',
+        'active' => 'Đang hoạt động',
+        'pending' => 'Chưa kích hoạt',
+        'blocked' => 'Bị chặn',
+        'deleted' => 'Đã xóa',
+    ];
 
     public function __construct()
     {
         parent::__construct();
         $this->users = new UserModel();
     }
-    public function index(\Illuminate\Http\Request $request)
+
+    public function index(Request $request)
     {
-        $title = 'Quản lý người dùng';
-
-        $all = collect($this->users->getAllUsers());
-
-        // Tìm nhanh theo tên, tên đăng nhập, email, số điện thoại (?q=)
+        $title = 'Người dùng';
         $q = trim((string) $request->query('q', ''));
+        $f = array_key_exists((string) $request->query('f'), self::FILTERS) ? (string) $request->query('f') : 'all';
+
+        // Đếm theo từng bộ lọc bằng một truy vấn
+        $c = DB::table('tbl_users')->selectRaw(
+            "COUNT(*) AS total,
+             SUM(status IS NULL AND isActive = 'y') AS active,
+             SUM(status IS NULL AND isActive = 'n') AS pending,
+             SUM(status = 'b') AS blocked,
+             SUM(status = 'd') AS deleted"
+        )->first();
+        $counts = [
+            'all' => (int) $c->total, 'active' => (int) $c->active, 'pending' => (int) $c->pending,
+            'blocked' => (int) $c->blocked, 'deleted' => (int) $c->deleted,
+        ];
+
+        $query = DB::table('tbl_users');
+        match ($f) {
+            'active' => $query->whereNull('status')->where('isActive', 'y'),
+            'pending' => $query->whereNull('status')->where('isActive', 'n'),
+            'blocked' => $query->where('status', 'b'),
+            'deleted' => $query->where('status', 'd'),
+            default => null,
+        };
         if ($q !== '') {
-            $needle = mb_strtolower($q);
-            $all = $all->filter(function ($u) use ($needle) {
-                foreach (['fullName', 'username', 'email', 'phoneNumber'] as $field) {
-                    if (isset($u->$field) && mb_strpos(mb_strtolower((string) $u->$field), $needle) !== false) {
-                        return true;
-                    }
-                }
-                return false;
-            });
+            $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q) . '%';
+            $query->where(fn($w) => $w->where('fullName', 'like', $like)->orWhere('username', 'like', $like)
+                ->orWhere('email', 'like', $like)->orWhere('phoneNumber', 'like', $like));
         }
 
-        // Phân trang 12 người dùng / trang (?page=)
-        $perPage = 12;
-        $page = max(1, (int) $request->query('page', 1));
-        $users = new \Illuminate\Pagination\LengthAwarePaginator(
-            $all->forPage($page, $perPage)->values(),
-            $all->count(),
-            $perPage,
-            $page,
-            ['path' => route('admin.users'), 'query' => $q !== '' ? ['q' => $q] : []]
-        );
+        $users = $query->orderByDesc('userId')->paginate(15)->withQueryString();
 
-        foreach ($users as $user) {
-            if (!$user->fullName) {
-                $user->fullName = "Unnamed";
-            }
-            if (!$user->avatar) {
-                $user->avatar = 'unnamed.png';
-            }
-            if ($user->isActive == 'y')
-                $user->isActive = 'Đã kích hoạt';
-            else
-                $user->isActive = 'Chưa kích hoạt';
-        }
+        $bookingCount = $users->count()
+            ? DB::table('tbl_booking')->whereIn('userId', $users->pluck('userId'))
+                ->selectRaw('userId, COUNT(*) AS c')->groupBy('userId')->pluck('c', 'userId')
+            : collect();
 
-        return view('admin.users', compact('title', 'users', 'q'));
+        return view('admin.users', [
+            'title' => $title, 'users' => $users, 'q' => $q, 'f' => $f,
+            'filters' => self::FILTERS, 'counts' => $counts, 'bookingCount' => $bookingCount,
+        ]);
     }
 
     public function activeUser(Request $request)
     {
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'userId' => 'required|integer|min:1|exists:tbl_users,userId',
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors()->first(),
-            ], 422);
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
         }
 
         // Không dựa vào số dòng bị đổi: kích hoạt lần hai (0 dòng đổi) không phải là lỗi
         $this->users->updateActive((int) $request->userId);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Người dùng đã được kích hoạt thành công!'
-        ]);
+        return response()->json(['success' => true, 'message' => 'Người dùng đã được kích hoạt thành công!']);
     }
 
     public function changeStatus(Request $request)
     {
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'userId' => 'required|integer|min:1|exists:tbl_users,userId',
             // 'active' = bỏ chặn / khôi phục (ghi NULL vào cột status)
             'status' => 'required|in:b,d,active',
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors()->first(),
-            ], 422);
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
         }
 
-        $userId = (int) $request->userId;
         $status = $request->status === 'active' ? null : $request->status;
-
-        $this->users->changeStatus($userId, ['status' => $status]);
+        $this->users->changeStatus((int) $request->userId, ['status' => $status]);
 
         return response()->json([
             'success' => true,
-            'status'  => $this->getStatusText($request->status),
-            'message' => 'Trạng thái người dùng đã được cập nhật thành công!'
+            'status' => $status,   // null | 'b' | 'd' để giao diện tự vẽ lại nhãn
+            'message' => 'Trạng thái người dùng đã được cập nhật thành công!',
         ]);
-    }
-
-    private function getStatusText($status)
-    {
-        switch ($status) {
-            case 'active':
-                return 'Bình thường';
-            case 'b':
-                return 'Đã chặn';
-            case 'd':
-                return 'Đã xóa';
-            default:
-                return 'Không xác định';
-        }
     }
 }

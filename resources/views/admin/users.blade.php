@@ -3,116 +3,111 @@
     <div class="main_container">
         @include('admin.blocks.sidebar')
 
-        <!-- page content -->
         <div class="right_col" role="main">
-            <div class="">
-                <div class="page-title">
-                    <div class="title_left">
-                        <h3>Quản lý người dùng</h3>
-                    </div>
-
-                    <div class="title_right">
-                        <form method="GET" action="{{ route('admin.users') }}"
-                            class="col-md-5 col-sm-5  form-group pull-right top_search">
-                            <div class="input-group">
-                                <input type="text" name="q" value="{{ $q ?? '' }}" class="form-control"
-                                    placeholder="Tìm theo tên, email, số điện thoại...">
-                                <span class="input-group-btn">
-                                    <button class="btn btn-default" type="submit">Tìm</button>
-                                </span>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <div class="clearfix"></div>
-
-                <div class="x_panel">
-                    <div class="x_content row">
-                        @foreach ($users as $user)
-                            <div class="col-md-4 col-sm-4  profile_details">
-                                <div class="well profile_view">
-                                    <div class="col-sm-12">
-                                        <h4 class="brief"><i>{{ $user->isActive }}</i></h4>
-                                        <div class="left col-md-7 col-sm-7">
-                                            <h2>{{ $user->fullName }}</h2>
-                                            <p><strong>About: </strong> {{ $user->username }} </p>
-                                            <ul class="list-unstyled">
-                                                <li><i class="fa fa-building"></i> Address: {{ $user->address }}</li>
-                                                <li><i class="fa fa-phone"></i> Phone #: {{ $user->phoneNumber }}</li>
-                                            </ul>
-                                        </div>
-                                        <div class="right col-md-5 col-sm-5 text-center">
-                                            <img src="{{ \App\Support\Avatar::url($user->avatar) }}" alt=""
-                                                class="img-circle img-fluid">
-                                        </div>
-                                    </div>
-                                    <div class=" profile-bottom text-center">
-                                        <div class=" col-sm-12 emphasis" style="display: flex; justify-content: end">
-                                            @if ($user->isActive == 'Chưa kích hoạt')
-                                                <button type="button" class="btn btn-primary btn-sm btn-active"
-                                                    data-attr='{"userId": "{{ $user->userId }}", "action": "{{ route('admin.active-user') }}"}'>
-                                                    <i class="fa fa-check"> </i> Kích hoạt
-                                                </button>
-                                            @endif
-
-                                            <button type="button" class="btn btn-primary btn-warning btn-ban"
-                                                data-attr='{"userId": "{{ $user->userId }}", "action": "{{ route('admin.status-user') }}", "status": "b"}'
-                                                style="{{ $user->status === 'b' ? 'display: none;' : '' }}">
-                                                <i class="fa fa-ban"> </i> Chặn
-                                            </button>
-
-                                            <button type="button" class="btn btn-primary btn-warning btn-unban"
-                                                data-attr='{"userId": "{{ $user->userId }}", "action": "{{ route('admin.status-user') }}", "status": "active"}'
-                                                style="{{ $user->status !== 'b' ? 'display: none;' : '' }}">
-                                                <i class="fa fa-ban"> </i> Bỏ chặn
-                                            </button>
-
-                                            <button type="button" class="btn btn-primary btn-danger btn-delete"
-                                                data-attr='{"userId": "{{ $user->userId }}", "action": "{{ route('admin.status-user') }}", "status": "d"}'
-                                                style="{{ $user->status === 'd' ? 'display: none;' : '' }}">
-                                                <i class="fa fa-close"> </i> Xóa
-                                            </button>
-
-                                            <button type="button" class="btn btn-primary btn-danger btn-restore"
-                                                data-attr='{"userId": "{{ $user->userId }}", "action": "{{ route('admin.status-user') }}", "status": "active"}'
-                                                style="{{ $user->status !== 'd' ? 'display: none;' : '' }}">
-                                                <i class="fa fa-close"> </i> Khôi phục
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-
-                        @if ($users->count() === 0)
-                            <p class="text-center text-muted" style="padding:30px 0">Không tìm thấy người dùng
-                                nào{{ !empty($q) ? ' cho “' . $q . '”' : '' }}.</p>
-                        @endif
-                    </div>
-
-                    @if ($users->lastPage() > 1)
-                        <div class="tv-admin-pager tv-admin-pager--static">
-                            <span class="tv-admin-pager__info">Trang {{ $users->currentPage() }} /
-                                {{ $users->lastPage() }} · {{ $users->total() }} người dùng</span>
-                            <div>
-                                @if ($users->currentPage() > 1)
-                                    <a href="{{ $users->previousPageUrl() }}">‹</a>
-                                @endif
-                                @for ($p = max(1, $users->currentPage() - 2); $p <= min($users->lastPage(), $users->currentPage() + 2); $p++)
-                                    <a href="{{ $users->url($p) }}"
-                                        class="{{ $p === $users->currentPage() ? 'is-active' : '' }}">{{ $p }}</a>
-                                @endfor
-                                @if ($users->hasMorePages())
-                                    <a href="{{ $users->nextPageUrl() }}">›</a>
-                                @endif
-                            </div>
-                        </div>
-                    @endif
+            @include('admin.partials.flash')
+            <div class="ad-head">
+                <div>
+                    <h1>Người dùng</h1>
+                    <p>Tìm, kích hoạt, chặn hoặc khôi phục tài khoản khách hàng. Chặn = không đăng nhập/đặt tour được; Xóa = ẩn khỏi hệ thống (có thể khôi phục).</p>
                 </div>
             </div>
+
+            <div class="ad-card">
+                <div class="ad-toolbar">
+                    <form method="GET" action="{{ route('admin.users') }}" class="ad-search">
+                        <i class="fa fa-search"></i>
+                        <input type="search" name="q" value="{{ $q }}" placeholder="Tên, tên đăng nhập, email, số điện thoại…">
+                        @if ($f !== 'all')<input type="hidden" name="f" value="{{ $f }}">@endif
+                    </form>
+                    <div class="ad-chips">
+                        @foreach ($filters as $key => $label)
+                            <a class="ad-chip {{ $f === $key ? 'is-on' : '' }}"
+                                href="{{ route('admin.users', array_filter(['f' => $key === 'all' ? null : $key, 'q' => $q ?: null])) }}">{{ $label }} <b>{{ $counts[$key] }}</b></a>
+                        @endforeach
+                    </div>
+                </div>
+
+                @if ($users->count())
+                    <div class="ad-tablewrap">
+                        <table class="ad-table" id="ad-users">
+                            <thead><tr><th>Người dùng</th><th>Liên hệ</th><th>Địa chỉ</th><th>Ngày đăng ký</th><th class="num">Đơn</th><th>Trạng thái</th><th></th></tr></thead>
+                            <tbody>
+                            @foreach ($users as $u)
+                                <tr data-id="{{ $u->userId }}" data-active="{{ $u->isActive }}" data-status="{{ $u->status }}"
+                                    data-url-active="{{ route('admin.active-user') }}" data-url-status="{{ route('admin.status-user') }}">
+                                    <td>
+                                        <div class="ad-person">
+                                            <img src="{{ \App\Support\Avatar::url($u->avatar) }}" alt="" loading="lazy">
+                                            <div><b>{{ $u->fullName ?: 'Chưa đặt tên' }}</b><small>{{ '@' . $u->username }}</small></div>
+                                        </div>
+                                    </td>
+                                    <td>{{ $u->email }}<br><small class="ad-note">{{ $u->phoneNumber ?: '—' }}</small></td>
+                                    <td>{{ $u->address ?: '—' }}</td>
+                                    <td>{{ $u->createdDate ? \Illuminate\Support\Carbon::parse($u->createdDate)->format('d/m/Y') : '—' }}</td>
+                                    <td class="num">{{ $bookingCount[$u->userId] ?? 0 }}</td>
+                                    <td class="ad-u-badge"></td>
+                                    <td><div class="ad-rowact ad-u-btns"></div></td>
+                                </tr>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    @if ($users->hasPages())
+                        <div class="ad-pager"><span class="ad-note">Trang {{ $users->currentPage() }} / {{ $users->lastPage() }} · {{ $users->total() }} người dùng</span>{{ $users->links('admin.partials.pager') }}</div>
+                    @endif
+                @else
+                    <div class="ad-empty"><i class="fa fa-users"></i>Không có người dùng nào{{ $q !== '' ? ' khớp “' . e($q) . '”' : '' }}.</div>
+                @endif
+            </div>
         </div>
-        <!-- /page content -->
     </div>
 </div>
+@push('scripts')
+<script>
+// Vẽ nhãn + nút theo trạng thái của từng dòng; thao tác bằng AJAX rồi vẽ lại, không tải lại trang.
+(function () {
+    var table = document.getElementById('ad-users');
+    if (!table) return;
+    var csrf = document.querySelector('meta[name="csrf-token"]').content;
+
+    function paint(tr) {
+        var st = tr.dataset.status || '', act = tr.dataset.active === 'y';
+        var badge = st === 'b' ? ['bad', 'Bị chặn'] : st === 'd' ? ['mute', 'Đã xóa'] : act ? ['ok', 'Đang hoạt động'] : ['warn', 'Chưa kích hoạt'];
+        tr.querySelector('.ad-u-badge').innerHTML = '<span class="ad-badge ad-badge--' + badge[0] + '">' + badge[1] + '</span>';
+        var b = [];
+        if (!st && !act) b.push(['activate', 'Kích hoạt', 'ad-btn--primary', '']);
+        if (st === '') b.push(['b', 'Chặn', '', 'Chặn người dùng này? Họ sẽ không đăng nhập hay đặt tour được.']);
+        if (st === 'b') b.push(['active', 'Bỏ chặn', '', '']);
+        if (st !== 'd') b.push(['d', 'Xóa', 'ad-btn--danger', 'Xóa người dùng này? Có thể khôi phục lại sau.']);
+        if (st === 'd') b.push(['active', 'Khôi phục', '', '']);
+        tr.querySelector('.ad-u-btns').innerHTML = b.map(function (x) {
+            return '<button type="button" class="ad-btn ad-btn--sm ' + x[2] + '" data-do="' + x[0] + '" data-msg="' + x[3] + '">' + x[1] + '</button>';
+        }).join('');
+    }
+
+    function send(tr, what) {
+        var isAct = what === 'activate';
+        $.post(isAct ? tr.dataset.urlActive : tr.dataset.urlStatus,
+            isAct ? { userId: tr.dataset.id, _token: csrf } : { userId: tr.dataset.id, status: what, _token: csrf })
+            .done(function (r) {
+                if (!r.success) { toastr.error(r.message); return; }
+                if (isAct) tr.dataset.active = 'y'; else tr.dataset.status = r.status || '';
+                paint(tr); toastr.success(r.message);
+            })
+            .fail(function (x) { toastr.error((x.responseJSON && x.responseJSON.message) || 'Có lỗi xảy ra. Vui lòng thử lại.'); });
+    }
+
+    table.addEventListener('click', function (ev) {
+        var b = ev.target.closest('button[data-do]');
+        if (!b) return;
+        var tr = b.closest('tr'), what = b.dataset.do, msg = b.dataset.msg;
+        if (!msg) return send(tr, what);
+        Swal.fire({ title: 'Xác nhận', text: msg, icon: 'warning', showCancelButton: true, confirmButtonText: 'Đồng ý',
+            cancelButtonText: 'Hủy', confirmButtonColor: '#0d9488', reverseButtons: true })
+            .then(function (r) { if (r.isConfirmed) send(tr, what); });
+    });
+    table.querySelectorAll('tbody tr').forEach(paint);
+})();
+</script>
+@endpush
 @include('admin.blocks.footer')
