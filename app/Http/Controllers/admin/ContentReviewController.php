@@ -32,6 +32,32 @@ class ContentReviewController extends Controller
 
     private const PAGE = 25;
 
+    /** Gợi ý giấy phép khi nội dung dựa theo nguồn khác (vẫn gõ được giá trị khác). */
+    public const LICENSE_HINTS = ['CC BY-SA 4.0', 'CC BY 4.0', 'CC0 1.0', 'Công cộng (public domain)'];
+
+    /** Nội dung/ảnh do Travela tự viết, tự chụp: không cần nguồn ngoài. */
+    public const OWN_LICENSE = 'Tự viết';
+    public const OWN_CREDIT = 'Travela';
+
+    /**
+     * Cách nhóm các trường trong form (trường không nằm trong nhóm nào là phần chính, luôn hiện):
+     *   planner = cần để Planner xếp lịch (hiện, có tiêu đề riêng); when = thời gian diễn ra (lễ hội); advanced = thu gọn, không bắt buộc.
+     */
+    private const GROUPS = [
+        'foods' => ['advanced' => ['monthFrom', 'monthTo', 'whereToTry', 'placeId', 'isMustTry', 'isFeatured']],
+        'experiences' => [
+            'planner' => ['durationMinutes', 'difficulty', 'indoor'],
+            'advanced' => ['duration', 'priceLevel', 'monthFrom', 'monthTo', 'suitableFor', 'priceNote', 'priceMin', 'priceMax', 'latitude', 'longitude', 'isMustTry', 'isFeatured'],
+        ],
+        'events' => [
+            'when' => ['isLunar', 'lunarMonth', 'lunarDay', 'solarMonth', 'solarDay', 'durationDays', 'dateNote'],
+            'advanced' => ['isMustTry', 'isFeatured'],
+        ],
+        'guides' => [],
+        'itineraries' => [],
+        'places' => ['advanced' => ['isMustTry', 'isFeatured']],
+    ];
+
     /** @var array<string,bool> */
     private static array $colCache = [];
 
@@ -164,7 +190,10 @@ class ContentReviewController extends Controller
 
     private function cfg(string $kind): array
     {
-        return $this->kinds()[$kind] ?? abort(404);
+        $cfg = $this->kinds()[$kind] ?? abort(404);
+        $cfg['groups'] = self::GROUPS[$kind] ?? [];
+
+        return $cfg;
     }
 
     // ------------------------------------------------------------------ Danh sách
@@ -305,6 +334,11 @@ class ContentReviewController extends Controller
             'dates' => $dates,
             'destinations' => $cfg['dest'] ? DB::table('tbl_destinations')->orderBy('name')->get(['destinationId', 'name', 'isActive']) : collect(),
             'categories' => $kind === 'guides' ? DB::table('tbl_guide_categories')->orderBy('displayOrder')->orderBy('name')->get(['categoryId', 'name']) : collect(),
+            'categoryHints' => isset($cfg['fields']['category']) && $cfg['fields']['category'][1] === 'text'
+                ? DB::table($cfg['table'])->whereNotNull('category')->where('category', '<>', '')->distinct()->orderBy('category')->limit(60)->pluck('category')->all() : [],
+            'licenseHints' => self::LICENSE_HINTS,
+            'ownLicense' => self::OWN_LICENSE,
+            'ownCredit' => self::OWN_CREDIT,
             'raw' => $isNew ? null : $this->rawFor($kind, $row),
             'history' => $isNew ? collect() : DB::table('tbl_content_review_log')->where('kind', $kind)->where('refId', $id)->orderByDesc('logId')->limit(30)->get(),
         ]);
@@ -340,8 +374,17 @@ class ContentReviewController extends Controller
         $this->log($kind, $id, 'create', null, 'draft', 'Tạo mới');
         PublicCache::flush();
 
-        return redirect()->route('admin.content.edit', [$kind, $id])
-            ->with($coverErr ? 'error' : 'success', $coverErr ? "Đã tạo, nhưng ảnh chưa lưu được: {$coverErr}" : 'Đã tạo ở trạng thái Nháp. Bổ sung nguồn, giấy phép, ảnh rồi xuất bản.');
+        if ($coverErr) {
+            return redirect()->route('admin.content.edit', [$kind, $id])->with('error', "Đã tạo, nhưng ảnh chưa lưu được: {$coverErr}");
+        }
+        if ($request->input('after') === 'publish') {
+            $err = $this->apply($kind, $cfg, $id, 'published');
+
+            return redirect()->route('admin.content.edit', [$kind, $id])->with($err ? 'error' : 'success',
+                $err ? 'Đã lưu nháp, chưa xuất bản được vì: ' . $err : 'Đã tạo và xuất bản.');
+        }
+
+        return redirect()->route('admin.content.edit', [$kind, $id])->with('success', 'Đã lưu nháp. Xem mục "Trước khi xuất bản" bên phải để biết còn thiếu gì.');
     }
 
     public function update(Request $request, string $kind, int $id)
@@ -375,12 +418,20 @@ class ContentReviewController extends Controller
         }
         PublicCache::flush();
 
+        if ($request->input('after') === 'publish' && $fresh->reviewStatus !== 'published') {
+            $err = $this->apply($kind, $cfg, $id, 'published');
+
+            return redirect()->route('admin.content.edit', [$kind, $id])->with($err ? 'error' : 'success',
+                $err ? 'Đã lưu, chưa xuất bản được vì: ' . $err : 'Đã lưu và xuất bản.');
+        }
+
         return redirect()->route('admin.content.edit', [$kind, $id])->with('success', 'Đã lưu.');
     }
 
     private function validated(Request $request, array $cfg, ?int $id): array
     {
         $rules = array_map(fn($f) => $f[2], $cfg['fields']);
+        $this->applyLegalChoices($request, $cfg, $rules);
         if ($cfg['slug']) {
             $rules['slug'] = ['nullable', 'max:100', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique($cfg['table'], 'slug')->ignore($id, $cfg['key'])];
         }
@@ -388,13 +439,15 @@ class ContentReviewController extends Controller
             $rules['cover'] = ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:' . (int) config('media.limits.max_file_kb', 8192)];
             $rules['removeCover'] = ['nullable', 'boolean'];
             if ($request->hasFile('cover') && isset($cfg['fields']['imageCredit'])) {
-                $rules['imageCredit'] = ['required', 'max:255'];   // ảnh tải lên bắt buộc có ghi công
+                $rules['imageCredit'] = ['required', 'max:255'];   // ảnh tải lên bắt buộc có nguồn / tác giả
             }
         }
         $data = $request->validate($rules, [
             'slug.regex' => 'Slug chỉ gồm chữ thường không dấu, số và dấu gạch ngang.',
             'slug.unique' => 'Slug này đã có nội dung khác dùng.',
-            'imageCredit.required' => 'Tải ảnh lên thì phải ghi công ảnh.',
+            'imageCredit.required' => 'Ảnh cần có nguồn: chọn "Ảnh Travela tự chụp" hoặc ghi tên tác giả / nguồn ảnh.',
+            'license.required' => 'Nội dung dựa theo nguồn khác thì cần ghi giấy phép (ví dụ CC BY-SA 4.0).',
+            'sourceUrl.required' => 'Nội dung dựa theo nguồn khác thì cần dán liên kết nguồn.',
             'destinationId.exists' => 'Điểm đến không tồn tại.',
         ]);
         foreach ($cfg['fields'] as $name => $f) {
@@ -404,6 +457,41 @@ class ContentReviewController extends Controller
         }
 
         return array_map(fn($v) => is_string($v) && trim($v) === '' ? null : $v, $data);
+    }
+
+    /**
+     * Hai lựa chọn gọn thay cho ba ô gõ tay:
+     *  - provenance = own   -> giấy phép "Tự viết", không cần liên kết nguồn;
+     *  - provenance = other -> bắt buộc ghi giấy phép và liên kết nguồn;
+     *  - imageCreditMode = own -> nguồn ảnh "Travela" (ảnh tự chụp / tự tạo); = other -> bắt buộc gõ nguồn / tác giả.
+     * Không gửi các khóa này (API cũ, test cũ) thì giữ nguyên hành vi trước đây.
+     */
+    private function applyLegalChoices(Request $request, array $cfg, array &$rules): void
+    {
+        if ($cfg['legal'] && isset($cfg['fields']['license'])) {
+            $mode = (string) $request->input('provenance', '');
+            if ($mode === 'own') {
+                $request->merge(['license' => self::OWN_LICENSE, 'sourceUrl' => null]);
+            } elseif ($mode === 'other') {
+                $rules['license'] = ['required', 'max:80'];
+                $rules['sourceUrl'] = array_merge(['required'], self::URL);
+                if (trim((string) $request->input('license')) === self::OWN_LICENSE) {
+                    $request->merge(['license' => null]);   // đang chọn "nguồn khác" thì không được để lại "Tự viết" cũ
+                }
+            }
+        }
+        if ($cfg['cover'] && isset($cfg['fields']['imageCredit'])) {
+            $mode = (string) $request->input('imageCreditMode', '');
+            $hasImage = $request->hasFile('cover') || $request->boolean('hasCover');
+            if ($mode === 'own' && $hasImage) {
+                $request->merge(['imageCredit' => self::OWN_CREDIT]);
+            } elseif ($mode === 'other' && $hasImage) {
+                $rules['imageCredit'] = ['required', 'max:255'];
+                if (trim((string) $request->input('imageCredit')) === self::OWN_CREDIT) {
+                    $request->merge(['imageCredit' => null]);
+                }
+            }
+        }
     }
 
     /** Lưu / xóa ảnh bìa. Trả về thông điệp lỗi (tiếng Việt) hoặc null. Gỡ khỏi $data các khóa không phải cột. */

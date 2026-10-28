@@ -6,7 +6,7 @@
     $t = $payload['trip'];
     $money = fn($n) => number_format((float) $n, 0, ',', '.') . 'đ';
     $start = $t['startDate'] ? \Carbon\Carbon::parse($t['startDate']) : null;
-    $typeLabel = ['destination' => 'Điểm đến', 'place' => 'Địa điểm', 'food' => 'Món ăn', 'event' => 'Lễ hội', 'experience' => 'Trải nghiệm', 'tour' => 'Tour'];
+    $typeLabel = ['destination' => 'Điểm đến', 'place' => 'Địa điểm', 'food' => 'Món ăn', 'event' => 'Lễ hội', 'experience' => 'Trải nghiệm', 'tour' => 'Tour', 'note' => 'Ghi chú', 'transport' => 'Di chuyển'];
 @endphp
 
 <main class="tp tp--shared">
@@ -26,7 +26,7 @@
                         @foreach ($d['items'] as $it)
                             <li>
                                 <span class="tp-type">{{ $typeLabel[$it['type']] ?? '' }}</span>
-                                <a href="{{ $it['url'] }}">{{ $it['name'] }}</a>
+                                @if (!empty($it['url']))<a href="{{ $it['url'] }}">{{ $it['name'] }}</a>@else<span>{{ $it['name'] }}</span>@endif
                                 @if ($it['sub'])<small>{{ $it['sub'] }}</small>@endif
                                 @if ($it['when'])<small>Diễn ra {{ $it['when'] }}</small>@endif
                                 @if (!empty($it['slot']))<small>{{ ['morning' => 'Buổi sáng', 'noon' => 'Buổi trưa', 'afternoon' => 'Buổi chiều', 'evening' => 'Buổi tối'][$it['slot']] ?? '' }}</small>@endif
@@ -45,7 +45,7 @@
         @if ($payload['unassigned'])
             <section class="tp-card">
                 <h2>Chưa xếp ngày</h2>
-                <ul class="tp-items">@foreach ($payload['unassigned'] as $it)<li><a href="{{ $it['url'] }}">{{ $it['name'] }}</a></li>@endforeach</ul>
+                <ul class="tp-items">@foreach ($payload['unassigned'] as $it)<li>@if (!empty($it['url']))<a href="{{ $it['url'] }}">{{ $it['name'] }}</a>@else{{ $it['name'] }}@endif</li>@endforeach</ul>
             </section>
         @endif
 

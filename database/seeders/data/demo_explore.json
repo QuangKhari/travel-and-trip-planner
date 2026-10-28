@@ -1,0 +1,2188 @@
+{
+ "_ghi_chu": "Dữ liệu mẫu Khám phá (tự viết, license 'Tự viết'). Nạp bằng: php artisan explore:seed-demo [--publish]. Mặc định ở trạng thái draft. Tọa độ điểm đến là xấp xỉ; ngày lễ hội cần đối chiếu nguồn chính thống trước khi publish. Không có giá, giờ mở cửa hay ảnh.",
+ "destinations": [
+  {
+   "slug": "thai-nguyen",
+   "name": "Thái Nguyên",
+   "province": "Thái Nguyên",
+   "domain": "b",
+   "lat": 21.5928,
+   "lng": 105.8442,
+   "description": "Vùng đồi chè nổi tiếng của miền Bắc, nơi có hồ Núi Cốc, Bảo tàng Văn hóa các dân tộc Việt Nam và những làng chè để uống thử ngay tại vườn.",
+   "scores": {
+    "que": 85,
+    "nhien": 65,
+    "van": 60,
+    "am": 55,
+    "anh": 55,
+    "lanh": 55
+   }
+  },
+  {
+   "slug": "bac-ninh",
+   "name": "Bắc Ninh",
+   "province": "Bắc Ninh",
+   "domain": "b",
+   "lat": 21.1861,
+   "lng": 106.0763,
+   "description": "Cái nôi của dân ca quan họ, với các ngôi chùa cổ như Dâu, Bút Tháp, làng tranh Đông Hồ và những lễ hội đầu xuân.",
+   "scores": {
+    "van": 90,
+    "que": 70,
+    "am": 50,
+    "lanh": 55,
+    "anh": 45
+   }
+  },
+  {
+   "slug": "hung-yen",
+   "name": "Hưng Yên",
+   "province": "Hưng Yên",
+   "domain": "b",
+   "lat": 20.6464,
+   "lng": 106.0511,
+   "description": "Vùng đồng bằng sông Hồng với phố Hiến xưa, vườn nhãn lồng, chùa Keo và những làng nghề giữ nhịp sống chậm.",
+   "scores": {
+    "van": 80,
+    "que": 80,
+    "am": 55,
+    "lanh": 55
+   }
+  },
+  {
+   "slug": "dong-nai",
+   "name": "Đồng Nai",
+   "province": "Đồng Nai",
+   "domain": "n",
+   "lat": 10.9574,
+   "lng": 106.8427,
+   "description": "Cửa ngõ phía đông Nam Bộ, có Vườn quốc gia Cát Tiên cho người thích rừng, cùng các vườn trái cây và làng gốm Biên Hòa.",
+   "scores": {
+    "nhien": 85,
+    "que": 65,
+    "van": 45,
+    "anh": 50,
+    "doi": 40
+   }
+  },
+  {
+   "slug": "dong-thap",
+   "name": "Đồng Tháp",
+   "province": "Đồng Tháp",
+   "domain": "n",
+   "lat": 10.46,
+   "lng": 105.633,
+   "description": "Miền Tây sông nước với vườn quốc gia Tràm Chim, làng hoa Sa Đéc, đồng sen và những mùa nước nổi chậm rãi.",
+   "scores": {
+    "que": 95,
+    "nhien": 75,
+    "anh": 70,
+    "lanh": 65,
+    "am": 55
+   }
+  },
+  {
+   "slug": "lai-chau",
+   "name": "Lai Châu",
+   "province": "Lai Châu",
+   "domain": "b",
+   "lat": 22.3964,
+   "lng": 103.4582,
+   "description": "Miền núi Tây Bắc còn ít người biết: đèo Ô Quy Hồ, núi Putaleng, ruộng bậc thang và những bản làng người Thái, Mông, Dao.",
+   "scores": {
+    "nhien": 90,
+    "que": 80,
+    "anh": 80,
+    "lanh": 70,
+    "doi": 45
+   }
+  },
+  {
+   "slug": "sam-son",
+   "name": "Sầm Sơn",
+   "province": "Thanh Hóa",
+   "domain": "t",
+   "lat": 19.7339,
+   "lng": 105.9078,
+   "description": "Bãi biển lâu đời của xứ Thanh, thuận tiện cho kỳ nghỉ biển cuối tuần, với hải sản tươi và hòn Trống Mái ngay bờ.",
+   "scores": {
+    "bien": 85,
+    "am": 60,
+    "doi": 65,
+    "van": 40
+   }
+  },
+  {
+   "slug": "pu-luong",
+   "name": "Pù Luông",
+   "province": "Thanh Hóa",
+   "domain": "t",
+   "lat": 20.46,
+   "lng": 105.22,
+   "description": "Khu bảo tồn thiên nhiên với ruộng bậc thang, nhà sàn người Thái, người Mường và những cung đường đi bộ xuyên bản.",
+   "scores": {
+    "nhien": 90,
+    "que": 85,
+    "lanh": 85,
+    "anh": 80,
+    "doi": 40
+   }
+  },
+  {
+   "slug": "cua-lo",
+   "name": "Cửa Lò",
+   "province": "Nghệ An",
+   "domain": "t",
+   "lat": 18.8167,
+   "lng": 105.7167,
+   "description": "Thị xã biển của xứ Nghệ, bãi cát dài, hải sản và là điểm xuất phát để ghé quê Bác ở Kim Liên.",
+   "scores": {
+    "bien": 80,
+    "am": 60,
+    "van": 60,
+    "doi": 60
+   }
+  },
+  {
+   "slug": "ha-tinh",
+   "name": "Hà Tĩnh",
+   "province": "Hà Tĩnh",
+   "domain": "t",
+   "lat": 18.3428,
+   "lng": 105.9057,
+   "description": "Vùng đất của núi Hồng, sông La với di tích Ngã ba Đồng Lộc, khu lưu niệm Nguyễn Du và bãi biển Thiên Cầm.",
+   "scores": {
+    "van": 80,
+    "bien": 55,
+    "que": 65,
+    "am": 50
+   }
+  }
+ ],
+ "seasons": {
+  "thai-nguyen": {
+   "m": [
+    3,
+    4,
+    10,
+    11
+   ],
+   "w": "Đồi chè xanh, trời dịu"
+  },
+  "bac-ninh": {
+   "m": [
+    1,
+    2
+   ],
+   "w": "Mùa hội xuân, hát quan họ"
+  },
+  "hung-yen": {
+   "m": [
+    7,
+    8
+   ],
+   "w": "Mùa nhãn lồng chín"
+  },
+  "dong-nai": {
+   "m": [
+    12,
+    1,
+    2,
+    3
+   ],
+   "w": "Mùa khô, thuận tiện vào rừng"
+  },
+  "dong-thap": {
+   "m": [
+    9,
+    10,
+    11
+   ],
+   "w": "Mùa nước nổi miền Tây"
+  },
+  "lai-chau": {
+   "m": [
+    3,
+    9,
+    10
+   ],
+   "w": "Hoa ban mùa xuân, lúa chín mùa thu"
+  },
+  "sam-son": {
+   "m": [
+    5,
+    6,
+    7
+   ],
+   "w": "Mùa tắm biển"
+  },
+  "pu-luong": {
+   "m": [
+    5,
+    6,
+    9,
+    10
+   ],
+   "w": "Lúa non và lúa chín trên ruộng bậc thang"
+  },
+  "cua-lo": {
+   "m": [
+    5,
+    6,
+    7
+   ],
+   "w": "Mùa tắm biển"
+  },
+  "ha-tinh": {
+   "m": [
+    5,
+    6,
+    7
+   ],
+   "w": "Mùa biển Thiên Cầm"
+  }
+ },
+ "foods": [
+  {
+   "slug": "bun-bo-hue",
+   "name": "Bún bò Huế",
+   "destination": "hue",
+   "category": "mì bún",
+   "description": "Sợi bún to ăn với nước dùng hầm xương bò, thơm sả, vị cay của ớt và mắm ruốc; thường kèm giò heo, rau sống và bắp chuối bào.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "banh-beo-nam-loc",
+   "name": "Bánh bèo, bánh nậm, bánh lọc",
+   "destination": "hue",
+   "category": "bánh",
+   "description": "Nhóm bánh nhỏ làm từ bột gạo hoặc bột lọc, hấp và ăn với nước mắm ngọt cay, tôm chấy, mỡ hành; hay được gọi chung trong một mâm.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "com-hen",
+   "name": "Cơm hến",
+   "destination": "hue",
+   "category": "cơm",
+   "description": "Cơm nguội trộn hến xào, rau thơm, bắp chuối, tóp mỡ và ớt; ăn kèm bát nước hến nóng. Món bình dân của người Huế.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "che-hue",
+   "name": "Chè Huế",
+   "destination": "hue",
+   "category": "tráng miệng",
+   "description": "Huế có nhiều loại chè như chè hạt sen, chè đậu ngự, chè bắp; vị thanh, ngọt dịu, thường bán theo từng chén nhỏ.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "banh-trang-cuon-thit-heo",
+   "name": "Bánh tráng cuốn thịt heo",
+   "destination": "da-nang",
+   "category": "đặc sản",
+   "description": "Thịt heo luộc thái mỏng cuốn cùng bánh tráng, bún và nhiều loại rau thơm, chấm mắm nêm pha chua ngọt.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "bun-mam-nem",
+   "name": "Bún mắm nêm",
+   "destination": "da-nang",
+   "category": "mì bún",
+   "description": "Bún ăn với thịt heo luộc, rau sống và nước mắm nêm pha dứa, tỏi, ớt; mùi đậm, hợp người thích vị đặc trưng.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "banh-xeo-da-nang",
+   "name": "Bánh xèo Đà Nẵng",
+   "destination": "da-nang",
+   "category": "bánh",
+   "description": "Bánh xèo kích cỡ nhỏ, vỏ giòn, nhân tôm thịt và giá; cuốn bánh tráng với rau sống, chấm nước lèo đặc trưng miền Trung.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "com-tam",
+   "name": "Cơm tấm",
+   "destination": "ho-chi-minh",
+   "category": "cơm",
+   "description": "Cơm làm từ gạo tấm ăn với sườn nướng, bì, chả trứng và nước mắm pha; bữa sáng và bữa trưa phổ biến ở Sài Gòn.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "banh-mi-sai-gon",
+   "name": "Bánh mì Sài Gòn",
+   "destination": "ho-chi-minh",
+   "category": "bánh",
+   "description": "Ổ bánh mì giòn nhân thịt nguội, pa-tê, đồ chua, rau mùi và ớt; mỗi tiệm có công thức nước sốt riêng.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "hu-tieu-nam-vang",
+   "name": "Hủ tiếu Nam Vang",
+   "destination": "ho-chi-minh",
+   "category": "mì bún",
+   "description": "Hủ tiếu nước dùng ngọt từ xương, ăn với thịt bằm, tôm, gan, trứng cút; món chịu ảnh hưởng ẩm thực người Hoa và Khmer.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "ca-phe-sua-da",
+   "name": "Cà phê sữa đá",
+   "destination": "ho-chi-minh",
+   "category": "đồ uống",
+   "description": "Cà phê pha phin đậm, trộn sữa đặc và đá; thức uống quen thuộc của người Sài Gòn mỗi sáng.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "bun-sua",
+   "name": "Bún sứa",
+   "destination": "nha-trang",
+   "category": "mì bún",
+   "description": "Sứa biển giòn ăn với bún, chả cá, nước dùng thanh vị hải sản; ăn kèm rau sống và mắm.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "nem-nuong-ninh-hoa",
+   "name": "Nem nướng Ninh Hòa",
+   "destination": "nha-trang",
+   "category": "món nướng chiên",
+   "description": "Nem thịt heo nướng than, cuốn bánh tráng cùng rau, chuối chát, khế, chấm nước sốt đặc; món đặc sản của vùng Ninh Hòa, Khánh Hòa.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "banh-canh-cha-ca",
+   "name": "Bánh canh chả cá",
+   "destination": "nha-trang",
+   "category": "mì bún",
+   "description": "Sợi bánh canh to ăn với chả cá tươi và nước dùng ngọt từ cá, thường thêm ớt và chanh.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "bun-cha-ca-quy-nhon",
+   "name": "Bún chả cá Quy Nhơn",
+   "destination": "quy-nhon",
+   "category": "mì bún",
+   "description": "Bún với chả cá chiên hoặc hấp, nước dùng ngọt nhẹ vị cá biển, ăn kèm rau sống và ớt.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "banh-xeo-tom-nhay",
+   "name": "Bánh xèo tôm nhảy",
+   "destination": "quy-nhon",
+   "category": "bánh",
+   "description": "Bánh xèo nhỏ giòn có tôm tươi nhảy trong chảo; cuốn bánh tráng, rau sống, chấm nước mắm chua ngọt.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "nem-cho-huyen",
+   "name": "Nem chợ Huyện",
+   "destination": "quy-nhon",
+   "category": "đặc sản",
+   "description": "Nem làm từ thịt heo lên men, có nguồn gốc từ vùng Tuy Phước, Bình Định; thường dùng làm quà và ăn kèm lá chuối, rau, tỏi.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "so-huyet-o-loan",
+   "name": "Sò huyết Ô Loan",
+   "destination": "phu-yen",
+   "category": "hải sản",
+   "description": "Sò huyết từ đầm Ô Loan, thường nướng hoặc xào, ăn nóng với muối tiêu chanh.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "banh-hoi-long-heo",
+   "name": "Bánh hỏi lòng heo",
+   "destination": "phu-yen",
+   "category": "bánh",
+   "description": "Bánh hỏi sợi nhỏ ăn cùng lòng heo luộc, rau thơm và nước mắm gừng; món ăn sáng quen thuộc ở Phú Yên.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "nho-ninh-thuan",
+   "name": "Nho Ninh Thuận",
+   "destination": "phan-rang",
+   "category": "đặc sản",
+   "description": "Vùng khô nắng nhiều gió của Ninh Thuận thuận lợi cho cây nho; nho ăn tươi, làm rượu vang hoặc nước ép.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "thit-cuu-nuong",
+   "name": "Thịt cừu nướng",
+   "destination": "phan-rang",
+   "category": "món nướng chiên",
+   "description": "Thịt cừu nướng, xào lăn hoặc nấu cà ri, được ưa chuộng ở vùng đất nuôi cừu Ninh Thuận.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "goi-ca-mai",
+   "name": "Gỏi cá mai",
+   "destination": "mui-ne",
+   "category": "đặc sản",
+   "description": "Cá mai thái mỏng trộn chua với dừa nạo, rau thơm, ăn cuốn bánh tráng và chấm tương; món đặc trưng vùng biển Phan Thiết.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "ca-phe-buon-ma-thuot",
+   "name": "Cà phê Buôn Ma Thuột",
+   "destination": "buon-ma-thuot",
+   "category": "đồ uống",
+   "description": "Buôn Ma Thuột nổi tiếng là thủ phủ cà phê của Việt Nam; cà phê pha phin, vị đậm, thơm.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "com-lam-ga-nuong",
+   "name": "Cơm lam gà nướng",
+   "destination": "buon-ma-thuot",
+   "category": "cơm",
+   "description": "Gạo nếp nấu trong ống tre, ăn với gà nướng ướp lá rừng; món đặc trưng của Tây Nguyên.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "goi-toi-ly-son",
+   "name": "Gỏi tỏi Lý Sơn",
+   "destination": "ly-son",
+   "category": "đặc sản",
+   "description": "Tỏi Lý Sơn là đặc sản của đảo, dùng làm gỏi hoặc ngâm; hương nồng hơn tỏi thường.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "chao-canh-quang-binh",
+   "name": "Cháo canh Quảng Bình",
+   "destination": "phong-nha",
+   "category": "mì bún",
+   "description": "Sợi bột gạo dày nấu trong nước dùng cá hoặc tôm đặc sánh, ăn nóng với hành, tiêu.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "banh-da-cua",
+   "name": "Bánh đa cua",
+   "destination": "hai-phong",
+   "category": "mì bún",
+   "description": "Sợi bánh đa đỏ ăn với riêu cua, chả, rau muống chẻ và nước dùng ngọt; món sáng đặc trưng của Hải Phòng.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "banh-mi-cay-hai-phong",
+   "name": "Bánh mì cay Hải Phòng",
+   "destination": "hai-phong",
+   "category": "bánh",
+   "description": "Bánh mì que nhỏ nhân pa-tê, chả, rưới nước sốt cay đặc trưng.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "nem-cua-be",
+   "name": "Nem cua bể",
+   "destination": "hai-phong",
+   "category": "món nướng chiên",
+   "description": "Nem cuốn bánh đa nem chiên giòn với nhân thịt cua; thường ăn với bún, rau và nước chấm chua ngọt.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "cha-muc-ha-long",
+   "name": "Chả mực Hạ Long",
+   "destination": "ha-long",
+   "category": "đặc sản",
+   "description": "Mực giã tay rồi chiên, giòn dai, vị ngọt tự nhiên; đặc sản mang về làm quà của Quảng Ninh.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "sa-sung",
+   "name": "Sá sùng",
+   "destination": "ha-long",
+   "category": "hải sản",
+   "description": "Loài hải sản ở bãi triều Quảng Ninh, thường được phơi khô hoặc nấu cháo, nấu canh.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "thang-co",
+   "name": "Thắng cố",
+   "destination": "sa-pa",
+   "category": "đặc sản",
+   "description": "Món hầm nhiều loại thịt và nội tạng với thảo quả và gia vị núi, quen thuộc ở chợ vùng cao người H'Mông.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "ca-hoi-ca-tam-sa-pa",
+   "name": "Cá hồi, cá tầm Sa Pa",
+   "destination": "sa-pa",
+   "category": "đặc sản",
+   "description": "Cá nước lạnh được nuôi ở vùng núi cao, hay ăn lẩu, nướng hoặc làm gỏi.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "men-men",
+   "name": "Mèn mén",
+   "destination": "ha-giang",
+   "category": "cơm",
+   "description": "Món chính của người Mông: bột ngô hấp, ăn với canh rau và thịt; có vị bùi, thơm.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "chao-au-tau",
+   "name": "Cháo ấu tẩu",
+   "destination": "ha-giang",
+   "category": "đặc sản",
+   "description": "Cháo thịt chân giò nấu với củ ấu tẩu (đã chế biến kỹ để ăn được); món gắn với cao nguyên đá Đồng Văn, thường dùng trong tiết trời lạnh.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "hat-de-trung-khanh",
+   "name": "Hạt dẻ Trùng Khánh",
+   "destination": "cao-bang",
+   "category": "đặc sản",
+   "description": "Hạt dẻ vùng Trùng Khánh, rang hoặc luộc, vị bùi ngọt, mùa thu hoạch vào cuối thu.",
+   "monthFrom": 9,
+   "monthTo": 11
+  },
+  {
+   "slug": "vit-quay-7-vi",
+   "name": "Vịt quay 7 vị",
+   "destination": "cao-bang",
+   "category": "món nướng chiên",
+   "description": "Vịt ướp bảy loại gia vị bản địa rồi quay giòn da; món nổi tiếng ở Cao Bằng.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "pho-chua-lang-son",
+   "name": "Phở chua Lạng Sơn",
+   "destination": "lang-son",
+   "category": "mì bún",
+   "description": "Phở khô trộn nước sốt chua ngọt, ăn với thịt vịt quay, lạp xưởng, rau thơm và lạc.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "khau-nhuc",
+   "name": "Khâu nhục",
+   "destination": "lang-son",
+   "category": "đặc sản",
+   "description": "Thịt ba chỉ hấp mềm với mắm và gia vị, một món cỗ của người Tày, Nùng, hay có trong dịp lễ.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "de-nui-ninh-binh",
+   "name": "Dê núi Ninh Bình",
+   "destination": "ninh-binh",
+   "category": "đặc sản",
+   "description": "Dê nuôi thả núi đá vôi, chế biến thành nhiều món như dê tái chanh, dê hấp, lẩu dê.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "com-chay-ninh-binh",
+   "name": "Cơm cháy Ninh Bình",
+   "destination": "ninh-binh",
+   "category": "đặc sản",
+   "description": "Lớp cơm cháy sấy giòn, thường ăn kèm sốt thịt hoặc chà bông; hay mua làm quà.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "sua-chua-moc-chau",
+   "name": "Sữa chua Mộc Châu",
+   "destination": "moc-chau",
+   "category": "tráng miệng",
+   "description": "Cao nguyên Mộc Châu có nhiều trang trại bò sữa; sữa tươi và sữa chua là thức quà quen thuộc của du khách.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "com-lam-mai-chau",
+   "name": "Cơm lam Mai Châu",
+   "destination": "mai-chau",
+   "category": "cơm",
+   "description": "Gạo nếp nấu trong ống tre, ăn kèm thịt nướng hoặc muối vừng, thường có trong bữa cơm nhà sàn.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "ruou-can",
+   "name": "Rượu cần",
+   "destination": "mai-chau",
+   "category": "đồ uống",
+   "description": "Rượu ủ men lá, uống chung bằng cần dài trong các dịp tiếp khách của người Mường, người Thái; cần uống có chừng mực.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "thit-trau-gac-bep",
+   "name": "Thịt trâu gác bếp",
+   "destination": "dien-bien",
+   "category": "đặc sản",
+   "description": "Thịt trâu ướp gia vị tây bắc, treo gác bếp hun khói vài tuần, xé nhỏ ăn với rượu hoặc xôi.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "pa-pinh-top",
+   "name": "Pa pỉnh tộp",
+   "destination": "dien-bien",
+   "category": "món nướng chiên",
+   "description": "Cá nướng kẹp tre ướp gia vị, món truyền thống của người Thái ở Tây Bắc.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "banh-khot-vung-tau",
+   "name": "Bánh khọt Vũng Tàu",
+   "destination": "vung-tau",
+   "category": "bánh",
+   "description": "Bánh bột gạo nhỏ chiên trong khuôn, nhân tôm, ăn với rau sống và nước mắm chua ngọt.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "lau-ca-duoi",
+   "name": "Lẩu cá đuối",
+   "destination": "vung-tau",
+   "category": "lẩu",
+   "description": "Cá đuối nấu lẩu với me, dứa, rau thơm, hợp ăn cùng bún.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "goi-ca-trich",
+   "name": "Gỏi cá trích",
+   "destination": "phu-quoc",
+   "category": "đặc sản",
+   "description": "Cá trích tươi trộn dừa nạo, rau thơm, cuốn bánh tráng, chấm nước mắm đậu phộng.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "bun-quay-phu-quoc",
+   "name": "Bún quậy",
+   "destination": "phu-quoc",
+   "category": "mì bún",
+   "description": "Bún với nước dùng cá, tôm, chả; bàn có chén nước chấm tự pha để khách quậy trộn theo khẩu vị.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "nuoc-mam-phu-quoc",
+   "name": "Nước mắm Phú Quốc",
+   "destination": "phu-quoc",
+   "category": "đặc sản",
+   "description": "Nước mắm làm từ cá cơm ủ chượp lâu ngày, hương thơm và vị đậm; thường được du khách mua về.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "keo-dua-ben-tre",
+   "name": "Kẹo dừa Bến Tre",
+   "destination": "ben-tre",
+   "category": "đặc sản",
+   "description": "Kẹo làm từ nước cốt dừa và mạch nha, nấu dẻo, gói giấy; có thể xem quy trình làm kẹo ở các cơ sở địa phương.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "buoi-da-xanh-ben-tre",
+   "name": "Bưởi da xanh Bến Tre",
+   "destination": "ben-tre",
+   "category": "đặc sản",
+   "description": "Bưởi vỏ xanh khi chín, tép hồng, vị ngọt hơi chua, trồng nhiều ở các vườn quanh Bến Tre.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "mam-chau-doc",
+   "name": "Mắm Châu Đốc",
+   "destination": "chau-doc",
+   "category": "đặc sản",
+   "description": "Nhiều loại mắm cá lâu năm như mắm cá linh, cá sặc, cá lóc; đặc sản làm quà và dùng trong lẩu mắm.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "bun-ca-chau-doc",
+   "name": "Bún cá Châu Đốc",
+   "destination": "chau-doc",
+   "category": "mì bún",
+   "description": "Bún nước dùng nghệ, cá lóc hoặc cá thác lác, ăn với bông súng, rau đắng.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "cua-ca-mau",
+   "name": "Cua Cà Mau",
+   "destination": "dat-mui",
+   "category": "hải sản",
+   "description": "Cua biển của vùng rừng ngập mặn Cà Mau, thịt chắc ngọt, hay hấp hoặc rang muối.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "banh-trang-phoi-suong",
+   "name": "Bánh tráng phơi sương Trảng Bàng",
+   "destination": "nui-ba-den",
+   "category": "đặc sản",
+   "description": "Bánh tráng phơi sương mềm, ăn cuốn thịt luộc và rau sống, chấm mắm nêm.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "muoi-tom-tay-ninh",
+   "name": "Muối tôm Tây Ninh",
+   "destination": "nui-ba-den",
+   "category": "đặc sản",
+   "description": "Muối ớt, tôm khô giã nhuyễn, chấm trái cây xanh hoặc bánh tráng.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "che-thai-nguyen",
+   "name": "Chè Thái Nguyên",
+   "destination": "thai-nguyen",
+   "category": "đồ uống",
+   "description": "Chè xanh vùng Tân Cương nổi tiếng thơm và hậu ngọt, du khách thường uống thử ngay ở nhà vườn.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "banh-chung-bo-dau",
+   "name": "Bánh chưng Bờ Đậu",
+   "destination": "thai-nguyen",
+   "category": "bánh",
+   "description": "Bánh chưng nhỏ gọn của vùng Bờ Đậu, nhân đậu xanh và thịt, vỏ lá dong.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "banh-phu-the",
+   "name": "Bánh phu thê",
+   "destination": "bac-ninh",
+   "category": "bánh",
+   "description": "Bánh nếp bọc nhân đậu xanh dừa, gói lá dong, thường dùng làm quà cưới hỏi ở làng Đình Bảng.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "vai-thieu-luc-ngan",
+   "name": "Vải thiều Lục Ngạn",
+   "destination": "bac-ninh",
+   "category": "đặc sản",
+   "description": "Vải vỏ đỏ, cùi dày, thu hoạch vào đầu hè ở vùng Lục Ngạn.",
+   "monthFrom": 6,
+   "monthTo": 7
+  },
+  {
+   "slug": "nhan-long-hung-yen",
+   "name": "Nhãn lồng Hưng Yên",
+   "destination": "hung-yen",
+   "category": "đặc sản",
+   "description": "Nhãn cùi dày, vị ngọt đậm, được trồng nhiều ở vùng Phố Hiến; mùa chín vào giữa hè.",
+   "monthFrom": 7,
+   "monthTo": 8
+  },
+  {
+   "slug": "tuong-ban",
+   "name": "Tương Bần",
+   "destination": "hung-yen",
+   "category": "đặc sản",
+   "description": "Tương làm từ đỗ tương, nếp, ủ lâu ngày, vị ngọt hậu; dùng chấm rau luộc, thịt luộc.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "banh-cay-thai-binh",
+   "name": "Bánh cáy Thái Bình",
+   "destination": "hung-yen",
+   "category": "bánh",
+   "description": "Bánh làm từ nếp cẩm, gạo cẩm, gừng, mè, lạc, đường; món quà quê ở làng Nguyễn.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "buoi-tan-trieu",
+   "name": "Bưởi Tân Triều",
+   "destination": "dong-nai",
+   "category": "đặc sản",
+   "description": "Bưởi ngọt thanh, tép chắc, trồng ở vùng Tân Triều bên sông Đồng Nai.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "hat-dieu-binh-phuoc",
+   "name": "Hạt điều Bình Phước",
+   "destination": "dong-nai",
+   "category": "đặc sản",
+   "description": "Bình Phước là vùng trồng điều lớn, hạt điều rang muối hoặc rang tỏi là món quà quen thuộc.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "nem-lai-vung",
+   "name": "Nem Lai Vung",
+   "destination": "dong-thap",
+   "category": "đặc sản",
+   "description": "Nem thịt lên men gói lá chuối hoặc lá vông, ăn với bánh tráng, rau và chuối chát.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "hu-tieu-my-tho",
+   "name": "Hủ tiếu Mỹ Tho",
+   "destination": "dong-thap",
+   "category": "mì bún",
+   "description": "Hủ tiếu nước dùng trong, ngọt từ xương và tôm khô, sợi dai; ăn với thịt, tôm, giá.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "lau-ca-linh-dien-dien",
+   "name": "Lẩu cá linh bông điên điển",
+   "destination": "dong-thap",
+   "category": "lẩu",
+   "description": "Món của mùa nước nổi: cá linh nấu lẩu chua với bông điên điển, bông súng, rau đắng.",
+   "monthFrom": 9,
+   "monthTo": 11
+  },
+  {
+   "slug": "lon-cap-nach",
+   "name": "Lợn cắp nách",
+   "destination": "lai-chau",
+   "category": "món nướng chiên",
+   "description": "Giống lợn nhỏ nuôi thả vùng cao, chế biến nướng hoặc hấp, thịt thơm, chắc.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "xoi-ngu-sac",
+   "name": "Xôi ngũ sắc",
+   "destination": "lai-chau",
+   "category": "xôi",
+   "description": "Xôi nhuộm bằng lá cây rừng thành nhiều màu, thường có trong các dịp lễ của người dân tộc vùng Tây Bắc.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "nem-chua-thanh-hoa",
+   "name": "Nem chua Thanh Hóa",
+   "destination": "sam-son",
+   "category": "đặc sản",
+   "description": "Nem chua gói lá ổi hoặc lá chuối, vị chua cay, ăn kèm tỏi, ớt; đặc sản mang về làm quà.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "banh-gai-tu-tru",
+   "name": "Bánh gai Tứ Trụ",
+   "destination": "sam-son",
+   "category": "bánh",
+   "description": "Bánh có vỏ đen từ lá gai, nhân đậu xanh, dừa, đường; đặc sản của xứ Thanh.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "che-lam-thanh-hoa",
+   "name": "Chè lam",
+   "destination": "sam-son",
+   "category": "tráng miệng",
+   "description": "Chè lam làm từ bột nếp rang, gừng, mật mía, lạc; cứng, thơm, dùng với trà nóng.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "sup-luon-nghe-an",
+   "name": "Súp lươn Nghệ An",
+   "destination": "cua-lo",
+   "category": "đặc sản",
+   "description": "Lươn xào nấu súp sánh, vị cay ấm của tiêu và hành, ăn kèm bánh mì hoặc bánh đa.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "tuong-nam-dan",
+   "name": "Tương Nam Đàn",
+   "destination": "cua-lo",
+   "category": "đặc sản",
+   "description": "Tương làm từ đậu tương, nếp ủ lâu, vị đậm; gắn với vùng Nam Đàn, Nghệ An.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "keo-cu-do",
+   "name": "Kẹo cu đơ",
+   "destination": "ha-tinh",
+   "category": "đặc sản",
+   "description": "Kẹo lạc dẻo, giòn đặc sản của Hà Tĩnh, gồm đường, mạch nha, lạc và gừng.",
+   "monthFrom": null,
+   "monthTo": null
+  },
+  {
+   "slug": "buoi-phuc-trach",
+   "name": "Bưởi Phúc Trạch",
+   "destination": "ha-tinh",
+   "category": "đặc sản",
+   "description": "Bưởi vùng Hương Khê, tép giòn, vị ngọt thanh, mùa thu hoạch vào cuối năm.",
+   "monthFrom": 9,
+   "monthTo": 12
+  }
+ ],
+ "foodDescriptions": {
+  "pho-ha-noi": "Bún sợi phẳng trong nước dùng hầm xương bò hoặc gà, ăn cùng hành, chanh, quẩy; món gắn với bữa sáng của người Hà Nội.",
+  "bun-cha": "Bún ăn với chả thịt nướng than hoa và bát nước chấm chua ngọt, kèm rau sống; thường gọi thêm nem cua bể.",
+  "bun-thang": "Bát bún nhiều lớp gồm trứng chiên thái sợi, giò lụa, thịt gà, nước dùng trong thơm; món cầu kỳ của ẩm thực Hà Nội.",
+  "cha-ca-la-vong": "Cá ướp nghệ, nướng rồi rán nóng trên chảo cùng thì là, hành; ăn với bún, đậu phộng và mắm tôm.",
+  "banh-cuon": "Lớp bánh gạo tráng mỏng cuộn nhân thịt, mộc nhĩ, ăn nóng kèm chả quế và nước chấm.",
+  "bun-dau-mam-tom": "Bún lá, đậu rán, chả cốm, nem chua ăn với mắm tôm pha chanh, ớt; món bình dân của Hà Nội.",
+  "ca-phe-trung": "Cà phê pha với lòng đỏ trứng đánh bông cùng đường, vị béo ngọt, thường uống nóng.",
+  "com-lang-vong": "Cốm làm từ lúa nếp non ở làng Vòng, dùng ăn kèm chuối tiêu hoặc làm nhân bánh; mùa cốm vào đầu thu.",
+  "banh-tom-ho-tay": "Bánh khoai chiên giòn có tôm nguyên con, ăn kèm rau sống và nước chấm chua ngọt, nổi tiếng bên Hồ Tây.",
+  "xoi-xeo": "Xôi nếp trộn đậu xanh nghiền vàng, phủ hành phi, ăn buổi sáng hoặc ăn nhẹ.",
+  "cao-lau": "Sợi mì dày dai với thịt xíu, rau sống và ít nước sốt; món gắn với Hội An.",
+  "mi-quang": "Mì bản to với ít nước dùng đậm đà, tôm, thịt, đậu phộng và bánh tráng mè; món của vùng Quảng Nam, Đà Nẵng.",
+  "com-ga-hoi-an": "Cơm nấu với nước luộc gà, vàng nghệ, ăn cùng gà xé trộn hành tây, rau răm và nước mắm gừng.",
+  "banh-bao-banh-vac": "Bánh gạo hấp hình hoa, nhân tôm thịt, ăn với nước mắm pha; còn được gọi là bánh hoa hồng trắng.",
+  "banh-mi-hoi-an": "Ổ bánh mì giòn với thịt, pa-tê, rau và nước sốt riêng của từng tiệm.",
+  "hoanh-thanh-chien": "Hoành thánh chiên giòn, phủ tôm thịt, cà chua và rau, ăn nóng.",
+  "banh-dap": "Bánh tráng nướng giòn ăn kèm bánh ướt úp lên rồi chấm mắm nêm; món ăn vặt đặc trưng.",
+  "che-bap": "Chè bắp non nấu với nếp, nước cốt dừa, ăn nóng hoặc lạnh.",
+  "banh-trang-nuong": "Bánh tráng nướng trên than, thêm trứng, hành, xúc xích, phô mai; được gọi vui là pizza Đà Lạt.",
+  "banh-can": "Bánh bột gạo đổ trong khuôn đất nhỏ, nhân trứng hoặc hải sản, ăn nóng với nước mắm.",
+  "nem-nuong-da-lat": "Nem thịt nướng cuốn bánh tráng cùng rau sống, chấm nước tương đậu phộng.",
+  "lau-ga-la-e": "Lẩu gà nấu với lá é thơm, ăn kèm rau và bún; hợp tối trời lạnh.",
+  "banh-uot-long-ga": "Bánh ướt mỏng ăn với lòng gà luộc, rau thơm, nước mắm chua cay.",
+  "atiso-da-lat": "Atisô là cây trồng đặc trưng của Đà Lạt; được dùng làm trà, cao, nước giải khát và quà mang về.",
+  "mut-dau-tay": "Dâu tây ngâm đường làm mứt, bên cạnh dâu tươi và dâu sấy, là quà phổ biến khi đến Đà Lạt.",
+  "sua-dau-nanh-nong": "Sữa đậu nành nóng ăn với bánh mì que hoặc bánh tiêu, thích hợp buổi tối se lạnh ở Đà Lạt.",
+  "lau-mam": "Lẩu nước mắm cá linh hoặc cá lóc nấu với rau miền Tây như bông điên điển, rau đắng; vị đậm đà đặc trưng.",
+  "banh-xeo": "Bánh xèo miền Tây vỏ vàng giòn, to, nhân tôm thịt và giá; cuốn rau rừng chấm mắm.",
+  "banh-cong": "Bánh bột gạo rán giòn trong khuôn, nhân đậu xanh, thịt, tôm; ăn kèm rau sống.",
+  "bun-nuoc-leo": "Bún nước dùng mắm bồ hóc thơm đặc trưng, ăn cùng rau; món gắn với cộng đồng người Khmer.",
+  "hu-tieu": "Hủ tiếu nước dùng ngọt từ xương, ăn với thịt, tôm, gan; kiểu ăn khô hay nước tùy quán.",
+  "nem-nuong-cai-rang": "Nem thịt nướng cuốn bánh tráng, rau, chấm nước sốt đặc; món quen thuộc quanh khu Cái Răng.",
+  "ca-loc-nuong-trui": "Cá lóc nướng nguyên con trên rơm, cuốn bánh tráng cùng rau, chấm mắm me.",
+  "banh-pia": "Bánh pía vỏ nhiều lớp mỏng, nhân đậu xanh, khoai môn, sầu riêng hoặc trứng muối; đặc sản vùng Sóc Trăng.",
+  "banh-mi-xiu-mai": "Bánh mì ăn kèm xíu mại viên sốt cà chua, món ăn sáng được nhiều người chọn ở Đà Lạt."
+ },
+ "experiences": [
+  {
+   "slug": "du-thuyen-vinh-ha-long",
+   "name": "Đi thuyền ngắm vịnh Hạ Long",
+   "destination": "ha-long",
+   "category": "Thiên nhiên & thuyền",
+   "duration": "Nửa ngày",
+   "durationMinutes": 240,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Ngồi thuyền len giữa các đảo đá vôi của vịnh, ngắm cảnh và ghé những điểm dừng trên hải trình; nên chọn hành trình phù hợp thời tiết trong ngày."
+  },
+  {
+   "slug": "di-bo-vuon-quoc-gia-cat-ba",
+   "name": "Đi bộ trong Vườn quốc gia Cát Bà",
+   "destination": "cat-ba",
+   "category": "Đi bộ & leo núi",
+   "duration": "Nửa ngày",
+   "durationMinutes": 240,
+   "difficulty": "medium",
+   "indoor": false,
+   "description": "Cung đường mòn xuyên rừng trên đảo Cát Bà, phù hợp người thích đi bộ nhẹ và ngắm thiên nhiên."
+  },
+  {
+   "slug": "dao-bien-do-son",
+   "name": "Dạo biển Đồ Sơn",
+   "destination": "hai-phong",
+   "category": "Ngắm cảnh & dạo bộ",
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 120,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Đi dạo dọc bờ biển Đồ Sơn, ngắm cảnh và ăn hải sản địa phương."
+  },
+  {
+   "slug": "di-bo-ban-cat-cat",
+   "name": "Đi bộ qua bản Cát Cát",
+   "destination": "sa-pa",
+   "category": "Làng bản & văn hóa",
+   "duration": "Nửa ngày",
+   "durationMinutes": 180,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Đi bộ từ thị trấn xuống bản Cát Cát, ngắm nhà người H'Mông, ruộng bậc thang và các nghề thủ công của bản."
+  },
+  {
+   "slug": "cung-duong-deo-ma-pi-leng",
+   "name": "Ngắm cảnh đèo Mã Pí Lèng",
+   "destination": "ha-giang",
+   "category": "Ngắm cảnh & dạo bộ",
+   "duration": "Nửa ngày",
+   "durationMinutes": 240,
+   "difficulty": "medium",
+   "indoor": false,
+   "description": "Cung đèo nhiều khúc cua với tầm nhìn xuống sông Nho Quế; nên đi cùng tài xế quen đường và tránh lúc thời tiết xấu."
+  },
+  {
+   "slug": "tham-quan-thac-ban-gioc",
+   "name": "Thăm thác Bản Giốc",
+   "destination": "cao-bang",
+   "category": "Thiên nhiên & thuyền",
+   "duration": "Nửa ngày",
+   "durationMinutes": 240,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Dòng thác lớn ở biên giới Cao Bằng, có thể đứng bờ ngắm hoặc ngồi bè gần thác khi điều kiện cho phép."
+  },
+  {
+   "slug": "ngoi-thuyen-tam-coc",
+   "name": "Ngồi thuyền qua hang ở Tam Cốc",
+   "destination": "ninh-binh",
+   "category": "Thiên nhiên & thuyền",
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 120,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Chèo thuyền dọc sông Ngô Đồng, qua các hang núi đá vôi và cánh đồng lúa; đẹp nhất vào mùa lúa chín đầu hè."
+  },
+  {
+   "slug": "dao-doi-che-moc-chau",
+   "name": "Dạo đồi chè Mộc Châu",
+   "destination": "moc-chau",
+   "category": "Ngắm cảnh & dạo bộ",
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 120,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Đi bộ giữa các triền chè xanh trên cao nguyên, ghé trang trại bò sữa và thử các sản phẩm từ sữa."
+  },
+  {
+   "slug": "san-may-ta-xua",
+   "name": "Săn mây Tà Xùa",
+   "destination": "ta-xua",
+   "category": "Đi bộ & leo núi",
+   "duration": "Nửa ngày",
+   "durationMinutes": 240,
+   "difficulty": "medium",
+   "indoor": false,
+   "description": "Đi bộ lên các sống lưng khủng long để đón mây sáng sớm; nên đi theo hướng dẫn địa phương, mang đủ đồ giữ ấm."
+  },
+  {
+   "slug": "o-nha-san-ban-lac",
+   "name": "Ở nhà sàn bản Lác",
+   "destination": "mai-chau",
+   "category": "Làng bản & văn hóa",
+   "duration": "1 ngày",
+   "durationMinutes": 300,
+   "difficulty": "easy",
+   "indoor": null,
+   "description": "Đi dạo bản Lác, ăn cơm nhà sàn của người Thái và xem biểu diễn văn nghệ địa phương."
+  },
+  {
+   "slug": "ngam-ruong-bac-thang-mu-cang-chai",
+   "name": "Ngắm ruộng bậc thang Mù Cang Chải",
+   "destination": "mu-cang-chai",
+   "category": "Ngắm cảnh & dạo bộ",
+   "duration": "Nửa ngày",
+   "durationMinutes": 180,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Dừng ngắm các thửa ruộng bậc thang trên đường đèo; đẹp vào mùa nước đổ và mùa lúa chín."
+  },
+  {
+   "slug": "tham-quan-doi-a1",
+   "name": "Thăm đồi A1",
+   "destination": "dien-bien",
+   "category": "Văn hóa & di tích",
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 120,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Di tích gắn với chiến dịch Điện Biên Phủ năm 1954; nên kết hợp với bảo tàng và hầm De Castries."
+  },
+  {
+   "slug": "tham-quan-dong-tam-thanh",
+   "name": "Thăm động Tam Thanh",
+   "destination": "lang-son",
+   "category": "Văn hóa & di tích",
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 120,
+   "difficulty": "easy",
+   "indoor": null,
+   "description": "Hang động núi đá vôi ngay gần thành phố Lạng Sơn, có chùa và nhiều nhũ đá."
+  },
+  {
+   "slug": "di-thuyen-dong-phong-nha",
+   "name": "Đi thuyền vào động Phong Nha",
+   "destination": "phong-nha",
+   "category": "Thiên nhiên & thuyền",
+   "duration": "Nửa ngày",
+   "durationMinutes": 180,
+   "difficulty": "easy",
+   "indoor": null,
+   "description": "Thuyền ngược dòng sông Son vào hang động nổi tiếng của vùng Phong Nha – Kẻ Bàng."
+  },
+  {
+   "slug": "tham-quan-dai-noi-hue",
+   "name": "Thăm Đại Nội Huế",
+   "destination": "hue",
+   "category": "Văn hóa & di tích",
+   "duration": "Nửa ngày",
+   "durationMinutes": 180,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Dạo quần thể cung điện triều Nguyễn bên trong Kinh thành Huế; đi buổi sáng sớm cho mát."
+  },
+  {
+   "slug": "ngam-bien-my-khe",
+   "name": "Tắm và ngắm biển Mỹ Khê",
+   "destination": "da-nang",
+   "category": "Biển & đảo",
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 120,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Bãi cát dài của Đà Nẵng, hợp tắm biển, đi bộ sáng sớm hoặc ngắm hoàng hôn."
+  },
+  {
+   "slug": "cong-to-vo-hang-cau-ly-son",
+   "name": "Thăm Cổng Tò Vò và Hang Câu",
+   "destination": "ly-son",
+   "category": "Biển & đảo",
+   "duration": "Nửa ngày",
+   "durationMinutes": 180,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Đi quanh đảo Lý Sơn để ngắm những cổng đá và vách đá núi lửa bên biển."
+  },
+  {
+   "slug": "di-ky-co-eo-gio",
+   "name": "Đi Kỳ Co và Eo Gió",
+   "destination": "quy-nhon",
+   "category": "Biển & đảo",
+   "duration": "1 ngày",
+   "durationMinutes": 360,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Hành trình thường gặp ở Quy Nhơn: tắm biển ở Kỳ Co và ngắm vách đá ở Eo Gió."
+  },
+  {
+   "slug": "ngam-ganh-da-dia",
+   "name": "Ngắm Gành Đá Đĩa",
+   "destination": "phu-yen",
+   "category": "Ngắm cảnh & dạo bộ",
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 120,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Những cột đá bazan xếp tầng ven biển Phú Yên; đi chậm, chú ý mặt đá trơn."
+  },
+  {
+   "slug": "tham-quan-thap-ba-ponagar",
+   "name": "Thăm tháp Bà Ponagar",
+   "destination": "nha-trang",
+   "category": "Văn hóa & di tích",
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 90,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Quần thể tháp Chăm ở Nha Trang, nơi vẫn còn hoạt động tín ngưỡng; ăn mặc lịch sự khi vào tham quan."
+  },
+  {
+   "slug": "tham-quan-thap-po-klong-garai",
+   "name": "Thăm tháp Chăm Po Klong Garai",
+   "destination": "phan-rang",
+   "category": "Văn hóa & di tích",
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 90,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Cụm tháp Chăm gạch nung nổi bật trên đồi ở Ninh Thuận, thường kết hợp ghé làng gốm Bàu Trúc."
+  },
+  {
+   "slug": "choi-doi-cat-mui-ne",
+   "name": "Dạo đồi cát Mũi Né",
+   "destination": "mui-ne",
+   "category": "Ngắm cảnh & dạo bộ",
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 120,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Đồi cát vàng và đồi cát trắng ở Mũi Né, đẹp nhất lúc bình minh hoặc hoàng hôn, nên mang kính và che nắng."
+  },
+  {
+   "slug": "dao-rung-thong-mang-den",
+   "name": "Dạo rừng thông Măng Đen",
+   "destination": "mang-den",
+   "category": "Thiên nhiên & thuyền",
+   "duration": "Nửa ngày",
+   "durationMinutes": 150,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Đi bộ nhẹ dưới tán thông, hồ nước và khí hậu mát của cao nguyên Măng Đen."
+  },
+  {
+   "slug": "tham-quan-bao-tang-the-gioi-ca-phe",
+   "name": "Thăm Bảo tàng Thế giới Cà phê",
+   "destination": "buon-ma-thuot",
+   "category": "Văn hóa & di tích",
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 120,
+   "difficulty": "easy",
+   "indoor": true,
+   "description": "Bảo tàng giới thiệu lịch sử cà phê, văn hóa cà phê và các câu chuyện về Tây Nguyên."
+  },
+  {
+   "slug": "dao-pho-trung-tam-sai-gon",
+   "name": "Dạo phố trung tâm Sài Gòn",
+   "destination": "ho-chi-minh",
+   "category": "Ngắm cảnh & dạo bộ",
+   "duration": "Nửa ngày",
+   "durationMinutes": 180,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Đi bộ qua Nhà thờ Đức Bà, Bưu điện Thành phố và các con phố quanh trung tâm."
+  },
+  {
+   "slug": "ngam-hoang-hon-phu-quoc",
+   "name": "Ngắm hoàng hôn ở Phú Quốc",
+   "destination": "phu-quoc",
+   "category": "Biển & đảo",
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 120,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Chọn một bãi tây đảo hoặc khu Dinh Cậu để ngắm hoàng hôn; nên đến sớm để chọn chỗ."
+  },
+  {
+   "slug": "vieng-nghia-trang-hang-duong",
+   "name": "Viếng nghĩa trang Hàng Dương",
+   "destination": "con-dao",
+   "category": "Văn hóa & di tích",
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 90,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Nghĩa trang tưởng niệm các chiến sĩ bị giam giữ tại Côn Đảo; nên giữ trang phục và thái độ trang nghiêm."
+  },
+  {
+   "slug": "leo-nui-lon-tuong-chua-kito",
+   "name": "Lên tượng Chúa Kitô Vua",
+   "destination": "vung-tau",
+   "category": "Ngắm cảnh & dạo bộ",
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 120,
+   "difficulty": "medium",
+   "indoor": false,
+   "description": "Leo cầu thang lên tượng trên núi Nhỏ để ngắm toàn cảnh thành phố và biển; nên đi lúc trời mát."
+  },
+  {
+   "slug": "di-xuong-rach-dua-ben-tre",
+   "name": "Đi xuồng rạch dừa Bến Tre",
+   "destination": "ben-tre",
+   "category": "Thiên nhiên & thuyền",
+   "duration": "Nửa ngày",
+   "durationMinutes": 180,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Đi xuồng nhỏ qua các rạch dừa, ghé cơ sở làm kẹo dừa và xem nghề địa phương."
+  },
+  {
+   "slug": "len-nui-sam-chau-doc",
+   "name": "Lên núi Sam",
+   "destination": "chau-doc",
+   "category": "Văn hóa & di tích",
+   "duration": "Nửa ngày",
+   "durationMinutes": 150,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Thăm miếu Bà Chúa Xứ và các chùa trên núi Sam, ngắm cánh đồng biên giới từ trên cao."
+  },
+  {
+   "slug": "tham-quan-mui-nai-thach-dong",
+   "name": "Thăm Mũi Nai và Thạch Động",
+   "destination": "ha-tien",
+   "category": "Biển & đảo",
+   "duration": "Nửa ngày",
+   "durationMinutes": 180,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Hà Tiên có biển, núi đá vôi và những hang động; thích hợp đi nửa ngày bằng xe máy hoặc taxi."
+  },
+  {
+   "slug": "toi-cuc-nam-mui-ca-mau",
+   "name": "Đến mũi Cà Mau",
+   "destination": "dat-mui",
+   "category": "Ngắm cảnh & dạo bộ",
+   "duration": "Nửa ngày",
+   "durationMinutes": 150,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Điểm cực Nam của Tổ quốc, có cột mốc, rừng ngập mặn và những cây cầu gỗ đi bộ."
+  },
+  {
+   "slug": "chinh-phuc-nui-ba-den",
+   "name": "Chinh phục núi Bà Đen",
+   "destination": "nui-ba-den",
+   "category": "Đi bộ & leo núi",
+   "duration": "Nửa ngày",
+   "durationMinutes": 240,
+   "difficulty": "medium",
+   "indoor": false,
+   "description": "Núi cao nhất Nam Bộ; có thể đi bộ hoặc cáp treo, nên khởi hành sớm để tránh nắng gắt."
+  },
+  {
+   "slug": "tham-quan-doi-che-tan-cuong",
+   "name": "Tham quan đồi chè Tân Cương",
+   "destination": "thai-nguyen",
+   "category": "Làng bản & văn hóa",
+   "duration": "Nửa ngày",
+   "durationMinutes": 150,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Dạo đồi chè, xem hái và sao chè và uống thử tại nhà vườn."
+  },
+  {
+   "slug": "nghe-hat-quan-ho",
+   "name": "Nghe hát quan họ",
+   "destination": "bac-ninh",
+   "category": "Văn hóa & biểu diễn",
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 120,
+   "difficulty": "easy",
+   "indoor": null,
+   "description": "Nghe dân ca quan họ, di sản văn hóa phi vật thể của UNESCO, ở làng quan họ hoặc trong lễ hội mùa xuân."
+  },
+  {
+   "slug": "tham-quan-pho-hien",
+   "name": "Dạo phố Hiến",
+   "destination": "hung-yen",
+   "category": "Văn hóa & di tích",
+   "duration": "Nửa ngày",
+   "durationMinutes": 150,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Thăm các đình, đền, chùa còn lại của thương cảng cổ Phố Hiến."
+  },
+  {
+   "slug": "di-bo-vuon-quoc-gia-cat-tien",
+   "name": "Đi bộ trong Vườn quốc gia Cát Tiên",
+   "destination": "dong-nai",
+   "category": "Đi bộ & leo núi",
+   "duration": "1 ngày",
+   "durationMinutes": 480,
+   "difficulty": "medium",
+   "indoor": false,
+   "description": "Rừng nhiệt đới đa dạng sinh học ở đông Nam Bộ; đi theo hướng dẫn viên của vườn."
+  },
+  {
+   "slug": "tham-quan-lang-hoa-sa-dec",
+   "name": "Tham quan làng hoa Sa Đéc",
+   "destination": "dong-thap",
+   "category": "Làng bản & văn hóa",
+   "duration": "Nửa ngày",
+   "durationMinutes": 120,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Dạo các vườn hoa kiểng; đông khách nhất vào dịp trước Tết."
+  },
+  {
+   "slug": "ngam-deo-o-quy-ho",
+   "name": "Ngắm đèo Ô Quy Hồ",
+   "destination": "lai-chau",
+   "category": "Ngắm cảnh & dạo bộ",
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 120,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Một trong những đèo dài và đẹp nhất Tây Bắc, nằm giữa Lai Châu và Lào Cai; đi cẩn thận vì sương mù."
+  },
+  {
+   "slug": "tam-bien-sam-son",
+   "name": "Tắm biển Sầm Sơn",
+   "destination": "sam-son",
+   "category": "Biển & đảo",
+   "duration": "Nửa ngày",
+   "durationMinutes": 180,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Bãi tắm lâu đời của xứ Thanh, ngắm hòn Trống Mái và ăn hải sản."
+  },
+  {
+   "slug": "di-bo-ruong-bac-thang-pu-luong",
+   "name": "Đi bộ giữa ruộng bậc thang Pù Luông",
+   "destination": "pu-luong",
+   "category": "Đi bộ & leo núi",
+   "duration": "Nửa ngày",
+   "durationMinutes": 240,
+   "difficulty": "medium",
+   "indoor": false,
+   "description": "Đi bộ qua các bản người Thái, người Mường, ngắm ruộng bậc thang và guồng nước."
+  },
+  {
+   "slug": "tam-bien-cua-lo",
+   "name": "Tắm biển Cửa Lò",
+   "destination": "cua-lo",
+   "category": "Biển & đảo",
+   "duration": "Nửa ngày",
+   "durationMinutes": 180,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Bãi cát dài, hợp cho gia đình, kết hợp ăn hải sản tại thị xã."
+  },
+  {
+   "slug": "tham-quan-nga-ba-dong-loc",
+   "name": "Thăm Ngã ba Đồng Lộc",
+   "destination": "ha-tinh",
+   "category": "Văn hóa & di tích",
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 90,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Di tích tưởng niệm mười cô gái thanh niên xung phong; nên giữ thái độ trang nghiêm."
+  }
+ ],
+ "experienceDetails": {
+  "di-thuyen-thung-rung-dua-bay-mau": {
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 90,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Ngồi thuyền thúng chèo qua rừng dừa nước, có người chèo biểu diễn; ngắm cảnh sông nước gần Hội An."
+  },
+  "lop-hoc-nau-an-hoi-an": {
+   "duration": "Nửa ngày",
+   "durationMinutes": 180,
+   "difficulty": "easy",
+   "indoor": true,
+   "description": "Học làm món Hội An cùng đầu bếp địa phương, thường bắt đầu bằng đi chợ chọn nguyên liệu."
+  },
+  "tha-den-hoa-dang-song-hoai": {
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 60,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Thả đèn hoa đăng trên sông Hoài vào buổi tối, đặc biệt đẹp vào đêm rằm."
+  },
+  "cho-noi-cai-rang-buoi-sang": {
+   "duration": "Nửa ngày",
+   "durationMinutes": 150,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Đi thuyền ra chợ nổi vào sáng sớm, ăn sáng và mua trái cây ngay trên ghe."
+  },
+  "xem-mua-roi-nuoc-ha-noi": {
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 60,
+   "difficulty": "easy",
+   "indoor": true,
+   "description": "Xem nghệ thuật múa rối nước truyền thống của đồng bằng Bắc Bộ, có nhạc sống đi kèm."
+  },
+  "dao-pho-co-ha-noi": {
+   "duration": "Nửa ngày",
+   "durationMinutes": 180,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Đi bộ qua các phố nghề, ăn vặt và ghé hồ Hoàn Kiếm; đẹp nhất vào buổi sáng hoặc cuối tuần."
+  },
+  "dap-xe-quanh-ho-xuan-huong": {
+   "duration": "1 đến 2 giờ",
+   "durationMinutes": 90,
+   "difficulty": "easy",
+   "indoor": false,
+   "description": "Đạp xe một vòng quanh hồ giữa trung tâm Đà Lạt, dừng uống cà phê hoặc ăn sáng."
+  },
+  "san-may-ngam-binh-minh-da-lat": {
+   "duration": "Nửa ngày",
+   "durationMinutes": 180,
+   "difficulty": "medium",
+   "indoor": false,
+   "description": "Dậy sớm lên đồi cao để ngắm mây và bình minh; mang theo áo ấm."
+  }
+ },
+ "events": [
+  {
+   "slug": "hoi-lim",
+   "name": "Hội Lim",
+   "destination": "bac-ninh",
+   "isLunar": true,
+   "lunarMonth": 1,
+   "lunarDay": 13,
+   "solarMonth": null,
+   "solarDay": null,
+   "durationDays": 2,
+   "dateNote": "Ngày tính theo quy tắc phổ biến; đối chiếu với thông báo của địa phương trước khi đi.",
+   "description": "Lễ hội đầu xuân nổi tiếng của vùng quan họ Bắc Ninh, có hát quan họ trên đồi Lim và trên thuyền, cùng nhiều trò chơi dân gian."
+  },
+  {
+   "slug": "le-hoi-lam-kinh",
+   "name": "Lễ hội Lam Kinh",
+   "destination": "sam-son",
+   "isLunar": true,
+   "lunarMonth": 8,
+   "lunarDay": 22,
+   "solarMonth": null,
+   "solarDay": null,
+   "durationDays": 2,
+   "dateNote": "Ngày tính theo quy tắc phổ biến; đối chiếu với thông báo của địa phương trước khi đi.",
+   "description": "Lễ tưởng niệm vua Lê Thái Tổ tại khu di tích Lam Kinh, Thanh Hóa, với nghi lễ dâng hương và các hoạt động văn hóa."
+  },
+  {
+   "slug": "le-hoi-den-kiep-bac",
+   "name": "Lễ hội đền Kiếp Bạc",
+   "destination": "hai-phong",
+   "isLunar": true,
+   "lunarMonth": 8,
+   "lunarDay": 20,
+   "solarMonth": null,
+   "solarDay": null,
+   "durationDays": 5,
+   "dateNote": "Ngày tính theo quy tắc phổ biến; đối chiếu với thông báo của địa phương trước khi đi.",
+   "description": "Lễ hội tưởng niệm Hưng Đạo Đại Vương Trần Quốc Tuấn tại khu di tích Côn Sơn – Kiếp Bạc, vào mùa thu."
+  },
+  {
+   "slug": "le-hoi-yen-tu",
+   "name": "Lễ hội Yên Tử",
+   "destination": "ha-long",
+   "isLunar": true,
+   "lunarMonth": 1,
+   "lunarDay": 10,
+   "solarMonth": null,
+   "solarDay": null,
+   "durationDays": 60,
+   "dateNote": "Ngày khai hội; mùa hội kéo dài khoảng ba tháng mùa xuân. Ngày tính theo quy tắc phổ biến; đối chiếu với thông báo của địa phương trước khi đi.",
+   "description": "Mùa hành hương đầu xuân lên núi Yên Tử, gắn với Thiền phái Trúc Lâm; khách đi bộ hoặc dùng cáp treo."
+  },
+  {
+   "slug": "le-hoi-ba-chua-xu",
+   "name": "Lễ hội Vía Bà Chúa Xứ núi Sam",
+   "destination": "chau-doc",
+   "isLunar": true,
+   "lunarMonth": 4,
+   "lunarDay": 23,
+   "solarMonth": null,
+   "solarDay": null,
+   "durationDays": 5,
+   "dateNote": "Ngày tính theo quy tắc phổ biến; đối chiếu với thông báo của địa phương trước khi đi.",
+   "description": "Lễ hội hành hương lớn của miền Tây, đông khách đến miếu Bà Chúa Xứ trên núi Sam cầu bình an."
+  },
+  {
+   "slug": "le-hoi-nghinh-ong-vung-tau",
+   "name": "Lễ hội Nghinh Ông Vũng Tàu",
+   "destination": "vung-tau",
+   "isLunar": true,
+   "lunarMonth": 8,
+   "lunarDay": 16,
+   "solarMonth": null,
+   "solarDay": null,
+   "durationDays": 3,
+   "dateNote": "Ngày tính theo quy tắc phổ biến; đối chiếu với thông báo của địa phương trước khi đi.",
+   "description": "Lễ hội của ngư dân miền biển cầu cho mùa biển bình yên, có rước kiệu và các nghi lễ dân gian."
+  },
+  {
+   "slug": "le-hoi-ba-den",
+   "name": "Lễ hội Bà Đen",
+   "destination": "nui-ba-den",
+   "isLunar": true,
+   "lunarMonth": 1,
+   "lunarDay": 15,
+   "solarMonth": null,
+   "solarDay": null,
+   "durationDays": 3,
+   "dateNote": "Ngày tính theo quy tắc phổ biến; đối chiếu với thông báo của địa phương trước khi đi.",
+   "description": "Lễ hội đầu năm trên núi Bà Đen, thu hút đông người hành hương đi chùa và lên núi."
+  },
+  {
+   "slug": "le-hoi-thap-ba-ponagar",
+   "name": "Lễ hội Tháp Bà Ponagar",
+   "destination": "nha-trang",
+   "isLunar": true,
+   "lunarMonth": 3,
+   "lunarDay": 23,
+   "solarMonth": null,
+   "solarDay": null,
+   "durationDays": 4,
+   "dateNote": "Ngày tính theo quy tắc phổ biến; đối chiếu với thông báo của địa phương trước khi đi.",
+   "description": "Lễ hội tưởng niệm Thiên Y A Na ở Tháp Bà Ponagar, có các nghi lễ và hoạt động văn hóa của người Việt và người Chăm."
+  },
+  {
+   "slug": "le-khao-le-the-linh-hoang-sa",
+   "name": "Lễ khao lề thế lính Hoàng Sa",
+   "destination": "ly-son",
+   "isLunar": true,
+   "lunarMonth": 3,
+   "lunarDay": 10,
+   "solarMonth": null,
+   "solarDay": null,
+   "durationDays": 1,
+   "dateNote": "Ngày tính theo quy tắc phổ biến; đối chiếu với thông báo của địa phương trước khi đi.",
+   "description": "Nghi lễ tưởng nhớ những người lính Hoàng Sa, ghi nhớ truyền thống ra khơi giữ biển đảo của dân Lý Sơn."
+  },
+  {
+   "slug": "le-hoi-hoa-lu",
+   "name": "Lễ hội Hoa Lư",
+   "destination": "ninh-binh",
+   "isLunar": true,
+   "lunarMonth": 3,
+   "lunarDay": 10,
+   "solarMonth": null,
+   "solarDay": null,
+   "durationDays": 3,
+   "dateNote": "Ngày tính theo quy tắc phổ biến; đối chiếu với thông báo của địa phương trước khi đi.",
+   "description": "Lễ hội tại cố đô Hoa Lư tưởng nhớ vua Đinh Tiên Hoàng và vua Lê Đại Hành, có rước kiệu và các trò chơi."
+  },
+  {
+   "slug": "hoi-chua-keo",
+   "name": "Hội chùa Keo",
+   "destination": "hung-yen",
+   "isLunar": true,
+   "lunarMonth": 9,
+   "lunarDay": 15,
+   "solarMonth": null,
+   "solarDay": null,
+   "durationDays": 3,
+   "dateNote": "Chùa Keo (Thái Bình, nay thuộc Hưng Yên) có hội xuân và hội thu. Dữ liệu này là hội thu. Ngày tính theo quy tắc phổ biến; đối chiếu với thông báo của địa phương trước khi đi.",
+   "description": "Hội chùa Keo nổi tiếng với kiến trúc gỗ cổ và những nghi thức truyền thống, có hội mùa xuân và mùa thu."
+  },
+  {
+   "slug": "ngay-chien-thang-dien-bien-phu",
+   "name": "Kỷ niệm chiến thắng Điện Biên Phủ",
+   "destination": "dien-bien",
+   "isLunar": false,
+   "lunarMonth": null,
+   "lunarDay": null,
+   "solarMonth": 5,
+   "solarDay": 7,
+   "durationDays": 1,
+   "dateNote": "Ngày dương lịch cố định hằng năm.",
+   "description": "Dịp kỷ niệm chiến thắng Điện Biên Phủ năm 1954, với các hoạt động dâng hương, tham quan di tích và sự kiện văn hóa ở thành phố."
+  }
+ ],
+ "eventDescriptions": {
+  "tet-nguyen-dan": "Dịp lễ lớn nhất năm theo âm lịch: gia đình sum họp, cúng tổ tiên, mừng tuổi; nhiều cửa hàng và dịch vụ đổi giờ hoặc nghỉ.",
+  "ram-thang-gieng": "Rằm đầu năm (Tết Nguyên tiêu), người dân thường đi chùa cầu an và cúng gia tiên.",
+  "gio-to-hung-vuong": "Ngày tưởng nhớ các vua Hùng; lễ hội chính tổ chức tại đền Hùng, Phú Thọ, thu hút đông khách hành hương.",
+  "tet-trung-thu": "Tết rằm tháng Tám với đèn lồng, mâm cỗ trông trăng, bánh Trung thu và múa lân, dành nhiều cho thiếu nhi.",
+  "hoi-go-dong-da": "Lễ hội mùng 5 Tết tại gò Đống Đa, Hà Nội, kỷ niệm chiến thắng Ngọc Hồi – Đống Đa năm 1789.",
+  "hoi-chua-huong": "Mùa lễ hội mùa xuân ở khu danh thắng Hương Sơn, du khách đi thuyền trên suối Yến và leo núi vào chùa.",
+  "hoi-giong-phu-dong": "Lễ hội tưởng nhớ Thánh Gióng ở đền Phù Đổng, được UNESCO ghi danh là di sản văn hóa phi vật thể.",
+  "dem-ram-pho-co-hoi-an": "Mỗi đêm rằm (ngày 14 âm lịch) phố cổ Hội An giảm đèn điện, thắp đèn lồng và có hoạt động văn nghệ, thả đèn trên sông.",
+  "le-hoi-ba-thu-bon": "Lễ hội dân gian ở vùng Thu Bồn, huyện Duy Xuyên cũ, với nghi lễ rước kiệu và cúng Bà; cách Hội An khoảng 30 km.",
+  "festival-hoa-da-lat": "Sự kiện tôn vinh hoa và nghề hoa Đà Lạt, tổ chức định kỳ; ngày cụ thể thay đổi theo từng kỳ.",
+  "le-ky-yen-dinh-binh-thuy": "Lễ cúng thần tại đình Bình Thủy (Cần Thơ), nghi lễ truyền thống của cộng đồng địa phương."
+ },
+ "itineraries": [
+  {
+   "slug": "hue-2-ngay",
+   "title": "Huế 2 ngày: cố đô và món ngon",
+   "days": 2,
+   "region": "t",
+   "summary": "Hai ngày thong thả ở Huế: ngày đầu vào Đại Nội, ngày sau ra lăng tẩm và thử các món bún, bánh, chè của xứ Huế.",
+   "items": [
+    {
+     "dayNo": 1,
+     "refType": "destination",
+     "ref": "hue",
+     "label": "Huế",
+     "note": "Bắt đầu buổi sáng"
+    },
+    {
+     "dayNo": 1,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Đại Nội Huế",
+     "note": "Buổi sáng, đi sớm cho mát"
+    },
+    {
+     "dayNo": 1,
+     "refType": "food",
+     "ref": "bun-bo-hue",
+     "label": "Bún bò Huế",
+     "note": "Bữa trưa"
+    },
+    {
+     "dayNo": 1,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Chùa Thiên Mụ bên sông Hương",
+     "note": "Buổi chiều"
+    },
+    {
+     "dayNo": 1,
+     "refType": "food",
+     "ref": "banh-beo-nam-loc",
+     "label": "Bánh bèo, bánh nậm, bánh lọc",
+     "note": "Bữa tối"
+    },
+    {
+     "dayNo": 2,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Lăng tẩm triều Nguyễn",
+     "note": "Buổi sáng"
+    },
+    {
+     "dayNo": 2,
+     "refType": "food",
+     "ref": "com-hen",
+     "label": "Cơm hến",
+     "note": "Bữa trưa"
+    },
+    {
+     "dayNo": 2,
+     "refType": "food",
+     "ref": "che-hue",
+     "label": "Chè Huế",
+     "note": "Buổi chiều"
+    }
+   ]
+  },
+  {
+   "slug": "sa-pa-3-ngay",
+   "title": "Sa Pa 3 ngày: bản làng và ruộng bậc thang",
+   "days": 3,
+   "region": "b",
+   "summary": "Ba ngày ở Sa Pa gồm dạo thị trấn, đi bộ qua bản Cát Cát, ngắm ruộng bậc thang và ăn món vùng cao.",
+   "items": [
+    {
+     "dayNo": 1,
+     "refType": "destination",
+     "ref": "sa-pa",
+     "label": "Sa Pa",
+     "note": "Đến nơi, nghỉ ngơi, dạo thị trấn"
+    },
+    {
+     "dayNo": 1,
+     "refType": "food",
+     "ref": "thang-co",
+     "label": "Thắng cố",
+     "note": "Thử món vùng cao, tùy khẩu vị"
+    },
+    {
+     "dayNo": 2,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Đi bộ qua bản Cát Cát",
+     "note": "Buổi sáng"
+    },
+    {
+     "dayNo": 2,
+     "refType": "food",
+     "ref": "ca-hoi-ca-tam-sa-pa",
+     "label": "Cá hồi, cá tầm Sa Pa",
+     "note": "Bữa trưa"
+    },
+    {
+     "dayNo": 2,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Ngắm cảnh thung lũng",
+     "note": "Buổi chiều"
+    },
+    {
+     "dayNo": 3,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Chợ phiên và dạo thị trấn",
+     "note": "Buổi sáng trước khi về"
+    }
+   ]
+  },
+  {
+   "slug": "ninh-binh-2-ngay",
+   "title": "Ninh Bình 2 ngày: thuyền, hang động và đồng lúa",
+   "days": 2,
+   "region": "b",
+   "summary": "Hai ngày ở Ninh Bình: ngồi thuyền Tam Cốc, thăm cố đô Hoa Lư, ăn dê núi và cơm cháy.",
+   "items": [
+    {
+     "dayNo": 1,
+     "refType": "destination",
+     "ref": "ninh-binh",
+     "label": "Ninh Bình",
+     "note": "Đến nơi từ Hà Nội trong ngày"
+    },
+    {
+     "dayNo": 1,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Ngồi thuyền qua hang ở Tam Cốc",
+     "note": "Buổi sáng"
+    },
+    {
+     "dayNo": 1,
+     "refType": "food",
+     "ref": "de-nui-ninh-binh",
+     "label": "Dê núi Ninh Bình",
+     "note": "Bữa trưa"
+    },
+    {
+     "dayNo": 1,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Thăm cố đô Hoa Lư",
+     "note": "Buổi chiều"
+    },
+    {
+     "dayNo": 2,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Đạp xe quanh đồng quê",
+     "note": "Buổi sáng"
+    },
+    {
+     "dayNo": 2,
+     "refType": "food",
+     "ref": "com-chay-ninh-binh",
+     "label": "Cơm cháy Ninh Bình",
+     "note": "Mua làm quà trước khi về"
+    }
+   ]
+  },
+  {
+   "slug": "ha-long-cat-ba-2-ngay",
+   "title": "Hạ Long – Cát Bà 2 ngày: vịnh đá vôi và đảo",
+   "days": 2,
+   "region": "b",
+   "summary": "Hai ngày kết hợp vịnh Hạ Long và đảo Cát Bà: đi thuyền ngắm vịnh, ăn hải sản, đi bộ trong rừng quốc gia.",
+   "items": [
+    {
+     "dayNo": 1,
+     "refType": "destination",
+     "ref": "ha-long",
+     "label": "Vịnh Hạ Long",
+     "note": "Đi thuyền ngắm vịnh"
+    },
+    {
+     "dayNo": 1,
+     "refType": "food",
+     "ref": "cha-muc-ha-long",
+     "label": "Chả mực Hạ Long",
+     "note": "Bữa trưa"
+    },
+    {
+     "dayNo": 2,
+     "refType": "destination",
+     "ref": "cat-ba",
+     "label": "Cát Bà",
+     "note": "Sang đảo"
+    },
+    {
+     "dayNo": 2,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Đi bộ trong Vườn quốc gia Cát Bà",
+     "note": "Buổi sáng"
+    },
+    {
+     "dayNo": 2,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Hải sản tại Cát Bà",
+     "note": "Bữa trưa hoặc bữa tối"
+    }
+   ]
+  },
+  {
+   "slug": "nha-trang-3-ngay",
+   "title": "Nha Trang 3 ngày: biển, tháp Chăm và hải sản",
+   "days": 3,
+   "region": "t",
+   "summary": "Ba ngày ở Nha Trang gồm tắm biển, thăm tháp Bà Ponagar, ăn bún sứa, nem nướng Ninh Hòa và hải sản.",
+   "items": [
+    {
+     "dayNo": 1,
+     "refType": "destination",
+     "ref": "nha-trang",
+     "label": "Nha Trang",
+     "note": "Nhận phòng, tắm biển"
+    },
+    {
+     "dayNo": 1,
+     "refType": "food",
+     "ref": "bun-sua",
+     "label": "Bún sứa",
+     "note": "Bữa tối"
+    },
+    {
+     "dayNo": 2,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Tháp Bà Ponagar",
+     "note": "Buổi sáng"
+    },
+    {
+     "dayNo": 2,
+     "refType": "food",
+     "ref": "nem-nuong-ninh-hoa",
+     "label": "Nem nướng Ninh Hòa",
+     "note": "Bữa trưa"
+    },
+    {
+     "dayNo": 2,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Tham quan các đảo gần bờ",
+     "note": "Buổi chiều, tùy thời tiết"
+    },
+    {
+     "dayNo": 3,
+     "refType": "food",
+     "ref": "banh-canh-cha-ca",
+     "label": "Bánh canh chả cá",
+     "note": "Bữa sáng trước khi về"
+    }
+   ]
+  },
+  {
+   "slug": "phu-quoc-3-ngay",
+   "title": "Phú Quốc 3 ngày: biển, hoàng hôn và ẩm thực",
+   "days": 3,
+   "region": "n",
+   "summary": "Ba ngày ở Phú Quốc: ngày đầu nghỉ biển, ngày sau đi quanh đảo, buổi tối ngắm hoàng hôn và ăn hải sản.",
+   "items": [
+    {
+     "dayNo": 1,
+     "refType": "destination",
+     "ref": "phu-quoc",
+     "label": "Phú Quốc",
+     "note": "Nhận phòng, tắm biển"
+    },
+    {
+     "dayNo": 1,
+     "refType": "food",
+     "ref": "goi-ca-trich",
+     "label": "Gỏi cá trích",
+     "note": "Bữa tối"
+    },
+    {
+     "dayNo": 2,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Đi quanh đảo",
+     "note": "Buổi sáng"
+    },
+    {
+     "dayNo": 2,
+     "refType": "food",
+     "ref": "bun-quay-phu-quoc",
+     "label": "Bún quậy",
+     "note": "Bữa trưa"
+    },
+    {
+     "dayNo": 2,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Ngắm hoàng hôn",
+     "note": "Buổi chiều"
+    },
+    {
+     "dayNo": 3,
+     "refType": "food",
+     "ref": "nuoc-mam-phu-quoc",
+     "label": "Nước mắm Phú Quốc",
+     "note": "Mua làm quà trước khi về"
+    }
+   ]
+  },
+  {
+   "slug": "ho-chi-minh-2-ngay",
+   "title": "TP. Hồ Chí Minh 2 ngày: phố xá và ẩm thực",
+   "days": 2,
+   "region": "n",
+   "summary": "Hai ngày khám phá trung tâm Sài Gòn: đi bộ quanh Nhà thờ Đức Bà, Bưu điện, ăn cơm tấm, bánh mì và uống cà phê.",
+   "items": [
+    {
+     "dayNo": 1,
+     "refType": "destination",
+     "ref": "ho-chi-minh",
+     "label": "TP. Hồ Chí Minh",
+     "note": "Bắt đầu ở trung tâm"
+    },
+    {
+     "dayNo": 1,
+     "refType": "food",
+     "ref": "com-tam",
+     "label": "Cơm tấm",
+     "note": "Bữa sáng"
+    },
+    {
+     "dayNo": 1,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Nhà thờ Đức Bà và Bưu điện Thành phố",
+     "note": "Buổi sáng"
+    },
+    {
+     "dayNo": 1,
+     "refType": "food",
+     "ref": "hu-tieu-nam-vang",
+     "label": "Hủ tiếu Nam Vang",
+     "note": "Bữa trưa"
+    },
+    {
+     "dayNo": 2,
+     "refType": "food",
+     "ref": "banh-mi-sai-gon",
+     "label": "Bánh mì Sài Gòn",
+     "note": "Bữa sáng"
+    },
+    {
+     "dayNo": 2,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Dạo chợ Bến Thành và phố đi bộ",
+     "note": "Buổi sáng"
+    },
+    {
+     "dayNo": 2,
+     "refType": "food",
+     "ref": "ca-phe-sua-da",
+     "label": "Cà phê sữa đá",
+     "note": "Buổi chiều"
+    }
+   ]
+  },
+  {
+   "slug": "ha-giang-3-ngay",
+   "title": "Hà Giang 3 ngày: cao nguyên đá Đồng Văn",
+   "days": 3,
+   "region": "b",
+   "summary": "Ba ngày qua cao nguyên đá Đồng Văn với đèo Mã Pí Lèng, sông Nho Quế và các bản người H'Mông; nên đi cùng tài xế quen đường.",
+   "items": [
+    {
+     "dayNo": 1,
+     "refType": "destination",
+     "ref": "ha-giang",
+     "label": "Hà Giang",
+     "note": "Xuất phát từ thành phố"
+    },
+    {
+     "dayNo": 1,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Cổng trời Quản Bạ",
+     "note": "Buổi sáng"
+    },
+    {
+     "dayNo": 1,
+     "refType": "food",
+     "ref": "men-men",
+     "label": "Mèn mén",
+     "note": "Bữa trưa"
+    },
+    {
+     "dayNo": 2,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Đèo Mã Pí Lèng",
+     "note": "Buổi sáng"
+    },
+    {
+     "dayNo": 2,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Sông Nho Quế",
+     "note": "Buổi chiều"
+    },
+    {
+     "dayNo": 2,
+     "refType": "food",
+     "ref": "chao-au-tau",
+     "label": "Cháo ấu tẩu",
+     "note": "Bữa tối, tùy khẩu vị"
+    },
+    {
+     "dayNo": 3,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Phố cổ Đồng Văn",
+     "note": "Buổi sáng"
+    },
+    {
+     "dayNo": 3,
+     "refType": "experience_label",
+     "ref": null,
+     "label": "Cột cờ Lũng Cú",
+     "note": "Buổi chiều nếu còn thời gian"
+    }
+   ]
+  },
+  {
+   "slug": "mien-tay-3-ngay",
+   "title": "Miền Tây 3 ngày: Bến Tre, Cần Thơ, Châu Đốc",
+   "days": 3,
+   "region": "n",
+   "summary": "Ba ngày qua ba điểm đến miền Tây: đi xuồng rạch dừa Bến Tre, chợ nổi Cần Thơ và núi Sam ở Châu Đốc.",
+   "items": [
+    {
+     "dayNo": 1,
+     "refType": "destination",
+     "ref": "ben-tre",
+     "label": "Bến Tre",
+     "note": "Đi xuồng rạch dừa"
+    },
+    {
+     "dayNo": 1,
+     "refType": "food",
+     "ref": "keo-dua-ben-tre",
+     "label": "Kẹo dừa Bến Tre",
+     "note": "Mua làm quà"
+    },
+    {
+     "dayNo": 2,
+     "refType": "destination",
+     "ref": "can-tho",
+     "label": "Cần Thơ",
+     "note": "Chợ nổi buổi sáng"
+    },
+    {
+     "dayNo": 2,
+     "refType": "food",
+     "ref": "banh-xeo",
+     "label": "Bánh xèo miền Tây",
+     "note": "Bữa trưa"
+    },
+    {
+     "dayNo": 3,
+     "refType": "destination",
+     "ref": "chau-doc",
+     "label": "Châu Đốc",
+     "note": "Lên núi Sam"
+    },
+    {
+     "dayNo": 3,
+     "refType": "food",
+     "ref": "bun-ca-chau-doc",
+     "label": "Bún cá Châu Đốc",
+     "note": "Bữa trưa"
+    }
+   ]
+  }
+ ]
+}

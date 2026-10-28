@@ -9,6 +9,7 @@ use App\Support\Geo;
 use DateTimeImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Tuần 5-7: Trip Planner. Dùng chung cho trang web (PlannerController) và API (Api\V1\TripController).
@@ -20,6 +21,11 @@ use Illuminate\Support\Str;
 class TripPlanner
 {
     public const TYPES = ['destination', 'place', 'food', 'event', 'experience', 'tour'];
+    /** Mục tự thêm (không trỏ tới nội dung): ghi chú/lưu trú/ăn uống tự nhập, và di chuyển. refId = null, tên nằm ở cột label. */
+    public const CUSTOM_TYPES = ['note', 'transport'];
+    public const SEARCH_TYPES = ['destination', 'place', 'food', 'experience', 'event', 'tour'];
+    /** Nguồn tọa độ của mục tự thêm: dán link/tọa độ, bấm trên bản đồ, tìm ngoài Travela (dành cho giai đoạn sau). */
+    public const POSITION_SOURCES = ['link', 'map', 'search'];
     public const SLOTS = ['morning', 'noon', 'afternoon', 'evening'];
     public const MAX_DAYS = 14;
     public const MAX_ITEMS = 80;
@@ -43,6 +49,7 @@ class TripPlanner
             'days' => ['required', 'integer', 'between:1,' . self::MAX_DAYS],
             'groupSize' => ['required', 'integer', 'between:1,50'],
             'budget' => ['nullable', 'numeric', 'between:0,100000000000'],
+            'destinationId' => ['nullable', 'integer', 'exists:tbl_destinations,destinationId'],
         ];
     }
 
@@ -50,8 +57,13 @@ class TripPlanner
     {
         return [
             'items' => ['array', 'max:' . self::MAX_ITEMS],
-            'items.*.type' => ['required', 'in:' . implode(',', self::TYPES)],
-            'items.*.refId' => ['required', 'integer', 'min:1'],
+            'items.*.type' => ['required', 'in:' . implode(',', array_merge(self::TYPES, self::CUSTOM_TYPES))],
+            'items.*.refId' => ['nullable', 'integer', 'min:1'],   // bắt buộc với mục nội dung: save() kiểm tra, mục tự thêm thì không có
+            'items.*.label' => ['nullable', 'string', 'max:120'],
+            // Vị trí chỉ có nghĩa với mục tự thêm (mục nội dung lấy tọa độ từ kho, giá trị gửi lên bị bỏ qua); phải có đủ cặp lat+lng, save() kiểm tra
+            'items.*.lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'items.*.lng' => ['nullable', 'numeric', 'between:-180,180'],
+            'items.*.source' => ['nullable', 'in:' . implode(',', self::POSITION_SOURCES)],
             'items.*.day' => ['nullable', 'integer', 'between:1,' . self::MAX_DAYS],
             'items.*.note' => ['nullable', 'string', 'max:255'],
             'items.*.cost' => ['nullable', 'numeric', 'between:0,100000000000'],
@@ -212,9 +224,30 @@ class TripPlanner
     public function tripItems(int $tripId): array
     {
         $rows = DB::table('tbl_trip_items')->where('tripId', $tripId)->orderBy('dayNo')->orderBy('orderNo')->get();
-        $res = $this->resolve($rows->map(fn($r) => ['type' => $r->refType, 'refId' => (int) $r->refId])->all());
+        $res = $this->resolve($rows->filter(fn($r) => !in_array($r->refType, self::CUSTOM_TYPES, true))->map(fn($r) => ['type' => $r->refType, 'refId' => (int) $r->refId])->all());
         $out = [];
         foreach ($rows as $r) {
+            if (in_array($r->refType, self::CUSTOM_TYPES, true)) {
+                $lat = ($r->latitude ?? null) !== null ? (float) $r->latitude : null;
+                $lng = ($r->longitude ?? null) !== null ? (float) $r->longitude : null;
+                if ($lat === null || $lng === null) {
+                    $lat = $lng = null;
+                }
+                $out[] = [
+                    'type' => $r->refType, 'refId' => null, 'slug' => null, 'destinationId' => null, 'price' => null, 'sub' => '', 'raw' => null,
+                    'ownLat' => $lat, 'ownLng' => $lng, 'destName' => null, 'lat' => $lat, 'lng' => $lng,
+                    'source' => $lat !== null ? ($r->source ?? null) : null,
+                    'url' => $lat !== null ? 'https://www.google.com/maps?q=' . $lat . ',' . $lng : null,
+                    'name' => (string) ($r->label ?: ($r->refType === 'transport' ? 'Di chuyển' : 'Ghi chú')),
+                    'day' => $r->dayNo !== null ? (int) $r->dayNo : null,
+                    'order' => (int) $r->orderNo,
+                    'note' => $r->note,
+                    'cost' => $r->cost !== null ? (float) $r->cost : null,
+                    'slot' => $r->slot ?? null,
+                    'reasons' => [],
+                ];
+                continue;
+            }
             $k = $r->refType . ':' . $r->refId;
             if (!isset($res[$k])) {
                 continue;
@@ -245,6 +278,7 @@ class TripPlanner
                 'days' => (int) $f['days'],
                 'budget' => $f['budget'] ?? null,
                 'groupSize' => (int) $f['groupSize'],
+                'destinationId' => !empty($f['destinationId']) ? (int) $f['destinationId'] : null,
                 'status' => 'planned',
                 'createdAt' => now(),
                 'updatedAt' => now(),
@@ -343,36 +377,65 @@ class TripPlanner
             return false;
         }
         $days = (int) $f['days'];
-        $refs = array_map(fn($i) => ['type' => $i['type'], 'refId' => (int) $i['refId']], $items);
+        foreach ($items as $i => $it) {
+            if (in_array($it['type'], self::CUSTOM_TYPES, true)) {
+                if (trim((string) ($it['label'] ?? '')) === '') {
+                    throw ValidationException::withMessages(["items.$i.label" => 'Mục tự thêm cần có tên.']);
+                }
+                if ((self::hasCoord($it['lat'] ?? null)) !== (self::hasCoord($it['lng'] ?? null))) {
+                    throw ValidationException::withMessages(["items.$i.lat" => 'Vị trí cần đủ cả vĩ độ và kinh độ.']);
+                }
+            } elseif (empty($it['refId'])) {
+                throw ValidationException::withMessages(["items.$i.refId" => 'Mục thiếu mã tham chiếu.']);
+            }
+        }
+        $refs = [];
+        foreach ($items as $i) {
+            if (!in_array($i['type'], self::CUSTOM_TYPES, true)) {
+                $refs[] = ['type' => $i['type'], 'refId' => (int) $i['refId']];
+            }
+        }
         $valid = $this->resolve($refs);
 
         DB::transaction(function () use ($tripId, $f, $items, $days, $valid) {
-            DB::table('tbl_trips')->where('tripId', $tripId)->update([
+            $upd = [
                 'title' => $f['title'],
                 'startDate' => $f['startDate'] ?? null,
                 'days' => $days,
                 'budget' => $f['budget'] ?? null,
                 'groupSize' => (int) $f['groupSize'],
                 'updatedAt' => now(),
-            ]);
+            ];
+            if (array_key_exists('destinationId', $f)) {
+                $upd['destinationId'] = !empty($f['destinationId']) ? (int) $f['destinationId'] : null;
+            }
+            DB::table('tbl_trips')->where('tripId', $tripId)->update($upd);
             DB::table('tbl_trip_items')->where('tripId', $tripId)->delete();
 
             $seen = [];
             $counter = [];
             $rows = [];
             foreach ($items as $it) {
-                $k = $it['type'] . ':' . (int) $it['refId'];
-                if (!isset($valid[$k]) || isset($seen[$k])) {
-                    continue;
+                $custom = in_array($it['type'], self::CUSTOM_TYPES, true);
+                if (!$custom) {
+                    $k = $it['type'] . ':' . (int) $it['refId'];
+                    if (!isset($valid[$k]) || isset($seen[$k])) {
+                        continue;
+                    }
+                    $seen[$k] = true;
                 }
-                $seen[$k] = true;
                 $day = isset($it['day']) && $it['day'] !== null && $it['day'] !== '' ? min($days, max(1, (int) $it['day'])) : null;
                 $ck = $day === null ? 'x' : (string) $day;
                 $counter[$ck] = ($counter[$ck] ?? -1) + 1;
+                $pos = $custom && self::hasCoord($it['lat'] ?? null) && self::hasCoord($it['lng'] ?? null);
                 $rows[] = [
                     'tripId' => $tripId,
                     'refType' => $it['type'],
-                    'refId' => (int) $it['refId'],
+                    'refId' => $custom ? null : (int) $it['refId'],
+                    'label' => $custom ? mb_substr(trim((string) $it['label']), 0, 120) : null,
+                    'latitude' => $pos ? round((float) $it['lat'], 7) : null,
+                    'longitude' => $pos ? round((float) $it['lng'], 7) : null,
+                    'source' => $pos ? (in_array($it['source'] ?? null, self::POSITION_SOURCES, true) ? $it['source'] : 'map') : null,
                     'dayNo' => $day,
                     'orderNo' => $counter[$ck],
                     'note' => isset($it['note']) && trim((string) $it['note']) !== '' ? mb_substr(trim((string) $it['note']), 0, 255) : null,
@@ -479,6 +542,7 @@ class TripPlanner
         $end = $start ? $start->modify('+' . ($days - 1) . ' days') : null;
 
         $warnings = [];
+        $contentWarnings = [];   // cảnh báo về nội dung (lễ hội ngoài ngày đi, tháng nên cân nhắc): giao diện không tự tính được, cộng thêm vào cảnh báo cấu trúc
         $items = [];
         foreach ($this->tripItems((int) $trip->tripId) as $it) {
             [$when, $warn] = $this->eventInfo($it, $start, $end);
@@ -486,6 +550,7 @@ class TripPlanner
             unset($it['raw']);
             if ($warn) {
                 $warnings[] = $warn;
+                $contentWarnings[] = $warn;
             }
             $items[] = $it;
         }
@@ -556,7 +621,9 @@ class TripPlanner
                 foreach ($this->advice->verdicts(array_keys($destNames), $mo) as $destId => $v) {
                     $adviceRows[] = ['dest' => $destNames[$destId], 'month' => $mo, 'level' => $v['level'], 'label' => TravelAdvice::LABELS[$v['level']] ?? '', 'note' => $v['note']];
                     if ($v['level'] === 'avoid') {
-                        $warnings[] = 'Tháng ' . $mo . ' ở ' . $destNames[$destId] . ' thuộc mức "nên cân nhắc"' . ($v['note'] ? ' (' . $v['note'] . ')' : '') . '.';
+                        $w = 'Tháng ' . $mo . ' ở ' . $destNames[$destId] . ' thuộc mức "nên cân nhắc"' . ($v['note'] ? ' (' . $v['note'] . ')' : '') . '.';
+                        $warnings[] = $w;
+                        $contentWarnings[] = $w;
                     }
                 }
             }
@@ -572,6 +639,7 @@ class TripPlanner
                 'groupSize' => (int) $trip->groupSize,
                 'budget' => $budget,
                 'status' => $trip->status,
+                'destinationId' => !empty($trip->destinationId) ? (int) $trip->destinationId : null,
                 'shared' => !empty($trip->shareToken),
                 'shareToken' => $trip->shareToken ?? null,
             ],
@@ -579,6 +647,7 @@ class TripPlanner
             'unassigned' => $unassigned,
             'totals' => ['cost' => $cost, 'budget' => $budget, 'left' => $budget !== null ? $budget - $cost : null],
             'warnings' => array_values(array_unique($warnings)),
+            'contentWarnings' => array_values(array_unique($contentWarnings)),
             'advice' => $adviceRows,
             'estimateNote' => 'Quãng đường và thời gian là ước tính (đường chim bay x ' . self::ROAD_FACTOR . ', tốc độ ' . self::SPEED_KMH . ' km/h).',
         ];
@@ -658,14 +727,121 @@ class TripPlanner
         return $out;
     }
 
+    // ------------------------------------------------------------------ Tìm nội dung để thêm vào chuyến (tab Khám phá)
+
+    /**
+     * Tìm nội dung ĐÃ XUẤT BẢN để thêm vào chuyến: điểm đến, địa điểm, món, trải nghiệm, lễ hội, tour còn chỗ.
+     * $destId null = mọi điểm đến. $q rỗng = duyệt (mục "phải thử" và xếp hạng cao trước). Kết quả cùng dạng với gợi ý để JS dùng chung.
+     *
+     * @return list<array<string,mixed>>
+     */
+    public function search(object $trip, string $q, ?string $type, ?int $destId, int $limit = 24): array
+    {
+        $q = trim(mb_substr($q, 0, 80));
+        $like = $q === '' ? null : '%' . addcslashes($q, '%_\\') . '%';
+        $group = max(1, (int) $trip->groupSize);
+        $types = $type && in_array($type, self::SEARCH_TYPES, true) ? [$type] : self::SEARCH_TYPES;
+        $per = count($types) === 1 ? $limit : max(4, intdiv($limit, 3));
+        $out = [];
+        $num = fn($v) => $v !== null ? (float) $v : null;
+        $ll = fn($own, $d) => $own !== null ? $own : $d;
+
+        if (in_array('destination', $types, true)) {
+            $r = DB::table('tbl_destinations')->where('isActive', 1)
+                ->when($destId, fn($x) => $x->where('destinationId', $destId))
+                ->when($like, fn($x) => $x->where(fn($y) => $y->where('name', 'like', $like)->orWhere('province', 'like', $like)))
+                ->orderByDesc('isFeatured')->orderBy('name')->limit($per)->get();
+            foreach ($r as $d) {
+                $out[] = ['type' => 'destination', 'refId' => (int) $d->destinationId, 'name' => $d->name, 'sub' => (string) $d->province, 'destName' => $d->name,
+                    'destinationId' => (int) $d->destinationId, 'url' => route('destination.show', ['slug' => $d->slug]), 'cost' => null,
+                    'lat' => $num($d->latitude), 'lng' => $num($d->longitude)];
+            }
+        }
+        if (in_array('place', $types, true)) {
+            $r = DB::table('tbl_external_places as p')->join('tbl_destinations as d', 'd.destinationId', '=', 'p.destinationId')
+                ->where('p.reviewStatus', 'published')->where('d.isActive', 1)
+                ->when($destId, fn($x) => $x->where('p.destinationId', $destId))
+                ->when($like, fn($x) => $x->where('p.name', 'like', $like))
+                ->orderByDesc('p.isMustTry')->orderBy('p.rank')->orderBy('p.name')->limit($per)
+                ->get(['p.placeId', 'p.name', 'p.kind', 'p.destinationId', 'p.latitude', 'p.longitude', 'd.slug as destSlug', 'd.name as destName', 'd.latitude as dLat', 'd.longitude as dLng']);
+            foreach ($r as $p) {
+                $out[] = ['type' => 'place', 'refId' => (int) $p->placeId, 'name' => $p->name, 'sub' => (string) (\App\Support\PlaceKind::label($p->kind) ?? ''), 'destName' => $p->destName,
+                    'destinationId' => (int) $p->destinationId, 'url' => route('destination.show', ['slug' => $p->destSlug]) . '#gan-day', 'cost' => null,
+                    'lat' => $ll($num($p->latitude), $num($p->dLat)), 'lng' => $ll($num($p->longitude), $num($p->dLng))];
+            }
+        }
+        if (in_array('food', $types, true)) {
+            $r = DB::table('tbl_foods as f')->leftJoin('tbl_destinations as d', 'd.destinationId', '=', 'f.destinationId')
+                ->where('f.reviewStatus', 'published')
+                ->when($destId, fn($x) => $x->where(function ($y) use ($destId) {
+                    $y->where('f.destinationId', $destId)->orWhereIn('f.foodId', DB::table('tbl_food_destination')->where('destinationId', $destId)->select('foodId'));
+                }))
+                ->when($like, fn($x) => $x->where('f.name', 'like', $like))
+                ->orderByDesc('f.isMustTry')->orderBy('f.name')->limit($per)
+                ->get(['f.foodId', 'f.name', 'f.slug', 'f.category', 'f.destinationId', 'd.name as destName', 'd.latitude as dLat', 'd.longitude as dLng']);
+            foreach ($r as $f) {
+                $out[] = ['type' => 'food', 'refId' => (int) $f->foodId, 'name' => $f->name, 'sub' => (string) $f->category, 'destName' => $f->destName,
+                    'destinationId' => $f->destinationId ? (int) $f->destinationId : null, 'url' => route('foods.show', ['slug' => $f->slug]), 'cost' => null,
+                    'lat' => $num($f->dLat), 'lng' => $num($f->dLng)];
+            }
+        }
+        if (in_array('experience', $types, true)) {
+            $r = DB::table('tbl_experiences as e')->leftJoin('tbl_destinations as d', 'd.destinationId', '=', 'e.destinationId')
+                ->where('e.reviewStatus', 'published')
+                ->when($destId, fn($x) => $x->where('e.destinationId', $destId))
+                ->when($like, fn($x) => $x->where('e.name', 'like', $like))
+                ->orderByDesc('e.isMustTry')->orderBy('e.name')->limit($per)
+                ->select('e.*', 'd.name as destName', 'd.latitude as dLat', 'd.longitude as dLng')->get();
+            foreach ($r as $x) {
+                $out[] = ['type' => 'experience', 'refId' => (int) $x->experienceId, 'name' => $x->name, 'sub' => (string) ($x->duration ?? ''), 'destName' => $x->destName,
+                    'destinationId' => $x->destinationId ? (int) $x->destinationId : null, 'url' => route('experiences.show', ['slug' => $x->slug]), 'cost' => null,
+                    'lat' => $ll($num($x->latitude ?? null), $num($x->dLat)), 'lng' => $ll($num($x->longitude ?? null), $num($x->dLng))];
+            }
+        }
+        if (in_array('event', $types, true)) {
+            $r = DB::table('tbl_events as e')->leftJoin('tbl_destinations as d', 'd.destinationId', '=', 'e.destinationId')
+                ->where('e.reviewStatus', 'published')
+                ->when($destId, fn($x) => $x->where('e.destinationId', $destId))
+                ->when($like, fn($x) => $x->where('e.name', 'like', $like))
+                ->orderBy('e.name')->limit($per)
+                ->get(['e.eventId', 'e.name', 'e.slug', 'e.destinationId', 'd.name as destName', 'd.latitude as dLat', 'd.longitude as dLng']);
+            foreach ($r as $e) {
+                $out[] = ['type' => 'event', 'refId' => (int) $e->eventId, 'name' => $e->name, 'sub' => 'Lễ hội', 'destName' => $e->destName,
+                    'destinationId' => $e->destinationId ? (int) $e->destinationId : null, 'url' => route('events.show', ['slug' => $e->slug]), 'cost' => null,
+                    'lat' => $num($e->dLat), 'lng' => $num($e->dLng)];
+            }
+        }
+        if (in_array('tour', $types, true)) {
+            $tq = DB::table('tbl_tours as t')->leftJoin('tbl_destinations as d', 'd.destinationId', '=', 't.destinationId')
+                ->where('t.availability', 1)->where('t.quantity', '>', 0)->whereDate('t.startDate', '>', now()->toDateString())
+                ->when($destId, fn($x) => $x->where('t.destinationId', $destId))
+                ->when($like, fn($x) => $x->where('t.title', 'like', $like));
+            $trip->startDate ? $tq->orderByRaw('ABS(DATEDIFF(t.startDate, ?))', [$trip->startDate]) : $tq->orderBy('t.startDate');
+            foreach ($tq->limit($per)->get(['t.tourId', 't.title', 't.startDate', 't.priceAdult', 't.destinationId', 'd.name as destName', 'd.latitude as dLat', 'd.longitude as dLng']) as $t) {
+                $out[] = ['type' => 'tour', 'refId' => (int) $t->tourId, 'name' => $t->title,
+                    'sub' => date('d/m/Y', strtotime($t->startDate)) . ' · ' . number_format((float) $t->priceAdult, 0, ',', '.') . 'đ/người', 'destName' => $t->destName,
+                    'destinationId' => $t->destinationId ? (int) $t->destinationId : null, 'url' => route('tour-detail', ['id' => $t->tourId]),
+                    'cost' => round((float) $t->priceAdult * $group, 2), 'lat' => $num($t->dLat), 'lng' => $num($t->dLng)];
+            }
+        }
+
+        return array_slice($out, 0, $limit * (count($types) === 1 ? 1 : 3));
+    }
+
+    /** Giá trị tọa độ có được điền không (số, kể cả 0; null và chuỗi rỗng là không). */
+    private static function hasCoord(mixed $v): bool
+    {
+        return $v !== null && $v !== '' && is_numeric($v);
+    }
+
     /** Thêm tọa độ cho JS vẽ bản đồ: giữ nguyên mục nhưng chỉ lấy trường cần thiết. */
     public static function itemForClient(array $it): array
     {
         return [
-            'type' => $it['type'], 'refId' => $it['refId'], 'name' => $it['name'], 'sub' => $it['sub'], 'url' => $it['url'],
+            'type' => $it['type'], 'refId' => $it['refId'], 'name' => $it['name'], 'sub' => $it['sub'], 'url' => $it['url'] ?? null,
             'day' => $it['day'] ?? null, 'note' => $it['note'] ?? '', 'cost' => $it['cost'] ?? null,
             'lat' => $it['lat'], 'lng' => $it['lng'], 'when' => $it['when'] ?? null,
-            'slot' => $it['slot'] ?? null, 'reasons' => $it['reasons'] ?? [],
+            'slot' => $it['slot'] ?? null, 'reasons' => $it['reasons'] ?? [], 'source' => $it['source'] ?? null,
         ];
     }
 }

@@ -135,7 +135,7 @@ class Week6PlannerUiTest extends TestCase
     public function test_planner_page_prefills_from_natural_sentence(): void
     {
         $this->fillHanoi();
-        $html = $this->withSession($this->s)->get('/len-ke-hoach?q=' . urlencode('Hà Nội 3 ngày văn hóa'))->assertOk()->getContent();
+        $html = $this->withSession($this->s)->get('/len-ke-hoach/de-xuat?q=' . urlencode('Hà Nội 3 ngày văn hóa'))->assertOk()->getContent();
         $this->assertMatchesRegularExpression('/name="days"[^>]*value="3"/', $html);
         $this->assertMatchesRegularExpression('/value="culture"[^>]*checked/', $html);
     }

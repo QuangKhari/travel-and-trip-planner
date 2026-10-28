@@ -72,7 +72,7 @@ class PlannerTest extends TestCase
     public function test_trang_danh_sach_hien_form_va_chuyen_cua_toi(): void
     {
         $this->trip(['title' => 'Đà Lạt 3 ngày']);
-        $this->withSession($this->s)->get('/len-ke-hoach?thang=10')->assertOk()->assertSee('Đà Lạt 3 ngày')->assertSee('Tạo chuyến đi mới');
+        $this->withSession($this->s)->get('/len-ke-hoach')->assertOk()->assertSee('Đà Lạt 3 ngày')->assertSee('Tạo chuyến đi mới');
     }
 
     // ---- tạo từ khay -----------------------------------------------------------------------------

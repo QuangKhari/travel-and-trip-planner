@@ -86,4 +86,33 @@ return [
     // Tour (khối riêng, không cộng vào chi phí chuyến)
     'tours_max' => 3,
     'tour_window_days' => 14,       // khi biết ngày đi: lấy tour khởi hành trong ± số ngày này
+
+    // ---- Tìm địa điểm theo tên ở ngoài kho nội dung (ô "Thêm địa điểm" của trang sửa chuyến đi) ----
+    // Máy chủ gọi dịch vụ ngoài (trình duyệt không gọi trực tiếp, nên giấu được khóa và giới hạn được lượt gọi).
+    // 'photon'   : OpenStreetMap qua photon.komoot.io, KHÔNG cần khóa (dùng công bằng, đủ cho đồ án/demo).
+    // 'geoapify' : cần GEOAPIFY_KEY (gói miễn phí không cần thẻ). Mặc định tự chọn geoapify nếu đã có khóa, không thì photon.
+    // 'off'      : tắt, trang chỉ tìm trong kho Travela.
+    'geocoder' => env('PLANNER_GEOCODER'),
+    'photon_url' => env('PHOTON_URL', 'https://photon.komoot.io/api'),
+    'geoapify_key' => env('GEOAPIFY_KEY'),
+    // Khung Việt Nam: minLng,minLat,maxLng,maxLat. Đặt null để tìm toàn cầu (chuyến đi nước ngoài).
+    'geocode_bbox' => env('PLANNER_GEOCODE_BBOX', '102.1,8.4,109.6,23.4'),
+    'geocode_cache_minutes' => 360,
+    'geocode_timeout' => 6,
+    'geocode_limit' => 8,
+
+    /*
+     * Giá THAM KHẢO để gợi ý chi phí khi người dùng chưa nhập (đơn vị: đồng). Đây là con số tham khảo do nhóm đặt,
+     * không phải giá thị trường chính thức; trên giao diện luôn ghi "ước tính" và người dùng sửa được.
+     * 3 mức: low = tiết kiệm, mid = vừa, high = thoải mái. Mức mặc định suy ra từ ngân sách bình quân người/ngày.
+     */
+    'costs' => [
+        'meal'       => ['low' => 40000,  'mid' => 90000,  'high' => 200000],   // một bữa / người
+        'experience' => ['low' => 100000, 'mid' => 250000, 'high' => 600000],   // một trải nghiệm / người
+        'lodging'    => ['low' => 300000, 'mid' => 700000, 'high' => 1600000],  // một phòng / đêm
+        'transport'  => ['low' => 100000, 'mid' => 250000, 'high' => 600000],   // đi lại tại chỗ, cả nhóm / ngày
+        'mealsPerDay' => 3,
+        'peoplePerRoom' => 2,
+        'tierBudgetPerPersonDay' => ['low' => 600000, 'mid' => 1500000],       // dưới mức low => tiết kiệm; dưới mid => vừa; còn lại => thoải mái
+    ],
 ];

@@ -182,10 +182,13 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
 
     // Trip Planner (tuần 5-7)
     Route::get('/len-ke-hoach', [PlannerController::class, 'index'])->name('planner');
+    Route::get('/len-ke-hoach/de-xuat', [PlannerController::class, 'suggest'])->name('planner.suggest');
     Route::post('/len-ke-hoach/tao-tu-dong', [PlannerController::class, 'generate'])->middleware('throttle:10,1,planner-generate')->name('planner.generate');
     Route::post('/len-ke-hoach/{id}/trang-thai', [PlannerController::class, 'status'])->whereNumber('id')->middleware('throttle:60,1,planner-status')->name('planner.status');
     Route::post('/len-ke-hoach', [PlannerController::class, 'store'])->middleware('throttle:20,1,planner-store')->name('planner.store');
     Route::get('/len-ke-hoach/{id}', [PlannerController::class, 'edit'])->whereNumber('id')->name('planner.edit');
+    Route::get('/len-ke-hoach/{id}/tim-ngoai', [PlannerController::class, 'searchExternal'])->whereNumber('id')->middleware('throttle:40,1,planner-geo')->name('planner.searchExternal');
+    Route::get('/len-ke-hoach/{id}/tim', [PlannerController::class, 'search'])->whereNumber('id')->middleware('throttle:90,1,planner-search')->name('planner.search');
     Route::post('/len-ke-hoach/{id}/luu', [PlannerController::class, 'save'])->whereNumber('id')->middleware('throttle:60,1,planner-save')->name('planner.save');
     Route::post('/len-ke-hoach/{id}/chia-se', [PlannerController::class, 'share'])->whereNumber('id')->middleware('throttle:30,1,planner-share')->name('planner.share');
     Route::post('/lich-trinh/{slug}/dung-lam-chuyen-di', [PlannerController::class, 'fromItinerary'])->where('slug', '[a-z0-9-]+')->middleware('throttle:10,1,itin-to-trip')->name('planner.fromItinerary');

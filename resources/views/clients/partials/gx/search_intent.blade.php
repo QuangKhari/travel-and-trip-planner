@@ -10,8 +10,7 @@
     <section class="gx-box" aria-label="Lập chuyến đi">
         <h2>Lập chuyến đi theo ý bạn</h2>
         <p>
-            Mình hiểu: {{ $intent['destination']['name'] }}@if ($intent['days']), {{ $intent['days'] }} ngày @endif@if ($intent['month']), tháng {{ $intent['month'] }}@endif
-            @if ($intent['interests']), sở thích: {{ implode(', ', array_map(fn($k) => config("interests.$k.label", $k), $intent['interests'])) }}@endif.
+            Mình hiểu: {{ $intent['destination']['name'] }}{{ $intent['days'] ? ', ' . $intent['days'] . ' ngày' : '' }}{{ $intent['month'] ? ', tháng ' . $intent['month'] : '' }}{{ $intent['interests'] ? ', sở thích: ' . implode(', ', array_map(fn($k) => config("interests.$k.label", $k), $intent['interests'])) : '' }}.
         </p>
         <p><a class="gx-btn" href="{{ $plannerUrl }}">Lập chuyến đi này</a></p>
     </section>
