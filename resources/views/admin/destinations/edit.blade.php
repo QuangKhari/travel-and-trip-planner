@@ -30,13 +30,24 @@
                                 </select></div>
                         </div>
                         <div class="form-group"><label>Mô tả *</label><textarea class="form-control" name="description" rows="5" required>{{ $f('description') }}</textarea></div>
-                        <details class="form-group" @if ($isNew || empty($row->latitude) || empty($row->longitude) || $errors->has('slug') || $errors->has('latitude') || $errors->has('longitude') || $errors->has('wikiTitle')) open @endif style="margin-bottom:15px">
-                            <summary style="cursor:pointer"><b>Vị trí và liên kết</b> <small class="text-muted">(tọa độ bắt buộc; slug và Wikipedia thường để nguyên)</small></summary>
+                        <div class="well" style="padding:12px 15px;margin-bottom:15px">
+                            <b>Vị trí trên bản đồ *</b>
+                            <p class="text-muted" style="margin:4px 0 8px">Dùng để đặt điểm đến lên bản đồ, tính khoảng cách cho Planner và lấy thời tiết. Cách nhanh nhất: mở Google Maps, tìm nơi đó, bấm chuột phải vào đúng chỗ rồi bấm dòng số đầu tiên (đã tự chép), hoặc chép link ở thanh địa chỉ. Dán vào ô dưới, hệ thống tự điền hai ô vĩ độ và kinh độ.</p>
+                            <input class="form-control" id="map-paste" type="text" autocomplete="off" placeholder="Dán link Google Maps (đầy đủ) hoặc cặp số như 21.0285, 105.8542">
+                            <small id="map-paste-msg" class="text-muted" style="display:block;margin-top:4px"></small>
                             <div class="row" style="margin-top:10px">
-                                <div class="col-md-6 form-group"><label>Vĩ độ *</label><input class="form-control" name="latitude" value="{{ $f('latitude') }}" required><small class="text-muted">Dùng để đặt điểm đến lên bản đồ, tính khoảng cách cho Planner và lấy thời tiết. Mở Google Maps, bấm chuột phải vào nơi đó rồi chép số đầu tiên.</small></div>
-                                <div class="col-md-6 form-group"><label>Kinh độ *</label><input class="form-control" name="longitude" value="{{ $f('longitude') }}" required><small class="text-muted">Số thứ hai khi chép từ Google Maps.</small></div>
-                                <div class="col-md-6 form-group"><label>Slug (địa chỉ trang)</label><input class="form-control" name="slug" value="{{ $f('slug') }}" placeholder="để trống sẽ tự sinh từ tên"><small class="text-muted">Là phần cuối của đường dẫn, ví dụ /diem-den/<b>ha-noi</b>. Đổi slug sẽ đổi địa chỉ trang công khai.</small></div>
-                                <div class="col-md-6 form-group"><label>Tên bài Wikipedia</label><input class="form-control" name="wikiTitle" value="{{ $f('wikiTitle') }}"><small class="text-muted">Chỉ dùng khi chạy lệnh nhập dữ liệu từ Wikipedia (kéo mô tả, ảnh về). Không dùng thì để trống.</small></div>
+                                <div class="col-md-6 form-group"><label>Vĩ độ *</label><input class="form-control" id="lat" name="latitude" value="{{ $f('latitude') }}" required></div>
+                                <div class="col-md-6 form-group"><label>Kinh độ *</label><input class="form-control" id="lng" name="longitude" value="{{ $f('longitude') }}" required></div>
+                            </div>
+                            <small class="text-muted">Link rút gọn dạng maps.app.goo.gl không chứa tọa độ: hãy mở link đó trong trình duyệt rồi chép lại link đầy đủ ở thanh địa chỉ. Việt Nam nằm khoảng vĩ độ 8 đến 24, kinh độ 102 đến 110.</small>
+                        </div>
+                        @if (!$isNew)
+                            <p class="text-muted">Địa chỉ trang công khai: <code>/diem-den/{{ $row->slug }}</code> (tự sinh từ tên khi tạo, không cần sửa).</p>
+                        @endif
+                        <details class="form-group" @if ($errors->has('wikiTitle')) open @endif style="margin-bottom:15px">
+                            <summary style="cursor:pointer"><b>Nâng cao</b> <small class="text-muted">(bài viết tự soạn thì bỏ qua)</small></summary>
+                            <div class="row" style="margin-top:10px">
+                                <div class="col-md-6 form-group"><label>Tên bài Wikipedia</label><input class="form-control" name="wikiTitle" value="{{ $f('wikiTitle') }}"><small class="text-muted">Chỉ dùng khi chạy lệnh nhập dữ liệu từ Wikipedia (kéo mô tả, ảnh về). Bài tự viết thì để trống, không ảnh hưởng gì đến việc xuất bản.</small></div>
                             </div>
                         </details>
                         <div class="form-group">
@@ -126,6 +137,33 @@
     </div>
 </div>
 <script>
+function parseMapsInput(raw) {
+    var t = String(raw || '').trim();
+    try { t = decodeURIComponent(t); } catch (e) {}
+    var ok = function (la, lo) { la = parseFloat(la); lo = parseFloat(lo); return isFinite(la) && isFinite(lo) && Math.abs(la) <= 90 && Math.abs(lo) <= 180 ? [la, lo] : null; };
+    var m;
+    if ((m = t.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/))) return ok(m[1], m[2]);                 // ghim địa điểm
+    if ((m = t.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/))) return ok(m[1], m[2]);                     // tâm khung nhìn
+    if ((m = t.match(/[?&](?:q|query|ll|destination)=(-?\d+(?:\.\d+)?)[,+ ]+(-?\d+(?:\.\d+)?)/))) return ok(m[1], m[2]);
+    if ((m = t.match(/^(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)$/))) return ok(m[1], m[2]);        // "21.0285, 105.8542"
+    return null;
+}
+document.getElementById('map-paste')?.addEventListener('input', function () {
+    var msg = document.getElementById('map-paste-msg'), v = this.value.trim();
+    if (!v) { msg.textContent = ''; return; }
+    var r = parseMapsInput(v);
+    if (r) {
+        document.getElementById('lat').value = r[0];
+        document.getElementById('lng').value = r[1];
+        msg.className = 'text-success';
+        msg.textContent = 'Đã điền vĩ độ ' + r[0] + ', kinh độ ' + r[1] + '. Hãy kiểm tra lại cho đúng nơi bạn muốn.';
+    } else {
+        msg.className = 'text-danger';
+        msg.textContent = /goo\.gl|maps\.app/.test(v)
+            ? 'Link rút gọn không chứa tọa độ. Hãy mở link trong trình duyệt rồi chép link đầy đủ ở thanh địa chỉ.'
+            : 'Không đọc được tọa độ từ nội dung này. Bạn có thể nhập tay vào hai ô bên dưới.';
+    }
+});
 document.getElementById('apply-suggest')?.addEventListener('click', function () {
     document.querySelectorAll('.lvl').forEach(function (s) { if (s.dataset.suggest) s.value = s.dataset.suggest; });
 });
