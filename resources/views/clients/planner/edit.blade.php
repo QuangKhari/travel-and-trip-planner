@@ -15,6 +15,9 @@
             <p><a href="{{ route('planner') }}">← Chuyến đi của tôi</a></p>
             <h1>{{ $t['title'] }}</h1>
         </header>
+        @if (session('planner_notice'))
+            <p class="tp-card" role="status">{{ session('planner_notice') }}</p>
+        @endif
 
         <div class="tp-edit">
             <div class="tp-col-main">

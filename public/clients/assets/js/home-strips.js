@@ -69,6 +69,11 @@
         out.textContent = "";
         out.appendChild(el("h3", null, d.destination ? "Gợi ý cho " + d.destination.name : "Tháng " + d.month + " đang đẹp ở"));
         if (d.verdict && d.verdict.text) out.appendChild(el("p", "hpl-verdict is-" + d.verdict.level, d.verdict.text));
+        if (d.verdict && d.verdict.url) {
+            var more = el("a", "hpl-more", "Xem chi tiết tháng này →");
+            more.href = d.verdict.url;
+            out.appendChild(more);
+        }
         var cols = el("div", "hpl-cols");
         if (d.itineraries.length)
             cols.appendChild(col("Lịch trình mẫu", d.itineraries.map(function (i) { return { url: i.url, title: i.title, sub: i.days + " ngày" }; })));

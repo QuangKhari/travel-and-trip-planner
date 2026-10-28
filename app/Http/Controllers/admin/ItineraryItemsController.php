@@ -138,7 +138,7 @@ class ItineraryItemsController extends Controller
             return back()->with('error', $check['errors'][0]);
         }
 
-        DB::transaction(function () use ($id, $rows) {
+        DB::transaction(function () use ($id, $rows, $it) {
             DB::table('tbl_itinerary_items')->where('itineraryId', $id)->delete();
             if ($rows) {
                 DB::table('tbl_itinerary_items')->insert($rows);

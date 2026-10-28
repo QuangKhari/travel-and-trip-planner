@@ -48,6 +48,10 @@ class SeoController extends Controller
         }
         foreach (DB::table('tbl_destinations')->where('isActive', 1)->get() as $d) {
             $add(route('destination.show', ['slug' => $d->slug]), $d->updatedAt ?? $d->createdAt ?? null, 'weekly', '0.8');
+            // Trang theo tháng: chỉ đưa vào sitemap tháng đã có đánh giá mùa (tránh trang rỗng)
+            foreach (DB::table('tbl_destination_months')->where('destinationId', $d->destinationId)->pluck('month') as $mo) {
+                $add(route('destination.month', ['slug' => $d->slug, 'n' => (int) $mo]), $d->updatedAt ?? $d->createdAt ?? null, 'monthly', '0.5');
+            }
         }
         foreach (DB::table('tbl_foods')->where('reviewStatus', 'published')->get() as $r) {
             $add(route('foods.show', ['slug' => $r->slug]), $r->updatedAt ?? $r->createdAt ?? null, 'monthly', '0.6');

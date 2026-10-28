@@ -6,6 +6,7 @@ use App\Http\Controllers\clients\AboutController;
 use App\Http\Controllers\clients\ContactController;
 use App\Http\Controllers\clients\BookingController;
 use App\Http\Controllers\clients\DestinationController;
+use App\Http\Controllers\clients\DestinationMonthController;
 use App\Http\Controllers\clients\TravelGuidesController;
 use App\Http\Controllers\clients\ToursController;
 use App\Http\Controllers\clients\TourDetailController;
@@ -64,6 +65,7 @@ Route::post('/contact', [ContactController::class, 'store'])->middleware('thrott
 Route::get('/diem-den', [DestinationController::class, 'index'])->name('destination');
 Route::get('/diem-den/tat-ca', [ExploreContentController::class, 'destinations'])->middleware('throttle:60,1,destination-list')->name('destinations.list');
 Route::get('/diem-den/{slug}', [\App\Http\Controllers\clients\DestinationDetailController::class, 'show'])->where('slug', '[a-z0-9-]+')->middleware('throttle:60,1,destination-detail')->name('destination.show');
+    Route::get('/diem-den/{slug}/thang-{n}', [DestinationMonthController::class, 'show'])->where('slug', '[a-z0-9-]+')->where('n', '([1-9]|1[0-2])')->middleware('throttle:60,1,destination-month')->name('destination.month');
 // Đường dẫn cũ /destination chuyển vĩnh viễn sang /diem-den (một URL chuẩn cho mỗi trang)
 Route::permanentRedirect('/destination', '/diem-den');
 Route::get('/destination/{slug}', fn(string $slug) => redirect()->route('destination.show', ['slug' => $slug], 301))->where('slug', '[a-z0-9-]+');
@@ -183,6 +185,7 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::get('/len-ke-hoach/{id}', [PlannerController::class, 'edit'])->whereNumber('id')->name('planner.edit');
     Route::post('/len-ke-hoach/{id}/luu', [PlannerController::class, 'save'])->whereNumber('id')->middleware('throttle:60,1,planner-save')->name('planner.save');
     Route::post('/len-ke-hoach/{id}/chia-se', [PlannerController::class, 'share'])->whereNumber('id')->middleware('throttle:30,1,planner-share')->name('planner.share');
+    Route::post('/lich-trinh/{slug}/dung-lam-chuyen-di', [PlannerController::class, 'fromItinerary'])->where('slug', '[a-z0-9-]+')->middleware('throttle:10,1,itin-to-trip')->name('planner.fromItinerary');
     Route::post('/len-ke-hoach/{id}/xoa', [PlannerController::class, 'destroy'])->whereNumber('id')->middleware('throttle:20,1,planner-del')->name('planner.destroy');
 });
 

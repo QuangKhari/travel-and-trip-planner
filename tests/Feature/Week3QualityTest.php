@@ -171,6 +171,7 @@ class Week3QualityTest extends TestCase
 
     public function test_quality_dashboard_requires_admin_and_shows_scores(): void
     {
+        config(['core_destinations.slugs' => []]);   // trang Chất lượng lọc theo điểm đến lõi; để rỗng thì xét mọi điểm đến
         $this->fillHanoi();
         $this->get('/admin/content-quality')->assertRedirect(route('admin.login'));
 
@@ -225,15 +226,35 @@ class Week3QualityTest extends TestCase
         $this->assertNull($saved[1]->refId);
     }
 
-    public function test_admin_rejects_bad_slot_minutes_and_transport_ref(): void
+    /** Mỗi dòng sai phải bị từ chối: có thông báo lỗi và KHÔNG ghi gì vào lịch trình. */
+    private function assertSaveRejected(array $bad): void
     {
         $it = $this->itinerary(1);
-        $admin = $this->admin();
         $base = ['dayNo' => 1, 'refType' => null, 'refId' => null, 'label' => 'x', 'note' => '', 'slot' => null, 'durationMin' => null];
-        foreach ([['slot' => 'midnight'], ['durationMin' => 2], ['durationMin' => 99999], ['refType' => 'bus', 'refId' => 1]] as $bad) {
-            $this->withSession(['adminId' => $admin])->post(route('admin.itinerary.items.save', $it), $this->payload([$bad + $base]))->assertSessionHas('error');
-        }
-        $this->assertSame(0, DB::table('tbl_itinerary_items')->where('itineraryId', $it)->count());
+        $this->withSession(['adminId' => $this->admin()])
+            ->post(route('admin.itinerary.items.save', $it), $this->payload([$bad + $base]))
+            ->assertSessionHas('error');
+        $this->assertSame(0, DB::table('tbl_itinerary_items')->where('itineraryId', $it)->count(), 'dữ liệu sai không được ghi: ' . json_encode($bad));
+    }
+
+    public function test_admin_rejects_unknown_slot(): void
+    {
+        $this->assertSaveRejected(['slot' => 'midnight']);
+    }
+
+    public function test_admin_rejects_too_short_duration(): void
+    {
+        $this->assertSaveRejected(['durationMin' => 2]);
+    }
+
+    public function test_admin_rejects_too_long_duration(): void
+    {
+        $this->assertSaveRejected(['durationMin' => 99999]);
+    }
+
+    public function test_admin_rejects_unknown_ref_type(): void
+    {
+        $this->assertSaveRejected(['refType' => 'bus', 'refId' => 1]);
     }
 
     public function test_edit_page_loads_with_new_fields(): void

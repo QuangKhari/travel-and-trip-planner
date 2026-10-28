@@ -6,7 +6,7 @@
     $t = $payload['trip'];
     $money = fn($n) => number_format((float) $n, 0, ',', '.') . 'đ';
     $start = $t['startDate'] ? \Carbon\Carbon::parse($t['startDate']) : null;
-    $typeLabel = ['destination' => 'Điểm đến', 'food' => 'Món ăn', 'event' => 'Lễ hội', 'experience' => 'Trải nghiệm', 'tour' => 'Tour'];
+    $typeLabel = ['destination' => 'Điểm đến', 'place' => 'Địa điểm', 'food' => 'Món ăn', 'event' => 'Lễ hội', 'experience' => 'Trải nghiệm', 'tour' => 'Tour'];
 @endphp
 
 <main class="tp tp--shared">
@@ -29,7 +29,9 @@
                                 <a href="{{ $it['url'] }}">{{ $it['name'] }}</a>
                                 @if ($it['sub'])<small>{{ $it['sub'] }}</small>@endif
                                 @if ($it['when'])<small>Diễn ra {{ $it['when'] }}</small>@endif
+                                @if (!empty($it['slot']))<small>{{ ['morning' => 'Buổi sáng', 'noon' => 'Buổi trưa', 'afternoon' => 'Buổi chiều', 'evening' => 'Buổi tối'][$it['slot']] ?? '' }}</small>@endif
                                 @if ($it['note'])<p class="tp-note">{{ $it['note'] }}</p>@endif
+                                @if (!empty($it['reasons']))<p class="tp-why">Vì sao chọn: {{ implode('; ', $it['reasons']) }}</p>@endif
                             </li>
                         @endforeach
                     </ol>

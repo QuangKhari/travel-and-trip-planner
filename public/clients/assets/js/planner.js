@@ -14,7 +14,7 @@
         return x;
     });
     var sugg = cfg.suggestions || {};
-    var TYPE = { destination: "Điểm đến", food: "Món ăn", event: "Lễ hội", experience: "Trải nghiệm", tour: "Tour" };
+    var TYPE = { destination: "Điểm đến", place: "Địa điểm", food: "Món ăn", event: "Lễ hội", experience: "Trải nghiệm", tour: "Tour" };
     var SUGG_TITLE = { tray: "Từ khay chuyến đi", tour: "Tour sắp khởi hành", experience: "Trải nghiệm", food: "Món nên thử", event: "Lễ hội" };
     var COLORS = ["#0d6f6a", "#c2410c", "#1d4ed8", "#a21caf", "#4d7c0f", "#be123c", "#0e7490", "#92400e", "#4338ca", "#15803d", "#b45309", "#6d28d9", "#0369a1", "#9f1239"];
     var $ = function (id) { return document.getElementById(id); };
@@ -60,6 +60,10 @@
         var sub = [it.sub, it.when ? "diễn ra " + it.when : ""].filter(Boolean).join(" · ");
         if (sub) top.appendChild(el("small", "tp-item__sub", sub));
         li.appendChild(top);
+        if (it.reasons && it.reasons.length) {
+            var why = el("p", "tp-why", "Vì sao chọn: " + it.reasons.join("; "));
+            li.appendChild(why);
+        }
 
         var ctl = el("div", "tp-item__ctl");
         var sel = el("select");
@@ -278,7 +282,7 @@
             days: daysCount(),
             groupSize: parseInt($("tpGroup").value, 10) || 1,
             budget: $("tpBudget").value === "" ? null : +$("tpBudget").value,
-            items: items.map(function (x) { return { type: x.type, refId: x.refId, day: x.day, note: x.note, cost: x.cost }; }),
+            items: items.map(function (x) { return { type: x.type, refId: x.refId, day: x.day, note: x.note, cost: x.cost, slot: x.slot || null, reasons: x.reasons || [] }; }),
         };
         if (!body.title) { say("Hãy nhập tên chuyến đi.", true); return; }
         $("tpSave").disabled = true;

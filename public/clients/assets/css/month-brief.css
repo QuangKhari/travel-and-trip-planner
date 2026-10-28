@@ -1,0 +1,22 @@
+/* Trang "Điểm đến theo tháng" (tuần 4). Dùng biến màu của explore-kit.css. */
+.mb-list {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+}
+.mb-note {
+    margin-left: 8px;
+    font-size: 14px;
+    color: var(--gx-mute);
+}
+.mb-warn ul {
+    margin: 0;
+    padding-left: 18px;
+}
+.gx-box h3 {
+    font-size: 16px;
+    margin: 14px 0 6px;
+    color: var(--gx-navy);
+}

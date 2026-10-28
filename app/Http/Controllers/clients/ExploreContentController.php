@@ -196,6 +196,9 @@ class ExploreContentController extends Controller
             'stats' => $data['stats'],
             'tours' => app(\App\Services\Content\TourMatcher::class)->forDestinations($data['destIds'], 3),
             'plannerUrl' => config('postcards.planner_url') ? url(config('postcards.planner_url')) : null,
+            // Nút "Dùng làm chuyến đi của tôi": chỉ lịch trình MỘT điểm đến (ItineraryScope)
+            'canUseAsTrip' => (new \App\Services\Content\ItineraryScope())->singleDestination((int) $data['itinerary']->itineraryId) !== null,
+            'isLoggedIn' => (bool) session()->get('userId'),
         ]);
     }
 }

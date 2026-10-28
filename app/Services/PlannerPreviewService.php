@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Services\Content\DestinationMonthBrief;
 use App\Support\DiscoverImage;
 use Illuminate\Support\Facades\DB;
 
@@ -33,14 +34,11 @@ class PlannerPreviewService
 
         $out['destination'] = ['name' => $dest->name, 'url' => route('destination.show', ['slug' => $dest->slug])];
 
-        $m = DB::table('tbl_destination_months')->where('destinationId', $dest->destinationId)->where('month', $month)->first();
-        if ($m) {
-            $out['verdict'] = ['level' => $m->level, 'text' => match ($m->level) {
-                'best' => "Tháng {$month} là mùa đẹp nhất của {$dest->name}" . ($m->note ? ': ' . $m->note : '.'),
-                'ok' => "Tháng {$month} đi {$dest->name} được, không phải thời điểm đẹp nhất.",
-                'avoid' => "Tháng {$month} nên cân nhắc thời điểm khác cho {$dest->name}.",
-                default => null,
-            }];
+        // Tuần 4: một nguồn duy nhất cho câu trả lời theo thời điểm (cùng trang /diem-den/{slug}/thang-{n})
+        $brief = app(DestinationMonthBrief::class)->for((int) $dest->destinationId, $month);
+        if ($brief && $brief['hasRating'] && in_array($brief['rating']['level'], ['best', 'ok', 'avoid'], true)) {
+            $out['verdict'] = ['level' => $brief['rating']['level'], 'text' => DestinationMonthBrief::summaryText($brief),
+                'url' => route('destination.month', ['slug' => $dest->slug, 'n' => $month])];
         }
 
         $base = fn() => DB::table('tbl_itineraries as i')->where('i.reviewStatus', 'published')

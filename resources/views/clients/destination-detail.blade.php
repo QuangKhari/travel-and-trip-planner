@@ -149,7 +149,7 @@
             <ul class="gx-months">
                 @foreach ($months as $m)
                     <li class="gx-m gx-m--{{ $m['level'] }}">
-                        <b>T{{ $m['month'] }}</b>
+                        <b><a href="{{ route('destination.month', ['slug' => $destination->slug, 'n' => $m['month']]) }}" title="Xem chi tiết tháng {{ $m['month'] }}">T{{ $m['month'] }}</a></b>
                         <span>{{ ['best' => 'Đẹp nhất', 'ok' => 'Đi được', 'avoid' => 'Nên tránh', 'unknown' => 'Chưa rõ'][$m['level']] }}</span>
                         @if ($m['tMax'] !== null)
                             <small>{{ (int) $m['tMin'] }}–{{ (int) $m['tMax'] }}°C · {{ (int) $m['rainMm'] }}
@@ -158,6 +158,7 @@
                     </li>
                 @endforeach
             </ul>
+            <p class="gx-note" style="margin:8px 0 0">Bấm vào tháng để xem lễ hội, món theo mùa, trải nghiệm và lịch trình phù hợp tháng đó.</p>
             <p class="gx-legend">
                 <span><i style="background:#0d6f6a"></i>Đẹp nhất</span><span><i
                         style="background:#e6f4f1;border:1px solid #b9ddd7"></i>Đi được</span><span><i

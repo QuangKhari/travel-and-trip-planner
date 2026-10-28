@@ -34,10 +34,21 @@
             </dl>
         @endif
         <div class="gx-actions">
-            @if ($plannerUrl)
-                <a class="gx-btn" href="{{ $plannerUrl }}?lich-trinh={{ $it->slug }}">Dùng làm điểm xuất phát</a>
+            @if (session('planner_error'))
+                <p class="gx-note" role="alert">{{ session('planner_error') }}</p>
+            @endif
+            @if (!empty($canUseAsTrip))
+                @if (!empty($isLoggedIn))
+                    <form method="post" action="{{ route('planner.fromItinerary', ['slug' => $it->slug]) }}">
+                        @csrf
+                        <button class="gx-btn" type="submit">Dùng làm chuyến đi của tôi</button>
+                    </form>
+                    <span class="gx-note">Sao chép lịch trình này vào mục “Lên kế hoạch” để bạn chỉnh sửa theo ý mình.</span>
+                @else
+                    <a class="gx-btn" href="{{ route('login') }}">Đăng nhập để dùng làm chuyến đi của tôi</a>
+                @endif
             @else
-                <span class="gx-note">“Dùng làm điểm xuất phát” sẽ có khi trình lên kế hoạch ra mắt.</span>
+                <span class="gx-note">Lịch trình này đi qua nhiều điểm đến hoặc chưa gắn rõ điểm đến nên chưa dùng làm chuyến đi được.</span>
             @endif
         </div>
         @if ($points)

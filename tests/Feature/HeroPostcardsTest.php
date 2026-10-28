@@ -35,13 +35,13 @@ class HeroPostcardsTest extends TestCase
 
     public function test_trang_chu_blank_card_khong_con_tham_so_vo_nghia(): void
     {
-        config(['postcards.planner_url' => null]); // chưa bật Planner thì thẻ trống trỏ về #kham-pha
+        config(['postcards.planner_url' => null]); // chưa bật Planner thì thẻ trắng trỏ xuống khối lên kế hoạch #hpl
         $this->seedThree(true);
         $html = $this->get('/')->assertOk()->getContent();
         $this->assertStringContainsString('data-thumb="', $html);
-        $this->assertMatchesRegularExpression('/class="hp-card hp-blank" href="#kham-pha"/', $html);
-        $this->assertStringContainsString('Khám phá theo cảm hứng →', $html);
-        $this->assertStringNotContainsString('#kham-pha' . (int) date('n'), $html);
+        $this->assertMatchesRegularExpression('/class="hp-card hp-blank" href="#hpl"/', $html);
+        $this->assertStringContainsString('Lên kế hoạch ngay bên dưới →', $html);
+        $this->assertStringNotContainsString('#hpl' . (int) date('n'), $html);
         // tấm đầu hiện sẵn bằng CSS và có fetchpriority cho LCP
         $this->assertStringContainsString('fetchpriority="high"', $html);
     }

@@ -77,6 +77,19 @@ class PlannerController extends Controller
         ]);
     }
 
+    /** POST /lich-trinh/{slug}/dung-lam-chuyen-di : sao chép lịch trình mẫu (một điểm đến) thành chuyến đi của người dùng. */
+    public function fromItinerary(string $slug, TripPlanner $planner)
+    {
+        try {
+            $r = $planner->createFromItinerary($this->uid(), $slug);
+        } catch (\DomainException $e) {
+            return redirect()->route('itineraries.show', ['slug' => $slug])->with('planner_error', $e->getMessage());
+        }
+
+        return redirect()->route('planner.edit', ['id' => $r['tripId']])
+            ->with('planner_notice', 'Đã tạo chuyến đi từ lịch trình mẫu (' . $r['imported'] . ' mục' . ($r['skipped'] ? ', bỏ qua ' . $r['skipped'] . ' mục di chuyển/không còn công khai' : '') . ').');
+    }
+
     /** POST /len-ke-hoach/{id}/luu  {title,startDate,days,groupSize,budget,items[]} -> {ok:true} */
     public function save(Request $request, int $id, TripPlanner $planner): JsonResponse
     {

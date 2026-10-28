@@ -22,6 +22,7 @@ final class PublicCache
         SearchCatalog::forget();
         Cache::forget('sitemap.xml.v1');
         Cache::forget('rag.entities.v1');
+        Cache::forever('monthbrief.gen', (string) microtime(true));   // đổi thế hệ: vô hiệu mọi DestinationMonthBrief đã cache
 
         $limit = (int) config('postcards.limit', 8);
         $days = [date('Ymd'), date('Ymd', strtotime('-1 day'))];   // phòng khi vừa qua nửa đêm

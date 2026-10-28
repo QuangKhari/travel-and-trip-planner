@@ -389,3 +389,5 @@
         grid-template-columns: minmax(0, 1fr);
     }
 }
+
+.tp-why { margin: 4px 0 0; font-size: .85rem; color: #5b6b66; }
