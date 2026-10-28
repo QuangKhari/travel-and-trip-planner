@@ -389,6 +389,17 @@ class TripPlanner
         return true;
     }
 
+    /** Đổi trạng thái chuyến (draft|planned|done). false nếu không phải chuyến của người dùng hoặc trạng thái không hợp lệ. */
+    public function setStatus(int $userId, int $tripId, string $status): bool
+    {
+        if (!in_array($status, ['draft', 'planned', 'done'], true) || !$this->owned($userId, $tripId)) {
+            return false;
+        }
+        DB::table('tbl_trips')->where(['tripId' => $tripId, 'userId' => $userId])->update(['status' => $status, 'updatedAt' => now()]);
+
+        return true;
+    }
+
     public function delete(int $userId, int $tripId): bool
     {
         if (!$this->owned($userId, $tripId)) {

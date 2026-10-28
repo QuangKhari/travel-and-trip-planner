@@ -4,6 +4,8 @@
 <div class="right_col" role="main">
     <div class="page-title"><div class="title_left"><h3>Danh mục <small>cẩm nang</small></h3></div></div>
     <div class="clearfix"></div>
+    <p class="text-muted">Danh mục là các nhóm bài cẩm nang. Khi viết bài cẩm nang ở mục Soạn và duyệt, bạn chọn một danh mục từ đây.</p>
+
     @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if (session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
     @if ($errors->any())<div class="alert alert-danger">@foreach ($errors->all() as $e)<div>{{ $e }}</div>@endforeach</div>@endif

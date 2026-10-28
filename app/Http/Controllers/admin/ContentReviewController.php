@@ -26,7 +26,7 @@ use Illuminate\Validation\Rule;
  */
 class ContentReviewController extends Controller
 {
-    private const STATUSES = ['draft' => 'Nháp', 'reviewed' => 'Đã xem', 'published' => 'Đã xuất bản'];
+    private const STATUSES = ['draft' => 'Nháp', 'reviewed' => 'Đã kiểm tra (cũ)', 'published' => 'Đã xuất bản'];
 
     private const URL = ['nullable', 'max:255', 'regex:/^https?:\/\//i'];
 
@@ -364,14 +364,14 @@ class ContentReviewController extends Controller
         DB::table($cfg['table'])->where($cfg['key'], $id)->update($data);
         $this->log($kind, $id, 'update', $row->reviewStatus, $row->reviewStatus, 'Sửa nội dung');
 
-        // Sửa xong mà không còn đủ điều kiện thì tự hạ về "Đã xem" để không lộ nội dung lỗi ra công khai.
+        // Sửa xong mà không còn đủ điều kiện thì tự hạ về Nháp để không lộ nội dung lỗi ra công khai.
         $fresh = DB::table($cfg['table'])->where($cfg['key'], $id)->first();
         if ($fresh->reviewStatus === 'published' && ($p = PublishGate::problems($kind, $fresh))) {
-            DB::table($cfg['table'])->where($cfg['key'], $id)->update(['reviewStatus' => 'reviewed']);
-            $this->log($kind, $id, 'status', 'published', 'reviewed', 'Tự hạ vì không đủ điều kiện: ' . implode('; ', $p));
+            DB::table($cfg['table'])->where($cfg['key'], $id)->update(['reviewStatus' => 'draft']);
+            $this->log($kind, $id, 'status', 'published', 'draft', 'Tự hạ vì không đủ điều kiện: ' . implode('; ', $p));
             PublicCache::flush();
 
-            return redirect()->route('admin.content.edit', [$kind, $id])->with('error', 'Đã lưu, nhưng nội dung chưa đủ điều kiện nên được hạ về "Đã xem": ' . implode('; ', $p));
+            return redirect()->route('admin.content.edit', [$kind, $id])->with('error', 'Đã lưu, nhưng nội dung chưa đủ điều kiện nên được đưa về Nháp: ' . implode('; ', $p));
         }
         PublicCache::flush();
 

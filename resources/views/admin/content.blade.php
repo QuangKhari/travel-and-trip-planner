@@ -16,7 +16,7 @@
 
             <div class="page-title">
                 <div class="title_left">
-                    <h3>Duyệt <small>nội dung Khám phá</small></h3>
+                    <h3>{{ $cfg['label'] }} <small>danh sách, sửa, xem trước và xuất bản</small></h3>
                 </div>
                 <div class="title_right text-right">
                     @if ($cfg['create'])
@@ -45,6 +45,10 @@
                 </div>
             @endif
 
+            <p class="text-muted">
+                Quy trình: <b>Nháp</b> (đang soạn, khách chưa thấy) → <b>Đã xuất bản</b> (khách thấy trên website).
+                Chọn các dòng rồi dùng nút phía trên bảng để xuất bản hoặc đưa về nháp. Nội dung chưa đủ điều kiện (thiếu giấy phép, nguồn, ảnh...) sẽ bị chặn khi xuất bản. Chỉ nội dung đã xuất bản mới xuất hiện ở trang công khai, Tìm kiếm, Planner và Hỏi đáp.
+            </p>
             <div class="x_panel">
                 <div class="x_title">
                     <ul class="nav nav-tabs" style="border-bottom:0">
@@ -58,6 +62,7 @@
                 <div class="x_content">
                     <p>
                         @foreach ($statuses as $s => $label)
+                            @continue($s === 'reviewed' && empty($counts['reviewed']) && $status !== 'reviewed')
                             <a class="label label-{{ $labelOf($s) }}" style="{{ $status === $s ? 'outline:2px solid #333' : '' }}"
                                 href="{{ route('admin.content', $keep(['status' => $s], ['status'])) }}">
                                 {{ $label }}: {{ $counts[$s] ?? 0 }}</a>
@@ -109,7 +114,6 @@
                         @csrf
                         <div style="margin-bottom:10px">
                             <span>Với các dòng đã chọn:</span>
-                            <button name="status" value="reviewed" class="btn btn-info btn-sm">Đánh dấu đã xem</button>
                             <button name="status" value="published" class="btn btn-success btn-sm">Xuất bản</button>
                             <button name="status" value="draft" class="btn btn-default btn-sm">Về nháp</button>
                             <span style="margin-left:12px">

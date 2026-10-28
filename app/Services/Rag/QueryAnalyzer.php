@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 class QueryAnalyzer
 {
     /** Từ nghi vấn và từ đệm (đã bỏ dấu), bỏ khi tính độ phủ từ khóa. */
-    private const STOP = [
+    public const STOP = [
         'gi', 'nao', 'nhu', 'the', 'co', 'khong', 'la', 'o', 'tai', 'cho', 'toi', 'ban', 'minh', 'can', 'nen', 'di', 'den',
         'tu', 'va', 'cua', 'voi', 'hay', 'duoc', 'bao', 'nhieu', 'may', 'nhung', 'cac', 'mot', 'de', 'khi', 'thi', 'ma',
         'se', 'da', 'dang', 'nay', 'do', 'kia', 'vao', 'ra', 'lam', 'sao', 'thi', 'hoi', 'xin', 'cho', 'biet', 'vay',

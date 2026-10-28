@@ -87,8 +87,8 @@
                             <span class="ad-todo__t">Đã xác nhận, chưa thu tiền<small>Theo dõi thanh toán</small></span><i class="fa fa-angle-right"></i></a></li>
                         <li><a href="{{ route('admin.contact', ['status' => 'new']) }}"><span class="ad-todo__n {{ $todo['contact'] ? 'is-hot' : '' }}">{{ $todo['contact'] }}</span>
                             <span class="ad-todo__t">Tin liên hệ mới<small>Phản hồi khách</small></span><i class="fa fa-angle-right"></i></a></li>
-                        <li><a href="{{ route('admin.content', ['foods', 'status' => 'reviewed']) }}"><span class="ad-todo__n {{ $todo['reviewed'] ? 'is-hot' : '' }}">{{ $todo['reviewed'] }}</span>
-                            <span class="ad-todo__t">Nội dung chờ xuất bản<small>{{ $todo['draft'] }} bài còn ở trạng thái nháp</small></span><i class="fa fa-angle-right"></i></a></li>
+                        <li><a href="{{ route('admin.content', ['foods', 'status' => 'draft']) }}"><span class="ad-todo__n {{ $todo['pending'] ? 'is-hot' : '' }}">{{ $todo['pending'] }}</span>
+                            <span class="ad-todo__t">Nội dung chưa xuất bản<small>Bài còn ở trạng thái Nháp (món, trải nghiệm, lễ hội, cẩm nang, lịch trình)</small></span><i class="fa fa-angle-right"></i></a></li>
                         <li><a href="{{ route('admin.tours') }}"><span class="ad-todo__n {{ $todo['toursNoDest'] ? 'is-hot' : '' }}">{{ $todo['toursNoDest'] }}</span>
                             <span class="ad-todo__t">Tour chưa gắn điểm đến<small>Không lọc được theo cảm hứng</small></span><i class="fa fa-angle-right"></i></a></li>
                     </ul>

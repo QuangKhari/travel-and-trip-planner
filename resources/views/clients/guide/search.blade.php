@@ -34,8 +34,10 @@
                 </ul>
             </section>
         @elseif ($total === 0)
+            @include('clients.partials.gx.search_intent', ['intent' => $intent, 'quick' => $quick, 'plannerUrl' => $plannerUrl])
             <p class="gx-empty" role="status">Không có kết quả cho “{{ $q }}”. Thử từ ngắn hơn hoặc xem <a href="{{ route('destination') }}">tất cả điểm đến</a>.</p>
         @else
+            @include('clients.partials.gx.search_intent', ['intent' => $intent, 'quick' => $quick, 'plannerUrl' => $plannerUrl])
             <p class="gx-count" role="status">{{ $total }} kết quả cho “{{ $q }}”</p>
             @foreach ($groups as $type => $g)
                 <section class="gx-box" id="kq-{{ $type }}" aria-labelledby="h-{{ $type }}">

@@ -17,7 +17,16 @@ class InspirationManagementController extends Controller
     {
         $editId = (int) $request->query('edit', 0);
 
+        $destNames = [];
+        foreach (DB::table('tbl_destination_inspiration as di')->join('tbl_destinations as d', 'd.destinationId', '=', 'di.destinationId')
+            ->orderByDesc('di.score')->get(['di.inspirationId', 'd.name']) as $r) {
+            if (count($destNames[$r->inspirationId] ?? []) < 6) {
+                $destNames[$r->inspirationId][] = $r->name;
+            }
+        }
+
         return view('admin.inspirations', [
+            'destNames' => $destNames,
             'title' => 'Cảm hứng',
             'rows' => DB::table('tbl_inspirations as i')
                 ->leftJoin(DB::raw('(SELECT inspirationId, COUNT(*) c FROM tbl_destination_inspiration GROUP BY inspirationId) x'), 'x.inspirationId', '=', 'i.inspirationId')

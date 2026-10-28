@@ -7,6 +7,14 @@
 
     $inTours = $on('admin.tours', 'admin.page-add-tours', 'admin.tour-edit');
     $inContent = $on('admin.content*', 'admin.destinations*', 'admin.inspirations*', 'admin.guide-categories*', 'admin.blog*', 'admin.itinerary*');
+    // Menu Nội dung chia theo VIỆC admin làm: soạn/duyệt từng loại, xem báo cáo, thiết lập danh mục phụ.
+    $kindNow = request()->route('kind');
+    $onKind = fn(string $k) => ($k === 'itineraries' && $on('admin.itinerary*'))
+        || ($on('admin.content', 'admin.content.create', 'admin.content.edit', 'admin.content.preview') && ($kindNow ?? 'foods') === $k);
+    $inWrite = $on('admin.destinations*', 'admin.blog*', 'admin.itinerary*')
+        || $on('admin.content', 'admin.content.create', 'admin.content.edit', 'admin.content.preview');
+    $inReport = $on('admin.content.overview', 'admin.content.quality*');
+    $inSetup = $on('admin.inspirations*', 'admin.guide-categories*');
 @endphp
 
 <div class="col-md-3 left_col">
@@ -46,20 +54,35 @@
                 </ul>
 
                 @if ($adMgr)
-                    <h3>Nội dung</h3>
+                    <h3>Nội dung Khám phá</h3>
                     <ul class="nav side-menu">
-                        <li class="{{ $inContent ? 'active' : '' }}">
-                            <a><i class="fa fa-compass"></i> Khám phá
-                                @if ($badge['reviewed'] > 0)<span class="ad-pill" title="Nội dung đã xem, chờ xuất bản">{{ $badge['reviewed'] }}</span>@endif
+                        <li class="{{ $inWrite ? 'active' : '' }}">
+                            <a title="Viết, sửa, xem trước và xuất bản từng loại nội dung"><i class="fa fa-pencil"></i> Soạn và duyệt
+                                @if ($badge['pending'] > 0)<span class="ad-pill" title="Bài còn ở trạng thái Nháp, chưa xuất bản">{{ $badge['pending'] }}</span>@endif
                                 <span class="fa fa-chevron-down"></span></a>
-                            <ul class="nav child_menu" style="{{ $inContent ? 'display:block' : '' }}">
-                                <li class="{{ $on('admin.content.overview') ? 'ad-on' : '' }}"><a href="{{ route('admin.content.overview') }}">Tổng quan</a></li>
-                                <li class="{{ $on('admin.content.quality*') ? 'ad-on' : '' }}"><a href="{{ route('admin.content.quality') }}">Chất lượng nội dung</a></li>
-                                <li class="{{ $on('admin.content', 'admin.content.create', 'admin.content.edit', 'admin.content.preview', 'admin.itinerary*') ? 'ad-on' : '' }}"><a href="{{ route('admin.content') }}">Duyệt nội dung</a></li>
+                            <ul class="nav child_menu" style="{{ $inWrite ? 'display:block' : '' }}">
                                 <li class="{{ $on('admin.destinations*') ? 'ad-on' : '' }}"><a href="{{ route('admin.destinations') }}">Điểm đến</a></li>
+                                <li class="{{ $onKind('foods') ? 'ad-on' : '' }}"><a href="{{ route('admin.content', 'foods') }}">Món ăn</a></li>
+                                <li class="{{ $onKind('experiences') ? 'ad-on' : '' }}"><a href="{{ route('admin.content', 'experiences') }}">Trải nghiệm</a></li>
+                                <li class="{{ $onKind('events') ? 'ad-on' : '' }}"><a href="{{ route('admin.content', 'events') }}">Lễ hội</a></li>
+                                <li class="{{ $onKind('places') ? 'ad-on' : '' }}"><a href="{{ route('admin.content', 'places') }}">Địa điểm (OSM)</a></li>
+                                <li class="{{ $onKind('itineraries') ? 'ad-on' : '' }}"><a href="{{ route('admin.content', 'itineraries') }}">Lịch trình</a></li>
+                                <li class="{{ $onKind('guides') ? 'ad-on' : '' }}"><a href="{{ route('admin.content', 'guides') }}">Cẩm nang</a></li>
+                                <li class="{{ $on('admin.blog*') ? 'ad-on' : '' }}"><a href="{{ route('admin.blog') }}">Blog</a></li>
+                            </ul>
+                        </li>
+                        <li class="{{ $inReport ? 'active' : '' }}">
+                            <a title="Xem nội dung đã đủ chưa và còn thiếu gì"><i class="fa fa-bar-chart"></i> Báo cáo chất lượng <span class="fa fa-chevron-down"></span></a>
+                            <ul class="nav child_menu" style="{{ $inReport ? 'display:block' : '' }}">
+                                <li class="{{ $on('admin.content.overview') ? 'ad-on' : '' }}"><a href="{{ route('admin.content.overview') }}">Số bài và độ phủ</a></li>
+                                <li class="{{ $on('admin.content.quality*') ? 'ad-on' : '' }}"><a href="{{ route('admin.content.quality') }}">Điểm và lỗi dữ liệu</a></li>
+                            </ul>
+                        </li>
+                        <li class="{{ $inSetup ? 'active' : '' }}">
+                            <a title="Các danh mục dùng chung, ít khi phải sửa"><i class="fa fa-sliders"></i> Thiết lập <span class="fa fa-chevron-down"></span></a>
+                            <ul class="nav child_menu" style="{{ $inSetup ? 'display:block' : '' }}">
                                 <li class="{{ $on('admin.inspirations*') ? 'ad-on' : '' }}"><a href="{{ route('admin.inspirations') }}">Cảm hứng</a></li>
                                 <li class="{{ $on('admin.guide-categories*') ? 'ad-on' : '' }}"><a href="{{ route('admin.guide-categories') }}">Danh mục cẩm nang</a></li>
-                                <li class="{{ $on('admin.blog*') ? 'ad-on' : '' }}"><a href="{{ route('admin.blog') }}">Blog</a></li>
                             </ul>
                         </li>
                     </ul>

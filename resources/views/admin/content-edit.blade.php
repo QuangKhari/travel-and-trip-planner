@@ -59,7 +59,6 @@
                         <div style="margin-top:12px">
                             <form method="POST" action="{{ route('admin.content.status', [$kind, $id]) }}" class="form-inline" style="display:inline">
                                 @csrf
-                                <button name="status" value="reviewed" class="btn btn-info">Đánh dấu đã xem</button>
                                 <button name="status" value="published" class="btn btn-success">Xuất bản</button>
                                 <button name="status" value="draft" class="btn btn-default">Về nháp</button>
                             </form>

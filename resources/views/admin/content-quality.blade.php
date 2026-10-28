@@ -14,7 +14,7 @@
 @include('admin.blocks.sidebar')
 <div class="right_col" role="main">
     <div class="page-title">
-        <div class="title_left"><h3>Chất lượng nội dung <small>điểm Coverage và lỗi dữ liệu</small></h3></div>
+        <div class="title_left"><h3>Báo cáo nội dung <small>điểm từng điểm đến và lỗi cần sửa</small></h3></div>
         <div class="title_right text-right">
             <form method="POST" action="{{ route('admin.content.quality.snapshot') }}" style="display:inline">@csrf
                 <button class="btn btn-default" type="submit" title="Lưu điểm hôm nay để theo dõi tiến độ theo thời gian">Lưu mốc hôm nay</button>
@@ -22,13 +22,14 @@
         </div>
     </div>
     <div class="clearfix"></div>
+    @include('admin.partials.report-tabs')
     @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
 
     <div class="x_panel"><div class="x_content">
         <div class="row text-center">
-            <div class="col-sm-4"><h2>{{ $avg }}%</h2><small>Điểm trung bình ({{ count($scores) }} điểm đến)</small></div>
-            <div class="col-sm-4"><h2>{{ $ready }}/{{ count($scores) }}</h2><small>Đạt Planner-ready</small></div>
-            <div class="col-sm-4"><h2>{{ array_sum($codeCounts) }}</h2><small>Lỗi dữ liệu đang mở</small></div>
+            <div class="col-sm-4"><h2>{{ $avg }}%</h2><small title="Mức đầy đủ của nội dung đã xuất bản, tối đa 100%">Điểm đầy đủ trung bình ({{ count($scores) }} điểm đến)</small></div>
+            <div class="col-sm-4"><h2>{{ $ready }}/{{ count($scores) }}</h2><small title="Đủ món, trải nghiệm, địa điểm và mùa để Planner gợi ý lịch trình">Điểm đến đủ dữ liệu để gợi ý lịch trình</small></div>
+            <div class="col-sm-4"><h2>{{ array_sum($codeCounts) }}</h2><small title="Việc cần sửa: thiếu ảnh, thiếu nguồn, thiếu tọa độ...">Việc cần sửa</small></div>
         </div>
         <p class="text-muted" style="margin-top:12px">
             Điểm = Σ (điểm tối đa × min(1, có / mục tiêu)) chia tổng điểm các tiêu chí áp dụng, làm tròn về số nguyên; chỉ tính nội dung <b>đã xuất bản</b>.
@@ -41,7 +42,7 @@
 
     <div class="x_panel"><div class="x_title"><h2>Điểm từng điểm đến</h2><div class="clearfix"></div></div><div class="x_content">
         <div class="table-responsive"><table class="table table-condensed table-striped">
-            <thead><tr><th>Điểm đến</th><th style="width:22%">Điểm</th><th>Planner</th><th title="đã duyệt">Địa điểm</th><th>Món</th><th>Trải nghiệm</th><th>Lễ hội</th><th>Lịch trình</th><th>Tour</th><th>Chờ duyệt</th><th>Lịch sử</th></tr></thead>
+            <thead><tr><th>Điểm đến</th><th style="width:22%">Điểm</th><th title="Có đủ dữ liệu để Planner gợi ý lịch trình hay chưa">Gợi ý lịch trình</th><th title="đã duyệt">Địa điểm</th><th>Món</th><th>Trải nghiệm</th><th>Lễ hội</th><th>Lịch trình</th><th>Tour</th><th title="Số bài chưa xuất bản của điểm đến này">Chờ xuất bản</th><th>Lịch sử</th></tr></thead>
             <tbody>
             @foreach ($scores as $s)
                 @php $n = $s['counts']; $c = $s['criteria']; @endphp
@@ -71,14 +72,14 @@
                 @foreach ($focus['criteria'] as $k => $c)<tr class="{{ !$c['applicable'] ? 'text-muted' : '' }}"><td>{{ $c['label'] }}</td>
                     <td>{{ $c['have'] }}/{{ $c['target'] }}</td><td>{{ $c['applicable'] ? rtrim(rtrim(number_format($c['points'], 1), '0'), '.') . '/' . $c['max'] : 'miễn' }}</td></tr>@endforeach
                 </tbody></table></div>
-            <div class="col-md-6"><h5>Điều kiện Planner-ready</h5>
+            <div class="col-md-6"><h5>Điều kiện để gợi ý lịch trình</h5>
                 <ul class="list-unstyled">@foreach ($focus['planner'] as $p)<li>{!! $p['ok'] ? '<span class="text-success">✔</span>' : '<span class="text-danger">✘</span>' !!} {{ $p['label'] }}: {{ $p['have'] }}/{{ $p['need'] }}@if ($p['waiver']) <small class="text-muted">(miễn: {{ $p['waiver'] }})</small>@endif</li>@endforeach</ul>
             </div></div>
             <a href="{{ $q(['destination' => null]) }}">« Bỏ lọc điểm đến</a>
         </div></div>
     @endif
 
-    <div class="x_panel"><div class="x_title"><h2>Lỗi dữ liệu{{ $focus ? ' của ' . $focus['name'] : '' }}</h2><div class="clearfix"></div></div><div class="x_content">
+    <div class="x_panel"><div class="x_title"><h2>Việc cần sửa{{ $focus ? ' của ' . $focus['name'] : '' }}</h2><div class="clearfix"></div></div><div class="x_content">
         <p>
             <a class="label {{ $code === '' ? 'label-primary' : 'label-default' }}" href="{{ $q(['code' => null]) }}">Tất cả {{ array_sum($codeCounts) }}</a>
             @foreach ($codeCounts as $k => $cnt)<a class="label {{ $code === $k ? 'label-primary' : 'label-default' }}" href="{{ $q(['code' => $k]) }}">{{ $codes[$k] }} {{ $cnt }}</a> @endforeach

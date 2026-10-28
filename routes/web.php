@@ -57,6 +57,7 @@ use App\Http\Controllers\admin\SystemController;
 
 
 
+
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/about', [AboutController::class, 'index'])->name('about');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
@@ -65,7 +66,7 @@ Route::post('/contact', [ContactController::class, 'store'])->middleware('thrott
 Route::get('/diem-den', [DestinationController::class, 'index'])->name('destination');
 Route::get('/diem-den/tat-ca', [ExploreContentController::class, 'destinations'])->middleware('throttle:60,1,destination-list')->name('destinations.list');
 Route::get('/diem-den/{slug}', [\App\Http\Controllers\clients\DestinationDetailController::class, 'show'])->where('slug', '[a-z0-9-]+')->middleware('throttle:60,1,destination-detail')->name('destination.show');
-    Route::get('/diem-den/{slug}/thang-{n}', [DestinationMonthController::class, 'show'])->where('slug', '[a-z0-9-]+')->where('n', '([1-9]|1[0-2])')->middleware('throttle:60,1,destination-month')->name('destination.month');
+Route::get('/diem-den/{slug}/thang-{n}', [DestinationMonthController::class, 'show'])->where('slug', '[a-z0-9-]+')->where('n', '([1-9]|1[0-2])')->middleware('throttle:60,1,destination-month')->name('destination.month');
 // Đường dẫn cũ /destination chuyển vĩnh viễn sang /diem-den (một URL chuẩn cho mỗi trang)
 Route::permanentRedirect('/destination', '/diem-den');
 Route::get('/destination/{slug}', fn(string $slug) => redirect()->route('destination.show', ['slug' => $slug], 301))->where('slug', '[a-z0-9-]+');
@@ -181,6 +182,8 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
 
     // Trip Planner (tuần 5-7)
     Route::get('/len-ke-hoach', [PlannerController::class, 'index'])->name('planner');
+    Route::post('/len-ke-hoach/tao-tu-dong', [PlannerController::class, 'generate'])->middleware('throttle:10,1,planner-generate')->name('planner.generate');
+    Route::post('/len-ke-hoach/{id}/trang-thai', [PlannerController::class, 'status'])->whereNumber('id')->middleware('throttle:60,1,planner-status')->name('planner.status');
     Route::post('/len-ke-hoach', [PlannerController::class, 'store'])->middleware('throttle:20,1,planner-store')->name('planner.store');
     Route::get('/len-ke-hoach/{id}', [PlannerController::class, 'edit'])->whereNumber('id')->name('planner.edit');
     Route::post('/len-ke-hoach/{id}/luu', [PlannerController::class, 'save'])->whereNumber('id')->middleware('throttle:60,1,planner-save')->name('planner.save');

@@ -23,17 +23,22 @@
                         @endphp
                         <div class="row">
                             <div class="col-md-6 form-group"><label>Tên *</label><input class="form-control" name="name" value="{{ $f('name') }}" required></div>
-                            <div class="col-md-6 form-group"><label>Slug</label><input class="form-control" name="slug" value="{{ $f('slug') }}" placeholder="để trống sẽ tự sinh"><small class="text-muted">Đổi slug sẽ đổi địa chỉ trang công khai.</small></div>
                             <div class="col-md-6 form-group"><label>Tỉnh/thành *</label><input class="form-control" name="province" value="{{ $f('province') }}" required></div>
                             <div class="col-md-6 form-group"><label>Miền *</label>
                                 <select class="form-control" name="domain">
                                     @foreach ($regions as $c => $n)<option value="{{ $c }}" @selected($f('domain') === $c)>{{ $n }}</option>@endforeach
                                 </select></div>
-                            <div class="col-md-6 form-group"><label>Vĩ độ *</label><input class="form-control" name="latitude" value="{{ $f('latitude') }}" required></div>
-                            <div class="col-md-6 form-group"><label>Kinh độ *</label><input class="form-control" name="longitude" value="{{ $f('longitude') }}" required></div>
                         </div>
                         <div class="form-group"><label>Mô tả *</label><textarea class="form-control" name="description" rows="5" required>{{ $f('description') }}</textarea></div>
-                        <div class="form-group"><label>Tên bài Wikipedia</label><input class="form-control" name="wikiTitle" value="{{ $f('wikiTitle') }}"></div>
+                        <details class="form-group" @if ($isNew || empty($row->latitude) || empty($row->longitude) || $errors->has('slug') || $errors->has('latitude') || $errors->has('longitude') || $errors->has('wikiTitle')) open @endif style="margin-bottom:15px">
+                            <summary style="cursor:pointer"><b>Vị trí và liên kết</b> <small class="text-muted">(tọa độ bắt buộc; slug và Wikipedia thường để nguyên)</small></summary>
+                            <div class="row" style="margin-top:10px">
+                                <div class="col-md-6 form-group"><label>Vĩ độ *</label><input class="form-control" name="latitude" value="{{ $f('latitude') }}" required><small class="text-muted">Dùng để đặt điểm đến lên bản đồ, tính khoảng cách cho Planner và lấy thời tiết. Mở Google Maps, bấm chuột phải vào nơi đó rồi chép số đầu tiên.</small></div>
+                                <div class="col-md-6 form-group"><label>Kinh độ *</label><input class="form-control" name="longitude" value="{{ $f('longitude') }}" required><small class="text-muted">Số thứ hai khi chép từ Google Maps.</small></div>
+                                <div class="col-md-6 form-group"><label>Slug (địa chỉ trang)</label><input class="form-control" name="slug" value="{{ $f('slug') }}" placeholder="để trống sẽ tự sinh từ tên"><small class="text-muted">Là phần cuối của đường dẫn, ví dụ /diem-den/<b>ha-noi</b>. Đổi slug sẽ đổi địa chỉ trang công khai.</small></div>
+                                <div class="col-md-6 form-group"><label>Tên bài Wikipedia</label><input class="form-control" name="wikiTitle" value="{{ $f('wikiTitle') }}"><small class="text-muted">Chỉ dùng khi chạy lệnh nhập dữ liệu từ Wikipedia (kéo mô tả, ảnh về). Không dùng thì để trống.</small></div>
+                            </div>
+                        </details>
                         <div class="form-group">
                             @foreach (['isActive' => 'Đang hiển thị', 'isMustTry' => 'Nhãn "Phải thử"', 'isFeatured' => 'Nổi bật', 'isHero' => 'Ưu tiên hiện trong hero trang chủ'] as $n => $l)
                                 <label style="margin-right:18px"><input type="hidden" name="{{ $n }}" value="0"><input type="checkbox" name="{{ $n }}" value="1" @checked((int) $f($n, 0) === 1)> {{ $l }}</label>
@@ -90,8 +95,9 @@
             </div>
 
             <div class="x_panel">
-                <div class="x_title"><h2>Điểm hợp cảm hứng</h2><div class="clearfix"></div></div>
+                <div class="x_title"><h2>Thuộc nhóm cảm hứng nào?</h2><div class="clearfix"></div></div>
                 <div class="x_content">
+                    <p class="text-muted">Đây là <b>nơi duy nhất</b> để gắn điểm đến vào các nhóm cảm hứng ở trang chủ và /explore. Chấm từ 0 đến 100 mức độ điểm đến này hợp với từng nhóm (điểm cao hiện trước). Để trống nếu không thuộc nhóm đó.</p>
                     <form method="POST" action="{{ route('admin.destinations.inspirations', $id) }}">
                         @csrf
                         <div class="row">
@@ -102,7 +108,7 @@
                                 </div>
                             @endforeach
                         </div>
-                        <button class="btn btn-primary">Lưu điểm cảm hứng</button>
+                        <button class="btn btn-primary">Lưu nhóm cảm hứng</button>
                     </form>
                 </div>
             </div>

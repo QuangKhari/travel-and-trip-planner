@@ -14,11 +14,11 @@ final class AdminBadges
 {
     private const KEY = 'admin.badges.v1';
 
-    /** @return array{booking:int, unpaid:int, contact:int, reviewed:int, draft:int} */
+    /** @return array{booking:int, unpaid:int, contact:int, reviewed:int, draft:int, pending:int} */
     public static function counts(): array
     {
         return Cache::remember(self::KEY, 45, function () {
-            $c = ['booking' => 0, 'unpaid' => 0, 'contact' => 0, 'reviewed' => 0, 'draft' => 0];
+            $c = ['booking' => 0, 'unpaid' => 0, 'contact' => 0, 'reviewed' => 0, 'draft' => 0, 'pending' => 0];
             try {
                 $c['booking'] = (int) DB::table('tbl_booking')->where('bookingStatus', 'n')->count();
                 $c['unpaid'] = (int) DB::table('tbl_booking')
@@ -39,6 +39,8 @@ final class AdminBadges
             } catch (\Throwable $e) {
                 report($e);
             }
+            // Bước "Đã kiểm tra" không còn trong giao diện: mọi bài chưa xuất bản đều tính là chờ xử lý.
+            $c['pending'] = $c['draft'] + $c['reviewed'];
 
             return $c;
         });

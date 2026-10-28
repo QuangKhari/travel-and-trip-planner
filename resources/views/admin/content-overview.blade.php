@@ -2,12 +2,14 @@
 <div class="container body"><div class="main_container">
 @include('admin.blocks.sidebar')
 <div class="right_col" role="main">
-    <div class="page-title"><div class="title_left"><h3>Tổng quan <small>nội dung</small></h3></div></div>
+    <div class="page-title"><div class="title_left"><h3>Báo cáo nội dung <small>mỗi loại có bao nhiêu bài, mỗi điểm đến có những gì</small></h3></div></div>
     <div class="clearfix"></div>
+    @include('admin.partials.report-tabs')
+    <p class="text-muted">Dùng trang này để biết còn bao nhiêu bài chờ xử lý và điểm đến nào còn thiếu nội dung. Số màu đỏ nghĩa là chưa có nội dung nào được xuất bản.</p>
     @if ($noDestTours)<div class="alert alert-warning">{{ $noDestTours }} tour chưa gắn điểm đến (không hiện ở lọc theo cảm hứng và bản đồ). <a href="{{ route('admin.tours') }}">Mở danh sách tour</a></div>@endif
-    <div class="x_panel"><div class="x_title"><h2>Số bài theo trạng thái</h2><div class="clearfix"></div></div><div class="x_content">
-        <table class="table"><thead><tr><th>Loại</th><th>Nháp</th><th>Đã xem</th><th>Đã xuất bản</th></tr></thead><tbody>
-        @foreach ($byStatus as $k => $r)<tr><td><a href="{{ route('admin.content', $k) }}">{{ $r['label'] }}</a></td><td>{{ $r['draft'] ?? 0 }}</td><td>{{ $r['reviewed'] ?? 0 }}</td><td>{{ $r['published'] ?? 0 }}</td></tr>@endforeach
+    <div class="x_panel"><div class="x_title"><h2>Số bài theo trạng thái (bấm tên loại để mở danh sách)</h2><div class="clearfix"></div></div><div class="x_content">
+        <table class="table"><thead><tr><th>Loại</th><th title="Đang soạn, khách chưa thấy">Nháp</th><th title="Khách đã nhìn thấy trên website">Đã xuất bản</th></tr></thead><tbody>
+        @foreach ($byStatus as $k => $r)<tr><td><a href="{{ route('admin.content', $k) }}">{{ $r['label'] }}</a></td><td>{{ ($r['draft'] ?? 0) + ($r['reviewed'] ?? 0) }}</td><td>{{ $r['published'] ?? 0 }}</td></tr>@endforeach
         </tbody></table></div></div>
     <div class="x_panel"><div class="x_title"><h2>Độ phủ theo điểm đến (chỉ tính đã xuất bản)</h2><div class="clearfix"></div></div><div class="x_content">
         <table class="table table-condensed table-striped"><thead><tr><th>Điểm đến</th><th>Món</th><th>Trải nghiệm</th><th>Lễ hội</th><th>Địa điểm</th><th>Mùa đẹp</th><th>Tour</th></tr></thead><tbody>
