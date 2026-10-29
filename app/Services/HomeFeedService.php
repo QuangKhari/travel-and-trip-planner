@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
- * D2: dữ liệu các dải trên trang chủ. Chỉ nội dung published (ContentCatalog/GuideCatalog đã lọc sẵn).
+ * dữ liệu các dải trên trang chủ. Chỉ nội dung published (ContentCatalog/GuideCatalog đã lọc sẵn).
  * Cache 10 phút theo tháng và ngày. Dải nào rỗng thì view tự ẩn.
  */
 class HomeFeedService

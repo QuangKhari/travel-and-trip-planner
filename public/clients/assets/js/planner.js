@@ -56,9 +56,17 @@
         return x;
     });
     var sugg = cfg.suggestions || {};
+    var ROLE = cfg.role || "owner", RO = ROLE === "view", rev = cfg.rev || 0;
+    /* Phương án khi mưa: { "<ngày>": [{type, refId, name, sub, url}] }, tách khỏi lịch chính và chi phí chính */
+    var rain = (function (p) {
+        var o = {};
+        if (p && !Array.isArray(p)) Object.keys(p).forEach(function (k) { if (Array.isArray(p[k]) && p[k].length) o[k] = p[k]; });
+        return o;
+    })(cfg.rain && cfg.rain.plan);
+    var RAIN_MAX = cfg.rainMax || 4;
     var undo = [], redo = [], last = "", savedSnap = "";
     var dirty = false, saving = false, pendingSave = false, autoFail = false, timer = null;
-    var ui = { tab: "plan", target: 1, mapDay: "", sel: {}, open: {}, tier: null, results: null, searchSeq: 0, res: null, drag: null, pick: null, draft: null };
+    var ui = { tab: "plan", target: 1, mapDay: "", sel: {}, open: {}, tier: null, results: null, searchSeq: 0, res: null, br: null, drag: null, pick: null, draft: null };
 
     var box = $("tpDaysBox"), msg = $("tpMsg");
 
@@ -78,7 +86,7 @@
         };
     }
     function snap() {
-        return JSON.stringify({ m: meta(), i: items.map(function (x) { return x; }) });
+        return JSON.stringify({ m: meta(), i: items.map(function (x) { return x; }), r: rain });
     }
     function restore(s) {
         var o = JSON.parse(s), m = o.m;
@@ -89,6 +97,7 @@
         $("tpBudget").value = m.budget == null ? "" : m.budget;
         $("tpDest").value = m.dest == null ? "" : String(m.dest);
         items = o.i;
+        rain = o.r || {};
         ui.sel = {}; ui.open = {};
         renderAll();
     }
@@ -119,6 +128,7 @@
         msg.classList.toggle("tp-msg--bad", !!bad);
     }
     function markDirty() {
+        if (RO) return;
         dirty = true;
         autoFail = false;
         say("Chưa lưu");
@@ -127,6 +137,7 @@
     }
     /** keepList = true: không dựng lại danh sách (đang gõ trong một ô, dựng lại sẽ mất con trỏ). */
     function commit(keepList) {
+        if (RO) return;
         var now = snap();
         if (now === last) return;
         undo.push(last);
@@ -315,7 +326,7 @@
             try { e.dataTransfer.setData("text/plain", String(it.uid)); e.dataTransfer.setDragImage(li, 16, 16); } catch (x) { /* một số trình duyệt không hỗ trợ */ }
         });
         h.addEventListener("dragend", clearDrag);
-        top.appendChild(h);
+        if (!RO) top.appendChild(h);
 
         var cb = el("input");
         cb.type = "checkbox";
@@ -325,7 +336,14 @@
             if (cb.checked) ui.sel[it.uid] = true; else delete ui.sel[it.uid];
             renderBulk();
         });
-        top.appendChild(cb);
+        if (!RO) top.appendChild(cb);
+        var nb = numberOf(it);
+        var badge = el("button", "tp-numbadge" + (G.hasPos(it) ? " is-link" : ""), nb === "" ? "•" : String(nb));
+        badge.type = "button";
+        badge.style.background = it.day == null ? "#6b7280" : COLORS[(it.day - 1) % COLORS.length];
+        badge.setAttribute("aria-label", "Số " + (nb === "" ? "chưa xếp" : nb) + ": xem " + it.name + " trên bản đồ");
+        badge.addEventListener("click", function () { showOnMap(it.uid); });
+        top.appendChild(badge);
 
         var main = el("div", "tp-item__main");
         main.appendChild(el("span", "tp-type", TYPE[it.type] || ""));
@@ -346,21 +364,37 @@
             main.appendChild(el("span", "tp-badge" + (hp ? " is-ok" : ""), hp ? "Có vị trí" : "Chưa có vị trí"));
         }
         top.appendChild(main);
+        if (it.image) {
+            var ph = el("img", "tp-item__photo");
+            ph.src = it.image; ph.alt = ""; ph.loading = "lazy";
+            ph.addEventListener("click", function () { showOnMap(it.uid); });
+            top.appendChild(ph);
+        }
         var right = el("div", "tp-item__right");
         right.appendChild(costInput(it));
+        if (G.hasPos(it)) right.appendChild(btn("tp-mini", "Bản đồ", "Xem " + it.name + " trên bản đồ", function () { showOnMap(it.uid); }));
         var open = !!ui.open[it.uid];
         var tg = btn("tp-mini tp-item__toggle", open ? "Thu gọn" : "Sửa", "Sửa chi tiết " + it.name, function () {
             ui.open[it.uid] = !ui.open[it.uid];
             renderDays();
         });
         tg.setAttribute("aria-expanded", open ? "true" : "false");
-        right.appendChild(tg);
+        if (!RO) right.appendChild(tg);
         top.appendChild(right);
+        li.addEventListener("mouseenter", function () { if (map) map.highlight(it.uid); });
+        li.addEventListener("mouseleave", function () { if (map && !(ui.card && ui.card.uid === it.uid)) map.highlight(null); });
         li.appendChild(top);
         if (it.reasons && it.reasons.length) li.appendChild(el("p", "tp-why", "Vì sao chọn: " + it.reasons.join("; ")));
+        if (it.fit && it.fit.length) {
+            var fl = el("ul", "tp-fit");
+            it.fit.forEach(function (f) { fl.appendChild(el("li", "tp-fit__i tp-fit--" + (f.k === "good" || f.k === "warn" ? f.k : "info"), f.x)); });
+            li.appendChild(fl);
+        }
+        if (it.src) li.appendChild(el("small", "tp-src", it.src));
+        else if (CUSTOM[it.type] && it.source === "search") li.appendChild(el("small", "tp-src", "Ngoài dữ liệu Travela, chỉ chi phí tham khảo chung"));
         if (it.note && !open) li.appendChild(el("p", "tp-item__notepreview", it.note));
 
-        if (open) {
+        if (open && !RO) {
             var panel = el("div", "tp-item__panel");
             var ctl = el("div", "tp-item__ctl");
             ctl.appendChild(daySelect(it));
@@ -410,6 +444,7 @@
         return li;
     }
     function costInput(it) {
+        if (RO) return el("span", "tp-cost-ro", it.cost == null ? "" : money(it.cost));
         var cost = el("input");
         cost.type = "number";
         cost.min = "0";
@@ -464,6 +499,7 @@
         if (st.cost) bits.push(money(st.cost));
         h.appendChild(el("span", "tp-daystat", bits.join(" · ")));
         var act = el("div", "tp-dayact");
+        if (RO) { h.appendChild(act); return h; }
         if (d !== null) act.appendChild(btn("tp-mini", "+ Thêm", "Thêm mục vào " + dayLabel(d), function () { ui.target = d; renderTarget(); switchTab("plan"); focusAdd(); }));
         if (list.length) act.appendChild(btn("tp-mini", "Chọn hết", "Chọn tất cả mục " + (d === null ? "chưa xếp" : dayLabel(d)), function () {
             list.forEach(function (x) { ui.sel[x.uid] = true; });
@@ -474,6 +510,91 @@
         h.appendChild(act);
         return h;
     }
+    /* ---------------- Phương án khi mưa ---------------- */
+    function rainKey(r) { return r.type + ":" + r.refId; }
+    function rainPanel(d) {
+        var det = el("details", "tp-rain");
+        var list = rain[String(d)] || [];
+        var sum = el("summary", null, "Nếu trời mưa" + (list.length ? " (" + list.length + ")" : ""));
+        det.appendChild(sum);
+        if (ui.rainOpen && ui.rainOpen[d]) det.open = true;
+        det.addEventListener("toggle", function () { ui.rainOpen = ui.rainOpen || {}; ui.rainOpen[d] = det.open; });
+        det.appendChild(el("p", "tp-muted tp-small", "Chọn vài mục trong nhà để thay thế khi mưa. Không tính vào chi phí chính."));
+        var ul = el("ul", "tp-rain__list");
+        list.forEach(function (r) {
+            var li = el("li", "tp-rain__item");
+            var href = safeUrl(r.url);
+            if (href) { var a = el("a", null, r.name); a.href = href; a.target = "_blank"; a.rel = "noopener"; li.appendChild(a); } else li.appendChild(el("span", null, r.name));
+            if (r.sub) li.appendChild(el("small", "tp-muted", " · " + r.sub));
+            li.appendChild(btn("tp-mini tp-mini--danger", "Bỏ", "Bỏ " + r.name + " khỏi phương án mưa ngày " + d, function () {
+                rain[String(d)] = (rain[String(d)] || []).filter(function (x) { return rainKey(x) !== rainKey(r); });
+                if (!rain[String(d)].length) delete rain[String(d)];
+                commit();
+            }));
+            ul.appendChild(li);
+        });
+        det.appendChild(ul);
+        var box = el("div", "tp-rain__sugg");
+        var b = btn("tp-mini", "Gợi ý mục trong nhà", "Gợi ý mục trong nhà cho ngày " + d, function () { loadRain(d, box, b); });
+        det.appendChild(b);
+        det.appendChild(box);
+        return det;
+    }
+    function loadRain(d, box, b) {
+        if (!cfg.rainSuggestUrl) return;
+        if ((rain[String(d)] || []).length >= RAIN_MAX) { box.textContent = "Đã đủ " + RAIN_MAX + " mục cho ngày này."; return; }
+        b.disabled = true;
+        box.textContent = "Đang tìm…";
+        var have = (rain[String(d)] || []).map(rainKey);
+        var q = "?day=" + d + have.map(function (k) { return "&have[]=" + encodeURIComponent(k); }).join("");
+        fetch(cfg.rainSuggestUrl + q, { credentials: "same-origin", headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" } })
+            .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+            .then(function (j) {
+                box.textContent = "";
+                if (!j.items || !j.items.length) { box.appendChild(el("p", "tp-muted tp-small", "Chưa có mục trong nhà đã duyệt cho nơi này. Bạn có thể thêm mục riêng ở ô tìm kiếm.")); return; }
+                var ul = el("ul", "tp-rain__list");
+                j.items.forEach(function (x) {
+                    var li = el("li", "tp-rain__item");
+                    li.appendChild(el("strong", null, x.name));
+                    if (x.sub) li.appendChild(el("small", "tp-muted", " · " + x.sub));
+                    li.appendChild(el("small", "tp-rain__why", (x.reasons || []).join("; ")));
+                    li.appendChild(btn("tp-mini", "Chọn", "Chọn " + x.name + " làm phương án mưa ngày " + d, function () {
+                        var cur = rain[String(d)] = rain[String(d)] || [];
+                        if (cur.length >= RAIN_MAX || cur.some(function (r) { return rainKey(r) === x.type + ":" + x.refId; })) return;
+                        cur.push({ type: x.type, refId: x.refId, name: x.name, sub: x.sub || "", url: x.url || null, lat: x.lat == null ? null : x.lat, lng: x.lng == null ? null : x.lng });
+                        commit();
+                    }));
+                    ul.appendChild(li);
+                });
+                box.appendChild(ul);
+            })
+            .catch(function () { box.textContent = "Chưa tải được gợi ý, thử lại sau."; })
+            .then(function () { b.disabled = false; });
+    }
+    /** Danh sách ngày ở thanh bên trái: bấm để nhảy tới ngày đó (giống Wanderlog). */
+    function renderDayNav() {
+        var nav = $("tpDayNav");
+        if (!nav) return;
+        nav.textContent = "";
+        for (var d = 1; d <= daysCount(); d++) {
+            (function (day) {
+                var li = el("li");
+                var list = dayItems(day);
+                var b = btn("tp-daynav__b", "", dayLabel(day) + ", " + list.length + " mục", function () {
+                    switchTab("plan");
+                    var sec = document.getElementById("tpDay" + day);
+                    if (sec) { sec.scrollIntoView({ block: "start", behavior: "smooth" }); ui.mapDay = String(day); $("tpMapDay").value = String(day); renderMap(); }
+                });
+                var dot = el("span", "tp-daynav__dot");
+                dot.style.background = COLORS[(day - 1) % COLORS.length];
+                b.appendChild(dot);
+                b.appendChild(el("span", "tp-daynav__t", dayLabel(day)));
+                b.appendChild(el("small", null, list.length ? String(list.length) : ""));
+                li.appendChild(b);
+                nav.appendChild(li);
+            })(d);
+        }
+    }
     function renderDays() {
         box.textContent = "";
         var n = daysCount();
@@ -483,6 +604,7 @@
             var list = dayItems(day);
             if (day === null && !list.length) continue;
             var sec = el("section", "tp-day");
+            if (day !== null) sec.id = "tpDay" + day;
             var st = dayStats(list);
             sec.appendChild(dayHeader(day, list, st));
             var legOf = {};
@@ -511,8 +633,10 @@
                 });
             })(day, ul);
             sec.appendChild(ul);
+            if (day !== null && cfg.rainSuggestUrl && !RO) sec.appendChild(rainPanel(day));
             box.appendChild(sec);
         }
+        renderDayNav();
         if (!any) box.insertBefore(el("p", "tp-muted", "Chuyến đi chưa có mục nào. Gõ tên địa điểm, quán ăn hoặc khách sạn vào ô tìm ở trên để thêm vào lịch."), box.firstChild);
     }
     function renderTotals() {
@@ -830,10 +954,9 @@
     }
     /** Đặt ghim xem trước (vàng) trên bản đồ khi rê chuột vào một kết quả. */
     function previewPin(lat, lng, name) {
-        if (!pv || !map) return;
-        pv.clearLayers();
-        L.circleMarker([lat, lng], { radius: 9, color: "#b45309", weight: 3, fillColor: "#fbbf24", fillOpacity: 0.9 }).addTo(pv).bindTooltip(name);
-        map.setView([lat, lng], Math.max(map.getZoom(), 14));
+        if (!map) return;
+        map.preview(lat, lng, name);
+        map.view(lat, lng, Math.max(map.zoom(), 14));
     }
     function extList(list) {
         var have = haveExtMap();
@@ -872,6 +995,7 @@
     }
     function renderResults() {
         var r = $("tpResults"), s = ui.res;
+        if (ui.br && ui.br.built) renderBrowseList();
         r.textContent = "";
         r.hidden = !s;
         if (!s) return;
@@ -907,10 +1031,8 @@
         pts.forEach(function (p) { la += p.lat; ln += p.lng; });
         return { lat: Math.round(la / pts.length * 1e4) / 1e4, lng: Math.round(ln / pts.length * 1e4) / 1e4 };
     }
-    function runSearch() {
-        var q = $("tpQ").value.trim();
-        if (q.length < 2) { ui.searchSeq++; ui.res = null; renderResults(); return; }
-        var mine = ++ui.searchSeq, enc = encodeURIComponent(q);
+    function runNameSearch(q, mine) {
+        var enc = encodeURIComponent(q);
         ui.res = { q: q, kho: null, ext: cfg.searchExtUrl ? null : { ok: true, list: [] } };
         renderResults();
         var main = meta().dest;
@@ -924,6 +1046,338 @@
                 .catch(function () { if (mine === ui.searchSeq) { ui.res.ext = { ok: false, list: [] }; renderResults(); } });
         }
     }
+    function runSearch() {
+        var q = $("tpQ").value.trim();
+        if (q.length < 2) { ui.searchSeq++; ui.res = null; ui.br = null; renderResults(); renderBrowse(); return; }
+        var mine = ++ui.searchSeq;
+        if (!cfg.browseUrl) { ui.br = null; renderBrowse(); runNameSearch(q, mine); return; }
+        // Hiểu câu tìm trước: "nhà hàng chay giá rẻ" -> tìm theo tiêu chí; "Hồ Gươm", "phở Thìn" -> tìm theo tên như cũ
+        fetchJson(cfg.browseUrl + "?q=" + encodeURIComponent(q) + brPos())
+            .then(function (j) {
+                if (mine !== ui.searchSeq) return;
+                if (j && j.browse && j.filters) {
+                    ui.res = null;
+                    ui.br = { q: q, intent: j.intent || {}, f: brFromServer(j.filters), data: j.browse, loading: false, seq: 0, built: false };
+                    renderResults();
+                    renderBrowse();
+                } else {
+                    ui.br = null;
+                    renderBrowse();
+                    runNameSearch(q, mine);
+                }
+            })
+            .catch(function () { if (mine === ui.searchSeq) { ui.br = null; renderBrowse(); runNameSearch(q, mine); } });
+    }
+
+    /* ---------------- tìm theo tiêu chí (loại, mức giá, khoảng cách, ăn chay, trong nhà/ngoài trời...) ---------------- */
+    var BR_CATS = [["", "Mọi loại"], ["hotel", "Khách sạn"], ["restaurant", "Nhà hàng"], ["cafe", "Quán cà phê"], ["bar", "Quán bar"], ["market", "Chợ, mua sắm"], ["sight", "Tham quan"], ["experience", "Trải nghiệm"], ["tour", "Tour"]];
+    var BR_LEVELS = [[1, "₫", "Rẻ"], [2, "₫₫", "Vừa"], [3, "₫₫₫", "Cao"], [4, "₫₫₫₫", "Sang"]];
+    var BR_CUISINE = [["", "Món bất kỳ"], ["seafood", "Hải sản"], ["vietnamese", "Việt"], ["japanese", "Nhật"], ["korean", "Hàn"], ["hotpot", "Lẩu"], ["barbecue", "Nướng"], ["pizza", "Pizza"], ["italian", "Ý"], ["western", "Âu"], ["chinese", "Hoa"], ["thai", "Thái"]];
+    var BR_KM = [1, 2, 3, 5, 10, 20];
+    var brTimer = null;
+
+    function brFromServer(f) {
+        return {
+            cat: f.cat || "", kinds: f.kinds || [], levels: f.levels || null, minPrice: f.minPrice, maxPrice: f.maxPrice, free: !!f.free, veg: !!f.veg,
+            cuisine: f.cuisine || "", indoor: f.indoor === null || f.indoor === undefined ? "" : (f.indoor ? "1" : "0"), stars: f.stars || "",
+            km: f.radiusKm || 3, sort: f.sort || "", unknown: !!f.includeUnknown, from: "dest",
+        };
+    }
+    function brAnchor(f) {
+        if (f && f.from && f.from !== "dest") {
+            var it = items.filter(function (x) { return String(x.uid) === String(f.from); })[0];
+            if (it && G.hasPos(it)) return { lat: it.lat, lng: it.lng };
+        }
+        return biasCenter();
+    }
+    function brPos() {
+        var c = biasCenter(), d = meta().dest;
+        return (c ? "&lat=" + c.lat + "&lng=" + c.lng : "") + (d ? "&dest=" + d : "");
+    }
+    function brQuery(b) {
+        var f = b.f, p = ["q=" + encodeURIComponent(b.q), "f=1"], c = brAnchor(f), d = meta().dest;
+        if (f.cat) p.push("cat=" + f.cat);
+        if (f.kinds && f.kinds.length) p.push("kinds=" + f.kinds.join(","));
+        if (f.levels) p.push("levels=" + f.levels[0] + "-" + f.levels[1]);
+        if (f.minPrice != null && f.minPrice !== "") p.push("min=" + f.minPrice);
+        if (f.maxPrice != null && f.maxPrice !== "") p.push("max=" + f.maxPrice);
+        if (f.free) p.push("free=1");
+        if (f.veg) p.push("veg=1");
+        if (f.cuisine) p.push("cuisine=" + f.cuisine);
+        if (f.indoor !== "") p.push("indoor=" + f.indoor);
+        if (f.stars) p.push("stars=" + f.stars);
+        if (f.km) p.push("km=" + f.km);
+        if (f.sort) p.push("sort=" + f.sort);
+        if (f.unknown) p.push("unknown=1");
+        if (c) p.push("lat=" + c.lat, "lng=" + c.lng);
+        if (d) p.push("dest=" + d);
+        return cfg.browseUrl + "?" + p.join("&");
+    }
+    /** Đổi một điều kiện lọc rồi tải lại sau một nhịp ngắn (gõ số tiền không gọi mỗi phím). */
+    function brChange(mut, delay) {
+        var b = ui.br;
+        if (!b) return;
+        mut(b.f);
+        syncBrPanel();
+        clearTimeout(brTimer);
+        brTimer = setTimeout(function () { brFetch(); }, delay == null ? 120 : delay);
+    }
+    function brFetch() {
+        var b = ui.br;
+        if (!b) return;
+        var mine = ++b.seq;
+        b.loading = true;
+        renderBrowseList();
+        fetchJson(brQuery(b))
+            .then(function (j) { if (ui.br === b && mine === b.seq) { b.loading = false; b.data = j.browse || b.data; b.failed = false; renderBrowseList(); } })
+            .catch(function () { if (ui.br === b && mine === b.seq) { b.loading = false; b.failed = true; renderBrowseList(); } });
+    }
+    function brNum(v) { var n = parseFloat(String(v).replace(",", ".")); return isNaN(n) || n < 0 ? null : Math.round(n * 1000); }   // ô nhập tính bằng nghìn đồng
+    function brField(label, node, cls) {
+        var l = el("label", "tp-br__f" + (cls ? " " + cls : ""));
+        l.appendChild(el("span", "tp-br__l", label));
+        l.appendChild(node);
+        return l;
+    }
+    function brSelect(opts, value, onChange) {
+        var s = el("select", "no-nice");
+        opts.forEach(function (o) { var op = el("option", null, o[1]); op.value = String(o[0]); s.appendChild(op); });
+        s.value = String(value == null ? "" : value);
+        s.addEventListener("change", function () { onChange(s.value); });
+        return s;
+    }
+    function brCheck(text, checked, onChange) {
+        var l = el("label", "tp-br__ck");
+        var c = el("input");
+        c.type = "checkbox";
+        c.checked = !!checked;
+        c.addEventListener("change", function () { onChange(c.checked); });
+        l.appendChild(c);
+        l.appendChild(document.createTextNode(" " + text));
+        return l;
+    }
+    var brRefs = null;
+    function buildBrPanel(b) {
+        var f = b.f, p = el("div", "tp-br__panel"), refs = {};
+        var head = el("div", "tp-br__head");
+        head.appendChild(el("b", null, "Tìm theo tiêu chí"));
+        var tags = el("span", "tp-br__tags");
+        (b.intent.tags || []).forEach(function (t) { tags.appendChild(el("span", "tp-chip tp-chip--static", t)); });
+        if ((b.intent.tags || []).length) head.appendChild(el("span", "tp-muted tp-small", "Đã hiểu:"));
+        head.appendChild(tags);
+        head.appendChild(btn("tp-mini", "Xóa bộ lọc", "Xóa các bộ lọc", function () { brChange(function (x) { x.kinds = []; x.levels = null; x.minPrice = null; x.maxPrice = null; x.free = false; x.veg = false; x.cuisine = ""; x.indoor = ""; x.stars = ""; x.sort = ""; x.unknown = false; syncBrInputs(); }, 0); }));
+        p.appendChild(head);
+
+        var grid = el("div", "tp-br__grid");
+        refs.cat = brSelect(BR_CATS, f.cat, function (v) { brChange(function (x) { x.cat = v; x.kinds = []; x.stars = ""; x.cuisine = ""; x.veg = false; }, 0); });
+        grid.appendChild(brField("Loại", refs.cat));
+
+        // mức giá: bốn nút, chọn một hoặc nhiều mức liền nhau
+        var lv = el("div", "tp-br__levels");
+        refs.lv = BR_LEVELS.map(function (L) {
+            var bt = btn("tp-chip tp-br__lv", L[1] + " " + L[2], "Mức giá " + L[2].toLowerCase(), function () {
+                brChange(function (x) {
+                    var lo = x.levels ? x.levels[0] : null, hi = x.levels ? x.levels[1] : null, n = L[0];
+                    if (lo === null) { x.levels = [n, n]; }
+                    else if (n >= lo && n <= hi) { x.levels = lo === hi ? null : (n === lo ? [lo + 1, hi] : (n === hi ? [lo, hi - 1] : [n, n])); }
+                    else { x.levels = [Math.min(lo, n), Math.max(hi, n)]; }
+                    x.free = false;
+                }, 0);
+            });
+            bt.setAttribute("aria-pressed", "false");
+            lv.appendChild(bt);
+            return bt;
+        });
+        grid.appendChild(brField("Mức giá", lv, "tp-br__f--wide"));
+
+        refs.min = el("input"); refs.min.type = "number"; refs.min.min = "0"; refs.min.step = "50"; refs.min.placeholder = "từ";
+        refs.max = el("input"); refs.max.type = "number"; refs.max.min = "0"; refs.max.step = "50"; refs.max.placeholder = "đến";
+        refs.min.addEventListener("input", function () { brChange(function (x) { x.minPrice = brNum(refs.min.value); }, 500); });
+        refs.max.addEventListener("input", function () { brChange(function (x) { x.maxPrice = brNum(refs.max.value); }, 500); });
+        var rng = el("div", "tp-br__range");
+        rng.appendChild(refs.min); rng.appendChild(el("span", null, "–")); rng.appendChild(refs.max);
+        grid.appendChild(brField("Giá (nghìn đồng)", rng));
+
+        refs.km = brSelect(BR_KM.map(function (k) { return [k, "Trong " + k + " km"]; }), f.km, function (v) { brChange(function (x) { x.km = parseFloat(v); }, 0); });
+        grid.appendChild(brField("Khoảng cách", refs.km));
+
+        refs.from = el("select", "no-nice");
+        refs.from.addEventListener("change", function () { brChange(function (x) { x.from = refs.from.value; }, 0); });
+        grid.appendChild(brField("Tính từ", refs.from));
+
+        refs.stars = brSelect([["", "Mọi hạng"], [2, "2 sao"], [3, "3 sao"], [4, "4 sao"], [5, "5 sao"]], f.stars, function (v) { brChange(function (x) { x.stars = v; }, 0); });
+        refs.hotelNodes = [brField("Hạng sao", refs.stars, "tp-br__f--hotel")];
+        grid.appendChild(refs.hotelNodes[0]);
+        refs.cuisine = brSelect(BR_CUISINE, f.cuisine, function (v) { brChange(function (x) { x.cuisine = v; }, 0); });
+        refs.eatNodes = [brField("Món", refs.cuisine, "tp-br__f--eat")];
+        grid.appendChild(refs.eatNodes[0]);
+        refs.indoor = brSelect([["", "Trong nhà hay ngoài trời"], ["1", "Trong nhà"], ["0", "Ngoài trời"]], f.indoor, function (v) { brChange(function (x) { x.indoor = v; }, 0); });
+        grid.appendChild(brField("Không gian", refs.indoor));
+        refs.sort = brSelect([["", "Nổi bật trước"], ["near", "Gần nhất"], ["price", "Giá thấp đến cao"]], f.sort, function (v) { brChange(function (x) { x.sort = v; }, 0); });
+        grid.appendChild(brField("Sắp xếp", refs.sort));
+        p.appendChild(grid);
+
+        var cks = el("div", "tp-br__cks");
+        refs.free = brCheck("Miễn phí", f.free, function (v) { brChange(function (x) { x.free = v; if (v) x.levels = null; }, 0); });
+        refs.veg = brCheck("Có món chay", f.veg, function (v) { brChange(function (x) { x.veg = v; }, 0); });
+        refs.eatNodes.push(refs.veg);
+        cks.appendChild(refs.free); cks.appendChild(refs.veg);
+        p.appendChild(cks);
+        brRefs = refs;
+        syncBrInputs();
+        return p;
+    }
+    /** Đặt lại các ô nhập theo trạng thái lọc (sau khi bấm Xóa bộ lọc hoặc khi dựng lần đầu). */
+    function syncBrInputs() {
+        var b = ui.br, r = brRefs;
+        if (!b || !r) return;
+        var f = b.f;
+        r.cat.value = f.cat; r.stars.value = String(f.stars || ""); r.cuisine.value = f.cuisine || ""; r.indoor.value = f.indoor; r.sort.value = f.sort || "";
+        r.km.value = String(f.km);
+        r.min.value = f.minPrice != null ? String(f.minPrice / 1000) : ""; r.max.value = f.maxPrice != null ? String(f.maxPrice / 1000) : "";
+        r.free.firstChild.checked = !!f.free; r.veg.firstChild.checked = !!f.veg;
+        // danh sách "Tính từ": trung tâm điểm đến hoặc một mục đã có vị trí trong chuyến
+        r.from.textContent = "";
+        var o0 = el("option", null, "Trung tâm điểm đến");
+        o0.value = "dest";
+        r.from.appendChild(o0);
+        items.filter(G.hasPos).slice(0, 30).forEach(function (it) { var o = el("option", null, (it.day ? "Ngày " + it.day + " · " : "") + it.name); o.value = String(it.uid); r.from.appendChild(o); });
+        r.from.value = f.from;
+        if (r.from.value !== f.from) { f.from = "dest"; r.from.value = "dest"; }
+        syncBrPanel();
+    }
+    function syncBrPanel() {
+        var b = ui.br, r = brRefs;
+        if (!b || !r) return;
+        var f = b.f;
+        r.lv.forEach(function (bt, i) {
+            var on = !!f.levels && i + 1 >= f.levels[0] && i + 1 <= f.levels[1];
+            bt.setAttribute("aria-pressed", on ? "true" : "false");
+            bt.classList.toggle("is-on", on);
+        });
+        var eat = !f.cat || f.cat === "restaurant" || f.cat === "cafe" || f.cat === "bar";
+        r.eatNodes.forEach(function (n) { n.hidden = !eat; });
+        r.hotelNodes.forEach(function (n) { n.hidden = !(!f.cat || f.cat === "hotel"); });
+    }
+    function fmtDist(m) { return m < 1000 ? Math.round(m / 10) * 10 + " m" : (Math.round(m / 100) / 10).toLocaleString("vi-VN") + " km"; }
+    function priceBadge(r) {
+        var lv = r.priceLevel ? "₫₫₫₫".slice(0, r.priceLevel) : "";
+        if (r.priceSource === "travela") return { t: (lv ? lv + " · " : "") + (r.priceText || "Giá trên Travela"), cls: "tp-br__p" };
+        if (r.priceSource === "stars") return { t: lv + " · ước tính theo hạng sao", cls: "tp-br__p tp-br__p--est" };
+        if (r.priceSource === "kind") return { t: lv + " · ước tính theo loại hình", cls: "tp-br__p tp-br__p--est" };
+        return { t: r.priceText || "Chưa rõ giá", cls: "tp-br__p tp-br__p--none" };
+    }
+    var CUISINE_LABEL = {};
+    BR_CUISINE.forEach(function (c) { if (c[0]) CUISINE_LABEL[c[0]] = c[1]; });
+    function brItem(r) {
+        var li = el("li", "tp-br__it");
+        var main = el("div", "tp-br__main");
+        var href = safeUrl(r.url);
+        var nm;
+        if (href) { nm = el("a", null, r.name); nm.href = href; nm.target = "_blank"; nm.rel = "noopener"; } else { nm = el("b", null, r.name); }
+        main.appendChild(nm);
+        var meta1 = el("div", "tp-br__meta");
+        if (r.kind) meta1.appendChild(el("span", "tp-type", r.kind));
+        if (!r.destLevel) meta1.appendChild(el("span", "tp-br__d", fmtDist(r.distM)));
+        if (r.stars) meta1.appendChild(el("span", "tp-br__s", "★".repeat(r.stars) + " " + r.stars + " sao"));
+        var pb = priceBadge(r);
+        meta1.appendChild(el("span", pb.cls, pb.t));
+        main.appendChild(meta1);
+        var meta2 = [];
+        if (r.veg) meta2.push("Có món chay");
+        (r.cuisine || []).slice(0, 3).forEach(function (c) { meta2.push(CUISINE_LABEL[c] || c); });
+        if (r.wifi) meta2.push("Wi-Fi");
+        if (r.indoor === true) meta2.push("Trong nhà"); else if (r.indoor === false) meta2.push("Ngoài trời");
+        if (r.duration) meta2.push(r.duration);
+        if (r.hours) meta2.push("Giờ: " + r.hours);
+        if (meta2.length) main.appendChild(el("small", null, meta2.join(" · ")));
+        if (r.address) main.appendChild(el("small", null, r.address));
+        li.appendChild(main);
+
+        var typed = r.type !== "note";
+        var added = typed ? !!haveMap()[r.type + ":" + r.refId] : !!haveExtMap()[r.lat + "," + r.lng];
+        var add = btn("tp-mini", added ? "Đã có" : "+ Thêm", (added ? "Đã có " : "Thêm ") + r.name + " vào chuyến đi", function () {
+            var ok = typed
+                ? addItem({ type: r.type, refId: r.refId, name: r.name, sub: r.kind, url: r.url, cost: r.cost, lat: r.lat, lng: r.lng, day: ui.target })
+                : addItem({ type: "note", refId: null, name: r.name, note: r.address || "", lat: r.lat, lng: r.lng, source: "search", sub: r.kind || "", day: ui.target });
+            if (ok !== false) renderBrowseList();
+        });
+        add.disabled = added;
+        li.appendChild(add);
+        if (!r.destLevel && r.lat != null) {
+            li.addEventListener("mouseenter", function () { previewPin(r.lat, r.lng, r.name); });
+            li.addEventListener("mouseleave", function () { renderDraft(); });
+        }
+        return li;
+    }
+    function renderBrowseList() {
+        var b = ui.br, box = $("tpBrowseList");
+        if (!b || !box) return;
+        box.textContent = "";
+        var d = b.data || {};
+        var bar = el("div", "tp-br__bar");
+        bar.appendChild(el("b", null, b.loading ? "Đang tìm…" : (d.total || 0) + " kết quả"));
+        if (!b.loading && d.hidden) {
+            bar.appendChild(el("span", "tp-muted tp-small", "Đã ẩn " + d.hidden + " mục chưa có thông tin cho bộ lọc này."));
+            bar.appendChild(btn("tp-mini", "Hiện cả mục chưa rõ", "Hiện cả mục chưa có thông tin", function () { brChange(function (x) { x.unknown = true; }, 0); }));
+        } else if (b.f.unknown && !b.loading) {
+            bar.appendChild(btn("tp-mini", "Ẩn mục chưa rõ", "Ẩn mục chưa có thông tin", function () { brChange(function (x) { x.unknown = false; }, 0); }));
+        }
+        box.appendChild(bar);
+        if (b.failed) box.appendChild(el("p", "tp-muted tp-small", "Chưa tải được kết quả lúc này, thử lại sau."));
+        if (d.note) box.appendChild(el("p", "tp-muted tp-small", d.note));
+        // loại con (từ dữ liệu vừa tìm được)
+        var kinds = (d.facets && d.facets.kinds) || [];
+        if (kinds.length > 1) {
+            var kb = el("div", "tp-br__kinds");
+            kb.appendChild(btn("tp-chip" + (b.f.kinds.length ? "" : " is-on"), "Tất cả", "Mọi loại", function () { brChange(function (x) { x.kinds = []; }, 0); }));
+            kinds.forEach(function (k) {
+                var on = b.f.kinds.indexOf(k.key) >= 0;
+                kb.appendChild(btn("tp-chip" + (on ? " is-on" : ""), k.label + " (" + k.count + ")", "Chỉ hiện " + k.label, function () { brChange(function (x) { x.kinds = on ? [] : [k.key]; }, 0); }));
+            });
+            box.appendChild(kb);
+        }
+        var list = d.results || [];
+        if (!list.length && !b.loading) {
+            box.appendChild(el("p", "tp-muted", "Không có địa điểm khớp. Thử nới bộ lọc, tăng khoảng cách, hoặc bấm “Hiện cả mục chưa rõ”."));
+        } else {
+            var ul = el("ul", "tp-list tp-sugg tp-br__list");
+            list.forEach(function (r) { ul.appendChild(brItem(r)); });
+            box.appendChild(ul);
+        }
+        var s = d.sources || {};
+        var foot = el("details", "tp-br__about");
+        foot.appendChild(el("summary", null, "Về dữ liệu và mức giá"));
+        foot.appendChild(el("p", "tp-muted tp-small", "Giá chỉ hiện khi nguồn có dữ liệu. Trải nghiệm và tour lấy giá thật từ Travela. Dữ liệu OpenStreetMap không có giá: mức giá của khách sạn được ước tính theo hạng sao, của nhà nghỉ và quán ăn nhanh theo loại hình, và có ghi “ước tính”. Hạng sao, món, ăn chay, Wi-Fi, giờ mở cửa chỉ hiện khi tình nguyện viên OpenStreetMap đã điền."));
+        if (s.osm) foot.appendChild(el("p", "tp-muted tp-small", "Dữ liệu địa điểm © OpenStreetMap contributors."));
+        box.appendChild(foot);
+    }
+    function renderBrowse() {
+        var host = $("tpBrowse");
+        if (!host) return;
+        var b = ui.br;
+        host.hidden = !b;
+        if (!b) { host.textContent = ""; brRefs = null; return; }
+        if (!b.built) {
+            host.textContent = "";
+            host.appendChild(buildBrPanel(b));
+            var l = el("div", "tp-br__results");
+            l.id = "tpBrowseList";
+            host.appendChild(l);
+            var ft = el("div", "tp-res-foot");
+            ft.appendChild(el("span", "tp-muted tp-small", "Muốn tìm theo tên?"));
+            ft.appendChild(btn("tp-mini", "Tìm “" + b.q + "” theo tên", "Tìm theo tên thay vì theo tiêu chí", function () {
+                var q = b.q, mine = ++ui.searchSeq;
+                ui.br = null;
+                renderBrowse();
+                runNameSearch(q, mine);
+            }));
+            host.appendChild(ft);
+            b.built = true;
+        }
+        renderBrowseList();
+    }
+
     function renderSugg() {
         var s = $("tpSugg");
         s.textContent = "";
@@ -976,37 +1430,42 @@
         b.appendChild(btn("tp-link", "Sửa thông tin", "Sửa thông tin chuyến đi", function () { switchTab("info"); }));
     }
 
-    /* ---------------- bản đồ ---------------- */
-    var map = null, layer = null, pv = null, routeCache = {};
-    function initMap() {
+    /* ---------------- bản đồ (Google Maps, MapLibre hoặc OpenStreetMap, xem planner-map.js) ---------------- */
+    var map = null, routeCache = {};
+    function initMap(skipGoogle) {
         var m = $("tpMap");
-        if (!m || !window.L) return;
-        map = L.map(m, { scrollWheelZoom: false });
-        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: "© OpenStreetMap" }).addTo(map);
-        layer = L.layerGroup().addTo(map);
-        pv = L.layerGroup().addTo(map);   // ghim xem trước của mục sắp thêm (không bị renderMap xóa)
-        map.setView([16.0, 106.0], 5);
-        map.on("click", onMapPick);
+        if (!m || !window.TpMap) return;
+        window.TpMap.create(m, {
+            googleMapsKey: cfg.googleMapsKey, mapId: cfg.googleMapId, styleUrl: cfg.mapStyleUrl, skipGoogle: !!skipGoogle,
+            onAuthFail: function () { m.textContent = ""; map = null; initMap(true); },   // khóa Google bị từ chối: chuyển sang bản đồ vector / OpenStreetMap
+        }).then(function (ad) {
+            map = ad;
+            if (!map) return;
+            map.onClick(onMapPick);
+            m.setAttribute("data-map", map.kind);
+            renderMap();
+            renderDraft();
+            setTimeout(function () { map.resize(); }, 0);
+        });
     }
 
     /* ---------------- chọn vị trí cho mục tự thêm ---------------- */
     function startPick(uid) {
         if (!map) { say("Bản đồ chưa tải được. Hãy dán link Google Maps hoặc tọa độ.", true); return; }
         ui.pick = { uid: uid == null ? null : uid };
-        map.getContainer().classList.add("is-picking");
+        map.setPicking(true);
         say("Bấm vào một điểm trên bản đồ để chọn vị trí (Esc để hủy).");
-        try { map.getContainer().scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) { /* bỏ qua */ }
+        try { map.container().scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) { /* bỏ qua */ }
     }
     function endPick() {
         ui.pick = null;
-        if (map) map.getContainer().classList.remove("is-picking");
+        if (map) map.setPicking(false);
     }
     function onMapPick(e) {
         if (!ui.pick) return;
         var uid = ui.pick.uid;
         endPick();
-        var ll = map.wrapLatLng ? map.wrapLatLng(e.latlng) : e.latlng;
-        var pos = { lat: Math.round(ll.lat * 1e6) / 1e6, lng: Math.round(ll.lng * 1e6) / 1e6, source: "map" };
+        var pos = { lat: Math.round(e.lat * 1e6) / 1e6, lng: Math.round(e.lng * 1e6) / 1e6, source: "map" };
         if (uid == null) { setDraft(pos); say("Đã chọn vị trí. Bấm “+ Thêm” để thêm mục."); return; }
         var it = items.filter(function (x) { return x.uid === uid; })[0];
         if (it) { setPos(it, pos); say("Đã đặt vị trí cho “" + it.name + "”. Chưa lưu."); }
@@ -1018,28 +1477,30 @@
     }
     function renderDraft() {
         var m = $("tpPosMsg"), c = $("tpPosClear");
-        if (pv) pv.clearLayers();
+        if (map) map.clearPreview();
         if (!ui.draft) { m.textContent = ""; c.hidden = true; return; }
         m.textContent = "Vị trí đã chọn: " + ui.draft.lat + ", " + ui.draft.lng + " (" + (SRC[ui.draft.source] || "") + ")";
         c.hidden = false;
-        if (pv && map) {
-            L.circleMarker([ui.draft.lat, ui.draft.lng], { radius: 9, color: "#b45309", weight: 3, fillColor: "#fbbf24", fillOpacity: 0.9 }).addTo(pv).bindTooltip("Vị trí của mục sắp thêm");
-            map.setView([ui.draft.lat, ui.draft.lng], Math.max(map.getZoom(), 13));
+        if (map) {
+            map.preview(ui.draft.lat, ui.draft.lng, "Vị trí của mục sắp thêm");
+            map.view(ui.draft.lat, ui.draft.lng, Math.max(map.zoom(), 13));
         }
     }
     function drawRoute(pts, color) {
-        var line = L.polyline(pts.map(function (p) { return [p.lat, p.lng]; }), { color: color, weight: 4, opacity: 0.8 }).addTo(layer);
+        var line = map.line(pts, color);
         if (!cfg.osrmUrl || pts.length < 2) return;
         var coords = pts.map(function (p) { return p.lng + "," + p.lat; }).join(";");
-        function paint(g) { layer.removeLayer(line); line = L.geoJSON(g, { style: { color: color, weight: 4, opacity: 0.85 } }).addTo(layer); }
+        var gen = ++mapGen;
+        function paint(g) { if (gen !== mapGen || !map) return; map.removeLine(line); line = map.geoLine(g, color); }
         if (routeCache[coords]) { paint(routeCache[coords]); return; }
         fetch(cfg.osrmUrl.replace(/\/$/, "") + "/route/v1/driving/" + coords + "?overview=simplified&geometries=geojson")
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (j) {
-                if (j && j.routes && j.routes[0]) { routeCache[coords] = j.routes[0].geometry; if (layer.hasLayer(line)) paint(routeCache[coords]); }
+                if (j && j.routes && j.routes[0]) { routeCache[coords] = j.routes[0].geometry; paint(routeCache[coords]); }
             })
             .catch(function () { /* giữ đường thẳng */ });
     }
+    var mapGen = 0;
     function focusItem(uid) {
         switchTab("plan");
         var li = document.querySelector('.tp-item[data-uid="' + uid + '"]');
@@ -1068,24 +1529,175 @@
     }
     function renderMap() {
         if (!map) return;
-        layer.clearLayers();
+        mapGen++;
+        map.clear();
         var all = [], n = daysCount();
         for (var d = 1; d <= n + 1; d++) {
             var day = d <= n ? d : null;
             if (ui.mapDay !== "" && (day === null ? ui.mapDay !== "x" : String(day) !== ui.mapDay)) continue;
             var color = day === null ? "#6b7280" : COLORS[(day - 1) % COLORS.length];
-            var pts = dayItems(day).filter(G.hasPos);
+            var list = dayItems(day);
+            var pts = list.filter(G.hasPos);
             if (!pts.length) continue;
             drawRoute(pts, color);
-            pts.forEach(function (p, i) {
-                var mk = L.circleMarker([p.lat, p.lng], { radius: 8, color: "#fff", weight: 2, fillColor: color, fillOpacity: 1 }).addTo(layer);
-                mk.bindTooltip((day === null ? "" : "N" + day + "·" + (i + 1) + " ") + p.name);
-                mk.on("click", function () { if (!ui.pick) focusItem(p.uid); });
-                all.push([p.lat, p.lng]);
+            list.forEach(function (p, i) {
+                if (!G.hasPos(p)) return;
+                map.marker({
+                    id: p.uid, lat: p.lat, lng: p.lng, color: color, label: day === null ? "" : (i + 1),
+                    title: (day === null ? "" : "Ngày " + day + " · " + (i + 1) + " ") + p.name,
+                    onClick: function () { if (!ui.pick) openCard(p.uid); },
+                });
+                all.push(p);
             });
         }
-        if (all.length > 1) map.fitBounds(all, { padding: [24, 24], maxZoom: 12 });
-        else if (all.length === 1) map.setView(all[0], 10);
+        map.fit(all, 13);
+        if (ui.card) renderCard();
+    }
+
+    /* ---------------- thẻ chi tiết địa điểm (bấm ghim hoặc ảnh để mở) ---------------- */
+    function numberOf(it) {
+        if (it.day == null) return "";
+        return dayItems(it.day).indexOf(it) + 1;
+    }
+    function dirUrl(it) { return "https://www.google.com/maps/dir/?api=1&destination=" + it.lat + "," + it.lng; }
+    function openCard(uid) {
+        ui.card = { uid: uid, tab: "about", g: undefined };
+        var it = byUid(uid);
+        if (it && map) {
+            map.highlight(uid);
+            if (G.hasPos(it)) map.view(it.lat, it.lng, Math.max(map.zoom(), 14));
+        }
+        renderCard();
+        if (it && map && map.kind === "google" && G.hasPos(it) && !CUSTOM[it.type]) {
+            map.details(it).then(function (g) {
+                if (ui.card && ui.card.uid === uid) { ui.card.g = g || null; renderCard(); }
+            });
+        }
+    }
+    function closeCard() {
+        ui.card = null;
+        if (map) map.highlight(null);
+        var c = $("tpPlaceCard");
+        if (c) { c.hidden = true; c.textContent = ""; }
+    }
+    function cardNav(dir) {
+        var it = byUid(ui.card.uid);
+        if (!it) return;
+        var list = dayItems(it.day).filter(G.hasPos), i = list.indexOf(it) + dir;
+        if (i >= 0 && i < list.length) openCard(list[i].uid);
+    }
+    function renderCard() {
+        var c = $("tpPlaceCard");
+        if (!c) return;
+        var it = ui.card ? byUid(ui.card.uid) : null;
+        if (!it) { closeCard(); return; }
+        var g = ui.card.g, tab = ui.card.tab;
+        c.textContent = "";
+        c.hidden = false;
+
+        var head = el("div", "tp-pcard__head");
+        var num = numberOf(it);
+        var col = it.day == null ? "#6b7280" : COLORS[(it.day - 1) % COLORS.length];
+        head.appendChild(window.TpMap.pinEl(col, num === "" ? "" : num, true));
+        var tt = el("div", "tp-pcard__title");
+        tt.appendChild(el("strong", null, it.name));
+        tt.appendChild(el("small", null, [TYPE[it.type] || "", it.sub, it.day != null ? dayLabel(it.day) : "Chưa xếp ngày"].filter(Boolean).join(" · ")));
+        head.appendChild(tt);
+        var list = it.day != null ? dayItems(it.day).filter(G.hasPos) : [];
+        if (list.length > 1) {
+            var i = list.indexOf(it);
+            var nav = el("div", "tp-pcard__nav");
+            nav.appendChild(btn("tp-mini", "‹", "Mục trước trong ngày", function () { cardNav(-1); }));
+            nav.appendChild(el("span", null, (i + 1) + "/" + list.length));
+            nav.appendChild(btn("tp-mini", "›", "Mục sau trong ngày", function () { cardNav(1); }));
+            head.appendChild(nav);
+        }
+        head.appendChild(btn("tp-mini tp-pcard__x", "✕", "Đóng thẻ chi tiết", closeCard));
+        c.appendChild(head);
+
+        var tabs = el("div", "tp-pcard__tabs");
+        [["about", "Giới thiệu"]].concat(g && g.photos && g.photos.length ? [["photos", "Ảnh"]] : []).forEach(function (t) {
+            var b = btn("tp-pcard__tab" + (tab === t[0] ? " is-on" : ""), t[1], null, function () { ui.card.tab = t[0]; renderCard(); });
+            tabs.appendChild(b);
+        });
+        c.appendChild(tabs);
+
+        var body = el("div", "tp-pcard__body");
+        if (tab === "photos" && g && g.photos) {
+            var gal = el("div", "tp-pcard__gal");
+            g.photos.forEach(function (ph) {
+                var im = el("img");
+                im.src = ph.url; im.alt = it.name; im.loading = "lazy";
+                if (ph.by) im.title = "Ảnh: " + ph.by;
+                gal.appendChild(im);
+            });
+            body.appendChild(gal);
+            body.appendChild(el("small", "tp-muted", "Ảnh từ Google Maps, hiển thị trực tiếp, không lưu trên Travela."));
+        } else {
+            var top = el("div", "tp-pcard__top");
+            var txt = el("div", "tp-pcard__txt");
+            if (it.blurb) txt.appendChild(el("p", null, it.blurb));
+            else if (!g) txt.appendChild(el("p", "tp-muted", CUSTOM[it.type] ? "Mục bạn tự thêm." : "Chưa có lời giới thiệu cho mục này."));
+            if (it.reasons && it.reasons.length) txt.appendChild(el("p", "tp-why", "Vì sao chọn: " + it.reasons.join("; ")));
+            if (it.fit && it.fit.length) {
+                var fl = el("ul", "tp-fit");
+                it.fit.forEach(function (f) { fl.appendChild(el("li", "tp-fit__i tp-fit--" + (f.k === "good" || f.k === "warn" ? f.k : "info"), f.x)); });
+                txt.appendChild(fl);
+            }
+            top.appendChild(txt);
+            var img = it.image || (g && g.photos && g.photos[0] && g.photos[0].url);
+            if (img) { var pi = el("img", "tp-pcard__img"); pi.src = img; pi.alt = it.name; pi.loading = "lazy"; top.appendChild(pi); }
+            body.appendChild(top);
+
+            var facts = el("ul", "tp-pcard__facts");
+            function fact(label, value, href) {
+                if (!value) return;
+                var li = el("li");
+                li.appendChild(el("b", null, label + ": "));
+                if (href && safeUrl(href)) { var a = el("a", null, value); a.href = href; a.target = "_blank"; a.rel = "noopener"; li.appendChild(a); }
+                else li.appendChild(el("span", null, value));
+                facts.appendChild(li);
+            }
+            fact("Địa chỉ", it.address || (g && g.address));
+            if (g && g.rating != null) fact("Đánh giá Google", g.rating.toFixed(1) + " ★ (" + g.ratings.toLocaleString("vi-VN") + " lượt)", g.mapsUrl);
+            fact("Điện thoại", g && g.phone);
+            if (it.website || (g && g.website)) fact("Website", (it.website || g.website).replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, ""), it.website || g.website);
+            if (it.when) fact("Diễn ra", it.when);
+            if (it.cost != null) fact("Chi phí", money(it.cost));
+            if (it.note) fact("Ghi chú", it.note);
+            if (it.src) fact("Nguồn", it.src);
+            if (facts.children.length) body.appendChild(facts);
+            if (g && g.hours && g.hours.length) {
+                var hd = el("details", "tp-pcard__hours");
+                hd.appendChild(el("summary", null, "Giờ mở cửa"));
+                var hu = el("ul");
+                g.hours.forEach(function (h) { hu.appendChild(el("li", null, h)); });
+                hd.appendChild(hu);
+                body.appendChild(hd);
+            }
+            if (g) body.appendChild(el("small", "tp-muted", "Giờ mở cửa, đánh giá và ảnh lấy trực tiếp từ Google Maps, có thể thay đổi."));
+            else if (map && map.kind === "google" && !CUSTOM[it.type] && ui.card.g === undefined) body.appendChild(el("small", "tp-muted", "Đang tải thêm thông tin từ Google…"));
+        }
+        c.appendChild(body);
+
+        var act = el("div", "tp-pcard__act");
+        if (G.hasPos(it)) {
+            var a1 = el("a", "tp-btn tp-btn--ghost", "Chỉ đường");
+            a1.href = dirUrl(it); a1.target = "_blank"; a1.rel = "noopener";
+            act.appendChild(a1);
+            var a2 = el("a", "tp-btn tp-btn--ghost", "Mở Google Maps");
+            a2.href = (g && g.mapsUrl) || G.mapsUrl(it.lat, it.lng); a2.target = "_blank"; a2.rel = "noopener";
+            act.appendChild(a2);
+        }
+        var href = safeUrl(it.url);
+        if (href && !CUSTOM[it.type]) { var a3 = el("a", "tp-btn tp-btn--ghost", "Xem trên Travela"); a3.href = href; a3.target = "_blank"; a3.rel = "noopener"; act.appendChild(a3); }
+        c.appendChild(act);
+    }
+    function showOnMap(uid) {
+        var it = byUid(uid);
+        if (!it) return;
+        if (!G.hasPos(it)) { say("Mục này chưa có vị trí nên chưa hiện trên bản đồ.", true); return; }
+        openCard(uid);
     }
 
     /* ---------------- tab ---------------- */
@@ -1105,7 +1717,7 @@
         });
         try { sessionStorage.setItem("tpTab" + cfg.trip.id, name); } catch (e) { /* bỏ qua */ }
         if (name === "cost") renderCostTable();
-        if (name === "plan" && map) setTimeout(function () { map.invalidateSize(); }, 0);
+        if (name === "plan" && map) setTimeout(function () { map.resize(); }, 0);
     }
 
     /* ---------------- dựng lại ---------------- */
@@ -1143,6 +1755,7 @@
         });
     }
     function save(manual) {
+        if (RO) return;
         clearTimeout(timer);
         if (saving) { pendingSave = true; return; }
         if (!dirty && !manual) return;
@@ -1151,7 +1764,15 @@
         var m = meta();
         if (!m.title) { say("Hãy nhập tên chuyến đi (chưa lưu).", true); return; }
         var body = {
+            rev: rev,
             title: m.title, startDate: m.start, days: m.days, groupSize: m.group, budget: m.budget, destinationId: m.dest,
+            rainPlan: (function () {
+                var o = {}, n = daysCount();
+                Object.keys(rain).forEach(function (k) {
+                    if (+k >= 1 && +k <= n) o[k] = rain[k].map(function (r) { return { type: r.type, refId: r.refId }; });
+                });
+                return o;
+            })(),
             items: items.map(function (x) {
                 var o = { type: x.type, refId: CUSTOM[x.type] ? null : x.refId, day: x.day, note: x.note, cost: x.cost, slot: x.slot || null, reasons: x.reasons || [] };
                 if (CUSTOM[x.type]) {
@@ -1166,14 +1787,25 @@
         $("tpSave").disabled = true;
         say("Đang lưu…");
         post(cfg.saveUrl, body)
-            .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
+            .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, status: r.status, j: j }; }); })
             .then(function (res) {
                 saving = false;
                 $("tpSave").disabled = false;
+                if (res.status === 409) { showSync(res.j.message || "Chuyến đi vừa được người khác cập nhật.", true); autoFail = true; return; }
                 if (res.ok) {
+                    if (res.j.rev != null) rev = res.j.rev;
                     savedSnap = sent;
                     cfg.contentWarnings = res.j.contentWarnings || [];
                     cfg.advice = res.j.advice || [];
+                    if (res.j.fit) {
+                        var same = snap() === sent;
+                        items.forEach(function (x) {
+                            var f = res.j.fit[x.type + ":" + x.refId];
+                            if (f) { x.fit = f.fit || []; x.outdoor = f.outdoor; x.src = f.src || null; }
+                        });
+                        if (same) { sent = snap(); savedSnap = sent; last = sent; }
+                        renderDays();
+                    }
                     renderWarn();
                     renderSummary();
                     if (snap() !== sent) { markDirty(); } else { dirty = false; autoFail = false; say("Đã lưu lúc " + (res.j.savedAt || "")); }
@@ -1239,7 +1871,7 @@
     $("tpQ").addEventListener("input", function () { clearTimeout(qTimer); qTimer = setTimeout(runSearch, 350); });
     $("tpQ").addEventListener("keydown", function (e) {
         if (e.key === "Enter") { e.preventDefault(); clearTimeout(qTimer); runSearch(); }
-        else if (e.key === "Escape") { clearTimeout(qTimer); $("tpQ").value = ""; ui.searchSeq++; ui.res = null; renderResults(); }
+        else if (e.key === "Escape") { clearTimeout(qTimer); $("tpQ").value = ""; ui.searchSeq++; ui.res = null; ui.br = null; renderResults(); renderBrowse(); }
     });
     $("tpDestOnly").addEventListener("change", function () { if ($("tpQ").value.trim()) runSearch(); });
     $("tpCustomForm").addEventListener("submit", function (e) {
@@ -1281,15 +1913,130 @@
         if (dirty) { e.preventDefault(); e.returnValue = ""; }
     });
 
+    /* ---------------- cộng tác: thông báo có người vừa sửa, mời bạn đồng hành ---------------- */
+    function showSync(text, conflict) {
+        var b = $("tpSync");
+        if (!b) return;
+        b.textContent = "";
+        b.hidden = false;
+        b.classList.toggle("tp-banner--bad", !!conflict);
+        b.appendChild(el("span", null, text + " "));
+        b.appendChild(btn("tp-mini", "Tải lại", "Tải lại chuyến đi", function () { dirty = false; location.reload(); }));
+    }
+    var pollMs = 20000;
+    function pollRev() {
+        if (!cfg.revUrl || document.hidden) return;
+        fetch(cfg.revUrl, { credentials: "same-origin", headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (j) {
+                if (!j) return;
+                if (j.role && j.role !== ROLE) { showSync("Quyền của bạn trong chuyến đi vừa thay đổi.", false); return; }
+                if (j.rev > rev) showSync((j.by || "Người khác") + " vừa cập nhật chuyến đi" + (dirty ? ", bạn có thay đổi chưa lưu nên có thể bị xung đột." : "."), dirty);
+            })
+            .catch(function () { /* mất mạng: bỏ qua lần này */ });
+    }
+    if (cfg.revUrl) setInterval(pollRev, pollMs);
+
+    var memLoaded = false;
+    function memberMsg(t, bad) {
+        var m = $("tpInvMsg");
+        if (!m) return;
+        m.textContent = t || "";
+        m.classList.toggle("tp-msg--bad", !!bad);
+    }
+    function renderMembers(j) {
+        var ul = $("tpMemList");
+        if (!ul) return;
+        ul.textContent = "";
+        (j.members || []).forEach(function (m) {
+            var li = el("li", "tp-mem");
+            li.appendChild(el("span", "tp-mem__av", (m.name || "?").trim().charAt(0).toUpperCase()));
+            var who = el("div", "tp-mem__who");
+            who.appendChild(el("b", null, m.name + (m.userId === cfg.me ? " (bạn)" : "")));
+            if (m.email) who.appendChild(el("small", "tp-muted", m.email));
+            li.appendChild(who);
+            if (m.isOwner) li.appendChild(el("span", "tp-role tp-role--owner", "Chủ chuyến"));
+            else if (ROLE === "owner") {
+                var sel = el("select", "no-nice");
+                sel.setAttribute("aria-label", "Quyền của " + m.name);
+                [["view", "Chỉ xem"], ["edit", "Chỉnh sửa"]].forEach(function (o) { var op = el("option", null, o[1]); op.value = o[0]; sel.appendChild(op); });
+                sel.value = m.role;
+                sel.addEventListener("change", function () {
+                    post(cfg.membersUrl + "/" + m.userId, { role: sel.value }).then(function (r) { memberMsg(r.ok ? "Đã đổi quyền của " + m.name + "." : "Không đổi được quyền.", !r.ok); });
+                });
+                li.appendChild(sel);
+                li.appendChild(btn("tp-mini tp-mini--danger", "Gỡ", "Gỡ " + m.name + " khỏi chuyến đi", function () {
+                    post(cfg.membersUrl + "/" + m.userId + "/go", {}).then(function (r) { if (r.ok) { memberMsg("Đã gỡ " + m.name + "."); loadMembers(); } else memberMsg("Không gỡ được.", true); });
+                }));
+            } else {
+                li.appendChild(el("span", "tp-role tp-role--" + m.role, m.role === "edit" ? "Chỉnh sửa" : "Chỉ xem"));
+                if (m.userId === cfg.me) li.appendChild(btn("tp-mini tp-mini--danger", "Rời chuyến", "Rời khỏi chuyến đi", function () {
+                    if (!window.confirm("Rời khỏi chuyến đi này?")) return;
+                    post(cfg.membersUrl + "/" + m.userId + "/go", {}).then(function (r) { if (r.ok) { dirty = false; location.href = "/len-ke-hoach"; } else memberMsg("Không rời được.", true); });
+                }));
+            }
+            ul.appendChild(li);
+        });
+    }
+    function loadMembers() {
+        fetch(cfg.membersUrl, { credentials: "same-origin", headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (j) { if (j) { memLoaded = true; renderMembers(j); } else memberMsg("Chưa tải được danh sách.", true); })
+            .catch(function () { memberMsg("Mất kết nối.", true); });
+    }
+    var memLastFocus = null;
+    function openMembers() {
+        var d = $("tpMembers");
+        if (!d) return;
+        memLastFocus = document.activeElement;
+        d.hidden = false;
+        loadMembers();
+        var f = $("tpInvEmail") || d.querySelector("button");
+        if (f) f.focus();
+    }
+    function closeMembers() {
+        var d = $("tpMembers");
+        if (!d) return;
+        d.hidden = true;
+        if (memLastFocus && memLastFocus.focus) memLastFocus.focus();
+    }
+    function inviteSubmit(e) {
+        e.preventDefault();
+        var email = $("tpInvEmail").value.trim(), role = $("tpInvRole").value;
+        if (!email) return;
+        memberMsg("Đang mời…");
+        post(cfg.membersUrl, { email: email, role: role })
+            .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
+            .then(function (res) {
+                var j = res.j || {};
+                var errs = j.errors ? Object.keys(j.errors).map(function (k) { return j.errors[k][0]; }) : [];
+                memberMsg(j.message || errs[0] || (res.ok ? "Đã mời." : "Không mời được."), !res.ok);
+                if (res.ok) { $("tpInvEmail").value = ""; loadMembers(); }
+            })
+            .catch(function () { memberMsg("Mất kết nối.", true); });
+    }
+    if ($("tpInviteBtn")) $("tpInviteBtn").addEventListener("click", openMembers);
+    if ($("tpMembersClose")) $("tpMembersClose").addEventListener("click", closeMembers);
+    if ($("tpMembers")) $("tpMembers").addEventListener("click", function (e) { if (e.target === $("tpMembers")) closeMembers(); });
+    if ($("tpInvForm")) $("tpInvForm").addEventListener("submit", inviteSubmit);
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") { if ($("tpMembers") && !$("tpMembers").hidden) closeMembers(); else if (ui.card) closeCard(); } });
+    if ($("tpPlaceCard")) $("tpPlaceCard").hidden = true;
+
+    if (RO) {
+        var root = document.querySelector(".tp");
+        if (root) root.classList.add("tp--readonly");
+        ["tpTitle", "tpStart", "tpDays", "tpGroup", "tpBudget", "tpDest"].forEach(function (id) { if ($(id)) $(id).disabled = true; });
+        say("Bạn đang xem chuyến đi này với quyền chỉ xem.");
+    }
+
     clampDays();
     last = snap();
     savedSnap = last;
-    initMap();
     renderAll();
+    initMap();
     var startTab = (location.hash || "").replace("#", "");
     if (!/^(plan|cost|info|overview|explore)$/.test(startTab)) {
         try { startTab = sessionStorage.getItem("tpTab" + cfg.trip.id) || "plan"; } catch (e) { startTab = "plan"; }
     }
     switchTab(startTab);
-    if (map) setTimeout(function () { map.invalidateSize(); }, 0);
 })();

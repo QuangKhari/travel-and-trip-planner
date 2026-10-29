@@ -821,3 +821,168 @@ a.tp-item__name:hover { text-decoration: underline; }
 .tp-cta h2 { margin-bottom: 4px; }
 .tp-cta p { margin: 0; }
 .tp-item__panel > input[type="text"], .tp-item__right input[type="number"] { box-sizing: border-box; }
+
+/* ===== Tuần 12: vì sao hợp, phương án mưa, chọn điểm đến, nơi chưa có dữ liệu ===== */
+.tp-fit { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.tp-fit__i { font-size: .8rem; padding: 2px 9px; border-radius: 999px; border: 1px solid #d0d5dd; background: #f8fafc; color: #344054; }
+.tp-fit--good { background: #ecfdf3; border-color: #a6e7c1; color: #05603a; }
+.tp-fit--warn { background: #fffaeb; border-color: #fedf89; color: #93370d; }
+.tp-src { display: block; margin-top: 4px; color: #667085; font-size: .78rem; }
+.tp-rain { margin: 10px 0 0; border: 1px dashed #98c9c4; border-radius: 10px; padding: 8px 12px; background: #f6fbfa; }
+.tp-rain > summary { cursor: pointer; font-weight: 600; color: #0a5a56; }
+.tp-rain__list { list-style: none; margin: 6px 0; padding: 0; }
+.tp-rain__item { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; padding: 4px 0; border-bottom: 1px solid #e4efed; }
+.tp-rain__why { flex-basis: 100%; color: #667085; }
+.tp-rain--shared { border-style: solid; }
+.tp-find { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.tp-find__item { border: 1px solid var(--tp-line, #e4e7ec); border-radius: 12px; padding: 14px 16px; }
+.tp-find__head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.tp-find__head h3 { margin: 0; font-size: 1.05rem; }
+.tp-find__score { font-size: .8rem; color: #667085; }
+.tp-find__act { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; }
+.tp-why { list-style: none; padding-left: 0; }
+.tp-why--good::before { content: "✓ "; color: #067647; }
+.tp-why--warn::before { content: "! "; color: #b54708; }
+.tp-unknown { border-color: #fedf89; background: #fffcf5; }
+.tp-near { margin: 6px 0 10px; padding-left: 18px; }
+.tp-tours { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.tp-tours__item { display: grid; gap: 2px; padding-bottom: 10px; border-bottom: 1px solid #eef0f3; }
+.px-plan { margin-top: 12px; }
+
+/* ===== Tuần 13: giao diện 3 cột (thanh bên | lịch trình | bản đồ), thẻ địa điểm, ghim đánh số, mời bạn ===== */
+.tp--edit .container { max-width: 1760px; width: 100%; padding-left: 20px; padding-right: 20px; }
+.tp--edit .tp-edit { grid-template-columns: 200px minmax(0, 1fr) minmax(380px, 44%); gap: 20px; }
+.tp-side { position: sticky; top: 64px; align-self: start; max-height: calc(100vh - 80px); overflow: auto; padding-right: 4px; }
+.tp-side .tp-tabs { display: flex; flex-direction: column; gap: 2px; padding: 0; background: transparent; margin-bottom: 10px; overflow: visible; }
+.tp-side .tp-tab { text-align: left; border-radius: 10px; padding: 9px 12px; width: 100%; }
+.tp-side .tp-tab.is-on { background: #111827; color: #fff; box-shadow: none; }
+.tp-side__h { margin: 14px 0 6px; padding: 0 12px; font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; color: var(--tp-mut); }
+.tp-daynav { list-style: none; margin: 0; padding: 0; }
+.tp-daynav__b { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: transparent; padding: 7px 12px; border-radius: 10px; color: #374151; text-align: left; cursor: pointer; }
+.tp-daynav__b:hover { background: #e8eeee; }
+.tp-daynav__dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; order: -1; }
+.tp-daynav__t { flex: 1; font-size: .9rem; }
+.tp-daynav__b small { color: var(--tp-mut); }
+.tp--edit .tp-col-side { position: sticky; top: 64px; max-height: calc(100vh - 80px); overflow: auto; }
+.tp--edit .tp-map { height: calc(100vh - 330px); min-height: 380px; border-radius: 12px; }
+.tp-mapwrap { position: relative; }
+
+/* ghim đánh số: dùng chung cho Google Maps và Leaflet */
+.tp-pin-wrap { background: transparent; border: 0; }
+.tp-pin { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .4); color: #fff; font: 700 13px/1 system-ui, sans-serif; display: flex; align-items: center; justify-content: center; transition: transform .12s; cursor: pointer; }
+.tp-pin--sm { width: 24px; height: 24px; font-size: 12px; flex: 0 0 auto; cursor: default; }
+.tp-pin.is-hot { transform: scale(1.3); box-shadow: 0 0 0 4px rgba(245, 158, 11, .55), 0 3px 8px rgba(0, 0, 0, .4); }
+
+/* thẻ chi tiết địa điểm phủ phía dưới bản đồ */
+.tp-pcard { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 1100; max-height: 64%; overflow: auto; background: #fff; border-radius: 14px; box-shadow: 0 8px 28px rgba(16, 24, 40, .28); padding: 12px 14px; }
+.tp-pcard[hidden] { display: none; }
+.tp-pcard__head { display: flex; align-items: center; gap: 10px; }
+.tp-pcard__title { flex: 1; min-width: 0; display: grid; }
+.tp-pcard__title strong { font-size: 1.02rem; }
+.tp-pcard__title small { color: var(--tp-mut); }
+.tp-pcard__nav { display: flex; align-items: center; gap: 4px; font-size: .85rem; color: var(--tp-mut); }
+.tp-pcard__tabs { display: flex; gap: 14px; border-bottom: 1px solid var(--tp-line); margin: 8px 0; }
+.tp-pcard__tab { border: 0; background: transparent; padding: 6px 2px; font-weight: 600; color: var(--tp-mut); border-bottom: 2px solid transparent; cursor: pointer; }
+.tp-pcard__tab.is-on { color: #c2410c; border-bottom-color: #c2410c; }
+.tp-pcard__top { display: flex; gap: 12px; align-items: flex-start; }
+.tp-pcard__txt { flex: 1; min-width: 0; font-size: .92rem; }
+.tp-pcard__txt p { margin: 0 0 6px; }
+.tp-pcard__img { width: 116px; height: 90px; object-fit: cover; border-radius: 10px; flex: 0 0 auto; }
+.tp-pcard__facts { list-style: none; margin: 8px 0 0; padding: 0; font-size: .88rem; display: grid; gap: 3px; }
+.tp-pcard__hours { margin-top: 6px; font-size: .86rem; }
+.tp-pcard__hours ul { margin: 4px 0 0; padding-left: 18px; }
+.tp-pcard__gal { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.tp-pcard__gal img { width: 100%; height: 100px; object-fit: cover; border-radius: 8px; }
+.tp-pcard__act { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.tp-pcard__act .tp-btn { padding: 6px 12px; font-size: .86rem; text-decoration: none; }
+
+/* thẻ địa điểm trong lịch: số thứ tự + ảnh */
+.tp-numbadge { width: 26px; height: 26px; border-radius: 50%; border: 0; color: #fff; font: 700 .8rem/1 system-ui, sans-serif; flex: 0 0 auto; cursor: default; }
+.tp-numbadge.is-link { cursor: pointer; }
+.tp-item__main { flex: 1 1 200px; min-width: 0; }
+.tp-item__photo { width: 92px; height: 66px; object-fit: cover; border-radius: 10px; flex: 0 0 auto; cursor: pointer; }
+.tp-item { border-radius: 14px; }
+.tp-leg { color: var(--tp-mut); font-size: .82rem; margin: 6px 0 0 36px; }
+.tp-cost-ro { font-size: .9rem; color: #374151; }
+
+/* mời bạn đồng hành */
+.tp-modal { position: fixed; inset: 0; z-index: 2000; background: rgba(17, 24, 39, .5); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.tp-modal[hidden] { display: none; }
+.tp-modal__box { background: #fff; border-radius: 16px; width: min(520px, 100%); max-height: 90vh; overflow: auto; padding: 18px 20px; box-shadow: 0 20px 50px rgba(0, 0, 0, .3); }
+.tp-modal__head { display: flex; justify-content: space-between; align-items: center; }
+.tp-modal__head h2 { margin: 0; font-size: 1.15rem; }
+.tp-inv { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; margin: 12px 0 6px; }
+.tp-memlist { list-style: none; margin: 8px 0 0; padding: 0; }
+.tp-mem { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--tp-line); }
+.tp-mem__av { width: 34px; height: 34px; border-radius: 50%; background: var(--tp-brand-l); color: var(--tp-brand-d); display: flex; align-items: center; justify-content: center; font-weight: 700; flex: 0 0 auto; }
+.tp-mem__who { flex: 1; min-width: 0; display: grid; }
+.tp-role { font-size: .78rem; padding: 2px 9px; border-radius: 999px; background: #eef2f2; color: #374151; white-space: nowrap; }
+.tp-role--owner { background: #fef3c7; color: #92400e; }
+.tp-role--edit { background: #dcfce7; color: #166534; }
+.tp-role--view { background: #e0e7ff; color: #3730a3; }
+.tp-sub { margin: 16px 0 6px; font-size: .95rem; color: var(--tp-mut); }
+.tp-banner--bad { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+#tpSync { margin-bottom: 12px; }
+
+/* chỉ xem */
+.tp--readonly .tp-add, .tp--readonly .tp-bulk, .tp--readonly #tpUndo, .tp--readonly #tpRedo, .tp--readonly #tpSave,
+.tp--readonly .tp-suggbox, .tp--readonly .tp-planhead label, .tp--readonly .tp-handle { display: none !important; }
+
+@media (max-width: 1280px) {
+    .tp--edit .tp-edit { grid-template-columns: 170px minmax(0, 1fr) minmax(320px, 40%); }
+}
+@media (max-width: 1000px) {
+    .tp--edit .tp-edit { grid-template-columns: minmax(0, 1fr); }
+    .tp-side, .tp--edit .tp-col-side { position: static; max-height: none; }
+    .tp-side .tp-tabs { flex-direction: row; }
+    .tp-side .tp-tab { width: auto; text-align: center; }
+    .tp-side__h, .tp-daynav { display: none; }
+    .tp--edit .tp-map { height: 340px; min-height: 0; }
+    .tp-item__photo { width: 72px; height: 54px; }
+}
+
+/* Bản đồ vector (MapLibre): ghim đánh số dùng chung kiểu .tp-pin với Google Maps và Leaflet. */
+.tp-map .maplibregl-marker.tp-pin-wrap { line-height: 0; }
+.tp-map .maplibregl-ctrl-attrib { font-size: 11px; }
+
+/* ======================= Tìm theo tiêu chí ======================= */
+.tp-browse { margin-top: 10px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; max-height: 560px; overflow-y: auto; }
+.tp-browse[hidden] { display: none; }
+.tp-br__panel { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; position: sticky; top: 0; z-index: 2; }
+.tp-br__head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-bottom: 8px; }
+.tp-br__head > b { color: #0a5a56; }
+.tp-br__tags { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.tp-br__head .tp-mini { margin-left: auto; }
+.tp-chip--static { cursor: default; background: #fff; }
+.tp-br__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 10px; }
+.tp-br__f { display: flex; flex-direction: column; gap: 2px; margin: 0; min-width: 0; }
+.tp-br__f[hidden] { display: none; }
+.tp-br__f--wide { grid-column: 1 / -1; }
+.tp-br__l { font-size: 0.75rem; color: #4b5563; }
+.tp-br__f select.no-nice, .tp-br__f input { width: 100%; padding: 7px 8px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff; font-size: 0.9rem; }
+.tp-br__levels { display: flex; flex-wrap: wrap; gap: 6px; }
+.tp-br__lv.is-on, .tp-chip.is-on { background: #0d6f6a; border-color: #0d6f6a; color: #fff; }
+.tp-br__range { display: flex; align-items: center; gap: 6px; }
+.tp-br__cks { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 8px; }
+.tp-br__ck { display: inline-flex; align-items: center; gap: 4px; font-size: 0.88rem; margin: 0; }
+.tp-br__ck[hidden] { display: none; }
+.tp-br__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 10px 12px 4px; }
+.tp-br__results > p { margin: 4px 12px; }
+.tp-br__kinds { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 12px 8px; }
+.tp-br__list { list-style: none; margin: 0; padding: 0; }
+.tp-br__it { display: flex; gap: 8px 10px; align-items: flex-start; justify-content: space-between; padding: 9px 12px; border-top: 1px solid #f1f5f9; }
+.tp-br__main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.tp-br__main > a, .tp-br__main > b { font-weight: 600; overflow-wrap: anywhere; }
+.tp-br__main small { color: #6b7280; flex: none; }
+.tp-br__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 0.82rem; }
+.tp-br__d { color: #4b5563; }
+.tp-br__s { color: #b45309; }
+.tp-br__p { background: #ecfdf5; color: #065f46; border-radius: 999px; padding: 1px 8px; }
+.tp-br__p--est { background: #fffbeb; color: #92400e; }
+.tp-br__p--none { background: #f3f4f6; color: #6b7280; }
+.tp-br__about { padding: 8px 12px 12px; border-top: 1px solid #f1f5f9; }
+.tp-br__about summary { cursor: pointer; color: #0a5a56; font-size: 0.85rem; }
+@media (max-width: 600px) {
+    .tp-br__it { flex-wrap: wrap; }
+    .tp-br__panel { position: static; }
+}

@@ -12,7 +12,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * B2-B5: truy vấn nội dung lớp Khám phá cho các trang web (danh sách, chi tiết, thẻ liên kết chéo).
+ * truy vấn nội dung lớp Khám phá cho các trang web (danh sách, chi tiết, thẻ liên kết chéo).
  * Quy tắc cứng: CHỈ trả nội dung reviewStatus = 'published' (điểm đến thì isActive = 1).
  * Mọi giá trị lọc từ URL được kiểm tra danh sách cho phép trước khi vào truy vấn.
  */
@@ -48,7 +48,7 @@ class ContentCatalog
         return '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], mb_substr(trim($q), 0, 60)) . '%';
     }
 
-    // ------------------------------------------------------------------ Điểm đến
+    //  Điểm đến
 
     /** @return array{items:LengthAwarePaginator,filters:array,total:int} */
     public function destinations(array $in, int $page, int $perPage = 12): array
@@ -107,7 +107,7 @@ class ContentCatalog
         return DB::table('tbl_destinations')->where('isActive', 1)->distinct()->orderBy('province')->pluck('province')->all();
     }
 
-    // ------------------------------------------------------------------ Ẩm thực
+    //  Ẩm thực
 
     private function foodsBase()
     {
@@ -224,7 +224,7 @@ class ContentCatalog
         return $q->orderBy('f.name')->limit($limit)->get()->map(fn($r) => $this->foodCard($r));
     }
 
-    /** Món cùng nhóm ở điểm đến khác (biến thể liên kết chéo, tài liệu mục 4.4). */
+    /** Món cùng nhóm ở điểm đến khác. */
     public function foodVariants(object $food, int $limit = 6): Collection
     {
         if (!$food->category) {
@@ -235,7 +235,7 @@ class ContentCatalog
             ->orderBy('f.name')->limit($limit)->get()->map(fn($r) => $this->foodCard($r));
     }
 
-    // ------------------------------------------------------------------ Lễ hội
+    // Lễ hội
 
     private function eventsBase()
     {
@@ -450,8 +450,15 @@ class ContentCatalog
             $slot = !empty($it->slot) ? (string) $it->slot : null;
             $minutes = isset($it->durationMin) && $it->durationMin !== null ? (int) $it->durationMin : null;
             $row = [
-                'label' => $it->label, 'note' => $it->note, 'refType' => $it->refType, 'url' => $url, 'lat' => $lat, 'lng' => $lng,
-                'slot' => $slot, 'slotLabel' => ItineraryValidator::slotLabel($slot), 'durationMin' => $minutes,
+                'label' => $it->label,
+                'note' => $it->note,
+                'refType' => $it->refType,
+                'url' => $url,
+                'lat' => $lat,
+                'lng' => $lng,
+                'slot' => $slot,
+                'slotLabel' => ItineraryValidator::slotLabel($slot),
+                'durationMin' => $minutes,
             ];
             $days[$it->dayNo][] = $row;
             if ($minutes) {

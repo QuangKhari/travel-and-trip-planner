@@ -1,5 +1,5 @@
 @include('clients.blocks.header')
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=7">
 
 {{-- /chuyen-di/{token}: bản chỉ đọc của một chuyến đi được chia sẻ. Không có thông tin chủ chuyến. --}}
 @php
@@ -41,6 +41,20 @@
                 </section>
             @endif
         @endforeach
+
+        @if (!empty($payload['rain']['plan']))
+            <section class="tp-card tp-rain tp-rain--shared">
+                <h2>Nếu trời mưa</h2>
+                @foreach ($payload['rain']['plan'] as $dayNo => $list)
+                    <h3>Ngày {{ $dayNo }}</h3>
+                    <ul class="tp-rain__list">
+                        @foreach ($list as $r)
+                            <li class="tp-rain__item">@if (!empty($r['url']))<a href="{{ $r['url'] }}">{{ $r['name'] }}</a>@else{{ $r['name'] }}@endif @if ($r['sub'])<small class="tp-muted">· {{ $r['sub'] }}</small>@endif</li>
+                        @endforeach
+                    </ul>
+                @endforeach
+            </section>
+        @endif
 
         @if ($payload['unassigned'])
             <section class="tp-card">

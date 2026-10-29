@@ -52,6 +52,7 @@ use App\Http\Controllers\admin\ContentQualityController;
 use App\Http\Controllers\admin\BlogAdminController;
 use App\Http\Controllers\admin\ContentReviewController;
 use App\Http\Controllers\admin\TripAdminController;
+use App\Http\Controllers\admin\ContentRequestAdminController;
 use App\Http\Controllers\admin\SystemController;
 
 
@@ -183,15 +184,24 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     // Trip Planner (tuần 5-7)
     Route::get('/len-ke-hoach', [PlannerController::class, 'index'])->name('planner');
     Route::get('/len-ke-hoach/de-xuat', [PlannerController::class, 'suggest'])->name('planner.suggest');
+    Route::get('/len-ke-hoach/chon-diem-den', [PlannerController::class, 'discover'])->middleware('throttle:30,1,planner-discover')->name('planner.discover');
     Route::post('/len-ke-hoach/tao-tu-dong', [PlannerController::class, 'generate'])->middleware('throttle:10,1,planner-generate')->name('planner.generate');
     Route::post('/len-ke-hoach/{id}/trang-thai', [PlannerController::class, 'status'])->whereNumber('id')->middleware('throttle:60,1,planner-status')->name('planner.status');
     Route::post('/len-ke-hoach', [PlannerController::class, 'store'])->middleware('throttle:20,1,planner-store')->name('planner.store');
     Route::get('/len-ke-hoach/{id}', [PlannerController::class, 'edit'])->whereNumber('id')->name('planner.edit');
     Route::get('/len-ke-hoach/{id}/tim-ngoai', [PlannerController::class, 'searchExternal'])->whereNumber('id')->middleware('throttle:40,1,planner-geo')->name('planner.searchExternal');
+    Route::get('/len-ke-hoach/{id}/kham-pha', [PlannerController::class, 'browse'])->whereNumber('id')->middleware('throttle:60,1,planner-browse')->name('planner.browse');
     Route::get('/len-ke-hoach/{id}/tim', [PlannerController::class, 'search'])->whereNumber('id')->middleware('throttle:90,1,planner-search')->name('planner.search');
     Route::post('/len-ke-hoach/{id}/luu', [PlannerController::class, 'save'])->whereNumber('id')->middleware('throttle:60,1,planner-save')->name('planner.save');
+    Route::get('/len-ke-hoach/{id}/phien-ban', [PlannerController::class, 'revision'])->whereNumber('id')->middleware('throttle:120,1,planner-rev')->name('planner.revision');
+    Route::get('/len-ke-hoach/{id}/thanh-vien', [PlannerController::class, 'members'])->whereNumber('id')->middleware('throttle:60,1,planner-members')->name('planner.members');
+    Route::post('/len-ke-hoach/{id}/thanh-vien', [PlannerController::class, 'invite'])->whereNumber('id')->middleware('throttle:20,1,planner-invite')->name('planner.invite');
+    Route::post('/len-ke-hoach/{id}/thanh-vien/{userId}', [PlannerController::class, 'memberRole'])->whereNumber(['id', 'userId'])->middleware('throttle:30,1,planner-memrole')->name('planner.memberRole');
+    Route::post('/len-ke-hoach/{id}/thanh-vien/{userId}/go', [PlannerController::class, 'memberRemove'])->whereNumber(['id', 'userId'])->middleware('throttle:30,1,planner-memrm')->name('planner.memberRemove');
     Route::post('/len-ke-hoach/{id}/chia-se', [PlannerController::class, 'share'])->whereNumber('id')->middleware('throttle:30,1,planner-share')->name('planner.share');
     Route::post('/lich-trinh/{slug}/dung-lam-chuyen-di', [PlannerController::class, 'fromItinerary'])->where('slug', '[a-z0-9-]+')->middleware('throttle:10,1,itin-to-trip')->name('planner.fromItinerary');
+    Route::get('/len-ke-hoach/{id}/phuong-an-mua', [PlannerController::class, 'rainSuggest'])->whereNumber('id')->middleware('throttle:60,1,planner-rain')->name('planner.rainSuggest');
+    Route::post('/tour/{id}/len-ke-hoach', [PlannerController::class, 'fromTour'])->whereNumber('id')->middleware('throttle:10,1,tour-to-trip')->name('planner.fromTour');
     Route::post('/len-ke-hoach/{id}/xoa', [PlannerController::class, 'destroy'])->whereNumber('id')->middleware('throttle:20,1,planner-del')->name('planner.destroy');
 });
 
@@ -317,6 +327,8 @@ Route::prefix('admin')->group(function () {
         Route::get('/booking-export', [BookingManagementController::class, 'export'])->name('admin.booking.export');
         Route::get('/trips', [TripAdminController::class, 'index'])->name('admin.trips');
         Route::post('/trips/{id}/delete', [TripAdminController::class, 'destroy'])->whereNumber('id')->name('admin.trips.destroy');
+        Route::get('/content-requests', [ContentRequestAdminController::class, 'index'])->name('admin.content-requests');
+        Route::post('/content-requests/{id}/resolve', [ContentRequestAdminController::class, 'resolve'])->whereNumber('id')->name('admin.content-requests.resolve');
         Route::get('/system', [SystemController::class, 'index'])->name('admin.system');
         Route::post('/system/flush-content', [SystemController::class, 'flushContent'])->name('admin.system.flush');
         Route::post('/system/clear-views', [SystemController::class, 'clearViews'])->name('admin.system.views');

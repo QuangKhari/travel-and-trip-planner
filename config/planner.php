@@ -115,4 +115,67 @@ return [
         'peoplePerRoom' => 2,
         'tierBudgetPerPersonDay' => ['low' => 600000, 'mid' => 1500000],       // dưới mức low => tiết kiệm; dưới mid => vừa; còn lại => thoải mái
     ],
+
+    // ---- Tuần 12: Planner theo thời điểm, dự phòng mưa, tour khớp, địa điểm chưa có dữ liệu ----
+
+    // Địa điểm trong nhà (dùng cho phương án khi mưa). Kind khác nằm ngoài danh sách này thì không đoán là trong nhà.
+    'indoor_place_kinds' => ['museum', 'gallery', 'aquarium', 'cafe', 'restaurant'],
+    'rain_plan' => [
+        'max_per_day' => 4,       // số mục dự phòng tối đa cho mỗi ngày
+        'suggest_limit' => 8,     // số gợi ý trả về mỗi lần mở
+        'near_km' => 8,           // gần các điểm trong ngày (cộng điểm), xa hơn thì không cộng
+    ],
+
+    // Chọn điểm đến theo tháng + cảm hứng (DestinationFinder). Tổng trọng số chỉ để xếp hạng, không phải "độ hợp tuyệt đối".
+    'finder' => [
+        'limit' => 6,
+        'w_inspiration' => 0.45,  // điểm hợp cảm hứng (0-100, từ tbl_destination_inspiration)
+        'w_season' => 0.35,       // mức tháng (best 100, ok 65, chưa biết 40, avoid 0)
+        'season' => ['best' => 100, 'ok' => 65, 'unknown' => 40, 'avoid' => 0],
+        'event_bonus' => 5,       // mỗi lễ hội trùng tháng, tối đa 2 lễ hội
+        'tour_bonus' => 5,        // có tour khởi hành trong tháng
+        'ready_bonus' => 5,       // Planner tự xếp được lịch
+        'neutral_inspiration' => 60,   // khi người dùng không chọn cảm hứng nào
+        // cảm hứng của Khám phá (tbl_inspirations.slug) => sở thích của Planner (config/interests.php), dùng để điền sẵn form
+        'to_interests' => [
+            'bien' => ['nature', 'relax'], 'thien-nhien' => ['nature', 'adventure'], 'chua-lanh' => ['relax'],
+            'van-hoa' => ['culture'], 'am-thuc' => ['food'], 'mien-que' => ['nature', 'culture'],
+            'san-anh' => ['nature'], 'hai-nguoi' => ['relax', 'food'],
+        ],
+    ],
+
+    // Tour khớp chuyến đi (TourFit)
+    'tour_fit' => ['limit' => 3, 'min_score' => 30, 'max_day_gap' => 14],
+
+    // Địa điểm người dùng nhập mà kho chưa có (UnknownPlace)
+    'unknown' => [
+        'nearest_km' => 150,      // chỉ gợi ý điểm đến gần nhất trong bán kính này
+        'nearest_n' => 3,
+        'max_requests' => 5000,   // trần số cụm lưu trong tbl_content_requests, chống làm đầy bảng
+    ],
+
+    // Tìm theo tiêu chí (PlaceFinder): "nhà hàng chay giá rẻ", "khách sạn 4 sao", "hoạt động trong nhà"...
+    // Nguồn: trải nghiệm + tour của Travela (có giá thật), địa điểm đã đồng bộ (tbl_external_places) và OpenStreetMap qua Overpass (có cache).
+    'browse' => [
+        'overpass_urls' => array_values(array_filter([
+            env('PLANNER_OVERPASS_URL'), env('OVERPASS_URL'),
+            'https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter',
+        ])),
+        'timeout' => 14,            // giây cho mỗi máy chủ Overpass
+        'cache_minutes' => 720,
+        'osm_limit' => 250,         // số phần tử tối đa lấy từ Overpass mỗi lần
+        'limit' => 40,              // số kết quả trả về
+        'default_radius_m' => 3000,
+        'max_radius_m' => 20000,
+        // Ngưỡng đổi giá thật (đồng) sang mức 1..4: giá <= ngưỡng[0] là 1, <= ngưỡng[1] là 2, <= ngưỡng[2] là 3, còn lại là 4.
+        // Đây chỉ là cách chia nhóm để lọc; giá hiển thị luôn là giá thật của nguồn.
+        'level_bands' => [
+            'restaurant' => [100000, 300000, 700000], 'cafe' => [40000, 80000, 150000], 'bar' => [100000, 250000, 500000],
+            'hotel' => [500000, 1200000, 3000000], 'experience' => [200000, 600000, 1500000], 'tour' => [2000000, 5000000, 10000000],
+            'sight' => [50000, 150000, 400000], 'market' => [50000, 150000, 400000],
+        ],
+        // Loại địa điểm trong nhà / ngoài trời, dùng khi nguồn không ghi rõ
+        'indoor_kinds' => ['museum', 'gallery', 'aquarium', 'mall', 'supermarket', 'cinema'],
+        'outdoor_kinds' => ['beach', 'waterfall', 'peak', 'viewpoint', 'park', 'zoo', 'theme_park', 'cave_entrance', 'hot_spring', 'marketplace'],
+    ],
 ];

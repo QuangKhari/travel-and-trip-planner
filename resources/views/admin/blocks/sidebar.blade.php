@@ -50,6 +50,7 @@
                         <li class="{{ $on('admin.promotion*', 'admin.promotion-edit') ? 'ad-on' : '' }}"><a href="{{ route('admin.promotion') }}"><i class="fa fa-tags"></i> Khuyến mãi</a></li>
                         <li class="{{ $on('admin.users') ? 'ad-on' : '' }}"><a href="{{ route('admin.users') }}"><i class="fa fa-users"></i> Người dùng</a></li>
                         <li class="{{ $on('admin.trips*') ? 'ad-on' : '' }}"><a href="{{ route('admin.trips') }}"><i class="fa fa-road"></i> Chuyến đi (Planner)</a></li>
+                        <li class="{{ $on('admin.content-requests*') ? 'ad-on' : '' }}"><a href="{{ route('admin.content-requests') }}"><i class="fa fa-lightbulb-o"></i> Nhu cầu thiếu dữ liệu</a></li>
                     @endif
                 </ul>
 

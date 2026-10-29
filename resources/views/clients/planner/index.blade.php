@@ -1,5 +1,5 @@
 @include('clients.blocks.header')
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=6">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=7">
 
 {{-- /len-ke-hoach. Biến: $trips, $tray, $allDests. Chỉ phần TỰ lên kế hoạch; phần Travela đề xuất ở /len-ke-hoach/de-xuat. --}}
 <main class="tp">
@@ -7,6 +7,7 @@
         <header class="tp-head">
             <h1>Lên kế hoạch chuyến đi</h1>
             <p>Tạo chuyến đi, tìm địa điểm theo tên rồi xếp vào từng ngày. Quãng đường và chi phí tự cập nhật.</p>
+            <p><a class="tp-btn tp-btn--ghost" href="{{ route('planner.discover') }}">Chưa biết đi đâu? Chọn theo tháng và cảm hứng</a></p>
         </header>
 
         @if (session('planner_notice'))<p class="tp-card" role="status">{{ session('planner_notice') }}</p>@endif
@@ -96,6 +97,28 @@
                 @empty
                     <p class="tp-empty-note">Bạn chưa có chuyến đi nào. Điền form bên cạnh để bắt đầu, chỉ cần một cái tên là đủ.</p>
                 @endforelse
+
+                @if (!empty($sharedTrips))
+                    <h3 class="tp-sub">Được mời vào</h3>
+                    @foreach ($sharedTrips as $t)
+                        <article class="tp-trip tp-trip--shared">
+                            <a href="{{ route('planner.edit', ['id' => $t->tripId]) }}">
+                                <b>{{ $t->title }}</b>
+                                <span class="tp-status tp-role tp-role--{{ $t->myRole }}">{{ $t->myRole === 'edit' ? 'Được chỉnh sửa' : 'Chỉ xem' }}</span>
+                                <small>
+                                    Của {{ $t->ownerName }} · {{ $t->days }} ngày · {{ $t->itemCount }} mục
+                                    @if ($t->startDate) · từ {{ \Carbon\Carbon::parse($t->startDate)->format('d/m/Y') }}@endif
+                                </small>
+                            </a>
+                            <div class="tp-trip__act">
+                                <form method="POST" action="{{ route('planner.memberRemove', ['id' => $t->tripId, 'userId' => session('userId')]) }}" onsubmit="return confirm('Rời khỏi chuyến đi này?');">
+                                    @csrf
+                                    <button type="submit" class="tp-link tp-link--danger">Rời chuyến</button>
+                                </form>
+                            </div>
+                        </article>
+                    @endforeach
+                @endif
             </section>
         </div>
 
