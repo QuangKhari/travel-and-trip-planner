@@ -1,4 +1,4 @@
-{{-- Cấu hình cho travela-trip.js (khay chuyến đi + đánh dấu). Nạp trước hero-postcards.js. --}}
+{{-- Cấu hình cho travela-trip.js (khay chuyến đi + đánh dấu). --}}
 <script>
     window.TRAVELA_TRIP = {!! json_encode(
         [

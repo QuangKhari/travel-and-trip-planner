@@ -5,9 +5,10 @@ namespace App\Services\Planner;
 use App\Services\Content\TravelAdvice;
 use App\Services\Content\TripTray;
 use App\Services\EventDateService;
-use App\Support\Geo;
+use App\Services\Planner\Route\RouteService;
 use DateTimeImmutable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -16,7 +17,7 @@ use Illuminate\Validation\ValidationException;
  *
  * Mô hình dữ liệu: tbl_trips (chuyến) + tbl_trip_items (mục: điểm đến, món, lễ hội, trải nghiệm, tour; dayNo null = chưa xếp).
  * Khay chuyến đi (TripTray) là một chuyến nháp tên cố định; Planner không bao giờ sửa hay liệt kê nó như một chuyến thường.
- * Quãng đường: đường chim bay x ROAD_FACTOR, tốc độ trung bình SPEED_KMH (ước lượng, ghi rõ trên giao diện).
+ * Quãng đường: qua RouteService (một nguồn cho cả trang sửa, sức khỏe chuyến đi và tối ưu tuyến), tham số ở config planner.route.
  */
 class TripPlanner
 {
@@ -27,12 +28,10 @@ class TripPlanner
     /** Nguồn tọa độ của mục tự thêm: dán link/tọa độ, bấm trên bản đồ, tìm ngoài Travela (dành cho giai đoạn sau). */
     public const POSITION_SOURCES = ['link', 'map', 'search'];
     public const SLOTS = ['morning', 'noon', 'afternoon', 'evening'];
+    /** Nguồn chi phí của một mục: tự nhập dự kiến | điền từ giá tham khảo | đã chi thật. */
+    public const COST_TYPES = ['planned', 'estimate', 'actual'];
     public const MAX_DAYS = 14;
     public const MAX_ITEMS = 80;
-    public const ROAD_FACTOR = 1.3;
-    public const SPEED_KMH = 40;
-    public const DAY_ITEMS_WARN = 6;
-    public const DAY_TRAVEL_WARN_MIN = 300;
 
     /** Thứ tự trong ngày khi tự xếp: điểm đến, trải nghiệm, lễ hội, món ăn, tour. */
     private const WEIGHT = ['destination' => 0, 'place' => 1, 'experience' => 2, 'event' => 3, 'food' => 4, 'tour' => 5];
@@ -70,6 +69,11 @@ class TripPlanner
             'items.*.slot' => ['nullable', 'in:' . implode(',', self::SLOTS)],
             'items.*.reasons' => ['nullable', 'array', 'max:8'],
             'items.*.reasons.*' => ['string', 'max:200'],
+            // Timeline: giờ bắt đầu người dùng đặt (phút từ 00:00) và thời lượng ở lại (phút); null = để hệ thống tự xếp
+            'items.*.startMin' => ['nullable', 'integer', 'between:0,1439'],
+            'items.*.durationMin' => ['nullable', 'integer', 'between:5,720'],
+            'items.*.costType' => ['nullable', 'in:' . implode(',', self::COST_TYPES)],
+            'items.*.locked' => ['nullable', 'boolean'],
         ];
     }
 
@@ -124,20 +128,51 @@ class TripPlanner
     /** Chuyến của người dùng (không gồm khay). */
     public function owned(int $userId, int $tripId): ?object
     {
-        return DB::table('tbl_trips')->where(['tripId' => $tripId, 'userId' => $userId])->where('title', '!=', TripTray::TITLE)->first() ?: null;
+        return DB::table('tbl_trips')->where(['tripId' => $tripId, 'userId' => $userId])->where('kind', 'trip')->first() ?: null;
     }
 
     public function trips(int $userId): array
     {
-        return DB::table('tbl_trips as t')->where('t.userId', $userId)->where('t.title', '!=', TripTray::TITLE)
-            ->selectRaw('t.*, (SELECT COUNT(*) FROM tbl_trip_items i WHERE i.tripId = t.tripId) AS itemCount')
+        $rows = DB::table('tbl_trips as t')->leftJoin('tbl_destinations as d', 'd.destinationId', '=', 't.destinationId')
+            ->where('t.userId', $userId)->where('t.kind', 'trip')
+            ->selectRaw('t.*, d.name AS destName, d.coverImage AS destCover, (SELECT COUNT(*) FROM tbl_trip_items i WHERE i.tripId = t.tripId) AS itemCount,'
+                . ' (SELECT COUNT(*) FROM tbl_trip_items i WHERE i.tripId = t.tripId AND i.dayNo IS NOT NULL) AS placedCount,'
+                . ' (SELECT COUNT(*) FROM tbl_trip_members m WHERE m.tripId = t.tripId) AS memberCount')
             ->orderByDesc(DB::raw('COALESCE(t.updatedAt, t.createdAt)'))->get()->all();
+
+        return array_map([self::class, 'cardInfo'], $rows);
+    }
+
+    /**
+     * Thông tin hiển thị trên thẻ chuyến đi (trang "Chuyến đi của tôi"): ảnh bìa (ảnh điểm đến chính), ngày về,
+     * nhóm lọc: planning (chưa có ngày đi hoặc còn xa) | upcoming (khởi hành trong 30 ngày tới) | ongoing | past | done.
+     */
+    public static function cardInfo(object $t): object
+    {
+        $t->coverUrl = !empty($t->destCover ?? null) ? \App\Support\DiscoverImage::url((string) $t->destCover) : null;
+        $start = !empty($t->startDate) ? new DateTimeImmutable((string) $t->startDate) : null;
+        $t->endDate = $start ? $start->modify('+' . max(0, (int) $t->days - 1) . ' days')->format('Y-m-d') : null;
+        $today = new DateTimeImmutable('today');
+        if (($t->status ?? '') === 'done') {
+            $t->phase = 'done';
+        } elseif (!$start) {
+            $t->phase = 'planning';
+        } elseif ($t->endDate < $today->format('Y-m-d')) {
+            $t->phase = 'past';
+        } elseif ($start <= $today) {
+            $t->phase = 'ongoing';
+        } else {
+            $t->phase = $start <= $today->modify('+30 days') ? 'upcoming' : 'planning';
+        }
+        $t->daysLeft = $start && $start > $today ? (int) $today->diff($start)->days : null;
+
+        return $t;
     }
 
     /** Các mục đang có trong khay: [['type'=>..., 'refId'=>...], ...] theo thứ tự thêm. */
     public function trayRefs(int $userId): array
     {
-        $tray = DB::table('tbl_trips')->where(['userId' => $userId, 'title' => TripTray::TITLE, 'status' => 'draft'])->value('tripId');
+        $tray = DB::table('tbl_trips')->where(['userId' => $userId, 'kind' => 'tray', 'status' => 'draft'])->value('tripId');
         if (!$tray) {
             return [];
         }
@@ -175,15 +210,26 @@ class TripPlanner
             foreach (DB::table('tbl_external_places as p')->join('tbl_destinations as d', 'd.destinationId', '=', 'p.destinationId')
                 ->whereIn('p.placeId', array_keys($ids['place']))->where('p.reviewStatus', 'published')->where('d.isActive', 1)
                 ->get(['p.placeId', 'p.name', 'p.kind', 'p.destinationId', 'p.latitude', 'p.longitude', 'd.slug as destSlug']) as $p) {
-                $add('place', (int) $p->placeId, ['name' => $p->name, 'sub' => (string) (\App\Support\PlaceKind::label($p->kind) ?? ''),
+                $add('place', (int) $p->placeId, ['name' => $p->name, 'sub' => (string) (\App\Support\PlaceKind::label($p->kind) ?? ''), 'kind' => (string) $p->kind,
                     'destinationId' => (int) $p->destinationId, 'url' => route('destination.show', ['slug' => $p->destSlug]) . '#gan-day',
                     'ownLat' => $p->latitude !== null ? (float) $p->latitude : null, 'ownLng' => $p->longitude !== null ? (float) $p->longitude : null]);
             }
         }
         if (!empty($ids['food'])) {
-            foreach (DB::table('tbl_foods')->whereIn('foodId', array_keys($ids['food']))->where('reviewStatus', 'published')->get() as $f) {
-                $add('food', (int) $f->foodId, ['name' => $f->name, 'slug' => $f->slug, 'sub' => (string) $f->category,
-                    'destinationId' => $f->destinationId ? (int) $f->destinationId : null, 'url' => route('foods.show', ['slug' => $f->slug])]);
+            // món ăn: vị trí lấy từ quán đã gắn (tbl_foods.placeId); chưa gắn quán thì KHÔNG có vị trí (không lấy tâm điểm đến,
+            // tránh đoạn đi giả "về trung tâm rồi đi tiếp")
+            $q = DB::table('tbl_foods as f')->whereIn('f.foodId', array_keys($ids['food']))->where('f.reviewStatus', 'published');
+            $hasPlace = \Illuminate\Support\Facades\Schema::hasColumn('tbl_foods', 'placeId');
+            if ($hasPlace) {
+                $q->leftJoin('tbl_external_places as fp', function ($j) {
+                    $j->on('fp.placeId', '=', 'f.placeId')->where('fp.reviewStatus', 'published');
+                })->select('f.*', 'fp.latitude as pLat', 'fp.longitude as pLng', 'fp.name as pName');
+            }
+            foreach ($q->get() as $f) {
+                $has = $hasPlace && $f->pLat !== null && $f->pLng !== null;
+                $add('food', (int) $f->foodId, ['name' => $f->name, 'slug' => $f->slug, 'sub' => (string) $f->category . ($has && $f->pName ? ' · ' . $f->pName : ''),
+                    'destinationId' => $f->destinationId ? (int) $f->destinationId : null, 'url' => route('foods.show', ['slug' => $f->slug]),
+                    'noPos' => !$has, 'ownLat' => $has ? (float) $f->pLat : null, 'ownLng' => $has ? (float) $f->pLng : null]);
             }
         }
         if (!empty($ids['event'])) {
@@ -195,6 +241,7 @@ class TripPlanner
         if (!empty($ids['experience'])) {
             foreach (DB::table('tbl_experiences')->whereIn('experienceId', array_keys($ids['experience']))->where('reviewStatus', 'published')->get() as $x) {
                 $add('experience', (int) $x->experienceId, ['name' => $x->name, 'slug' => $x->slug, 'sub' => (string) ($x->duration ?? ''),
+                    'durationMin' => !empty($x->durationMinutes ?? null) ? (int) $x->durationMinutes : null,
                     'destinationId' => $x->destinationId ? (int) $x->destinationId : null, 'url' => route('experiences.show', ['slug' => $x->slug]),
                     'ownLat' => ($x->latitude ?? null) !== null ? (float) $x->latitude : null, 'ownLng' => ($x->longitude ?? null) !== null ? (float) $x->longitude : null]);
             }
@@ -213,8 +260,11 @@ class TripPlanner
         foreach ($rows as $k => $r) {
             $d = $r['destinationId'] ? $dest->get($r['destinationId']) : null;
             $rows[$k]['destName'] = $d?->name;
-            $rows[$k]['lat'] = $r['ownLat'] ?? ($d && $d->latitude !== null ? (float) $d->latitude : null);   // địa điểm/trải nghiệm có tọa độ riêng thì dùng, không thì lấy tâm điểm đến
-            $rows[$k]['lng'] = $r['ownLng'] ?? ($d && $d->longitude !== null ? (float) $d->longitude : null);
+            // địa điểm/trải nghiệm có tọa độ riêng thì dùng, không thì lấy tâm điểm đến; món ăn chưa gắn quán thì không có vị trí
+            $center = empty($r['noPos']) && $d && $d->latitude !== null;
+            $rows[$k]['lat'] = $r['ownLat'] ?? ($center ? (float) $d->latitude : null);
+            $rows[$k]['lng'] = $r['ownLng'] ?? ($center ? (float) $d->longitude : null);
+            unset($rows[$k]['noPos']);
         }
 
         return $this->enrich($rows);
@@ -287,6 +337,10 @@ class TripPlanner
                     'cost' => $r->cost !== null ? (float) $r->cost : null,
                     'slot' => $r->slot ?? null,
                     'reasons' => [],
+                    'startMin' => isset($r->startMin) ? (int) $r->startMin : null,
+                    'durationMin' => !empty($r->durationMin) ? (int) $r->durationMin : null,
+                    'costType' => $r->costType ?? null,
+                    'locked' => !empty($r->isLocked),
                 ];
                 continue;
             }
@@ -301,6 +355,10 @@ class TripPlanner
                 'cost' => $r->cost !== null ? (float) $r->cost : null,
                 'slot' => $r->slot ?? null,
                 'reasons' => !empty($r->reasons) ? (json_decode((string) $r->reasons, true) ?: []) : [],
+                'startMin' => isset($r->startMin) ? (int) $r->startMin : null,
+                'durationMin' => !empty($r->durationMin) ? (int) $r->durationMin : ($res[$k]['durationMin'] ?? null),
+                'costType' => $r->costType ?? null,
+                'locked' => !empty($r->isLocked),
             ]);
         }
 
@@ -310,8 +368,22 @@ class TripPlanner
     // ------------------------------------------------------------------ Tạo / lưu / xóa / chia sẻ
 
     /** Tạo chuyến mới; $fromTray = true thì lấy các mục trong khay và tự chia vào các ngày. */
+    /**
+     * Giới hạn số chuyến mỗi người (chống làm đầy CSDL): áp dụng cho mọi đường tạo chuyến
+     * (tạo mới, từ khay, từ lịch trình mẫu, từ tour, tự đề xuất, nhân bản, API).
+     */
+    public static function assertCanCreate(int $userId): void
+    {
+        $max = (int) config('planner.max_trips_per_user', 200);
+        if (DB::table('tbl_trips')->where('userId', $userId)->where('kind', 'trip')->count() >= $max) {
+            throw new \DomainException('Bạn đã có ' . $max . ' chuyến đi (mức tối đa). Hãy xóa bớt chuyến cũ trước khi tạo chuyến mới.');
+        }
+    }
+
     public function create(int $userId, array $f, bool $fromTray = false): int
     {
+        self::assertCanCreate($userId);
+
         return DB::transaction(function () use ($userId, $f, $fromTray) {
             $tripId = (int) DB::table('tbl_trips')->insertGetId([
                 'userId' => $userId,
@@ -360,6 +432,7 @@ class TripPlanner
      */
     public function createFromItinerary(int $userId, string $slug): array
     {
+        self::assertCanCreate($userId);
         $it = DB::table('tbl_itineraries')->where('slug', $slug)->where('reviewStatus', 'published')->first();
         if (!$it) {
             throw new \DomainException('Không tìm thấy lịch trình.');
@@ -418,6 +491,7 @@ class TripPlanner
      */
     public function createFromTour(int $userId, int $tourId, int $groupSize = 2): array
     {
+        self::assertCanCreate($userId);
         $t = DB::table('tbl_tours')->where('tourId', $tourId)->where('availability', 1)->where('quantity', '>', 0)->first();
         if (!$t || strtotime((string) $t->startDate) < strtotime(date('Y-m-d'))) {
             throw new \DomainException('Tour này không còn nhận đặt chỗ hoặc đã khởi hành.');
@@ -437,7 +511,8 @@ class TripPlanner
             $rows = [];
             $order = 0;
             if ($destId) {
-                $rows[] = ['tripId' => $tripId, 'refType' => 'destination', 'refId' => $destId, 'dayNo' => 1, 'orderNo' => $order++];
+                // chèn nhiều dòng một lần: mọi dòng phải CÙNG tập cột (MySQL báo "Column count doesn't match" nếu khác)
+                $rows[] = ['tripId' => $tripId, 'refType' => 'destination', 'refId' => $destId, 'dayNo' => 1, 'orderNo' => $order++, 'cost' => null];
             }
             $rows[] = ['tripId' => $tripId, 'refType' => 'tour', 'refId' => (int) $t->tourId, 'dayNo' => 1, 'orderNo' => $order,
                 'cost' => round((float) $t->priceAdult * $group, 2)];
@@ -536,7 +611,7 @@ class TripPlanner
                     'cost' => isset($it['cost']) && $it['cost'] !== '' && $it['cost'] !== null ? (float) $it['cost'] : null,
                     'slot' => isset($it['slot']) && in_array($it['slot'], self::SLOTS, true) ? $it['slot'] : null,
                     'reasons' => !empty($it['reasons']) && is_array($it['reasons']) ? json_encode(array_values(array_map('strval', array_slice($it['reasons'], 0, 8))), JSON_UNESCAPED_UNICODE) : null,
-                ];
+                ] + self::timeColumns($it);
             }
             if ($rows) {
                 DB::table('tbl_trip_items')->insert($rows);
@@ -557,6 +632,53 @@ class TripPlanner
         }
 
         return true;
+    }
+
+    /**
+     * Nhân bản một chuyến (của mình hoặc được mời vào) thành chuyến MỚI của người dùng: giữ thông tin, các mục, giờ,
+     * chi phí và phương án mưa; không chép người được mời, liên kết chia sẻ, phiên bản. Trả id chuyến mới, null nếu không có quyền xem.
+     */
+    public function duplicate(int $userId, int $tripId): ?int
+    {
+        $acc = app(TripSharing::class)->access($userId, $tripId);
+        if (!$acc) {
+            return null;
+        }
+        $src = (array) $acc['trip'];
+        self::assertCanCreate($userId);
+
+        return DB::transaction(function () use ($src, $userId, $tripId) {
+            $row = $src;
+            unset($row['tripId']);
+            $row['userId'] = $userId;
+            $row['title'] = mb_substr(preg_replace('/( \(bản sao\))+$/u', '', (string) $src['title']) . ' (bản sao)', 0, 160);
+            $row['status'] = 'draft';
+            $row['source'] = 'copy';
+            $row['createdAt'] = now();
+            $row['updatedAt'] = now();
+            foreach (['shareToken', 'lastEditorId'] as $c) {
+                if (array_key_exists($c, $row)) {
+                    $row[$c] = null;
+                }
+            }
+            if (array_key_exists('rev', $row)) {
+                $row['rev'] = 0;
+            }
+            $newId = (int) DB::table('tbl_trips')->insertGetId($row);
+            $items = DB::table('tbl_trip_items')->where('tripId', $tripId)->orderBy('dayNo')->orderBy('orderNo')->get()
+                ->map(function ($r) use ($newId) {
+                    $a = (array) $r;
+                    unset($a['itemId']);
+                    $a['tripId'] = $newId;
+
+                    return $a;
+                })->all();
+            foreach (array_chunk($items, 50) as $chunk) {
+                DB::table('tbl_trip_items')->insert($chunk);
+            }
+
+            return $newId;
+        });
     }
 
     /** Đổi trạng thái chuyến (draft|planned|done). false nếu không phải chuyến của người dùng hoặc trạng thái không hợp lệ. */
@@ -599,204 +721,19 @@ class TripPlanner
             return null;
         }
 
-        return DB::table('tbl_trips')->where('shareToken', $token)->where('title', '!=', TripTray::TITLE)->first() ?: null;
+        return DB::table('tbl_trips')->where('shareToken', $token)->where('kind', 'trip')->first() ?: null;
     }
 
-    // ------------------------------------------------------------------ Tóm tắt (quãng đường, chi phí, cảnh báo)
+    // ------------------------------------------------------------------ Read model
 
-    private static function fmtRange(array $d): string
-    {
-        $s = new DateTimeImmutable($d['start']);
-        $e = new DateTimeImmutable($d['end']);
-        if (!empty($d['approx'])) {
-            return 'khoảng tháng ' . $s->format('n/Y');
-        }
-        if ($d['start'] === $d['end']) {
-            return $s->format('d/m/Y');
-        }
-
-        return $s->format('Y') === $e->format('Y') ? $s->format('d/m') . '–' . $e->format('d/m/Y') : $s->format('d/m/Y') . '–' . $e->format('d/m/Y');
-    }
-
-    /** @return array{0:?string,1:?string} [ngày diễn ra tiếp theo, cảnh báo nếu ngoài thời gian chuyến đi] */
-    private function eventInfo(array $it, ?DateTimeImmutable $start, ?DateTimeImmutable $end): array
-    {
-        if ($it['type'] !== 'event' || empty($it['raw'])) {
-            return [null, null];
-        }
-        $next = $this->dates->upcoming($it['raw'], $start ?? new DateTimeImmutable('today'), 1)[0] ?? null;
-        if (!$next) {
-            return [null, null];
-        }
-        $text = self::fmtRange($next);
-        $warn = null;
-        if ($start && $end) {
-            $s = new DateTimeImmutable($next['start']);
-            $e = new DateTimeImmutable($next['end']);
-            if ($s > $end || $e < $start) {
-                $warn = 'Lễ hội "' . $it['name'] . '" diễn ra ' . $text . ', ngoài thời gian chuyến đi.';
-            }
-        }
-
-        return [$text, $warn];
-    }
-
-    /** Dữ liệu đầy đủ cho trang sửa, trang chia sẻ và API. */
+    /**
+     * Dữ liệu đầy đủ cho trang sửa, trang chia sẻ và API.
+     * Phần dựng dữ liệu (read model) nằm ở TripPayloadBuilder; TripPlanner chỉ lo tạo / lưu / nhân bản / quyền.
+     * Giữ hàm này để các nơi gọi cũ (API, controller, test) không phải đổi.
+     */
     public function payload(object $trip): array
     {
-        $days = max(1, (int) ($trip->days ?: 1));
-        $start = $trip->startDate ? new DateTimeImmutable($trip->startDate) : null;
-        $end = $start ? $start->modify('+' . ($days - 1) . ' days') : null;
-
-        $warnings = [];
-        $contentWarnings = [];   // cảnh báo về nội dung (lễ hội ngoài ngày đi, tháng nên cân nhắc): giao diện không tự tính được, cộng thêm vào cảnh báo cấu trúc
-        $items = [];
-        foreach ($this->tripItems((int) $trip->tripId) as $it) {
-            [$when, $warn] = $this->eventInfo($it, $start, $end);
-            $it['when'] = $when;
-            unset($it['raw']);
-            if ($warn) {
-                $warnings[] = $warn;
-                $contentWarnings[] = $warn;
-            }
-            $items[] = $it;
-        }
-
-        // Tuần 12: "vì sao hợp" cho từng mục + ngữ cảnh mưa của tháng đi + phương án dự phòng đã lưu
-        $insights = app(ItemInsights::class);
-        $ins = $insights->forTrip($trip, $items);
-        foreach ($items as &$itx) {
-            $x = $ins[$itx['type'] . ':' . ($itx['refId'] ?? 0)] ?? null;
-            $itx['fit'] = $x['fit'] ?? [];
-            $itx['outdoor'] = $x['outdoor'] ?? null;
-            $itx['src'] = $x['src'] ?? null;
-        }
-        unset($itx);
-        $time = ItemInsights::timeContext($trip);
-        $primaryDest = !empty($trip->destinationId) ? (int) $trip->destinationId : null;
-        if ($primaryDest === null) {
-            foreach ($items as $itx) {
-                if (!empty($itx['destinationId'])) {
-                    $primaryDest = (int) $itx['destinationId'];
-                    break;
-                }
-            }
-        }
-        $rainCtx = null;
-        if ($time['month'] && $primaryDest) {
-            $rr = $insights->rainByDestination([$primaryDest], (int) $time['month'])[$primaryDest] ?? null;
-            if ($rr) {
-                $rainCtx = ['dest' => (string) DB::table('tbl_destinations')->where('destinationId', $primaryDest)->value('name'), 'month' => (int) $time['month'],
-                    'rainy' => $rr['rainy'], 'rainyDays' => (int) round($rr['rainyDays'])];
-            }
-        }
-        $rainPlan = app(RainPlan::class)->resolve($trip->rainPlan ?? null, $this);
-
-        $byDay = [];
-        for ($d = 1; $d <= $days; $d++) {
-            $byDay[$d] = ['day' => $d, 'items' => [], 'legs' => [], 'km' => 0, 'minutes' => 0, 'cost' => 0.0];
-        }
-        $unassigned = [];
-        foreach ($items as $it) {
-            if ($it['day'] !== null && isset($byDay[$it['day']])) {
-                $byDay[$it['day']]['items'][] = $it;
-            } else {
-                $unassigned[] = $it;
-            }
-        }
-
-        foreach ($byDay as $d => $day) {
-            $pts = array_values(array_filter($day['items'], fn($x) => $x['lat'] !== null && $x['lng'] !== null));
-            $km = 0;
-            $min = 0;
-            for ($i = 1; $i < count($pts); $i++) {
-                $straight = Geo::distanceKm($pts[$i - 1]['lat'], $pts[$i - 1]['lng'], $pts[$i]['lat'], $pts[$i]['lng']);
-                if ($straight < 0.5) {
-                    continue;   // cùng một khu: không tính đoạn đường
-                }
-                $road = $straight * self::ROAD_FACTOR;
-                $m = (int) round($road / self::SPEED_KMH * 60);
-                $byDay[$d]['legs'][] = ['from' => $pts[$i - 1]['name'], 'to' => $pts[$i]['name'], 'km' => (int) round($road), 'min' => $m];
-                $km += $road;
-                $min += $m;
-            }
-            $byDay[$d]['km'] = (int) round($km);
-            $byDay[$d]['minutes'] = $min;
-            $byDay[$d]['cost'] = array_sum(array_map(fn($x) => $x['cost'] ?? 0, $day['items']));
-
-            $outdoorN = count(array_filter($day['items'], fn($x) => ($x['outdoor'] ?? null) === true));
-            $byDay[$d]['outdoor'] = $outdoorN;
-            if ($rainCtx && $rainCtx['rainy'] && $outdoorN >= 2 && empty($rainPlan[$d])) {
-                $w = 'Ngày ' . $d . ' có ' . $outdoorN . ' mục ngoài trời, tháng ' . $rainCtx['month'] . ' ở ' . $rainCtx['dest'] . ' mưa nhiều (khoảng ' . $rainCtx['rainyDays'] . ' ngày mưa). Hãy chọn phương án dự phòng khi mưa.';
-                $warnings[] = $w;
-                $contentWarnings[] = $w;
-            }
-            if (count($day['items']) > self::DAY_ITEMS_WARN) {
-                $warnings[] = 'Ngày ' . $d . ' có ' . count($day['items']) . ' mục, hơi dày.';
-            }
-            if ($min > self::DAY_TRAVEL_WARN_MIN) {
-                $warnings[] = 'Ngày ' . $d . ' di chuyển khoảng ' . round($min / 60, 1) . ' giờ, nên bớt điểm hoặc chia sang ngày khác.';
-            }
-        }
-        if ($unassigned) {
-            $warnings[] = 'Còn ' . count($unassigned) . ' mục chưa xếp vào ngày nào.';
-        }
-
-        $cost = array_sum(array_map(fn($x) => $x['cost'] ?? 0, $items));
-        $budget = $trip->budget !== null ? (float) $trip->budget : null;
-        if ($budget !== null && $cost > $budget) {
-            $warnings[] = 'Chi phí dự kiến ' . number_format($cost, 0, ',', '.') . 'đ vượt ngân sách ' . number_format($budget, 0, ',', '.') . 'đ.';
-        }
-
-        // Thời điểm đi: mức tháng của từng điểm đến trong khoảng ngày của chuyến.
-        $adviceRows = [];
-        if ($start && $end) {
-            $destNames = [];
-            foreach ($items as $it) {
-                if ($it['destinationId']) {
-                    $destNames[$it['destinationId']] = $it['destName'] ?: $it['name'];
-                }
-            }
-            $months = [];
-            for ($c = $start; $c <= $end; $c = $c->modify('+1 day')) {
-                $months[(int) $c->format('n')] = true;
-            }
-            foreach (array_keys($months) as $mo) {
-                foreach ($this->advice->verdicts(array_keys($destNames), $mo) as $destId => $v) {
-                    $adviceRows[] = ['dest' => $destNames[$destId], 'month' => $mo, 'level' => $v['level'], 'label' => TravelAdvice::LABELS[$v['level']] ?? '', 'note' => $v['note']];
-                    if ($v['level'] === 'avoid') {
-                        $w = 'Tháng ' . $mo . ' ở ' . $destNames[$destId] . ' thuộc mức "nên cân nhắc"' . ($v['note'] ? ' (' . $v['note'] . ')' : '') . '.';
-                        $warnings[] = $w;
-                        $contentWarnings[] = $w;
-                    }
-                }
-            }
-        }
-
-        return [
-            'trip' => [
-                'id' => (int) $trip->tripId,
-                'title' => $trip->title,
-                'startDate' => $trip->startDate,
-                'endDate' => $end?->format('Y-m-d'),
-                'days' => $days,
-                'groupSize' => (int) $trip->groupSize,
-                'budget' => $budget,
-                'status' => $trip->status,
-                'destinationId' => !empty($trip->destinationId) ? (int) $trip->destinationId : null,
-                'shared' => !empty($trip->shareToken),
-                'shareToken' => $trip->shareToken ?? null,
-                'month' => $time['month'],
-            ],
-            'rain' => ['context' => $rainCtx, 'plan' => $rainPlan],
-            'days' => array_values($byDay),
-            'unassigned' => $unassigned,
-            'totals' => ['cost' => $cost, 'budget' => $budget, 'left' => $budget !== null ? $budget - $cost : null],
-            'warnings' => array_values(array_unique($warnings)),
-            'contentWarnings' => array_values(array_unique($contentWarnings)),
-            'advice' => $adviceRows,
-            'estimateNote' => 'Quãng đường và thời gian là ước tính (đường chim bay x ' . self::ROAD_FACTOR . ', tốc độ ' . self::SPEED_KMH . ' km/h).',
-        ];
+        return app(TripPayloadBuilder::class)->build($trip);
     }
 
     // ------------------------------------------------------------------ Gợi ý thêm vào chuyến
@@ -984,12 +921,72 @@ class TripPlanner
     public static function itemForClient(array $it): array
     {
         return [
-            'type' => $it['type'], 'refId' => $it['refId'], 'name' => $it['name'], 'sub' => $it['sub'], 'url' => $it['url'] ?? null,
+            'type' => $it['type'], 'refId' => $it['refId'], 'name' => $it['name'], 'sub' => $it['sub'], 'url' => $it['url'] ?? null, 'kind' => $it['kind'] ?? null,
             'day' => $it['day'] ?? null, 'note' => $it['note'] ?? '', 'cost' => $it['cost'] ?? null,
             'lat' => $it['lat'], 'lng' => $it['lng'], 'when' => $it['when'] ?? null,
             'slot' => $it['slot'] ?? null, 'reasons' => $it['reasons'] ?? [], 'source' => $it['source'] ?? null,
             'fit' => $it['fit'] ?? [], 'outdoor' => $it['outdoor'] ?? null, 'src' => $it['src'] ?? null,
             'image' => $it['image'] ?? null, 'address' => $it['address'] ?? null, 'website' => $it['website'] ?? null, 'blurb' => $it['blurb'] ?? null,
+            'startMin' => $it['startMin'] ?? null, 'durationMin' => $it['durationMin'] ?? null, 'defDur' => self::defaultDuration($it),
+            'costType' => $it['costType'] ?? null, 'locked' => !empty($it['locked']),
+            'hours' => $it['hours'] ?? null,   // giờ mở cửa theo thứ (OpeningHours); null = chưa biết
         ];
+    }
+
+    /**
+     * Thời lượng mặc định (phút) của một mục khi người dùng chưa đặt: cùng bảng config('planner.default_duration_min') mà PlannerEngine dùng.
+     * Địa điểm tra theo nhóm kind; tour tính nửa ngày; mục tự thêm: di chuyển 30 phút, ghi chú/lưu trú/ăn uống 60 phút.
+     */
+    public static function defaultDuration(array $it): int
+    {
+        $d = (array) config('planner.default_duration_min', []);
+        $type = (string) ($it['type'] ?? '');
+        if ($type === 'place') {
+            $group = 'default';
+            foreach ((array) config('planner.kind_groups', []) as $g => $kinds) {
+                if (in_array((string) ($it['kind'] ?? ''), (array) $kinds, true)) {
+                    $group = $g;
+                    break;
+                }
+            }
+
+            return (int) ($d['place'][$group] ?? $d['place']['default'] ?? 60);
+        }
+
+        return match ($type) {
+            'tour' => 240,
+            'destination' => 120,
+            'transport' => 30,
+            'note' => 60,
+            default => (int) (is_numeric($d[$type] ?? null) ? $d[$type] : 60),
+        };
+    }
+
+    /** startMin / durationMin / costType chỉ ghi khi cột đã có (cơ sở dữ liệu chưa chạy migration mới vẫn lưu được các phần còn lại). */
+    private static function timeColumns(array $it): array
+    {
+        static $has = null;
+        if ($has === null) {
+            $has = ['startMin' => Schema::hasColumn('tbl_trip_items', 'startMin'), 'durationMin' => Schema::hasColumn('tbl_trip_items', 'durationMin'),
+                'costType' => Schema::hasColumn('tbl_trip_items', 'costType'), 'isLocked' => Schema::hasColumn('tbl_trip_items', 'isLocked')];
+        }
+        $out = [];
+        if ($has['isLocked']) {
+            $out['isLocked'] = !empty($it['locked']) ? 1 : 0;
+        }
+        if ($has['costType']) {
+            $hasCost = isset($it['cost']) && $it['cost'] !== '' && $it['cost'] !== null;
+            $out['costType'] = $hasCost && in_array($it['costType'] ?? null, self::COST_TYPES, true) ? $it['costType'] : null;
+        }
+        if ($has['startMin']) {
+            $v = $it['startMin'] ?? null;
+            $out['startMin'] = $v === null || $v === '' ? null : max(0, min(1439, (int) $v));
+        }
+        if ($has['durationMin']) {
+            $v = $it['durationMin'] ?? null;
+            $out['durationMin'] = $v === null || $v === '' ? null : max(5, min(720, (int) $v));
+        }
+
+        return $out;
     }
 }

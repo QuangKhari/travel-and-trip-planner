@@ -15,7 +15,7 @@ class PlannerGenerate extends Command
         {--month= : Tháng đi 1-12 (bắt buộc)} {--days=3} {--group=2} {--budget=} {--pace=normal : relaxed|normal|packed}
         {--interests= : vd nature,food} {--dislikes= : vd trekking,crowds} {--max-difficulty= : easy|medium|hard} {--start= : Ngày đi Y-m-d}
         {--user= : Lưu thành chuyến đi của userId này} {--force : Bỏ qua cổng Planner-ready (chỉ để thử trên dữ liệu chưa đủ)}
-        {--json : In JSON} {--log : In nhật ký lọc} {--gate : Chỉ in tình trạng Planner-ready của các điểm đến lõi}';
+        {--open : Cho phép đề xuất mở rộng (bổ sung dữ liệu bản đồ) khi điểm đến chưa đủ dữ liệu} {--json : In JSON} {--log : In nhật ký lọc} {--gate : Chỉ in tình trạng Planner-ready của các điểm đến lõi}';
 
     protected $description = 'Planner tự đề xuất lịch trình cho một điểm đến (cổng Planner-ready, lọc, chấm điểm, gom ngày, ngân sách)';
 
@@ -37,6 +37,7 @@ class PlannerGenerate extends Command
             'slug' => $this->argument('slug'), 'month' => $this->option('month'), 'days' => $this->option('days'), 'groupSize' => $this->option('group'),
             'budget' => $this->option('budget'), 'pace' => $this->option('pace'), 'interests' => $csv($this->option('interests')),
             'dislikes' => $csv($this->option('dislikes')), 'maxDifficulty' => $this->option('max-difficulty'), 'startDate' => $this->option('start'),
+            'mode' => $this->option('open') ? 'auto' : 'curated',
         ], (bool) $this->option('force'));
 
         if (!$res['ok']) {
@@ -68,7 +69,7 @@ class PlannerGenerate extends Command
             $this->newLine();
             $this->line(sprintf('<options=bold>Ngày %d</> (hoạt động %d phút, di chuyển ~%d phút, ~%d km)', $d['day'], $d['activityMin'], $d['travelMin'], $d['km']));
             foreach ($d['items'] as $i) {
-                $this->line(sprintf('  %s %02d:%02d  [%s] %s%s', str_pad($slotName[$i['slot']], 6), 8 + intdiv($i['startMin'], 60), $i['startMin'] % 60, $i['type'], $i['name'],
+                $this->line(sprintf('  %s %02d:%02d  [%s] %s%s', str_pad($slotName[$i['slot']], 6), intdiv($i['startMin'], 60), $i['startMin'] % 60, $i['type'], $i['name'],
                     $i['reasons'] ? '  — ' . implode('; ', $i['reasons']) : ''));
             }
         }

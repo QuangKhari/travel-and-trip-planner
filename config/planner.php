@@ -6,12 +6,71 @@
  * Tên cột khớp migration 2026_10_26_000001_link_content_and_planner: durationMinutes, difficulty (easy|medium|hard), indoor.
  */
 return [
-    // Quỹ thời gian hoạt động mỗi ngày (phút), không tính ngủ và nghỉ trưa dài
-    'day_budget_min' => 480,
+    /*
+     * ===== Một ngày của Planner (MỘT nguồn, đọc qua App\Services\Planner\PlannerRules; trình duyệt nhận bản sao qua cfg.rules) =====
+     *   start_min    08:00  giờ bắt đầu tự xếp lịch
+     *   soft_end_min 18:00  hết khung hoạt động chính. Sức chứa một ngày = soft_end - start = 600 phút.
+     *                       Độ dày = (hoạt động + di chuyển + bữa ăn chừa sẵn + đệm) / sức chứa; vẫn được xếp mục buổi tối sau 18:00.
+     *   end_min      22:00  kết thúc sau giờ này là "muộn"
+     * Các con số suy ra (không khai báo lại ở nơi khác):
+     *   - availableMin = soft_end - start
+     *   - itemBudgetMin = tổng thời lượng các mục (kể cả bữa ăn) vừa sức chứa khi còn đệm và ~travel_reserve_min đi lại
+     *     = floor((availableMin / (1 + buffer_ratio) - travel_reserve_min) / 10) * 10 = 480
+     *     Dùng cho kiểm tra lịch trình mẫu (admin) và quỹ hoạt động khi tự tạo lịch (PlannerEngine trừ bữa ăn).
+     */
+    'day' => [
+        'start_min' => 480,
+        'soft_end_min' => 1080,
+        'end_min' => 1320,
+    ],
+    'meal_allowance_min' => 60,         // ngày chưa có mục ăn uống nào: chừa 60 phút ăn trưa
+    'buffer_ratio' => 0.1,              // đệm 10% (nghỉ, chờ, chụp ảnh)
+    'travel_reserve_min' => 60,         // thời gian đi lại chừa sẵn khi tính quỹ thời lượng các mục
+    'load_warn' => 0.85,                // độ dày từ 85% là "hơi dày", từ 100% là "quá dày"
+    'travel_warn_min' => 180,           // đi lại quá 3 giờ một ngày
+    'day_items_warn' => 7,              // hơn 7 mục một ngày là hơi nhiều (trang sửa, TripHealth, cảnh báo khi lưu)
+    'day_cost_over_avg' => 0.4,         // chi phí một ngày cao hơn trung bình các ngày 40% thì nhắc
 
-    // Tốc độ di chuyển ước lượng (km/giờ) theo đường chim bay nhân hệ số đường vòng
-    'travel_speed_kmh' => 25,
-    'detour_factor' => 1.4,
+    // Buổi trong ngày (phút kể từ 00:00, [start, end)). Mục chọn buổi không bắt đầu trước `start`; giờ thuộc buổi nào tra theo khoảng.
+    'slots' => [
+        'morning' => ['label' => 'Sáng', 'start' => 480, 'end' => 690],      // 08:00 - 11:30
+        'noon' => ['label' => 'Trưa', 'start' => 690, 'end' => 810],         // 11:30 - 13:30
+        'afternoon' => ['label' => 'Chiều', 'start' => 810, 'end' => 1080],  // 13:30 - 18:00
+        'evening' => ['label' => 'Tối', 'start' => 1080, 'end' => 1440],     // 18:00 trở đi
+    ],
+
+    // Mục tự thêm (note) đoán loại theo tên. Viết theo cú pháp chung của PCRE và JavaScript (không dấu phân cách, không cờ).
+    'kind_patterns' => [
+        'lodging' => 'khách sạn|hotel|homestay|resort|nhà nghỉ|hostel|villa|lưu trú|căn hộ|bungalow',
+        'meal' => 'nhà hàng|cà phê|cafe|coffee|phở|bún|buffet|cơm|lẩu|ăn uống|ăn sáng|ăn trưa|ăn tối|restaurant|(^|\\s)quán(\\s|$)',
+    ],
+    // Địa điểm trong kho (type = place) nhận diện theo kind: quán ăn là bữa ăn, khách sạn là lưu trú (cùng ở máy chủ và trình duyệt)
+    'kind_places' => [
+        'meal' => ['restaurant', 'cafe', 'fast_food', 'food_court'],
+        'lodging' => ['hotel', 'guest_house', 'hostel', 'motel', 'apartment', 'resort'],
+    ],
+
+    // ---- Tuyến đường: MỌI phép tính đi qua RouteService (máy chủ) và planner-geo.js (xem trước ở trình duyệt, cùng tham số) ----
+    'route' => [
+        'provider' => env('PLANNER_ROUTE_PROVIDER', 'haversine'),   // haversine | osrm
+        'osrm_url' => env('PLANNER_OSRM_URL', ''),                   // ví dụ https://router.project-osrm.org
+        'mode' => env('PLANNER_TRAVEL_MODE', 'driving'),             // phương tiện mặc định
+        'factor' => 1.3,                                              // hệ số đường vòng so với đường chim bay
+        'min_leg_km' => 0.5,                                          // hai điểm gần hơn mức này (chim bay) coi là cùng một khu, không tính đoạn đi
+        'modes' => [                                                  // tốc độ trung bình và hồ sơ OSRM theo phương tiện
+            'driving' => ['label' => 'Ô tô', 'speed_kmh' => 40, 'osrm' => 'driving'],
+            'motorbike' => ['label' => 'Xe máy', 'speed_kmh' => 30, 'osrm' => 'driving'],
+            'walking' => ['label' => 'Đi bộ', 'speed_kmh' => 4.5, 'osrm' => 'foot'],
+        ],
+    ],
+
+    // Quanh tuyến: ngưỡng thời gian đi vòng thêm (phút) để gắn nhãn đáng ghé hay không
+    'detour_levels' => [
+        ['max' => 5, 'key' => 'great', 'label' => 'Gần như không đi vòng'],
+        ['max' => 15, 'key' => 'good', 'label' => 'Đáng ghé'],
+        ['max' => 30, 'key' => 'consider', 'label' => 'Cân nhắc'],
+        ['max' => null, 'key' => 'far', 'label' => 'Vòng xa'],
+    ],
 
     // Thời lượng mặc định (phút) khi mục chưa có durationMinutes. Địa điểm tra theo nhóm kind (xem kind_groups).
     'default_duration_min' => [
@@ -26,9 +85,9 @@ return [
     // `tbl_external_places.kind` thật trong dữ liệu (đếm ngày 25/10/2026) gom thành 5 nhóm.
     // Kind chưa có trong danh sách (OSM thêm kind mới) rơi vào nhóm 'see'. Cập nhật khi SyncPlaces mang về kind mới.
     'kind_groups' => [
-        'eat' => ['restaurant', 'cafe'],
-        'nature' => ['peak', 'hot_spring', 'cave_entrance', 'viewpoint', 'beach'],
-        'culture' => ['historic', 'place_of_worship', 'museum', 'gallery'],
+        'eat' => ['restaurant', 'cafe', 'fast_food', 'food_court'],
+        'nature' => ['peak', 'hot_spring', 'cave_entrance', 'viewpoint', 'beach', 'waterfall', 'park'],
+        'culture' => ['historic', 'place_of_worship', 'museum', 'gallery', 'monument', 'memorial', 'castle', 'ruins', 'temple', 'archaeological_site', 'fort'],
         'fun' => ['theme_park', 'zoo', 'aquarium'],
         'see' => ['attraction'],
     ],
@@ -38,17 +97,32 @@ return [
         'trekking' => ['experience_difficulty' => ['hard'], 'place_kinds' => ['peak', 'cave_entrance']],
         'crowds' => ['place_kinds' => ['theme_park', 'zoo', 'aquarium']],
         'outdoor' => ['experience_indoor' => [false], 'place_kinds' => ['peak', 'beach', 'viewpoint', 'cave_entrance', 'hot_spring']],
-        'long_travel' => [],
+        // không cấm loại nơi nào; chỉ siết quãng đi: tối đa 90 phút di chuyển mỗi ngày, mỗi chặng không quá 25 km
+        'long_travel' => ['max_travel_min_per_day' => 90, 'max_leg_km' => 25],
     ],
 
     // ---- Tuần 5: PlannerEngine ----
 
+    // Đề xuất mở rộng (điểm đến chưa đủ nội dung đã duyệt, hoặc nơi bất kỳ trên bản đồ): bổ sung ứng viên từ OpenStreetMap,
+    // ghi rõ "dữ liệu bản đồ, chưa được Travela biên tập". Bán kính lấy dữ liệu (m) và số ứng viên tối đa mỗi nhóm.
+    'open_mode' => [
+        'enabled' => (bool) env('PLANNER_OPEN_MODE', true),
+        'radius_sight_m' => 8000,
+        'radius_eat_m' => 4000,
+        'max_per_cat' => 40,
+    ],
+
     // Số ngày tối đa cho một lần tạo; số mục "hoạt động" mỗi ngày theo nhịp (không tính bữa ăn)
     'max_days' => 7,
+    // Số chuyến tối đa của một người (mọi cách tạo: tạo mới, tự đề xuất, nhân bản, từ tour/lịch trình, API)
+    'max_trips_per_user' => (int) env('PLANNER_MAX_TRIPS', 200),
+    // budget_factor nhân với quỹ hoạt động = PlannerRules::itemBudgetMin() - các bữa ăn (meals_per_day x meal_minutes)
     'pace' => [
-        'relaxed' => ['min_per_day' => 2, 'max_per_day' => 3, 'budget_factor' => 0.7],
-        'normal' => ['min_per_day' => 3, 'max_per_day' => 4, 'budget_factor' => 1.0],
-        'packed' => ['min_per_day' => 4, 'max_per_day' => 6, 'budget_factor' => 1.2],
+        // target_load / min_load: độ dày tối đa / tối thiểu của một ngày vừa tạo (cùng thang với "Sức khỏe chuyến đi":
+        // Nhẹ dưới 50%, Bận từ 85%, Quá tải từ 100%). Dày hơn thì bớt mục điểm thấp; thưa hơn thì bù từ phần còn lại.
+        'relaxed' => ['min_per_day' => 2, 'max_per_day' => 3, 'budget_factor' => 0.8, 'target_load' => 0.65, 'min_load' => 0.35],
+        'normal' => ['min_per_day' => 3, 'max_per_day' => 4, 'budget_factor' => 1.0, 'target_load' => 0.8, 'min_load' => 0.5],
+        'packed' => ['min_per_day' => 4, 'max_per_day' => 6, 'budget_factor' => 1.2, 'target_load' => 0.95, 'min_load' => 0.6],
     ],
     'default_pace' => 'normal',
 
@@ -71,13 +145,11 @@ return [
         'rain_outdoor' => -8,       // tháng mưa nhiều: trừ mục ngoài trời
         'hot_outdoor_hard' => -6,   // tháng nắng nóng: trừ mục ngoài trời khó
         'avoid_month_outdoor' => -4,
+        'meal_has_place' => 3,      // bữa ăn: quán có tọa độ thật được ưu tiên hơn món chưa gắn quán (không tính được đường đi)
     ],
+    'hours_max_wait_min' => 90,     // tới sớm hơn giờ mở cửa quá chừng này phút thì thử xếp mục khác trước
     'rainy_share' => 0.4,           // tỷ lệ ngày mưa từ mức này là "mưa nhiều"
     'hot_tmax' => 34,
-
-    // Khung giờ trong ngày (giờ bắt đầu từ phút 0 = 08:00). Ranh giới đổi khung theo phút kể từ 08:00.
-    'day_start_hour' => 8,
-    'slot_bounds_min' => ['morning' => [0, 210], 'noon' => [210, 330], 'afternoon' => [330, 600], 'evening' => [600, 1440]],
 
     // Hai điểm cách nhau hơn mức này (km, đường chim bay) thì không xếp chung một ngày khi còn lựa chọn khác
     'max_leg_km' => 60,
@@ -98,7 +170,7 @@ return [
     // Khung Việt Nam: minLng,minLat,maxLng,maxLat. Đặt null để tìm toàn cầu (chuyến đi nước ngoài).
     'geocode_bbox' => env('PLANNER_GEOCODE_BBOX', '102.1,8.4,109.6,23.4'),
     'geocode_cache_minutes' => 360,
-    'geocode_timeout' => 6,
+    'geocode_timeout' => 5,
     'geocode_limit' => 8,
 
     /*
@@ -161,7 +233,11 @@ return [
             env('PLANNER_OVERPASS_URL'), env('OVERPASS_URL'),
             'https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter',
         ])),
-        'timeout' => 14,            // giây cho mỗi máy chủ Overpass
+        'timeout' => 5,             // giây tối đa cho mỗi máy chủ Overpass
+        'budget' => 7,              // tổng giây tối đa cho mọi lần thử (php artisan serve chỉ có 1 luồng, không được chặn lâu)
+        'max_servers' => 2,         // thử tối đa chừng này máy chủ Overpass trong một yêu cầu web
+        // nguồn trực tiếp khi người dùng bấm / gõ nhóm (cà phê, khách sạn...): photon (mặc định, ~1 giây) | overpass (đủ thẻ hơn nhưng hay quá tải)
+        'live' => env('PLANNER_OSM_LIVE', 'photon'),
         'cache_minutes' => 720,
         'osm_limit' => 250,         // số phần tử tối đa lấy từ Overpass mỗi lần
         'limit' => 40,              // số kết quả trả về
@@ -177,5 +253,12 @@ return [
         // Loại địa điểm trong nhà / ngoài trời, dùng khi nguồn không ghi rõ
         'indoor_kinds' => ['museum', 'gallery', 'aquarium', 'mall', 'supermarket', 'cinema'],
         'outdoor_kinds' => ['beach', 'waterfall', 'peak', 'viewpoint', 'park', 'zoo', 'theme_park', 'cave_entrance', 'hot_spring', 'marketplace'],
+    ],
+
+    // Dịch vụ ngoài (Overpass, Photon, OSRM): cầu dao chống treo trang (xem ExternalGuard).
+    //  PLANNER_EXTERNAL=off : demo không mạng, chỉ dùng dữ liệu có sẵn (CSDL + bản chụp OSM đã nạp bằng planner:warm-osm).
+    'external' => [
+        'enabled' => env('PLANNER_EXTERNAL', 'on') !== 'off',
+        'down_seconds' => (int) env('PLANNER_EXTERNAL_DOWN_SECONDS', 300),   // lỗi một lần thì nghỉ 5 phút, không thử lại mỗi lần bấm
     ],
 ];

@@ -22,7 +22,7 @@
             được tư vấn.</p>
     </div>
 @else
-    <div class="tv-grid">
+    <div class="trc-grid">
         @foreach ($tours as $tour)
             @include('clients.partials.tour-card', ['tour' => $tour])
         @endforeach

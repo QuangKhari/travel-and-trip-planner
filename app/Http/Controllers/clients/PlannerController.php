@@ -10,8 +10,13 @@ use App\Services\Planner\PlaceFinder;
 use App\Services\Planner\PlaceGeocoder;
 use App\Services\Planner\PlaceQuery;
 use App\Services\Planner\PlannerGate;
+use App\Services\Planner\PlannerRules;
 use App\Services\Planner\PlannerService;
 use App\Services\Planner\RainPlan;
+use App\Services\Planner\RouteExplorer;
+use App\Services\Planner\Health\TripHealth;
+use App\Services\Planner\Health\TripResolver;
+use App\Services\Planner\Route\RouteService;
 use App\Services\Planner\TourFit;
 use App\Services\Planner\TripConflict;
 use App\Services\Planner\TripSharing;
@@ -53,6 +58,8 @@ class PlannerController extends Controller
             'sharedTrips' => app(TripSharing::class)->sharedWithMe($uid),
             'tray' => $tray->items($uid),
             'allDests' => DB::table('tbl_destinations')->where('isActive', 1)->orderBy('name')->limit(300)->get(['destinationId', 'name']),
+            // gợi ý nhanh ở bước "Đi đâu?": điểm đến nổi bật trước
+            'popularDests' => DB::table('tbl_destinations')->where('isActive', 1)->orderByDesc('isFeatured')->orderByDesc('isHero')->orderByDesc('isMustTry')->orderBy('name')->limit(8)->get(['destinationId', 'name']),
         ]);
     }
 
@@ -60,8 +67,27 @@ class PlannerController extends Controller
     public function suggest(Request $request, PlannerGate $gate, SearchIntent $intent)
     {
         $month = (int) $request->query('thang');
-        $pre = ['destination' => null, 'month' => $month >= 1 && $month <= 12 ? $month : null, 'days' => null, 'groupSize' => null, 'budget' => null, 'interests' => [], 'dislikes' => []];
-        if (is_string($q = $request->query('q')) && trim($q) !== '') {
+        $pre = ['destination' => null, 'month' => $month >= 1 && $month <= 12 ? $month : null, 'days' => null, 'groupSize' => null, 'budget' => null, 'interests' => [], 'dislikes' => [],
+            'adults' => null, 'children' => null, 'startDate' => null, 'pace' => null, 'maxDifficulty' => null];
+        $pre['place'] = null;
+        if ($request->query('destinationId') || $request->query('placeLat')) {
+            // quay lại từ màn xem trước ("Sửa yêu cầu") hoặc từ "đề xuất mở rộng quanh nơi này": điền lại đúng các lựa chọn
+            $qv = $request->query();
+            if (!$request->query('destinationId') && is_numeric($qv['placeLat'] ?? null) && is_numeric($qv['placeLng'] ?? null)) {
+                $pre['place'] = ['name' => mb_substr(trim((string) ($qv['placeName'] ?? '')), 0, 120) ?: 'Nơi đã chọn',
+                    'lat' => max(-90, min(90, (float) $qv['placeLat'])), 'lng' => max(-180, min(180, (float) $qv['placeLng']))];
+            }
+            $pre = array_merge($pre, [
+                'destination' => !empty($qv['destinationId']) ? DB::table('tbl_destinations')->where('destinationId', (int) $qv['destinationId'])->value('slug') : null,
+                'month' => isset($qv['month']) ? (int) $qv['month'] : null, 'days' => isset($qv['days']) ? (int) $qv['days'] : null,
+                'adults' => isset($qv['adults']) ? (int) $qv['adults'] : null, 'children' => isset($qv['children']) ? (int) $qv['children'] : null,
+                'budget' => isset($qv['budget']) && $qv['budget'] !== '' ? (int) $qv['budget'] : null,
+                'startDate' => is_string($qv['startDate'] ?? null) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $qv['startDate']) ? $qv['startDate'] : null,
+                'pace' => is_string($qv['pace'] ?? null) ? $qv['pace'] : null, 'maxDifficulty' => is_string($qv['maxDifficulty'] ?? null) ? $qv['maxDifficulty'] : null,
+                'interests' => array_values(array_intersect((array) ($qv['interests'] ?? []), array_keys((array) config('interests')))),
+                'dislikes' => array_values(array_intersect((array) ($qv['dislikes'] ?? []), array_keys((array) config('planner.dislikes')))),
+            ]);
+        } elseif (is_string($q = $request->query('q')) && trim($q) !== '') {
             $i = $intent->parse(mb_substr($q, 0, 200));
             $pre = ['destination' => $i['destination']['slug'] ?? null, 'month' => $i['month'], 'days' => $i['days'], 'groupSize' => $i['groupSize'],
                 'budget' => $i['budget'], 'interests' => $i['interests'], 'dislikes' => $i['dislikes']];
@@ -86,10 +112,21 @@ class PlannerController extends Controller
             }
         }
 
+        $dests = $gate->coreStatus();
+        // mọi điểm đến đang bật cho ô "Đi đâu?" (lọc ngay ở trình duyệt); điểm đến lõi có cờ sẵn sàng, còn lại dùng đề xuất mở rộng
+        $readyById = array_column($dests, 'ready', 'destinationId');
+        $all = DB::table('tbl_destinations')->where('isActive', 1)->orderBy('name')->get(['destinationId', 'slug', 'name', 'province', 'coverImage', 'latitude', 'longitude'])
+            ->map(fn($d) => ['id' => (int) $d->destinationId, 'slug' => $d->slug, 'name' => $d->name, 'sub' => (string) $d->province,
+                'core' => array_key_exists((int) $d->destinationId, $readyById), 'ready' => (bool) ($readyById[(int) $d->destinationId] ?? false),
+                'img' => $d->coverImage ? \Illuminate\Support\Facades\Storage::disk('public')->url($d->coverImage) : null])->values()->all();
+
         return view('clients.planner.suggest', [
             'unknown' => $unknown,
-            'dests' => $gate->coreStatus(),
+            'dests' => $dests,
+            'allDests' => $all,
+            'openMode' => (bool) config('planner.open_mode.enabled', true),
             'pre' => $pre,
+            'notReady' => $this->notReady($pre['destination'], $pre['month'], $dests),
             'title' => 'Để Travela đề xuất lịch trình',
             'metaDescription' => 'Travela xếp sẵn lịch trình từ nội dung đã được biên tập duyệt, bạn chỉnh lại theo ý mình.',
             'noindex' => true,
@@ -115,13 +152,21 @@ class PlannerController extends Controller
         $budget = $budget > 0 && $budget <= 100000000000 ? $budget : null;
 
         $result = $month ? $finder->recommend(['month' => $month, 'inspirations' => $picked, 'days' => $days, 'groupSize' => $group, 'budget' => $budget]) : null;
+        if ($result && $result['items']) {
+            $covers = DB::table('tbl_destinations')->whereIn('destinationId', array_column($result['items'], 'destinationId'))->pluck('coverImage', 'destinationId');
+            foreach ($result['items'] as &$it) {
+                $c = $covers[$it['destinationId']] ?? null;
+                $it['img'] = $c ? \Illuminate\Support\Facades\Storage::disk('public')->url($c) : null;
+            }
+            unset($it);
+        }
 
         return view('clients.planner.discover', [
             'title' => 'Chưa biết đi đâu? Chọn tháng và cảm hứng',
             'metaDescription' => 'Chọn tháng đi và cảm hứng, Travela gợi ý điểm đến hợp nhất kèm lý do từ mùa, khí hậu, lễ hội và tour.',
             'noindex' => true,
             'inspirations' => $ins, 'picked' => $picked, 'month' => $month, 'days' => $days, 'group' => $group, 'budget' => $budget,
-            'maxDays' => $max, 'result' => $result, 'now' => (int) date('n'),
+            'maxDays' => $max, 'result' => $result, 'now' => (int) date('n'), 'openMode' => (bool) config('planner.open_mode.enabled', true),
         ]);
     }
 
@@ -157,29 +202,138 @@ class PlannerController extends Controller
             ->with('planner_notice', 'Đã tạo chuyến đi quanh tour. Thêm món ăn, lễ hội và trải nghiệm quanh nơi đến ở ô tìm kiếm, rồi quay lại đặt tour khi đã vừa ý.');
     }
 
-    /** POST /len-ke-hoach/tao-tu-dong : Planner tự đề xuất lịch trình từ dữ liệu đã duyệt rồi lưu thành chuyến. Web không có cách bỏ qua cổng Planner-ready. */
-    public function generate(Request $request, PlannerService $service)
+    /** Quy tắc kiểm tra yêu cầu tự đề xuất (dùng chung cho xem trước và lưu). */
+    private function generateRules(): array
     {
         $maxDays = (int) config('planner.max_days', 7);
-        $data = $request->validate([
-            'destinationId' => ['required', 'integer', 'min:1'],
-            'month' => ['required', 'integer', 'between:1,12'],
+
+        return [
+            'destinationId' => ['required_without:placeLat', 'nullable', 'integer', 'min:1'],
+            'placeName' => ['nullable', 'string', 'max:120'],
+            'placeLat' => ['required_without:destinationId', 'nullable', 'numeric', 'between:-90,90', 'required_with:placeLng'],
+            'placeLng' => ['nullable', 'numeric', 'between:-180,180', 'required_with:placeLat'],
+            'mode' => ['nullable', 'in:auto,curated,open'],
+            'startDate' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:' . now()->subDay()->toDateString(), 'before:' . now()->addYears(2)->toDateString()],
+            'month' => ['required_without:startDate', 'nullable', 'integer', 'between:1,12'],
             'days' => ['required', 'integer', 'between:1,' . $maxDays],
-            'groupSize' => ['required', 'integer', 'between:1,50'],
+            'adults' => ['required_without:groupSize', 'nullable', 'integer', 'between:1,50'],
+            'children' => ['nullable', 'integer', 'between:0,30'],
+            'groupSize' => ['nullable', 'integer', 'between:1,50'],
             'budget' => ['nullable', 'numeric', 'between:0,100000000000'],
-            'startDate' => ['nullable', 'date'],
             'pace' => ['nullable', 'in:' . implode(',', array_keys((array) config('planner.pace')))],
+            'maxDifficulty' => ['nullable', 'in:' . implode(',', array_keys((array) config('planner.difficulty_rank')))],
             'interests' => ['nullable', 'array', 'max:6'],
             'interests.*' => ['string', 'in:' . implode(',', array_keys((array) config('interests')))],
             'dislikes' => ['nullable', 'array', 'max:6'],
             'dislikes.*' => ['string', 'in:' . implode(',', array_keys((array) config('planner.dislikes')))],
-        ]);
+        ];
+    }
 
+    /** Chuẩn hóa: có ngày đi thì tháng lấy theo ngày đi; số người = người lớn + trẻ em. */
+    private static function generateInput(array $data): array
+    {
+        if (!empty($data['startDate'])) {
+            $data['month'] = (int) date('n', strtotime($data['startDate']));
+        }
+        if (!empty($data['adults'])) {
+            $data['children'] = (int) ($data['children'] ?? 0);
+            $data['groupSize'] = (int) $data['adults'] + $data['children'];
+        }
+
+        return $data;
+    }
+
+    /**
+     * Điểm đến chưa Planner-ready: nói rõ còn thiếu gì và gợi ý điểm đến khác đã sẵn sàng (xếp theo tháng đi bằng DestinationFinder).
+     * @return ?array{name:string,slug:string,missing:list<string>,percent:int,alternatives:list<array{slug:string,name:string,why:?string}>}
+     */
+    private function notReady(?string $slug, ?int $month, array $dests): ?array
+    {
+        $row = $slug ? collect($dests)->firstWhere('slug', $slug) : null;
+        if (!$row || $row['ready']) {
+            return null;
+        }
+        $ready = collect($dests)->where('ready', true);
+        $alts = [];
+        if ($ready->isNotEmpty() && $month) {
+            try {
+                foreach (app(DestinationFinder::class)->recommend(['month' => $month, 'limit' => 12])['items'] as $it) {
+                    if ($ready->firstWhere('slug', $it['slug'] ?? null)) {
+                        $alts[] = ['slug' => $it['slug'], 'name' => $it['name'], 'why' => $it['reasons'][0] ?? null];
+                    }
+                }
+            } catch (\Throwable) {
+                $alts = [];
+            }
+        }
+        if (!$alts) {
+            $alts = $ready->take(3)->map(fn($d) => ['slug' => $d['slug'], 'name' => $d['name'], 'why' => null])->values()->all();
+        }
+
+        return ['name' => $row['name'], 'slug' => $row['slug'], 'destinationId' => $row['destinationId'], 'missing' => $row['missing'], 'percent' => $row['percent'],
+            'alternatives' => array_slice($alts, 0, 3), 'open' => (bool) config('planner.open_mode.enabled', true)];
+    }
+
+    /**
+     * GET /len-ke-hoach/tim-noi?q= : ô "Đi đâu?" của trang đề xuất. Trả điểm đến Travela khớp tên (kèm mức sẵn sàng)
+     * và nơi trên bản đồ (Photon) để đề xuất mở rộng ở bất kỳ đâu. Gõ không dấu vẫn khớp.
+     */
+    public function placeSearch(Request $request, PlannerGate $gate, PlaceGeocoder $geo): JsonResponse
+    {
+        $q = trim((string) $request->validate(['q' => ['required', 'string', 'min:2', 'max:80']])['q']);
+        $fold = fn(string $x) => trim(preg_replace('/\s+/', ' ', \Illuminate\Support\Str::ascii(str_replace(['đ', 'Đ'], 'd', mb_strtolower($x)))));
+        $needle = $fold($q);
+        $ready = [];
+        foreach ($gate->coreStatus() as $c) {
+            $ready[$c['destinationId']] = $c['ready'];
+        }
+        $dests = DB::table('tbl_destinations')->where('isActive', 1)->get(['destinationId', 'slug', 'name', 'province', 'latitude', 'longitude'])
+            ->filter(fn($d) => str_contains($fold($d->name . ' ' . $d->province . ' ' . $d->slug), $needle))
+            ->take(6)->map(fn($d) => ['type' => 'destination', 'id' => (int) $d->destinationId, 'name' => $d->name, 'sub' => $d->province,
+                'ready' => $ready[(int) $d->destinationId] ?? $gate->isReady((int) $d->destinationId),
+                'lat' => $d->latitude !== null ? (float) $d->latitude : null, 'lng' => $d->longitude !== null ? (float) $d->longitude : null])->values()->all();
+        $map = [];
+        $ok = true;
+        if (count($dests) < 6 && config('planner.open_mode.enabled', true)) {
+            $r = $geo->search($q);
+            $ok = $r['ok'];
+            foreach (array_slice($r['results'], 0, 6) as $p) {
+                $map[] = ['type' => 'place', 'name' => $p['name'], 'sub' => trim(($p['kind'] ? $p['kind'] . ' · ' : '') . $p['address'], ' ·'), 'lat' => $p['lat'], 'lng' => $p['lng']];
+            }
+        }
+
+        return response()->json(['ok' => $ok, 'destinations' => $dests, 'places' => $map]);
+    }
+
+    /**
+     * GET /len-ke-hoach/de-xuat/xem-truoc : Planner tự đề xuất, CHƯA lưu. Người dùng xem lịch, lý do chọn / loại,
+     * rồi "Lưu thành chuyến", "Đổi nhịp đi" hoặc sửa yêu cầu. Engine là hàm thuần nên lưu ra đúng lịch đang xem.
+     */
+    public function preview(Request $request, PlannerService $service)
+    {
+        $data = self::generateInput($request->validate($this->generateRules()));
         $result = $service->generate($data);   // không truyền $ignoreGate: điểm đến thiếu dữ liệu bị chặn
         if (empty($result['ok'])) {
-            $msg = $result['message'] ?? 'Không thể tạo lịch trình.';
+            return redirect()->route('planner.suggest', $request->query())->withErrors(['generate' => $result['message'] ?? 'Không thể tạo lịch trình.']);
+        }
+        $empty = !array_filter($result['plan']['days'], fn($d) => !empty($d['items']));
 
-            return redirect()->route('planner.suggest')->withInput()->withErrors(['generate' => $msg]);
+        return view('clients.planner.preview', [
+            'r' => $result,
+            'query' => array_filter($request->only(array_filter(array_keys($this->generateRules()), fn($k) => !str_contains($k, '.'))), fn($v) => $v !== null && $v !== '' && $v !== []),
+            'empty' => $empty,
+            'title' => 'Xem trước lịch trình ' . $result['destination']['name'],
+            'noindex' => true,
+        ]);
+    }
+
+    /** POST /len-ke-hoach/tao-tu-dong : lưu lịch vừa xem trước thành chuyến (tạo lại từ cùng yêu cầu). */
+    public function generate(Request $request, PlannerService $service)
+    {
+        $data = self::generateInput($request->validate($this->generateRules()));
+        $result = $service->generate($data);
+        if (empty($result['ok'])) {
+            return redirect()->route('planner.suggest')->withInput()->withErrors(['generate' => $result['message'] ?? 'Không thể tạo lịch trình.']);
         }
         if (!array_filter($result['plan']['days'], fn($d) => !empty($d['items']))) {
             // Không đủ ứng viên thỏa ràng buộc cứng: không lưu chuyến rỗng, nói rõ lý do (mục 12)
@@ -187,10 +341,19 @@ class PlannerController extends Controller
 
             return redirect()->route('planner.suggest')->withInput()->withErrors(['generate' => 'Chưa đủ nội dung phù hợp để xếp lịch với điều kiện này. ' . implode(' ', $why) . ' Hãy thử nới ngân sách, bỏ bớt điều không thích hoặc đổi tháng.']);
         }
-        $id = $service->save($this->uid(), $result);
+        try {
+            $id = $service->save($this->uid(), $result);
+        } catch (\DomainException $e) {
+            return redirect()->route('planner.suggest')->withInput()->withErrors(['generate' => $e->getMessage()]);
+        }
+        $spare = count(array_filter($result['plan']['unplaced'] ?? [], fn($u) => !empty($u['refId']) || !empty($u['osm'])));
+        $how = $result['mode'] === 'open'
+            ? ' bằng đề xuất mở rộng: các mục ghi "Ngoài dữ liệu Travela" lấy từ bản đồ OpenStreetMap, nên kiểm tra lại giờ mở cửa và giá trước khi đi. '
+            : ' từ nội dung đã được duyệt. ';
 
         return redirect()->route('planner.edit', ['id' => $id])
-            ->with('planner_notice', 'Đã tạo lịch trình ' . $result['destination']['name'] . ' từ nội dung đã được duyệt. ' . ($result['plan']['budget']['message'] ?? ''));
+            ->with('planner_notice', 'Đã tạo lịch trình ' . $result['destination']['name'] . $how . ($result['plan']['budget']['message'] ?? '')
+                . ($spare ? ' ' . $spare . ' mục điểm cao chưa xếp được đang nằm ở khu "Đã lưu", bạn kéo vào ngày nào cũng được.' : ''));
     }
 
     /** POST /len-ke-hoach/{id}/trang-thai {status} */
@@ -206,7 +369,11 @@ class PlannerController extends Controller
     public function store(Request $request, TripPlanner $planner)
     {
         $data = $request->validate(TripPlanner::tripRules());
-        $id = $planner->create($this->uid(), $data, $request->boolean('fromTray'));
+        try {
+            $id = $planner->create($this->uid(), $data, $request->boolean('fromTray'));
+        } catch (\DomainException $e) {
+            return back()->withInput()->withErrors(['title' => $e->getMessage()]);
+        }
 
         return redirect()->route('planner.edit', ['id' => $id]);
     }
@@ -220,6 +387,7 @@ class PlannerController extends Controller
         $role = $acc['role'];
         $payload = $planner->payload($trip);
         $sugg = $planner->suggestions($trip, $payload, $uid);
+        $rules = PlannerRules::fromConfig();
 
         if ($role !== 'owner') {
             // liên kết chia sẻ là của chủ chuyến: người được mời không cần và không nhận token
@@ -244,7 +412,9 @@ class PlannerController extends Controller
             'shareUrl' => route('planner.share', ['id' => $id]),
             'sharedBase' => url('/chuyen-di') . '/',
             'csrf' => csrf_token(),
-            'osrmUrl' => config('planner.osrm_url'),
+            // đường vẽ trên bản đồ theo đường bộ thật: chỉ khi máy chủ cũng dùng OSRM (cùng một nguồn, cùng khóa cấu hình planner.route.*)
+            'osrmUrl' => $rules->route()['provider'] === 'osrm' ? $rules->route()['osrmUrl'] : null,
+            'osrmProfile' => $rules->route()['osrmProfile'],
             'searchUrl' => route('planner.search', ['id' => $id]),
             'searchExtUrl' => $geo->enabled() ? route('planner.searchExternal', ['id' => $id]) : null,   // null = tắt tìm ngoài kho
             'dests' => DB::table('tbl_destinations')->where('isActive', 1)->orderBy('name')->limit(300)->get(['destinationId', 'name', 'latitude', 'longitude'])
@@ -258,6 +428,12 @@ class PlannerController extends Controller
             'rainSuggestUrl' => route('planner.rainSuggest', ['id' => $id]),
             'rainMax' => (int) config('planner.rain_plan.max_per_day', 4),
             'limits' => ['maxDays' => TripPlanner::MAX_DAYS, 'maxItems' => TripPlanner::MAX_ITEMS],
+            // Quy tắc nghiệp vụ (giờ trong ngày, buổi, độ dày, tuyến): MỘT nguồn PlannerRules, planner-schedule.js / planner-geo.js chỉ đọc từ đây
+            'rules' => $rules->client(),
+            'aroundUrl' => route('planner.around', ['id' => $id]),
+            'optimizeUrl' => route('planner.optimize', ['id' => $id]),
+            'healthUrl' => route('planner.health', ['id' => $id]),
+            'resolveUrl' => TripSharing::canEdit($role) ? route('planner.resolve', ['id' => $id]) : null,
         ];
 
         $destIds = array_values(array_unique(array_filter(array_merge(
@@ -265,7 +441,13 @@ class PlannerController extends Controller
             array_map(fn($x) => (int) ($x['destinationId'] ?? 0), $all)
         ))));
 
+        // ảnh bìa chuyến = ảnh điểm đến chính; "ai vừa cập nhật" cho phần cộng tác
+        $cover = !empty($trip->destinationId) ? DB::table('tbl_destinations')->where('destinationId', $trip->destinationId)->value('coverImage') : null;
+        $rv = app(TripSharing::class)->revision($id);
+
         return view('clients.planner.edit', [
+            'cover' => $cover ? \App\Support\DiscoverImage::url((string) $cover) : null,
+            'lastEdit' => ['by' => $rv['by'], 'at' => $trip->updatedAt ?? null, 'byMe' => (int) ($trip->lastEditorId ?? 0) === $uid],
             'title' => $trip->title,
             'metaDescription' => 'Chuyến đi của bạn.',
             'noindex' => true,
@@ -275,6 +457,107 @@ class PlannerController extends Controller
             'payload' => $payload,
             'client' => $client,
         ]);
+    }
+
+    /**
+     * GET /len-ke-hoach/{id}/quanh-tuyen?pts=lat,lng;lat,lng&km=1&group=eat&have[]=place:12
+     * -> {results:[...], total, km} : địa điểm / trải nghiệm đã xuất bản nằm gần tuyến của một ngày, xếp theo quãng phải đi vòng thêm.
+     * Tuyến gửi từ trình soạn (kể cả thay đổi chưa lưu); chỉ người sửa được chuyến mới gọi được.
+     */
+    public function around(Request $request, int $id, RouteExplorer $explorer): JsonResponse
+    {
+        app(TripSharing::class)->editable($this->uid(), $id) ?? abort(404);
+        $v = $request->validate([
+            'pts' => ['required', 'string', 'max:1200'],
+            'km' => ['nullable', 'numeric', 'between:0.3,10'],
+            'group' => ['nullable', 'in:' . implode(',', RouteExplorer::GROUPS)],
+            'have' => ['nullable', 'array', 'max:80'],
+            'have.*' => ['string', 'max:30'],
+        ]);
+        $pts = [];
+        foreach (explode(';', $v['pts']) as $pair) {
+            $xy = explode(',', $pair);
+            if (count($xy) === 2 && is_numeric($xy[0]) && is_numeric($xy[1]) && abs((float) $xy[0]) <= 90 && abs((float) $xy[1]) <= 180) {
+                $pts[] = [(float) $xy[0], (float) $xy[1]];
+            }
+        }
+        if (!$pts) {
+            return response()->json(['message' => 'Ngày này chưa có điểm nào có vị trí.', 'results' => [], 'total' => 0], 422);
+        }
+
+        return response()->json($explorer->around($pts, (float) ($v['km'] ?? 1), (string) ($v['group'] ?? 'all'), $v['have'] ?? []));
+    }
+
+    /**
+     * POST /len-ke-hoach/{id}/toi-uu  {stops:[{key, lat?, lng?, anchor}], keepFirst}
+     * -> {order:[key...], beforeKm, afterKm, savedKm, savedMin, changed, moved, provider}
+     * Tối ưu thứ tự MỘT ngày từ trạng thái đang soạn (kể cả chưa lưu). Điểm neo (giờ cố định, khóa vị trí, đã chọn buổi, điểm đầu ngày khi keepFirst)
+     * giữ nguyên chỗ. Chỉ trả đề xuất; giao diện cho xem trước, người dùng bấm Áp dụng mới đổi (rồi tự lưu như mọi thay đổi khác).
+     */
+    public function optimize(Request $request, int $id, RouteService $route): JsonResponse
+    {
+        app(TripSharing::class)->editable($this->uid(), $id) ?? abort(404);
+        $v = $request->validate([
+            'stops' => ['required', 'array', 'min:2', 'max:' . TripPlanner::MAX_ITEMS],
+            'stops.*.key' => ['required', 'string', 'max:40', 'distinct'],
+            'stops.*.lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'stops.*.lng' => ['nullable', 'numeric', 'between:-180,180'],
+            'stops.*.anchor' => ['nullable', 'boolean'],
+            'keepFirst' => ['nullable', 'boolean'],
+        ]);
+        $stops = array_map(fn($s) => ['key' => $s['key'], 'lat' => $s['lat'] ?? null, 'lng' => $s['lng'] ?? null, 'anchor' => !empty($s['anchor'])], $v['stops']);
+        if (!empty($v['keepFirst'])) {
+            foreach ($stops as $i => $s) {
+                if ($s['lat'] !== null && $s['lng'] !== null) {
+                    $stops[$i]['anchor'] = true;   // điểm có vị trí đầu tiên của ngày (thường là khách sạn)
+                    break;
+                }
+            }
+        }
+
+        $o = $route->optimize($stops);
+
+        return response()->json($o + ['provider' => $route->provider(), 'route' => $route->status()]);
+    }
+
+    /** GET /len-ke-hoach/{id}/suc-khoe -> {score, level, days:[...], checks:[{group, level, code, text, day, action}], provider} (bản đã lưu). */
+    public function health(int $id, TripHealth $health): JsonResponse
+    {
+        $trip = (app(TripSharing::class)->access($this->uid(), $id) ?? abort(404))['trip'];
+
+        return response()->json($health->forTrip($trip));
+    }
+
+    /**
+     * GET /len-ke-hoach/{id}/suc-khoe/xu-ly?code=capacity.overload&day=2[&index=3]
+     * -> {code, day, index, problem, options:[{id, label, reason, changes, effects:[{day, beforePct, afterPct}], resolves}]}
+     * Chỉ đề xuất trên bản đã lưu; không ghi gì (trình duyệt áp dụng rồi tự lưu).
+     */
+    public function resolve(Request $request, int $id, TripResolver $resolver): JsonResponse
+    {
+        $trip = (app(TripSharing::class)->editable($this->uid(), $id) ?? abort(404))['trip'];
+        $v = $request->validate([
+            'code' => ['required', 'string', 'max:40', 'regex:/^[a-z]+\.[a-z_]+$/'],
+            'day' => ['nullable', 'integer', 'min:1', 'max:' . TripPlanner::MAX_DAYS],
+            'index' => ['nullable', 'integer', 'min:0', 'max:' . TripPlanner::MAX_ITEMS],
+        ]);
+
+        return response()->json($resolver->forTrip($trip, $v['code'], isset($v['day']) ? (int) $v['day'] : null, isset($v['index']) ? (int) $v['index'] : null));
+    }
+
+    /** POST /len-ke-hoach/{id}/nhan-ban : tạo chuyến mới của mình từ chuyến này (kể cả chuyến được mời xem). */
+    public function duplicate(int $id, TripPlanner $planner)
+    {
+        try {
+            $new = $planner->duplicate($this->uid(), $id);
+        } catch (\DomainException $e) {
+            return back()->with('planner_notice', $e->getMessage());
+        }
+        if ($new === null) {
+            abort(404);
+        }
+
+        return redirect()->route('planner.edit', ['id' => $new])->with('planner_notice', 'Đã nhân bản thành chuyến đi mới. Bạn đang sửa bản sao, chuyến gốc giữ nguyên.');
     }
 
     /** POST /lich-trinh/{slug}/dung-lam-chuyen-di : sao chép lịch trình mẫu (một điểm đến) thành chuyến đi của người dùng. */
@@ -304,7 +587,10 @@ class PlannerController extends Controller
         }
 
         if (!$ok) {
-            return response()->json(['message' => 'Bạn không có quyền sửa chuyến đi này hoặc chuyến đi không còn.'], 403);
+            // không liên quan tới chuyến: 404 (không lộ chuyến có tồn tại); được mời chỉ xem: 403
+            return app(TripSharing::class)->access($this->uid(), $id)
+                ? response()->json(['message' => 'Bạn chỉ có quyền xem chuyến đi này.'], 403)
+                : response()->json(['message' => 'Không tìm thấy chuyến đi.'], 404);
         }
         // Giao diện lưu không tải lại trang: trả phần máy chủ mới tính được (cảnh báo nội dung, thời điểm đi)
         $p = $planner->payload(app(TripSharing::class)->access($this->uid(), $id)['trip']);
@@ -379,7 +665,10 @@ class PlannerController extends Controller
             'lat' => ['nullable', 'numeric', 'between:-90,90'],
             'lng' => ['nullable', 'numeric', 'between:-180,180'],
             'dest' => ['nullable', 'integer', 'min:1'],
+            'osm' => ['nullable', 'in:0,1'],
         ]);
+        // osm=0: trả ngay phần có sẵn (CSDL, bản chụp), không gọi mạng; giao diện gọi tiếp osm=1 nếu osmPending
+        $live = ($v['osm'] ?? '1') !== '0';
         $intent = PlaceQuery::parse((string) ($v['q'] ?? ''));
         $head = ['cat' => $intent['cat'], 'tags' => $intent['tags'], 'specific' => $intent['specific'], 'rest' => $intent['rest']];
         $pos = ['lat' => $v['lat'] ?? null, 'lng' => $v['lng'] ?? null, 'destId' => $v['dest'] ?? null];
@@ -403,7 +692,7 @@ class PlannerController extends Controller
             ]);
         }
 
-        return response()->json(['ok' => true, 'intent' => $head, 'filters' => $c + ['radiusKm' => round($c['radiusM'] / 1000, 1)], 'browse' => $finder->browse($trip, $c)]);
+        return response()->json(['ok' => true, 'intent' => $head, 'filters' => $c + ['radiusKm' => round($c['radiusM'] / 1000, 1)], 'browse' => $finder->browse($trip, $c, $live)]);
     }
 
     /** POST /len-ke-hoach/{id}/chia-se  {on:0|1} -> {token, url} */

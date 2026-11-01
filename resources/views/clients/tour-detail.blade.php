@@ -128,9 +128,9 @@
                         @if ($tourDetail->quantity <= 0)
                             Đã hết
                         @elseif ($tourDetail->quantity <= 10)
-                            Chỉ còn {{ $tourDetail->quantity }}
+                            Chỉ còn {{ $tourDetail->quantity }} chỗ
                         @else
-                            Còn chỗ
+                            Còn {{ $tourDetail->quantity }} chỗ
                         @endif
                     </b>
                 </div>
@@ -379,7 +379,7 @@
                                     @elseif ($tourDetail->quantity <= 10)
                                         Chỉ còn {{ $tourDetail->quantity }} chỗ
                                     @else
-                                        Còn chỗ
+                                        Còn {{ $tourDetail->quantity }} chỗ
                                     @endif
                                 </dd>
                             </div>

@@ -95,7 +95,9 @@ final class DestinationFinder
             $bonus += (float) $w['ready_bonus'];
             $reasons[] = 'Travela có thể tự xếp lịch trình cho nơi này';
         } else {
-            $warns[] = 'Chưa đủ dữ liệu để tự xếp lịch, bạn vẫn lập thủ công được';
+            $warns[] = config('planner.open_mode.enabled', true)
+                ? 'Chưa đủ nội dung biên tập: lịch tự xếp sẽ bổ sung từ bản đồ OpenStreetMap'
+                : 'Chưa đủ dữ liệu để tự xếp lịch, bạn vẫn lập thủ công được';
         }
 
         $score = $insp * (float) $w['w_inspiration'] + $season * (float) $w['w_season'] + $bonus;

@@ -382,8 +382,10 @@ class PlaceFinder
      * @param array<string,mixed> $c kết quả criteria()
      * @return array<string,mixed> {ok, center, results, hidden, facets, sort, total, sources:{travela,db,osm}, osmOk, note}
      */
-    public function browse(object $trip, array $c): array
+    public function browse(object $trip, array $c, bool $live = true): array
     {
+        $osmFrom = null;
+        $osmPending = false;
         $cat = $c['cat'];
         $group = max(1, (int) $trip->groupSize);
         [$lat, $lng] = $this->center($trip, $c);
@@ -408,10 +410,12 @@ class PlaceFinder
             $src['db'] += count($r);
         }
         if ($cat !== null && isset(self::OSM[$cat]) && $lat !== null) {
-            [$ok, $r] = $this->overpass($cat, $lat, $lng, $c['radiusM']);
-            $osmOk = $ok;
-            $items = array_merge($items, $r);
-            $src['osm'] += count($r);
+            $o = $this->osm($cat, $lat, $lng, $c['radiusM'], $live);
+            $osmOk = $o['ok'];
+            $osmFrom = $o['from'];
+            $osmPending = $o['pending'];
+            $items = array_merge($items, $o['list']);
+            $src['osm'] += count($o['list']);
         }
 
         $items = self::dedupe($items);
@@ -430,13 +434,78 @@ class PlaceFinder
 
         $res = self::apply($items, $c);
         $limit = (int) config('planner.browse.limit', 40);
+        // nhóm có dữ liệu OSM mà trong bán kính không có gì (tâm điểm đến nằm giữa vùng trống, như giữa đảo): tự nới tới 10 km
+        if (!$res['list'] && $cat !== null && isset(self::OSM[$cat]) && $c['radiusM'] < 10000 && empty($c['widened']) && !$osmPending) {
+            $wide = $this->browse($trip, ['radiusM' => 10000, 'widened' => true] + $c, $live);
+            if ($wide['results']) {
+                return ['widenedKm' => 10, 'note' => 'Không có trong ' . round($c['radiusM'] / 1000) . ' km quanh điểm đến, đang hiện trong 10 km.'] + $wide;
+            }
+        }
 
         return [
             'ok' => true, 'center' => $lat !== null ? ['lat' => $lat, 'lng' => $lng] : null,
             'results' => array_slice($res['list'], 0, $limit), 'total' => count($res['list']), 'hidden' => $res['hidden'],
-            'facets' => $res['facets'], 'sort' => $res['sort'], 'sources' => $src, 'osmOk' => $osmOk,
-            'note' => $osmOk ? null : 'Chưa tải được dữ liệu OpenStreetMap lúc này, đang hiện các mục có sẵn trên Travela.',
+            'facets' => $res['facets'], 'sort' => $res['sort'], 'sources' => $src, 'osmOk' => $osmOk, 'osmFrom' => $osmFrom, 'osmPending' => $osmPending,
+            'note' => self::osmNote($osmOk, $osmFrom, $osmPending),
         ];
+    }
+
+    private static function osmNote(bool $ok, ?string $from, bool $pending): ?string
+    {
+        if ($pending) {
+            return null;   // giao diện tự hiện "đang tải thêm"
+        }
+        if ($from === 'stale') {
+            return 'Đang dùng dữ liệu OpenStreetMap đã lưu trước đó (chưa cập nhật được lúc này).';
+        }
+        if ($from === 'photon') {
+            return 'Máy chủ Overpass đang bận, kết quả lấy từ Photon (cũng là dữ liệu OpenStreetMap) nên ít thông tin hơn.';
+        }
+        if (!$ok) {
+            return 'Chưa tải được dữ liệu OpenStreetMap lúc này (mạng hoặc máy chủ bận), đang hiện các mục có sẵn trên Travela.';
+        }
+
+        return null;
+    }
+
+    /**
+     * Ứng viên từ OpenStreetMap cho chế độ đề xuất mở rộng: điểm tham quan + nhà hàng + quán cà phê quanh tâm.
+     * Đi qua cùng đường với tìm theo tiêu chí (cache → bản chụp CSDL → Photon → Overpass), nên có cầu dao và lưu lại.
+     *
+     * @return array{items:list<array<string,mixed>>,ok:bool,from:list<string>}
+     */
+    public function openCandidates(float $lat, float $lng): array
+    {
+        $cfg = (array) config('planner.open_mode', []);
+        $max = (int) ($cfg['max_per_cat'] ?? 40);
+        $out = [];
+        $from = [];
+        $ok = false;
+        foreach (['sight' => (int) ($cfg['radius_sight_m'] ?? 8000), 'restaurant' => (int) ($cfg['radius_eat_m'] ?? 4000), 'cafe' => (int) ($cfg['radius_eat_m'] ?? 4000)] as $cat => $r) {
+            $o = $this->osm($cat, $lat, $lng, $r, true);
+            $ok = $ok || ($o['ok'] && $o['list']);
+            $from[] = $cat . ':' . $o['from'];
+            $list = [];
+            foreach ($o['list'] as $it) {
+                if ($it['lat'] === null || mb_strlen(trim((string) $it['name'])) < 3) {
+                    continue;
+                }
+                $d = self::distanceM($lat, $lng, (float) $it['lat'], (float) $it['lng']);
+                if ($d > $r * 1.5) {
+                    continue;
+                }
+                // nguồn ít thông tin (Photon) có rank như nhau: ưu tiên nơi gần trung tâm hơn
+                $it['rank'] = (int) ($it['rank'] ?? 0) + max(0, 4 - intdiv($d, 1500));
+                $it['distM'] = $d;
+                $list[] = $it;
+            }
+            usort($list, fn($a, $b) => [$b['rank'], $a['distM'], $a['key']] <=> [$a['rank'], $b['distM'], $b['key']]);
+            foreach (array_slice($list, 0, $max) as $it) {
+                $out[] = $it + ['cat' => $cat];
+            }
+        }
+
+        return ['items' => $out, 'ok' => $ok, 'from' => $from];
     }
 
     /** @return array{0:?float,1:?float} */
@@ -531,38 +600,253 @@ class PlaceFinder
         return $out;
     }
 
-    /** @return array{0:bool,1:list<array<string,mixed>>} [gọi được, kết quả] */
-    private function overpass(string $cat, float $lat, float $lng, int $radiusM): array
+    /**
+     * Dữ liệu OSM của một nhóm quanh một điểm. Thứ tự, nhanh nhất trước:
+     *   1. cache (vài giờ)  2. bản chụp trong CSDL (tbl_osm_snapshots, không mất khi xóa cache)
+     *   3. gọi Overpass thật — chỉ khi $live, dịch vụ đang không bị ngắt, và trong ngân sách thời gian ngắn
+     *   4. Overpass lỗi: thử Photon lọc theo loại (máy chủ khác, thường vẫn sống)  5. bản chụp cũ hơn nếu có
+     *
+     * @return array{ok:bool,list:list<array<string,mixed>>,from:string,pending:bool}
+     *   from = cache | snapshot | overpass | photon | stale | none ; pending = chưa gọi mạng vì $live = false (giao diện gọi lượt 2)
+     */
+    private function osm(string $cat, float $lat, float $lng, int $radiusM, bool $live): array
     {
-        // làm tròn để nhiều người cùng tìm một khu vực dùng chung một bản cache
         $rLat = round($lat, 3);
         $rLng = round($lng, 3);
         $radius = (int) (ceil($radiusM / 500) * 500);
-        $key = 'browse:osm:' . $cat . ':' . $rLat . ',' . $rLng . ':' . $radius;
-        $hit = Cache::get($key);
+        $key = self::osmKey($cat, $rLat, $rLng, $radius);
+        $hit = $this->cacheGet($key);
         if (is_array($hit)) {
-            return [true, $hit];
+            return ['ok' => true, 'list' => $hit, 'from' => 'cache', 'pending' => false];
+        }
+        $freshMin = (int) config('planner.browse.cache_minutes', 720);
+        [$snap, $age] = self::snapshot($cat, $rLat, $rLng, $radius);
+        if ($snap !== null && $age !== null && $age <= $freshMin * 60) {
+            $this->cachePut($key, $snap, $freshMin);
+
+            return ['ok' => true, 'list' => $snap, 'from' => 'snapshot', 'pending' => false];
         }
         $ql = self::overpassQuery($cat, $rLat, $rLng, $radius, (int) config('planner.browse.osm_limit', 250));
         if ($ql === null) {
-            return [true, []];
+            return ['ok' => true, 'list' => [], 'from' => 'none', 'pending' => false];
         }
-        foreach ((array) config('planner.browse.overpass_urls', []) as $url) {
-            try {
-                $res = Http::withHeaders(['User-Agent' => (string) config('discover.user_agent', 'TravelaGraduationProject/1.0')])
-                    ->timeout((int) config('planner.browse.timeout', 14))->asForm()->post($url, ['data' => $ql]);
-                if ($res->ok() && is_array($res->json())) {
-                    $list = self::parseOverpass($res->json(), $cat);
-                    Cache::put($key, $list, now()->addMinutes((int) config('planner.browse.cache_minutes', 720)));
+        if (!$live) {
+            // lượt 1: trả ngay phần có sẵn; giao diện tự gọi lượt 2 (osm=1) để bổ sung từ mạng
+            $pending = ExternalGuard::allowed('overpass') || ((bool) config('planner.external.enabled', true) && config('planner.geocoder') !== 'off' && !ExternalGuard::isDown('geocoder'));
 
-                    return [true, $list];
+            return ['ok' => $pending || $snap !== null, 'list' => $snap ?? [], 'from' => $snap !== null ? 'stale' : 'none', 'pending' => $pending];
+        }
+
+        // Nguồn trực tiếp: mặc định Photon (nhanh, hợp với "gõ là ra"); Overpass chỉ dùng khi cấu hình chọn hoặc Photon không có gì.
+        // Overpass vẫn là nguồn của planner:warm-osm (đủ thẻ hơn: hạng sao, món, giờ mở cửa).
+        $order = config('planner.browse.live', 'photon') === 'overpass' ? ['overpass', 'photon'] : ['photon', 'overpass'];
+        foreach ($order as $src) {
+            if ($src === 'photon') {
+                $ph = app(PlaceGeocoder::class)->nearby($cat, $lat, $lng, $radius);
+                if ($ph !== null && $ph !== []) {
+                    $this->cachePut($key, $ph, 360);
+                    if ($snap === null) {
+                        $this->remember($key, $cat, $rLat, $rLng, $radius, $ph, 360);   // lần sau mất mạng vẫn có
+                    }
+
+                    return ['ok' => true, 'list' => $ph, 'from' => 'photon', 'pending' => false];
                 }
-                Log::info('PlaceFinder overpass ' . parse_url($url, PHP_URL_HOST) . ' HTTP ' . $res->status());
-            } catch (Throwable $e) {
-                Log::info('PlaceFinder overpass ' . parse_url($url, PHP_URL_HOST) . ': ' . $e->getMessage());
+                continue;
+            }
+            if (!ExternalGuard::allowed('overpass')) {
+                continue;
+            }
+            $deadline = microtime(true) + (float) config('planner.browse.budget', 7);
+            $perTry = (int) config('planner.browse.timeout', 5);
+            $why = 'không có máy chủ';
+            foreach (array_slice((array) config('planner.browse.overpass_urls', []), 0, (int) config('planner.browse.max_servers', 2)) as $url) {
+                $left = $deadline - microtime(true);
+                if ($left < 1.5) {
+                    break;
+                }
+                try {
+                    $res = Http::withHeaders(['User-Agent' => (string) config('discover.user_agent', 'TravelaGraduationProject/1.0')])
+                        ->connectTimeout(min(3, (int) floor($left)))->timeout((int) max(2, min($perTry, floor($left))))->asForm()->post($url, ['data' => $ql]);
+                    if ($res->ok() && is_array($res->json())) {
+                        $list = self::parseOverpass($res->json(), $cat);
+                        $this->remember($key, $cat, $rLat, $rLng, $radius, $list, $freshMin);
+                        ExternalGuard::reset('overpass');
+
+                        return ['ok' => true, 'list' => $list, 'from' => 'overpass', 'pending' => false];
+                    }
+                    $why = 'HTTP ' . $res->status();
+                } catch (Throwable $e) {
+                    $why = mb_substr($e->getMessage(), 0, 120);
+                    Log::info('PlaceFinder overpass ' . parse_url($url, PHP_URL_HOST) . ': ' . $why);
+                }
+            }
+            ExternalGuard::trip('overpass', $why);
+        }
+        if ($snap !== null) {
+            return ['ok' => false, 'list' => $snap, 'from' => 'stale', 'pending' => false];
+        }
+
+        return ['ok' => false, 'list' => [], 'from' => 'none', 'pending' => false];
+    }
+
+    private static function osmKey(string $cat, float $rLat, float $rLng, int $radius): string
+    {
+        return 'browse:osm:' . $cat . ':' . $rLat . ',' . $rLng . ':' . $radius;
+    }
+
+    private function cacheGet(string $key): mixed
+    {
+        try {
+            return Cache::get($key);
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    private function cachePut(string $key, array $list, int $minutes): void
+    {
+        try {
+            Cache::put($key, $list, now()->addMinutes($minutes));
+        } catch (Throwable) {
+        }
+    }
+
+    /** Lưu cả cache lẫn bản chụp CSDL. */
+    private function remember(string $key, string $cat, float $rLat, float $rLng, int $radius, array $list, int $minutes): void
+    {
+        $this->cachePut($key, $list, $minutes);
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('tbl_osm_snapshots')) {
+                DB::table('tbl_osm_snapshots')->updateOrInsert(['snapKey' => $key], [
+                    'cat' => $cat, 'latitude' => $rLat, 'longitude' => $rLng, 'radiusM' => $radius, 'itemCount' => count($list),
+                    'payload' => json_encode($list, JSON_UNESCAPED_UNICODE), 'fetchedAt' => now(),
+                ]);
+            }
+        } catch (Throwable $e) {
+            Log::info('PlaceFinder snapshot: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Bản chụp gần nhất cùng nhóm: đúng khóa, hoặc tâm cách điểm tìm không quá nửa bán kính (bán kính chụp >= bán kính tìm).
+     *
+     * @return array{0:?list<array<string,mixed>>,1:?int} [danh sách, tuổi (giây)]
+     */
+    public static function snapshot(string $cat, float $lat, float $lng, int $radiusM): array
+    {
+        try {
+            if (!\Illuminate\Support\Facades\Schema::hasTable('tbl_osm_snapshots')) {
+                return [null, null];
+            }
+            $d = ($radiusM / 2) / 111000.0;
+            $rows = DB::table('tbl_osm_snapshots')->where('cat', $cat)->where('radiusM', '>=', $radiusM)
+                ->whereBetween('latitude', [$lat - $d, $lat + $d])->whereBetween('longitude', [$lng - $d * 1.1, $lng + $d * 1.1])
+                ->get(['latitude', 'longitude', 'payload', 'fetchedAt']);
+            $best = null;
+            $bestD = PHP_INT_MAX;
+            foreach ($rows as $r) {
+                $dist = self::distanceM($lat, $lng, (float) $r->latitude, (float) $r->longitude);
+                if ($dist < $bestD) {
+                    $bestD = $dist;
+                    $best = $r;
+                }
+            }
+            if (!$best) {
+                return [null, null];
+            }
+            $list = json_decode((string) $best->payload, true);
+
+            return [is_array($list) ? $list : null, $best->fetchedAt ? max(0, time() - strtotime((string) $best->fetchedAt)) : null];
+        } catch (Throwable) {
+            return [null, null];
+        }
+    }
+
+    /**
+     * Nạp sẵn dữ liệu OSM của một nhóm quanh một điểm (cho `php artisan planner:warm-osm`, chạy ngoài web nên cho chờ lâu).
+     * Ghi vào cả cache và tbl_osm_snapshots: sau đó trang lập kế hoạch đọc thẳng, không cần mạng.
+     * Máy chủ Overpass công cộng giới hạn số yêu cầu theo IP (HTTP 429) và hay quá tải (504): gặp 429 thì chờ theo
+     * Retry-After (mặc định 20 giây) rồi thử lại một lần; lỗi thì chuyển máy chủ kế tiếp. $say nhận dòng tiến trình.
+     *
+     * @return array{0:bool,1:int,2:string} [thành công, số mục, lý do lỗi (rỗng nếu thành công)]
+     */
+    public function warmOsm(string $cat, float $lat, float $lng, int $radiusM, int $timeout = 40, ?callable $say = null): array
+    {
+        $rLat = round($lat, 3);
+        $rLng = round($lng, 3);
+        $radius = (int) (ceil($radiusM / 500) * 500);
+        $ql = self::overpassQuery($cat, $rLat, $rLng, $radius, (int) config('planner.browse.osm_limit', 250));
+        if ($ql === null) {
+            return [true, 0, ''];
+        }
+        // chạy nền nên cho máy chủ thời gian xử lý dài hơn lúc tìm trên web
+        $ql = str_replace('[timeout:25]', '[timeout:' . max(25, $timeout) . ']', $ql);
+        $why = [];
+        foreach ((array) config('planner.browse.overpass_urls', []) as $url) {
+            $host = (string) parse_url($url, PHP_URL_HOST);
+            for ($try = 0; $try < 2; $try++) {
+                try {
+                    $res = Http::withHeaders(['User-Agent' => (string) config('discover.user_agent', 'TravelaGraduationProject/1.0')])
+                        ->connectTimeout(10)->timeout($timeout + 10)->asForm()->post($url, ['data' => $ql]);
+                    if ($res->ok() && is_array($res->json())) {
+                        $list = self::parseOverpass($res->json(), $cat);
+                        $this->remember(self::osmKey($cat, $rLat, $rLng, $radius), $cat, $rLat, $rLng, $radius, $list, 60 * 24 * 30);
+                        ExternalGuard::reset('overpass');
+
+                        return [true, count($list), ''];
+                    }
+                    $code = $res->status();
+                    if ($code === 429 && $try === 0) {
+                        $wait = min(60, max(5, (int) ($res->header('Retry-After') ?: 20)));
+                        $say && $say("   $host giới hạn số yêu cầu (429), chờ {$wait} giây rồi thử lại…");
+                        sleep($wait);
+                        continue;
+                    }
+                    $why[] = $host . ': ' . match (true) {
+                        $code === 429 => 'giới hạn số yêu cầu (429)',
+                        $code === 504 => 'máy chủ quá tải (504)',
+                        $code >= 500 => 'lỗi máy chủ (' . $code . ')',
+                        $res->ok() => 'trả về không phải JSON',
+                        default => 'HTTP ' . $code,
+                    };
+                } catch (Throwable $e) {
+                    $m = $e->getMessage();
+                    $why[] = $host . ': ' . (str_contains($m, 'timed out') || str_contains($m, 'cURL error 28') ? 'quá ' . ($timeout + 10) . ' giây không trả lời'
+                        : (str_contains($m, 'resolve') || str_contains($m, 'cURL error 6') ? 'không phân giải được tên miền'
+                        : (str_contains($m, 'cURL error 7') ? 'không kết nối được' : mb_substr($m, 0, 80))));
+                    Log::info('PlaceFinder warm ' . $host . ': ' . $m);
+                }
+                break;
             }
         }
 
-        return [false, []];
+        return [false, 0, implode('; ', $why)];
+    }
+
+    /**
+     * Nạp nhanh bằng Photon (~1 giây mỗi lượt, ít thẻ hơn Overpass). Tâm điểm đến có thể nằm giữa vùng trống
+     * (ví dụ giữa đảo Phú Quốc): không có gì trong bán kính thì nới dần tới 10 rồi 20 km.
+     *
+     * @return array{0:bool,1:int,2:string,3:int} [thành công, số mục, lý do lỗi, bán kính đã dùng (m)]; thành công với 0 mục = nơi đó thật sự không có
+     */
+    public function warmPhoton(string $cat, float $lat, float $lng, int $radiusM): array
+    {
+        $rLat = round($lat, 3);
+        $rLng = round($lng, 3);
+        $radius = (int) (ceil($radiusM / 500) * 500);
+        foreach (array_values(array_unique([$radius, max($radius, 10000), max($radius, 20000)])) as $r) {
+            ExternalGuard::reset('geocoder');
+            $list = app(PlaceGeocoder::class)->nearby($cat, $lat, $lng, $r);
+            if ($list === null) {
+                return [false, 0, 'Photon không trả lời (' . (ExternalGuard::reason('geocoder') ?? 'lỗi') . ')', $r];
+            }
+            if ($list !== []) {
+                $this->remember(self::osmKey($cat, $rLat, $rLng, $r), $cat, $rLat, $rLng, $r, $list, 60 * 24 * 30);
+
+                return [true, count($list), '', $r];
+            }
+        }
+
+        return [true, 0, '', $r];
     }
 }

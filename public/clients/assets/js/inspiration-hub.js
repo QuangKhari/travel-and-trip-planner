@@ -68,7 +68,16 @@
         allText: $("tvhAllText"),
         live: $("tvhLive"),
         banDo: $("tvhBanDo"),
+        dPhoto: $("tvmPhoto"),
+        dTemp: $("tvhDetailTemp"),
     };
+    // Trang chủ bố cục mới bỏ ảnh hero, 4 thẻ nhỏ và bản đồ mini: phần tử nào không có thì dùng
+    // một thẻ div tách rời để các hàm vẽ cũ vẫn chạy mà không cần sửa từng chỗ.
+    Object.keys(els).forEach(function (k) {
+        if (!els[k]) {
+            els[k] = document.createElement("div");
+        }
+    });
 
     var DOMNAME = { b: "Miền Bắc", t: "Miền Trung", n: "Miền Nam" };
     var SHAPES = {
@@ -104,7 +113,15 @@
     var mqHover = window.matchMedia("(hover: hover) and (min-width: 992px)");
     var mqMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-    var state = { ins: INS[0].slug, dom: "all", sel: null, hov: null };
+    var KEY = "tv.inspiration";
+    function saved() {
+        var q = null;
+        try {
+            q = new URLSearchParams(location.search).get("ins") || localStorage.getItem(KEY);
+        } catch (e) {}
+        return q && INS.some(function (i) { return i.slug === q; }) ? q : INS[0].slug;
+    }
+    var state = { ins: saved(), dom: "all", sel: null, hov: null, last: null };
     var timer = null;
     var rows = [].slice.call(els.toc.querySelectorAll(".tvh-row"));
 
@@ -287,12 +304,10 @@
                     '" data-dest="' +
                     esc(d.slug) +
                     '" aria-label="' +
-                    esc(d.name + ", " + s + "% phù hợp. Xem trên bản đồ") +
+                    esc(d.name + ". Xem trên bản đồ") +
                     '">' +
                     (d.image ? photo(d) : scene("thumb")) +
-                    '<span class="tvh-thumb__pct">' +
-                    s +
-                    "%</span>" +
+                    (s >= 85 ? '<span class="tvh-thumb__pct">Đề xuất</span>' : "") +
                     '<span class="tvh-thumb__name">' +
                     esc(d.name) +
                     "</span></button>"
@@ -314,7 +329,10 @@
         });
     }
 
-    function renderPins(ins, sel) {
+    function renderPins(ins, sel, pool) {
+        var top = (pool || []).slice(0, 4).map(function (d) { return d.slug; });
+        var pop = state.last !== ins.slug;
+        var k = 0;
         DEST.forEach(function (d) {
             var s = score(d, ins.slug);
             var visible = state.dom === "all" || d.domain === state.dom;
@@ -324,11 +342,18 @@
                 ? Math.round(14 + (Math.max(0, s - 40) / 60) * 16)
                 : 8;
             var b = pinEls[d.slug];
+            var rank = lit ? top.indexOf(d.slug) + 1 : 0;
             b.className =
                 "tvh-pin" +
                 (lit ? " is-lit" : "") +
                 (isSel ? " is-sel" : "") +
+                (rank ? " is-top" : "") +
+                (lit && pop ? " is-pop" : "") +
                 (visible ? "" : " is-hidden");
+            b.firstChild.textContent = rank ? String(rank) : "";
+            if (lit && pop) {
+                b.style.setProperty("--i", String(k++));
+            }
             b.style.setProperty("--d", (isSel ? size + 4 : size) + "px");
             b.style.zIndex = isSel ? 50 : lit ? Math.round(10 + s / 10) : 1;
             b.setAttribute(
@@ -336,7 +361,7 @@
                 d.name +
                     ", " +
                     d.province +
-                    (lit ? ", " + s + "% phù hợp" : ""),
+                    (lit ? (s >= 85 ? ", đề xuất" : ", phù hợp") : ""),
             );
         });
     }
@@ -446,8 +471,8 @@
                 "<strong>" +
                 esc(d.name) +
                 "</strong><span>" +
-                score(d, ins.slug) +
-                "% phù hợp</span></span>";
+                esc(d.province) +
+                "</span></span>";
         });
         els.labels.innerHTML = html;
     }
@@ -458,8 +483,8 @@
             " điểm đến hợp với cảm hứng của bạn" +
             (state.dom === "all" ? "" : " · " + DOMNAME[state.dom]);
         els.band.innerHTML = pool
-            .slice(0, 3)
-            .map(function (d) {
+            .slice(0, 4)
+            .map(function (d, i) {
                 return (
                     '<button type="button" class="tvh-card' +
                     (d.slug === sel.slug ? " is-on" : "") +
@@ -469,6 +494,9 @@
                     (d.slug === sel.slug ? "true" : "false") +
                     '">' +
                     '<span class="tvh-card__ph">' +
+                    '<span class="tvh-card__n" aria-hidden="true">' +
+                    (i + 1) +
+                    "</span>" +
                     (d.image ? photo(d) : scene("card")) +
                     "</span>" +
                     '<span class="tvh-card__tx"><strong>' +
@@ -477,8 +505,8 @@
                     esc(d.province) +
                     "</small>" +
                     "<em>" +
-                    score(d, ins.slug) +
-                    "% phù hợp</em></span></button>"
+                    (score(d, ins.slug) >= 85 ? "Đề xuất" : "Phù hợp") +
+                    "</em></span></button>"
                 );
             })
             .join("");
@@ -598,6 +626,18 @@
         els.dName.textContent = sel.name;
         els.dDesc.textContent = sel.description || "";
         els.dMore.href = sel.url;
+        els.dPhoto.style.backgroundImage = sel.image
+            ? 'url("' + String(sel.image).replace(/"/g, "%22") + '")'
+            : "";
+        els.dPhoto.classList.toggle("is-empty", !sel.image);
+        if (sel.weather && sel.weather.temp !== null && sel.weather.temp !== undefined) {
+            els.dTemp.innerHTML =
+                '<i class="fas ' + esc(sel.weather.icon || "fa-sun") + '" aria-hidden="true"></i> ' +
+                esc(Math.round(sel.weather.temp)) + "° · " + esc(sel.weather.label || "");
+            els.dTemp.hidden = false;
+        } else {
+            els.dTemp.hidden = true;
+        }
         if (sel.weather && sel.weather.temp !== null) {
             els.dWx.innerHTML = renderWeather(sel.weather);
             els.dWx.hidden = false;
@@ -608,12 +648,8 @@
         if (withTour) {
             els.dCta.href = sel.tourUrl;
             els.dCta.className = "tvh-btn";
-            els.dCta.innerHTML =
-                "Xem " +
-                sel.tourCount +
-                " tour tại " +
-                esc(sel.name) +
-                ' <i class="fas fa-arrow-right" aria-hidden="true"></i>';
+            els.dCta.innerHTML = "Xem " + sel.tourCount + " tour";
+            els.dCta.setAttribute("aria-label", "Xem " + sel.tourCount + " tour tại " + sel.name);
             els.dSoon.hidden = true;
         } else {
             els.dCta.href =
@@ -659,16 +695,27 @@
         renderThumbs(ins, sel);
         renderMini();
         renderIntro(ins);
-        renderPins(ins, sel);
+        renderPins(ins, sel, pool);
         renderLabels(ins, sel, pool);
         renderBand(ins, sel, pool);
         renderDetail(ins, sel, pool);
         els.live.textContent =
             "Đã chọn " + ins.name + ": " + pool.length + " điểm đến phù hợp.";
+        if (state.last !== ins.slug) {
+            state.last = ins.slug;
+            document.dispatchEvent(
+                new CustomEvent("tv:inspiration", {
+                    detail: { slug: ins.slug, name: ins.name, icon: ins.icon },
+                }),
+            );
+        }
     }
 
     /* ---------- hành động ---------- */
     function choose(slug) {
+        try {
+            localStorage.setItem(KEY, slug);
+        } catch (e) {}
         var best = ranked(slug, state.dom)[0];
         state.ins = slug;
         state.hov = null;
@@ -807,6 +854,25 @@
             selectDest(b.getAttribute("data-dest"), false);
         }
     });
+
+    function hot(slug) {
+        Object.keys(pinEls).forEach(function (k) {
+            pinEls[k].classList.toggle("is-hot", k === slug);
+        });
+        [].forEach.call(els.band.querySelectorAll("[data-dest]"), function (c) {
+            c.classList.toggle("is-hot", c.getAttribute("data-dest") === slug);
+        });
+    }
+    els.band.addEventListener("mouseover", function (e) {
+        var b = e.target.closest("[data-dest]");
+        hot(b ? b.getAttribute("data-dest") : null);
+    });
+    els.band.addEventListener("mouseleave", function () { hot(null); });
+    els.pins.addEventListener("mouseover", function (e) {
+        var b = e.target.closest("[data-dest]");
+        hot(b ? b.getAttribute("data-dest") : null);
+    });
+    els.pins.addEventListener("mouseleave", function () { hot(null); });
 
     els.doms.addEventListener("click", function (e) {
         var b = e.target.closest("[data-dom]");

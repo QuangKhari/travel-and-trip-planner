@@ -2,7 +2,6 @@
 
 namespace App\Services\Planner;
 
-use App\Services\Content\TripTray;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -27,7 +26,7 @@ final class TripSharing
      */
     public function access(int $userId, int $tripId): ?array
     {
-        $trip = DB::table('tbl_trips')->where('tripId', $tripId)->where('title', '!=', TripTray::TITLE)->first();
+        $trip = DB::table('tbl_trips')->where('tripId', $tripId)->where('kind', 'trip')->first();
         if (!$trip) {
             return null;
         }
@@ -70,7 +69,7 @@ final class TripSharing
     /** @return array{ok:bool,message:string} */
     public function invite(int $ownerId, int $tripId, string $email, string $role): array
     {
-        $trip = DB::table('tbl_trips')->where(['tripId' => $tripId, 'userId' => $ownerId])->where('title', '!=', TripTray::TITLE)->first();
+        $trip = DB::table('tbl_trips')->where(['tripId' => $tripId, 'userId' => $ownerId])->where('kind', 'trip')->first();
         if (!$trip) {
             return ['ok' => false, 'message' => 'Chỉ chủ chuyến đi mới mời được bạn đồng hành.'];
         }
@@ -116,10 +115,16 @@ final class TripSharing
     /** Chuyến người khác mời tôi vào, kèm quyền và tên chủ chuyến. */
     public function sharedWithMe(int $userId): array
     {
-        return DB::table('tbl_trip_members as m')->join('tbl_trips as t', 't.tripId', '=', 'm.tripId')->join('tbl_users as o', 'o.userId', '=', 't.userId')
-            ->where('m.userId', $userId)->where('t.title', '!=', TripTray::TITLE)
-            ->selectRaw('t.*, m.role as myRole, o.fullName as ownerName, (SELECT COUNT(*) FROM tbl_trip_items i WHERE i.tripId = t.tripId) AS itemCount')
+        $rows = DB::table('tbl_trip_members as m')->join('tbl_trips as t', 't.tripId', '=', 'm.tripId')->join('tbl_users as o', 'o.userId', '=', 't.userId')
+            ->leftJoin('tbl_destinations as d', 'd.destinationId', '=', 't.destinationId')
+            ->where('m.userId', $userId)->where('t.kind', 'trip')
+            ->selectRaw('t.*, m.role as myRole, o.fullName as ownerName, d.name AS destName, d.coverImage AS destCover,'
+                . ' (SELECT COUNT(*) FROM tbl_trip_items i WHERE i.tripId = t.tripId) AS itemCount,'
+                . ' (SELECT COUNT(*) FROM tbl_trip_items i WHERE i.tripId = t.tripId AND i.dayNo IS NOT NULL) AS placedCount,'
+                . ' (SELECT COUNT(*) FROM tbl_trip_members x WHERE x.tripId = t.tripId) AS memberCount')
             ->orderByDesc(DB::raw('COALESCE(t.updatedAt, t.createdAt)'))->get()->all();
+
+        return array_map([TripPlanner::class, 'cardInfo'], $rows);
     }
 
     /** @return array{rev:int,by:?string} */

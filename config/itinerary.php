@@ -2,7 +2,7 @@
 
 /**
  * Lịch trình mẫu (kế hoạch v6, mục 6): khung giờ, giới hạn "không quá dày", thời lượng ước lượng khi mục chưa ghi số phút.
- * Quỹ thời gian mỗi ngày lấy từ config/planner.php (day_budget_min) để Planner và lịch trình dùng CÙNG một con số.
+ * Quỹ thời gian mỗi ngày là PlannerRules::itemBudgetMin() (suy ra từ config/planner.php: day, buffer_ratio, travel_reserve_min) để Planner và lịch trình dùng CÙNG một con số.
  */
 return [
     // Khung giờ: khóa => [nhãn, thứ tự]

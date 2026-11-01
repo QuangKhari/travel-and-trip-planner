@@ -59,8 +59,9 @@
             geoLine: function (g, color) { return L.geoJSON(g, { style: { color: color, weight: 4, opacity: 0.85 } }).addTo(layer); },
             removeLine: function (l) { if (l) layer.removeLayer(l); },
             fit: function (pts, maxZoom) {
-                if (pts.length > 1) map.fitBounds(pts.map(function (p) { return [p.lat, p.lng]; }), { padding: [24, 24], maxZoom: maxZoom || 14 });
-                else if (pts.length === 1) map.setView([pts[0].lat, pts[0].lng], 12);
+                // không chạy hiệu ứng: bản đồ được vẽ lại liên tục khi cuộn timeline, hiệu ứng dở dang làm sai mức zoom
+                if (pts.length > 1) map.fitBounds(pts.map(function (p) { return [p.lat, p.lng]; }), { padding: [36, 36], maxZoom: maxZoom || 14, animate: false });
+                else if (pts.length === 1) map.setView([pts[0].lat, pts[0].lng], Math.min(maxZoom || 14, 15), { animate: false });
             },
             view: function (lat, lng, z) { map.setView([lat, lng], z || map.getZoom()); },
             zoom: function () { return map.getZoom(); },
@@ -69,7 +70,7 @@
                 L.circleMarker([lat, lng], { radius: 9, color: "#b45309", weight: 3, fillColor: "#fbbf24", fillOpacity: 0.9 }).addTo(pv).bindTooltip(title || "");
             },
             clearPreview: function () { pv.clearLayers(); },
-            resize: function () { map.invalidateSize(); },
+            resize: function () { map.invalidateSize({ pan: false, animate: false }); },
             details: function () { return Promise.resolve(null); },
         };
     }
@@ -191,7 +192,7 @@
                         var b = new ml.LngLatBounds();
                         pts.forEach(function (p) { b.extend([p.lng, p.lat]); });
                         map.fitBounds(b, { padding: 56, maxZoom: maxZoom || 14, duration: 0 });
-                    } else if (pts.length === 1) map.jumpTo({ center: [pts[0].lng, pts[0].lat], zoom: 12 });
+                    } else if (pts.length === 1) map.jumpTo({ center: [pts[0].lng, pts[0].lat], zoom: Math.min(maxZoom || 14, 15) });
                 },
                 view: function (lat, lng, z) { map.jumpTo({ center: [lng, lat], zoom: z || map.getZoom() }); },
                 zoom: function () { return map.getZoom(); },
@@ -278,7 +279,7 @@
                         pts.forEach(function (p) { b.extend({ lat: p.lat, lng: p.lng }); });
                         map.fitBounds(b, 56);
                         g.event.addListenerOnce(map, "idle", function () { if (map.getZoom() > (maxZoom || 14)) map.setZoom(maxZoom || 14); });
-                    } else if (pts.length === 1) { map.setCenter({ lat: pts[0].lat, lng: pts[0].lng }); map.setZoom(12); }
+                    } else if (pts.length === 1) { map.setCenter({ lat: pts[0].lat, lng: pts[0].lng }); map.setZoom(Math.min(maxZoom || 14, 15)); }
                 },
                 view: function (lat, lng, z) { map.setCenter({ lat: lat, lng: lng }); if (z) map.setZoom(z); },
                 zoom: function () { return map.getZoom() || 5; },

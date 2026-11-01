@@ -33,25 +33,21 @@ class HeroPostcardsTest extends TestCase
         $this->assertNull($items['b']['thumb']);
     }
 
-    public function test_trang_chu_blank_card_khong_con_tham_so_vo_nghia(): void
+    // Trang chủ bản v3 (hero "Kể một câu" thay cho bộ bưu thiếp cũ): ô mô tả chuyến đi gửi thẳng tới Trip Planner
+
+    public function test_hero_ke_mot_cau_gui_toi_trip_planner(): void
     {
-        config(['postcards.planner_url' => null]); // chưa bật Planner thì thẻ trắng trỏ xuống khối lên kế hoạch #hpl
         $this->seedThree(true);
         $html = $this->get('/')->assertOk()->getContent();
-        $this->assertStringContainsString('data-thumb="', $html);
-        $this->assertMatchesRegularExpression('/class="hp-card hp-blank" href="#hpl"/', $html);
-        $this->assertStringContainsString('Lên kế hoạch ngay bên dưới →', $html);
-        $this->assertStringNotContainsString('#hpl' . (int) date('n'), $html);
-        // tấm đầu hiện sẵn bằng CSS và có fetchpriority cho LCP
-        $this->assertStringContainsString('fetchpriority="high"', $html);
+        $this->assertMatchesRegularExpression('/<form[^>]*id="hxAi"[^>]*action="' . preg_quote(route('planner'), '/') . '"[^>]*method="GET"/', $html);
+        $this->assertStringContainsString('fetchpriority="high"', $html);   // ảnh hero tải sớm cho LCP
     }
 
-    public function test_co_planner_thi_blank_card_dan_thang_kem_thang(): void
+    public function test_khoi_gioi_thieu_planner_dan_toi_trang_lap_ke_hoach(): void
     {
-        config(['postcards.planner_url' => '/len-ke-hoach']);
         $this->seedThree(false);
         $html = $this->get('/')->assertOk()->getContent();
-        $this->assertStringContainsString('/len-ke-hoach?thang=' . (int) date('n'), $html);
-        $this->assertStringContainsString('Lên kế hoạch cho tháng ' . (int) date('n'), $html);
+        $this->assertStringContainsString('Kể một câu, nhận trọn lịch trình', $html);
+        $this->assertStringContainsString('href="' . route('planner') . '"', $html);
     }
 }

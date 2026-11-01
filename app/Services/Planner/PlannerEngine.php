@@ -3,6 +3,7 @@
 namespace App\Services\Planner;
 
 use App\Services\Content\DestinationMonthBrief;
+use App\Services\Planner\Route\RouteService;
 use App\Support\Geo;
 use Illuminate\Support\Str;
 
@@ -20,18 +21,31 @@ use Illuminate\Support\Str;
  *  key "type:refId", type place|experience|food|event, refId, name, group (eat|nature|culture|fun|see|null), kind, category,
  *  lat, lng (null = dùng tâm điểm đến, đánh dấu ước lượng), durationMin?, difficulty?, indoor?(bool|null), mustTry(bool), rank(int),
  *  monthFrom?, monthTo?, priceMin?, priceMax?, eventStart?, eventEnd? (Y-m-d)
- * Yêu cầu ($req): month, days, interests[], dislikes[], budget?, groupSize, pace?, maxDifficulty?, startDate?
+ * Yêu cầu ($req): month, days, interests[], dislikes[], budget?, groupSize | adults+children, pace?, maxDifficulty?, startDate?
+ *  hours? (ứng viên): giờ mở cửa theo thứ, dạng OpeningHours::forItems — biết ngày đi thì không xếp mục vào lúc/ngày đóng cửa.
+ *
+ * Ràng buộc CỨNG ngoài bước (1): giờ mở cửa (khi biết ngày đi), ngân sách (tổng giá ĐÃ BIẾT không vượt ngân sách),
+ * "không thích di chuyển xa" (giới hạn phút đi lại mỗi ngày và độ dài một chặng). Mục bị loại vì các ràng buộc này
+ * có trong filterLog kèm lý do; mục điểm cao nhưng không còn chỗ nằm trong unplaced (lưu vào khu "Đã lưu" của chuyến).
  * Bối cảnh ($ctx): center [lat,lng]|null, rainyShare?, tMax?, ratingLevel?
  */
 final class PlannerEngine
 {
     private array $cfg;
     private array $interests;
+    private PlannerRules $rules;
+    private RouteService $route;
 
-    public function __construct(?array $cfg = null, ?array $interests = null)
+    /**
+     * Mọi hằng số thời gian / buổi / tuyến lấy từ PlannerRules và RouteService (cùng nguồn với trang sửa và TripHealth).
+     * $route = null: dựng từ chính $cfg (chạy được trong Unit test không có Laravel).
+     */
+    public function __construct(?array $cfg = null, ?array $interests = null, ?RouteService $route = null)
     {
         $this->cfg = $cfg ?? (array) config('planner');
         $this->interests = $interests ?? (array) config('interests');
+        $this->rules = new PlannerRules($this->cfg);
+        $this->route = $route ?? RouteService::fromRules($this->rules->route());
     }
 
     public static function normalize(string $s): string
@@ -45,6 +59,7 @@ final class PlannerEngine
         $req = $this->normalizeRequest($req);
         $log = [];
         $warnings = [];
+        $maxLeg = $this->maxLegKm($req);
 
         // (1) lọc cứng
         $kept = $this->hardFilter($candidates, $req, $ctx, $log);
@@ -70,14 +85,20 @@ final class PlannerEngine
         $pace = $this->cfg['pace'][$req['pace']];
         $perDayMax = (int) $pace['max_per_day'];
         $perDayMin = (int) $pace['min_per_day'];
-        $dayBudget = (int) round($this->cfg['day_budget_min'] * (float) $pace['budget_factor']);
+        // quỹ cho HOẠT ĐỘNG = quỹ thời lượng các mục của một ngày trừ các bữa ăn sẽ chèn, nhân hệ số nhịp đi.
+        // Nhờ vậy lịch "vừa phải" tự tạo ra không bị TripHealth chấm là quá dày.
+        $mealsMin = (int) $this->cfg['meals_per_day'] * (int) ($this->cfg['meal_minutes'] ?? 60);
+        $dayBudget = (int) round(max(120, $this->rules->itemBudgetMin() - $mealsMin) * (float) $pace['budget_factor']);
         $want = $req['days'] * $perDayMax;
         $picked = array_slice($acts, 0, $want);
         $leftover = array_slice($acts, $want);
+        if ($req['budget'] !== null) {
+            [$picked, $leftover] = $this->fitBudget($picked, $leftover, $req, $log);
+        }
 
         // (4) gom theo ngày
         $center = $ctx['center'] ?? $this->centroid($picked ?: $scored);
-        $dayLists = $this->assignDays($picked, $req, $center, $perDayMax, $dayBudget, $log);
+        $dayLists = $this->assignDays($picked, $req, $center, $perDayMax, $dayBudget, $log, $leftover);
 
         // bổ sung ngày thiếu mục từ phần còn lại (gần trọng tâm ngày, trong giới hạn khoảng cách)
         for ($d = 0; $d < $req['days']; $d++) {
@@ -85,8 +106,11 @@ final class PlannerEngine
                 $cent = $this->centroid($dayLists[$d] ?: $picked) ?? $center;
                 $best = null;
                 foreach ($leftover as $i => $c) {
+                    if ($this->closedOn($c, $this->dowOf($req, $d + 1))) {
+                        continue;
+                    }
                     $km = $this->km($cent, $this->pt($c, $center));
-                    if ($km <= $this->cfg['max_leg_km'] && ($best === null || $km < $best[1])) {
+                    if ($km <= $maxLeg && ($best === null || $km < $best[1])) {
                         $best = [$i, $km];
                     }
                 }
@@ -103,19 +127,22 @@ final class PlannerEngine
         $dayMeals = [];
         for ($d = 0; $d < $req['days']; $d++) {
             $cent = $this->centroid($dayLists[$d]) ?? $center;
+            $dow = $this->dowOf($req, $d + 1);
             $dayMeals[$d] = [];
             for ($m = 0; $m < (int) $this->cfg['meals_per_day']; $m++) {
                 $best = null;
                 foreach ($meals as $c) {
-                    if (isset($usedMeal[$c['key']])) {
+                    if (isset($usedMeal[$c['key']]) || $this->closedOn($c, $dow)) {
                         continue;
                     }
                     $km = $cent ? $this->km($cent, $this->pt($c, $center)) : 0.0;
-                    if ($km > $this->cfg['max_leg_km']) {
+                    if ($km > $maxLeg) {
                         continue;
                     }
-                    // điểm cao trước; cùng điểm thì gần hơn
-                    $rank = [-$c['score'], round($km, 2), $c['key']];
+                    // điểm cao trước (quán có tọa độ thật được cộng nhẹ: món chưa có vị trí thì không tính được đường đi);
+                    // cùng điểm thì gần hơn
+                    $real = ($c['lat'] ?? null) !== null && ($c['lng'] ?? null) !== null;
+                    $rank = [-($c['score'] + ($real ? (float) ($this->cfg['score']['meal_has_place'] ?? 3) : 0)), round($km, 2), $c['key']];
                     if ($best === null || $rank < $best[1]) {
                         $best = [$c, $rank];
                     }
@@ -134,8 +161,65 @@ final class PlannerEngine
         // (6) giờ, khung giờ, quãng đường
         $days = [];
         $selected = [];
+        $dropped = [];
+        // độ dày mục tiêu theo nhịp, đo bằng CÙNG công thức với TripHealth (PlannerRules::occupied): ngày vượt mức thì bớt
+        // hoạt động điểm thấp nhất (mục "phải thử" bớt sau cùng) đưa vào "Đã lưu", nên lịch vừa tạo không bị chấm "Bận"/"Quá tải"
+        $target = (float) ($pace['target_load'] ?? 0.8);
         for ($d = 0; $d < $req['days']; $d++) {
-            $day = $this->timeline($d + 1, $dayLists[$d], $dayMeals[$d], $center, $dayBudget, $warnings);
+            $acts = $dayLists[$d];
+            for ($guard = 0; ; $guard++) {
+                $w = [];
+                $drop = [];
+                $day = $this->timeline($d + 1, $acts, $dayMeals[$d], $center, $dayBudget, $w, $req, $drop);
+                $load = $this->loadOf($day);
+                $nAct = count(array_filter($day['items'], fn($i) => !$i['isMeal']));
+                if ($load <= $target || $nAct <= 1 || $guard > 8) {
+                    break;
+                }
+                $worst = null;
+                foreach ($acts as $i => $c) {
+                    $k = [$c['type'] === 'event' ? 1 : 0, $c['mustTry'] ? 1 : 0, $c['score'], $c['key']];
+                    if ($worst === null || $k < $worst[1]) {
+                        $worst = [$i, $k];
+                    }
+                }
+                $c = $acts[$worst[0]];
+                array_splice($acts, $worst[0], 1);
+                // trả về phần còn lại: ngày sau còn chỗ thì dùng, không thì vào "Đã lưu" kèm lý do
+                $leftover[] = $c + ['dropWhy' => 'Ngày ' . ($d + 1) . ' đã đủ dày với nhịp đã chọn (khoảng ' . (int) round($load * 100) . '% thời gian trong ngày)'];
+            }
+            // ngày còn thưa (dưới mức tối thiểu của nhịp): bù từ phần còn lại, gần trọng tâm ngày, miễn không vượt mức mục tiêu
+            $minLoad = (float) ($pace['min_load'] ?? 0.45);
+            $tries = 0;
+            while ($load < $minLoad && $leftover && $tries++ < 6) {
+                $cent = $this->centroid($acts) ?? $center;
+                $best = null;
+                foreach ($leftover as $i => $c) {
+                    if ($this->closedOn($c, $this->dowOf($req, $d + 1)) || !empty($c['triedDay'][$d])) {
+                        continue;
+                    }
+                    $km = $this->km($cent, $this->pt($c, $center));
+                    if ($km <= $maxLeg && ($best === null || $km < $best[1])) {
+                        $best = [$i, $km];
+                    }
+                }
+                if ($best === null) {
+                    break;
+                }
+                $c = $leftover[$best[0]];
+                $w2 = [];
+                $drop2 = [];
+                $try = $this->timeline($d + 1, $this->orderByRoute(array_merge($acts, [$c]), $center), $dayMeals[$d], $center, $dayBudget, $w2, $req, $drop2);
+                if ($this->loadOf($try) > $target || $drop2) {
+                    $leftover[$best[0]]['triedDay'][$d] = true;   // không vừa ngày này, thử mục khác
+                    continue;
+                }
+                array_splice($leftover, $best[0], 1);
+                $acts = $this->orderByRoute(array_merge($acts, [$c]), $center);
+                [$day, $w, $drop, $load] = [$try, $w2, $drop2, $this->loadOf($try)];
+            }
+            array_push($warnings, ...$w);
+            array_push($dropped, ...$drop);
             foreach ($day['items'] as $it) {
                 $selected[] = $it;
             }
@@ -144,13 +228,31 @@ final class PlannerEngine
         if (!array_filter($days, fn($x) => $x['items'])) {
             $warnings[] = 'Không đủ dữ liệu đã duyệt để đề xuất lịch trình cho lựa chọn này.';
         } else {
-            $nAct = count(array_filter($selected, fn($i) => !$i['isMeal']));
-            if ($nAct < $req['days'] * $perDayMin) {
-                $warnings[] = 'Dữ liệu chỉ đủ ' . $nAct . ' hoạt động cho ' . $req['days'] . ' ngày (mục tiêu tối thiểu ' . ($req['days'] * $perDayMin) . '). Một số ngày sẽ thưa.';
+            // ngày thưa đo bằng độ dày (cùng thang với Sức khỏe chuyến đi), không đếm số mục: một lớp nấu ăn 3 giờ đã đủ một buổi
+            $thin = [];
+            foreach ($days as $x) {
+                if ($x['items'] && $this->loadOf($x) < (float) ($pace['min_load'] ?? 0.45)) {
+                    $thin[] = $x['day'];
+                }
+            }
+            $blank = array_column(array_filter($days, fn($x) => !$x['items']), 'day');
+            if ($thin) {
+                $warnings[] = 'Ngày ' . implode(', ', $thin) . ' còn thưa vì dữ liệu đã duyệt gần đó chưa đủ. Bạn có thể thêm mục từ khu "Đã lưu" hoặc tự tìm thêm.';
+            }
+            if ($blank) {
+                $warnings[] = 'Ngày ' . implode(', ', $blank) . ' chưa có mục nào: dữ liệu đã duyệt không đủ cho ' . $req['days'] . ' ngày.';
             }
         }
 
-        $unplaced = array_map(fn($c) => ['key' => $c['key'], 'name' => $c['name'], 'type' => $c['type'], 'score' => $c['score']], array_slice($leftover, 0, 10));
+        foreach ($dropped as $c) {
+            $log[] = ['key' => $c['key'], 'name' => $c['name'], 'type' => $c['type'], 'code' => 'hours', 'reason' => $c['dropWhy']];
+        }
+        // mục điểm cao không còn chỗ (hoặc bị loại vì giờ mở cửa ngày đó): đưa vào khu "Đã lưu" để người dùng tự xếp
+        $spare = array_merge($dropped, array_values(array_filter($leftover, fn($c) => empty($c['overBudget']))));
+        $unplaced = array_map(fn($c) => ['key' => $c['key'], 'name' => $c['name'], 'type' => $c['type'], 'refId' => (int) ($c['refId'] ?? 0),
+            'score' => $c['score'], 'reasons' => $c['reasons'] ?? [], 'durationMin' => $c['durationMin'] ?? null, 'priceMin' => $c['priceMin'] ?? null,
+            'why' => $c['dropWhy'] ?? 'Điểm cao nhưng các ngày đã đủ', 'osm' => !empty($c['osm']), 'lat' => $c['lat'] ?? null, 'lng' => $c['lng'] ?? null],
+            array_slice($spare, 0, 10));
 
         return [
             'days' => $days,
@@ -170,13 +272,19 @@ final class PlannerEngine
         $pace = isset($this->cfg['pace'][$r['pace'] ?? '']) ? $r['pace'] : $this->cfg['default_pace'];
         $diff = isset($this->cfg['difficulty_rank'][$r['maxDifficulty'] ?? '']) ? $r['maxDifficulty'] : $this->cfg['default_max_difficulty'];
 
+        // người lớn + trẻ em; chỉ có groupSize thì coi tất cả là người lớn
+        $adults = isset($r['adults']) && $r['adults'] !== null && $r['adults'] !== '' ? max(1, (int) $r['adults']) : max(1, (int) ($r['groupSize'] ?? 1));
+        $children = isset($r['adults']) && $r['adults'] !== null && $r['adults'] !== '' ? max(0, (int) ($r['children'] ?? 0)) : 0;
+
         return [
             'month' => (int) ($r['month'] ?? 1),
             'days' => max(1, min($maxDays, (int) ($r['days'] ?? 1))),
             'interests' => array_values(array_intersect((array) ($r['interests'] ?? []), array_keys($this->interests))),
             'dislikes' => array_values(array_intersect((array) ($r['dislikes'] ?? []), array_keys($this->cfg['dislikes']))),
-            'budget' => isset($r['budget']) && $r['budget'] !== '' && $r['budget'] !== null ? (float) $r['budget'] : null,
-            'groupSize' => max(1, (int) ($r['groupSize'] ?? 1)),
+            'budget' => isset($r['budget']) && $r['budget'] !== '' && $r['budget'] !== null && (float) $r['budget'] > 0 ? (float) $r['budget'] : null,
+            'groupSize' => $adults + $children,
+            'adults' => $adults,
+            'children' => $children,
             'pace' => $pace,
             'maxDifficulty' => $diff,
             'startDate' => !empty($r['startDate']) ? (string) $r['startDate'] : null,
@@ -236,6 +344,14 @@ final class PlannerEngine
                 && ($c['eventStart'] > $tripEnd || $c['eventEnd'] < $req['startDate'])) {
                 $reject($c, 'event_outside_trip', 'Lễ hội diễn ra ' . $c['eventStart'] . ' → ' . $c['eventEnd'] . ', ngoài thời gian chuyến đi');
                 continue;
+            }
+            // "không thích di chuyển xa": bỏ nơi cách tâm điểm đến quá một chặng cho phép
+            if (in_array('long_travel', $req['dislikes'], true) && !empty($ctx['center']) && ($c['lat'] ?? null) !== null && ($c['lng'] ?? null) !== null) {
+                $far = $this->km($ctx['center'], [(float) $c['lat'], (float) $c['lng']]);
+                if ($far > $this->maxLegKm($req)) {
+                    $reject($c, 'far', 'Cách trung tâm khoảng ' . round($far) . ' km, bạn chọn "không thích di chuyển xa"');
+                    continue;
+                }
             }
             // địa điểm phải có tọa độ (không có thì không tính được lộ trình)
             if ($c['type'] === 'place' && (($c['lat'] ?? null) === null || ($c['lng'] ?? null) === null)) {
@@ -351,7 +467,7 @@ final class PlannerEngine
      * Chọn $days "hạt giống" cách xa nhau (farthest-point), gán mỗi mục vào hạt giống gần nhất còn chỗ.
      * Lễ hội biết ngày diễn ra được ghim vào đúng ngày đó. Trả về $days danh sách (đã sắp theo đường đi gần nhất).
      */
-    private function assignDays(array $picked, array $req, ?array $center, int $perDayMax, int $dayBudget, array &$log): array
+    private function assignDays(array $picked, array $req, ?array $center, int $perDayMax, int $dayBudget, array &$log, array &$leftover = []): array
     {
         $n = $req['days'];
         $lists = array_fill(0, $n, []);
@@ -381,6 +497,9 @@ final class PlannerEngine
         foreach ($free as $d) {
             $best = null;
             foreach ($pool as $i => $c) {
+                if ($this->closedOn($c, $this->dowOf($req, $d + 1))) {
+                    continue;
+                }
                 $p = $this->pt($c, $center);
                 $dist = $seeds ? min(array_map(fn($s) => $this->km($p, $s), $seeds)) : 0.0;
                 if ($best === null || $dist > $best[1] + 1e-9) {
@@ -404,6 +523,9 @@ final class PlannerEngine
             $placed = false;
             foreach ($order as $d) {
                 $dur = $this->dur($c);
+                if ($this->closedOn($c, $this->dowOf($req, $d + 1))) {
+                    continue;   // biết ngày đi: không xếp vào ngày nơi này đóng cửa
+                }
                 if (count($lists[$d]) < $perDayMax && $load[$d] + $dur <= $dayBudget) {
                     $lists[$d][] = $c;
                     $load[$d] += $dur;
@@ -414,6 +536,7 @@ final class PlannerEngine
             if (!$placed) {
                 $log[] = ['key' => $c['key'], 'name' => $c['name'], 'type' => $c['type'], 'code' => 'capacity',
                     'reason' => 'Các ngày đều đã đủ thời gian/số mục, không còn chỗ cho mục này'];
+                array_unshift($leftover, $c);   // vẫn giữ trong "Đã lưu" để người dùng tự xếp
             }
         }
 
@@ -453,9 +576,14 @@ final class PlannerEngine
 
     // ------------------------------------------------------------------ (6) timeline
 
-    private function timeline(int $dayNo, array $acts, array $meals, ?array $center, int $dayBudget, array &$warnings): array
+    /**
+     * Xếp giờ một ngày: sáng (~200 phút hoạt động), bữa trưa, chiều, bữa tối.
+     * Biết thứ của ngày (có ngày đi): mục tới trước giờ mở thì chờ; không còn khoảng mở đủ dài thì thử dời xuống cuối ngày,
+     * vẫn không được thì bỏ khỏi ngày (đưa vào $dropped kèm lý do). Mục không có tọa độ (món ăn chưa gắn quán) không tạo chặng đi.
+     */
+    private function timeline(int $dayNo, array $acts, array $meals, ?array $center, int $dayBudget, array &$warnings, array $req = [], array &$dropped = []): array
     {
-        // hoạt động buổi sáng đến khi đủ ~200 phút, bữa trưa, hoạt động buổi chiều, bữa tối
+        $dow = $this->dowOf($req, $dayNo);
         $morning = [];
         $afternoon = [];
         $acc = 0;
@@ -467,79 +595,208 @@ final class PlannerEngine
                 $afternoon[] = $c;
             }
         }
-        $seq = [];
+        $queue = [];
         foreach ($morning as $c) {
-            $seq[] = [$c, null];
+            $queue[] = [$c, null];
         }
         if (isset($meals[0])) {
-            $seq[] = [$meals[0], 'noon'];
+            $queue[] = [$meals[0], 'noon'];
         }
         foreach ($afternoon as $c) {
-            $seq[] = [$c, null];
+            $queue[] = [$c, null];
         }
         if (isset($meals[1])) {
-            $seq[] = [$meals[1], 'evening'];
+            $queue[] = [$meals[1], 'evening'];
         }
 
-        $bounds = $this->cfg['slot_bounds_min'];
-        $clock = 0;
+        $clock = $this->rules->dayStart();   // phút kể từ 00:00, cùng thang với startMin của mục chuyến đi
         $prev = null;
         $items = [];
         $travelTotal = 0;
         $kmTotal = 0.0;
         $actMin = 0;
-        foreach ($seq as $i => [$c, $forced]) {
-            $p = $this->pt($c, $center);
+        $retried = [];
+        $maxWait = (int) ($this->cfg['hours_max_wait_min'] ?? 90);
+        while ($queue) {
+            [$c, $forced] = array_shift($queue);
+            $p = $this->realPt($c);
             $travelKm = 0.0;
             $travelMin = 0;
-            if ($prev !== null) {
-                $straight = $this->km($prev, $p);
-                if ($straight >= 0.5) {   // cùng một khu: không tính đoạn đường
-                    $travelKm = $straight * (float) $this->cfg['detour_factor'];
-                    $travelMin = (int) round($travelKm / (float) $this->cfg['travel_speed_kmh'] * 60);
-                }
+            if ($prev !== null && $p !== null) {
+                $leg = $this->route->leg($prev, $p);   // RouteService: cùng quy tắc "cùng một khu" và cùng tốc độ với trang sửa
+                $travelKm = $leg['km'];
+                $travelMin = $leg['min'];
             }
-            $clock += $travelMin;
-            $slot = $forced ?? $this->slotAt($clock, $bounds);
+            $start = (int) (ceil(($clock + $travelMin) / 5) * 5);   // làm tròn 5 phút như DaySchedule
+            if ($forced !== null && $start < (int) $this->rules->slotStart($forced)) {
+                $start = (int) $this->rules->slotStart($forced);   // bữa trưa không sớm hơn đầu buổi trưa, bữa tối không sớm hơn đầu buổi tối
+            }
+            $dur = $this->dur($c);
+            if ($dow !== null && isset($c['hours'][(string) $dow])) {
+                $fit = OpeningHours::fit($c['hours'], $dow, $start, $dur);
+                if ($fit === null || $fit - $start > $maxWait) {
+                    if (empty($retried[$c['key']]) && $queue) {
+                        // thử lại sau: chèn trước bữa tối (nếu còn), để mục khác đi trước
+                        $retried[$c['key']] = true;
+                        $last = end($queue);
+                        if ($last !== false && $last[1] === 'evening') {
+                            array_splice($queue, count($queue) - 1, 0, [[$c, $forced]]);
+                        } else {
+                            $queue[] = [$c, $forced];
+                        }
+                        continue;
+                    }
+                    if ($fit === null) {
+                        $dropped[] = $c + ['dropWhy' => 'Ngày ' . $dayNo . ' (' . self::DOW[$dow] . ') không còn khoảng mở cửa đủ ' . $dur . ' phút'
+                            . (($h = OpeningHours::describe($c['hours'], $dow)) ? ' (giờ mở: ' . $h . ')' : '')];
+                        continue;
+                    }
+                }
+                $start = max($start, $fit);
+            }
+            $slot = $forced ?? $this->rules->slotOf($start);
             if ($forced === null && $slot === 'noon') {
                 $slot = 'afternoon';   // khung trưa dành cho bữa ăn
             }
-            if ($forced === 'noon' && $clock < $bounds['noon'][0]) {
-                $clock = $bounds['noon'][0];   // bữa trưa không sớm hơn 11:30
-            }
-            if ($forced === 'evening' && $clock < $bounds['evening'][0]) {
-                $clock = $bounds['evening'][0];   // bữa tối không sớm hơn 18:00
-            }
-            $dur = $this->dur($c);
-            $items[] = $c + ['slot' => $slot, 'startMin' => $clock, 'durationMin' => $dur, 'travelKm' => round($travelKm, 1), 'travelMin' => $travelMin, 'coordsApprox' => ($c['lat'] ?? null) === null || ($c['lng'] ?? null) === null];
-            $clock += $dur;
+            // array_merge (không dùng +): ứng viên có thể mang sẵn khóa durationMin = null (lễ hội) và phải được ghi đè
+            $items[] = array_merge($c, ['slot' => $slot, 'startMin' => $start, 'durationMin' => $dur, 'travelKm' => round($travelKm, 1), 'travelMin' => $travelMin,
+                'coordsApprox' => $p === null]);
+            $clock = $start + $dur;
             if (!$c['isMeal']) {
                 $actMin += $dur;
             }
             $travelTotal += $travelMin;
             $kmTotal += $travelKm;
-            $prev = $p;
-        }
-
-        if ($actMin + $travelTotal > $dayBudget * 1.1) {
-            $warnings[] = 'Ngày ' . $dayNo . ' khá dày: khoảng ' . round(($actMin + $travelTotal) / 60, 1) . ' giờ hoạt động và di chuyển.';
-        }
-        if ($travelTotal > (int) $this->cfg['max_travel_min_per_day']) {
-            $warnings[] = 'Ngày ' . $dayNo . ' di chuyển khoảng ' . round($travelTotal / 60, 1) . ' giờ (ước tính), nên bớt điểm hoặc chia sang ngày khác.';
-        }
-
-        return ['day' => $dayNo, 'items' => $items, 'activityMin' => $actMin, 'travelMin' => $travelTotal, 'km' => (int) round($kmTotal)];
-    }
-
-    private function slotAt(int $min, array $bounds): string
-    {
-        foreach ($bounds as $slot => [$from, $to]) {
-            if ($min >= $from && $min < $to) {
-                return $slot;
+            if ($p !== null) {
+                $prev = $p;   // mục không có vị trí không làm đứt đoạn đi giữa hai điểm thật
             }
         }
 
-        return 'evening';
+        $out = ['day' => $dayNo, 'items' => $items, 'travelMin' => $travelTotal];
+        if ($this->loadOf($out) >= $this->rules->loadWarn()) {
+            $warnings[] = 'Ngày ' . $dayNo . ' khá dày: khoảng ' . round(($actMin + $travelTotal) / 60, 1) . ' giờ hoạt động và di chuyển.';
+        }
+        if ($travelTotal > $this->maxTravelMin($req)) {
+            $warnings[] = 'Ngày ' . $dayNo . ' di chuyển khoảng ' . round($travelTotal / 60, 1) . ' giờ (ước tính), nên bớt điểm hoặc chia sang ngày khác.';
+        }
+
+        return ['day' => $dayNo, 'dow' => $dow, 'items' => $items, 'activityMin' => $actMin, 'travelMin' => $travelTotal, 'km' => (int) round($kmTotal)];
+    }
+
+    /** Độ dày của một ngày theo PlannerRules::occupied (hoạt động gồm cả bữa ăn + di chuyển + đệm) / sức chứa. */
+    private function loadOf(array $day): float
+    {
+        $all = array_sum(array_map(fn($i) => (int) $i['durationMin'], $day['items']));
+        $hasMeal = (bool) array_filter($day['items'], fn($i) => !empty($i['isMeal']) || $this->rules->kindOf($i) === 'meal');
+        $o = $this->rules->occupied($all, (int) $day['travelMin'], $hasMeal, (bool) $day['items']);
+
+        return $o['occupied'] / max(1, $this->rules->availableMin());
+    }
+
+    // ------------------------------------------------------------------ ràng buộc cứng: ngân sách, giờ mở cửa, đi xa
+
+    private const DOW = [1 => 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ nhật'];
+
+    /** Giá ĐÃ BIẾT của một mục cho cả nhóm (null = chưa có giá). Trẻ em: chưa có giá riêng thì tính như người lớn (ghi rõ trong thông báo ngân sách). */
+    public function costOf(array $c, array $req): ?float
+    {
+        $min = $c['priceMin'] ?? null;
+        if ($min === null) {
+            return null;
+        }
+        $child = $c['priceChild'] ?? null;
+
+        return (float) $min * $req['adults'] + (float) ($child ?? $min) * $req['children'];
+    }
+
+    /**
+     * Ngân sách là ràng buộc CỨNG trên phần đã biết giá: tổng giá đã biết của các mục được chọn không được vượt ngân sách.
+     * Bỏ dần mục đắt nhất (mục "phải thử" bỏ sau cùng), thay bằng mục kế tiếp còn vừa ngân sách; mục bị bỏ ghi vào nhật ký.
+     *
+     * @return array{0:list<array>,1:list<array>} [picked, leftover]
+     */
+    private function fitBudget(array $picked, array $leftover, array $req, array &$log): array
+    {
+        $limit = (float) $req['budget'];
+        $total = fn(array $l) => array_sum(array_map(fn($c) => (float) ($this->costOf($c, $req) ?? 0), $l));
+        while ($total($picked) > $limit) {
+            // riêng các mục "phải thử" đã vượt ngân sách thì phải bỏ bớt chúng; nếu không, chỉ bỏ mục thường
+            $must = array_sum(array_map(fn($c) => $c['mustTry'] ? (float) ($this->costOf($c, $req) ?? 0) : 0.0, $picked));
+            $dropMust = $must > $limit;
+            $worst = null;
+            foreach ($picked as $i => $c) {
+                $cost = $this->costOf($c, $req);
+                if ($cost === null || $cost <= 0 || $c['mustTry'] !== $dropMust) {
+                    continue;
+                }
+                $k = [-$cost, $c['score'], $c['key']];   // đắt nhất trước, cùng giá thì điểm thấp hơn trước
+                if ($worst === null || $k < $worst[1]) {
+                    $worst = [$i, $k];
+                }
+            }
+            if ($worst === null) {
+                break;
+            }
+            $c = $picked[$worst[0]];
+            array_splice($picked, $worst[0], 1);
+            $log[] = ['key' => $c['key'], 'name' => $c['name'], 'type' => $c['type'], 'code' => 'budget',
+                'reason' => 'Giá ' . number_format((float) $this->costOf($c, $req), 0, ',', '.') . 'đ cho cả nhóm làm tổng phần đã biết giá vượt ngân sách ' . number_format($limit, 0, ',', '.') . 'đ'];
+            // thay bằng mục kế tiếp (điểm cao nhất) còn vừa ngân sách
+            $room = $limit - $total($picked);
+            foreach ($leftover as $j => $x) {
+                $xc = $this->costOf($x, $req);
+                if ($xc === null || $xc <= $room) {
+                    $picked[] = $x;
+                    array_splice($leftover, $j, 1);
+                    break;
+                }
+            }
+        }
+        // phần còn lại vượt ngân sách thì không dùng để bù ngày thưa
+        $room = $limit - $total($picked);
+        foreach ($leftover as &$x) {
+            $xc = $this->costOf($x, $req);
+            if ($xc !== null && $xc > $room) {
+                $x['overBudget'] = true;
+            }
+        }
+        unset($x);
+        $leftover = array_values(array_filter($leftover, fn($x) => empty($x['overBudget'])));
+
+        return [$picked, $leftover];
+    }
+
+    /** Thứ ISO của ngày thứ $day khi biết ngày đi; null khi chưa có ngày đi. */
+    private function dowOf(array $req, int $day): ?int
+    {
+        return OpeningHours::dowOf($req['startDate'] ?? null, $day);
+    }
+
+    /** Biết chắc nơi này đóng cửa cả ngày đó. */
+    private function closedOn(array $c, ?int $dow): bool
+    {
+        return $dow !== null && isset($c['hours']) && is_array($c['hours']) && array_key_exists((string) $dow, $c['hours']) && $c['hours'][(string) $dow] === [];
+    }
+
+    /** "Không thích di chuyển xa": giới hạn phút đi lại mỗi ngày chặt hơn. */
+    private function maxTravelMin(array $req): int
+    {
+        $d = (int) $this->cfg['max_travel_min_per_day'];
+        if (in_array('long_travel', $req['dislikes'] ?? [], true)) {
+            $d = min($d, (int) ($this->cfg['dislikes']['long_travel']['max_travel_min_per_day'] ?? 90));
+        }
+
+        return $d;
+    }
+
+    private function maxLegKm(array $req): float
+    {
+        $d = (float) $this->cfg['max_leg_km'];
+        if (in_array('long_travel', $req['dislikes'] ?? [], true)) {
+            $d = min($d, (float) ($this->cfg['dislikes']['long_travel']['max_leg_km'] ?? 25));
+        }
+
+        return $d;
     }
 
     // ------------------------------------------------------------------ (7) ngân sách (quy tắc 0.1-D)
@@ -561,8 +818,8 @@ final class PlannerEngine
             $priced++;
             $lo = (float) ($min ?? $max);
             $hi = (float) ($max ?? $min);
-            $knownMin += $lo * $g;
-            $knownMax += max($lo, $hi) * $g;
+            $knownMin += (float) $this->costOf(['priceMin' => $lo] + $it, $req);
+            $knownMax += (float) $this->costOf(['priceMin' => max($lo, $hi), 'priceChild' => null], $req);
         }
         $status = $priced === 0 ? 'UNKNOWN' : ($unknown === 0 ? 'FULL' : 'PARTIAL');
         $limit = $req['budget'];
@@ -573,6 +830,9 @@ final class PlannerEngine
         };
         if ($limit !== null && $priced > 0 && $knownMin > $limit) {
             $msg .= ' Riêng phần đã biết giá đã vượt ngân sách bạn nhập.';
+        }
+        if (($req['children'] ?? 0) > 0 && $priced > 0) {
+            $msg .= ' Trải nghiệm chưa có giá trẻ em riêng nên trẻ em được tính như người lớn.';
         }
 
         return ['status' => $status, 'knownMin' => $knownMin, 'knownMax' => $knownMax, 'pricedCount' => $priced, 'unknownCount' => $unknown,
@@ -594,6 +854,12 @@ final class PlannerEngine
         return (int) ($d[$c['type']] ?? 60);
     }
 
+    /** Tọa độ thật của mục (không thay bằng tâm điểm đến). */
+    private function realPt(array $c): ?array
+    {
+        return ($c['lat'] ?? null) !== null && ($c['lng'] ?? null) !== null ? [(float) $c['lat'], (float) $c['lng']] : null;
+    }
+
     /** @return array{0:float,1:float}|null */
     private function pt(array $c, ?array $center): ?array
     {
@@ -604,6 +870,7 @@ final class PlannerEngine
         return $center;
     }
 
+    /** Khoảng cách chim bay, CHỈ để gom điểm theo cụm khi chia ngày (không phải thời gian di chuyển: cái đó luôn qua RouteService). */
     private function km(?array $a, ?array $b): float
     {
         return $a && $b ? Geo::distanceKm($a[0], $a[1], $b[0], $b[1]) : 0.0;

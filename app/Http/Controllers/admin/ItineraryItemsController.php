@@ -56,7 +56,7 @@ class ItineraryItemsController extends Controller
             'items' => $items,
             'slots' => array_map(fn($s) => $s[0], (array) config('itinerary.slots')),
             'slotRank' => array_map(fn($s) => $s[1], (array) config('itinerary.slots')),
-            'budget' => (int) config('planner.day_budget_min', 480),
+            'budget' => \App\Services\Planner\PlannerRules::fromConfig()->itemBudgetMin(),
             'warnings' => $check['warnings'],
         ]);
     }

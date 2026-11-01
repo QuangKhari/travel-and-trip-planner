@@ -56,14 +56,10 @@
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
 
-    <!-- Travel Theme v2: phải nằm CUỐI <head> để đè được CSS cũ -->
-    {{-- Chỉ preload ảnh của hero đang hiển thị: hero mới -> ảnh bưu ảnh đầu tiên; hero cũ -> hero.webp --}}
-    @if (isset($postcards) && count($postcards) >= 3)
-        <link rel="preload" as="image" href="{{ $postcards[0]['image'] }}" fetchpriority="high">
-    @else
-        <link rel="preload" as="image" href="{{ asset('clients/assets/images/hero/hero.webp') }}"
-            type="image/webp" fetchpriority="high">
-    @endif
+    <!-- Ảnh chính của hero (Lý Sơn, từ hero.jpg) tải sớm cho LCP -->
+    <link rel="preload" as="image" href="{{ asset('clients/assets/images/hero/hero-bg.webp') }}" type="image/webp"
+        fetchpriority="high">
+    <link rel="preload" as="image" href="{{ asset('clients/assets/images/hero/hero-card.webp') }}" type="image/webp">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -72,22 +68,14 @@
         rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/travel-theme.css') }}?v=3">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/inspiration.css') }}?v=2">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/inspiration-hub.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-hub-layout.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/inspiration-hub.css') }}?v=3">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-weather.css') }}?v=1">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/hero-postcards.css') }}?v=3">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/explore-kit.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/home-strips.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/gx-discover.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/gx-guide.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/gx-pages.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/home-unify.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/mobile-nav.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/site-ux.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/home-ux.css') }}?v=3">
+    {{-- Giao diện mới: phải nằm CUỐI <head> --}}
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv3.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv3-home.css') }}?v=5">
 </head>
 
 <body class="tv-home">

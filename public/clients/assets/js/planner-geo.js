@@ -1,10 +1,23 @@
 /* Hàm thuần của Trip Planner (khoảng cách, thời gian di chuyển, tối ưu thứ tự trong ngày).
  * Không đụng DOM nên chạy được cả trong trình duyệt (window.TpGeo) lẫn Node (module.exports) để kiểm thử.
- * Hằng số ROAD_FACTOR / SPEED_KMH / MIN_LEG_KM phải khớp App\Services\Planner\TripPlanner (máy chủ tính cùng công thức khi lưu).
+ * Vai trò: XEM TRƯỚC tức thì ở trình duyệt. Nguồn sự thật là RouteService phía máy chủ (lưu, sức khỏe chuyến đi, tối ưu tuyến).
+ * Tham số không khai báo ở đây: trang sửa gọi TpGeo.configure(cfg.rules.route) với đúng số của PlannerRules::route(),
+ * nên khi máy chủ dùng ước tính (haversine) hai bên ra cùng con số (PlannerContractTest kiểm tra).
+ * Giá trị dưới đây chỉ là mặc định khi chạy ngoài trang (kiểm thử Node cũ).
  */
 (function (root) {
     "use strict";
     var ROAD_FACTOR = 1.3, SPEED_KMH = 40, MIN_LEG_KM = 0.5;
+
+    /** Nhận tham số tuyến từ máy chủ: {factor, speedKmh, minLegKm}. */
+    function configure(r) {
+        if (!r) return api;
+        if (r.factor > 0) ROAD_FACTOR = +r.factor;
+        if (r.speedKmh > 0) SPEED_KMH = +r.speedKmh;
+        if (r.minLegKm >= 0) MIN_LEG_KM = +r.minLegKm;
+        api.ROAD_FACTOR = ROAD_FACTOR; api.SPEED_KMH = SPEED_KMH; api.MIN_LEG_KM = MIN_LEG_KM;
+        return api;
+    }
 
     function hav(a, b) {
         var R = 6371, rad = Math.PI / 180;
@@ -22,11 +35,11 @@
             var s = hav(pts[i - 1], pts[i]);
             if (s < MIN_LEG_KM) continue;
             var road = s * ROAD_FACTOR, m = Math.round(road / SPEED_KMH * 60);
-            out.push({ from: pts[i - 1], to: pts[i], km: Math.round(road), min: m });
+            out.push({ from: pts[i - 1], to: pts[i], km: Math.round(road), kmExact: road, min: m });
             km += road;
             min += m;
         }
-        return { legs: out, km: Math.round(km), minutes: min };
+        return { legs: out, km: Math.round(km), kmExact: km, minutes: min };
     }
 
     function pathLen(order, pts) {
@@ -110,7 +123,7 @@
     function isShortMapsLink(raw) { return /goo\.gl|maps\.app|g\.co\/kgs/i.test(String(raw || "")); }
     function mapsUrl(lat, lng) { return "https://www.google.com/maps?q=" + lat + "," + lng; }
 
-    var api = { ROAD_FACTOR: ROAD_FACTOR, SPEED_KMH: SPEED_KMH, MIN_LEG_KM: MIN_LEG_KM, hav: hav, hasPos: hasPos, legs: legs, optimize: optimize, roadKm: roadKm, roadKmExact: roadKmExact, parseMapsInput: parseMapsInput, isShortMapsLink: isShortMapsLink, mapsUrl: mapsUrl };
+    var api = { configure: configure, ROAD_FACTOR: ROAD_FACTOR, SPEED_KMH: SPEED_KMH, MIN_LEG_KM: MIN_LEG_KM, hav: hav, hasPos: hasPos, legs: legs, optimize: optimize, roadKm: roadKm, roadKmExact: roadKmExact, parseMapsInput: parseMapsInput, isShortMapsLink: isShortMapsLink, mapsUrl: mapsUrl };
     if (typeof module !== "undefined" && module.exports) module.exports = api;
     root.TpGeo = api;
 })(typeof window !== "undefined" ? window : globalThis);

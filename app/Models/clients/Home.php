@@ -18,8 +18,8 @@ class Home extends Model
             ->where('availability', 1)
             ->where('quantity', '>', 0)
             ->whereDate('startDate', '>', now()->toDateString())
-            ->inRandomOrder()
-            ->limit(6)
+            ->orderBy('startDate')
+            ->limit(12) // 4 tour hiện ra; số còn lại để trang chủ ưu tiên lại theo cảm hứng người xem chọn
             ->get();
 
         $tourIds = $tours->pluck('tourId')->all();
@@ -47,7 +47,13 @@ class Home extends Model
             ->get()
             ->keyBy('tourId');
 
+        // slug điểm đến của từng tour (để khớp với điểm theo cảm hứng trên bản đồ)
+        $destSlugs = DB::table('tbl_destinations')
+            ->whereIn('destinationId', $tours->pluck('destinationId')->filter()->unique()->all())
+            ->pluck('slug', 'destinationId');
+
         foreach ($tours as $tour) {
+            $tour->destSlug = $destSlugs[$tour->destinationId ?? 0] ?? null;
             $tour->rating = optional($ratingsByTour->get($tour->tourId))->avgRating;
             $tour->ratingCount = optional($ratingsByTour->get($tour->tourId))->ratingCount ?? 0;
 

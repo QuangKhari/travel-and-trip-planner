@@ -68,7 +68,9 @@ class Week8PlannerSplitTest extends TestCase
     {
         $this->withSession($this->s)->get('/len-ke-hoach/de-xuat')->assertOk()
             ->assertSee('Điền sẵn giúp tôi')
-            ->assertSee('/len-ke-hoach/tao-tu-dong', false);
+            ->assertSee('/len-ke-hoach/de-xuat/xem-truoc', false)   // gửi sang màn xem trước, chưa lưu
+            ->assertSee('name="startDate"', false)->assertSee('name="pace"', false)->assertSee('name="maxDifficulty"', false)
+            ->assertSee('name="adults"', false)->assertSee('name="children"', false);
     }
 
     public function test_suggest_page_requires_login(): void
@@ -139,11 +141,20 @@ class Week8PlannerSplitTest extends TestCase
 
     public function test_external_failure_reports_ok_false_and_is_not_cached(): void
     {
-        Http::fake(['photon.komoot.io/*' => Http::response('boom', 500)]);
+        // một fake duy nhất đổi trạng thái (gọi Http::fake lần hai chỉ thêm stub phía sau, stub đầu vẫn thắng)
+        $up = false;
+        Http::fake(['photon.komoot.io/*' => function () use (&$up) {
+            return $up ? Http::response($this->photonPayload()) : Http::response('boom', 500);
+        }]);
         $id = $this->trip();
         $this->withSession($this->s)->getJson("/len-ke-hoach/$id/tim-ngoai?q=" . urlencode('ho guom'))->assertOk()
             ->assertJsonPath('ok', false)->assertJsonPath('results', []);
-        Http::fake(['photon.komoot.io/*' => Http::response($this->photonPayload())]);
+        // vừa lỗi: cầu dao tạm ngắt, lần sau trả ngay (không chờ mạng làm treo trang)
+        $sent = count(Http::recorded());
+        $this->withSession($this->s)->getJson("/len-ke-hoach/$id/tim-ngoai?q=" . urlencode('ho guom'))->assertJsonPath('ok', false);
+        $this->assertSame($sent, count(Http::recorded()));
+        $up = true;   // hết thời gian ngắt; lỗi lần trước không bị lưu cache: lần này gọi lại dịch vụ
+        \App\Services\Planner\ExternalGuard::reset('geocoder');
         $this->withSession($this->s)->getJson("/len-ke-hoach/$id/tim-ngoai?q=" . urlencode('ho guom'))->assertJsonPath('ok', true);
     }
 

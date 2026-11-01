@@ -219,7 +219,8 @@ class Week7ManualPlannerTest extends TestCase
     {
         $id = $this->trip();
         $this->withSession($this->s)->get("/len-ke-hoach/$id")->assertOk()
-            ->assertSee('Lịch trình')->assertSee('Chi phí')->assertSee('Thông tin')->assertDontSee('Khám phá')
+            // "Khám phá" vẫn có trong menu chung của website; điều cần kiểm là trang sửa KHÔNG còn tab "Khám phá" riêng
+            ->assertSee('Lịch trình')->assertSee('Chi phí')->assertSee('Thông tin')->assertDontSee('data-tab="explore"', false)
             ->assertSee('Lưu thay đổi')->assertSee('Hoàn tác')
             ->assertSee("/len-ke-hoach/$id/tim", false);
     }

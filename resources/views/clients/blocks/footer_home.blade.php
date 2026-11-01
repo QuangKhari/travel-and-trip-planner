@@ -34,10 +34,11 @@
         <script src="{{ asset('clients/assets/js/travel-theme.js') }}?v=2"></script>
         @include('clients.blocks.mobile_tabbar')
         @include('clients.blocks.trip_boot')
-        <script src="{{ asset('clients/assets/js/hero-postcards.js') }}?v=5"></script>
-        <script src="{{ asset('clients/assets/js/home-strips.js') }}?v=2" defer></script>
+        <script src="{{ asset('clients/assets/js/tv3.js') }}?v=1" defer></script>
+        {{-- trang chủ: phải chạy trước inspiration-hub.js (defer) để nhận sự kiện đổi cảm hứng đầu tiên --}}
+        <script src="{{ asset('clients/assets/js/tv-home.js') }}?v=2"></script>
+        <script src="{{ asset('clients/assets/js/tv-tours-10.js') }}?v=1" defer></script>
         <script src="{{ asset('clients/assets/js/travel-chat.js') }}?v=1"></script>
-        <script src="{{ asset('clients/assets/js/gx-discover.js') }}?v=1" defer></script>
 
         <script src="{{ asset('clients/assets/js/jquery.datetimepicker.full.min.js') }}"></script>
 

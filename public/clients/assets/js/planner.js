@@ -1,26 +1,45 @@
 /* Trình soạn chuyến đi (/len-ke-hoach/{id}). JS thuần, dữ liệu từ <script type="application/json" id="tpData">.
  *
+ * Bố cục "Timeline + Bản đồ" (tham khảo Wanderlog và Roadtrippers):
+ * - Dải ngày phía trên: mỗi ngày có thanh "độ dày" (phút hoạt động + di chuyển so với quỹ thời gian trong ngày).
+ * - Mỗi ngày là một timeline theo buổi (sáng/trưa/chiều/tối): giờ bắt đầu - kết thúc được XẾP TỰ ĐỘNG từ thứ tự,
+ *   thời lượng ở lại và quãng đường giữa các điểm; người dùng có thể ghim giờ cố định hoặc đổi thời lượng cho từng mục.
+ * - Bản đồ liên kết hai chiều: rê/bấm một mục -> ghim sáng lên; bấm ghim -> cuộn tới mục. Bản đồ tự theo ngày đang xem.
+ * - Cảnh báo nằm ngay trong ngày bị ảnh hưởng (quá dày, đi lại nhiều, trùng giờ) kèm nút xử lý; "Tối ưu tuyến" hiện
+ *   trước/sau để người dùng quyết định áp dụng hay không.
+ *
  * Trạng thái nằm trong mảng `items` + các ô thông tin; mọi chữ động gán bằng textContent (không innerHTML).
  * - Hoàn tác / làm lại: mỗi thay đổi đã "chốt" (commit) so với ảnh chụp trước đó và đẩy vào ngăn xếp.
- * - Tự lưu sau vài giây không thao tác; lưu xong không tải lại trang.
+ * - Tự lưu sau vài giây không thao tác; lưu xong không tải lại trang. Trạng thái lưu hiện ở đầu trang.
  * - Quãng đường theo ngày tính ngay trên trình duyệt bằng planner-geo.js (cùng công thức với máy chủ).
- * - Kéo-thả bằng HTML5 (tay cầm ⠿); trên cảm ứng dùng nút ↑ ↓ và ô chọn ngày.
- * - Bản đồ: Leaflet + OpenStreetMap; nếu cấu hình osrmUrl thì vẽ đường bộ, không thì đường thẳng.
+ * - Kéo-thả bằng HTML5 (tay cầm); trên cảm ứng dùng nút ↑ ↓ và ô chọn ngày trong phần "Sửa".
  */
 (function () {
     "use strict";
     var node = document.getElementById("tpData");
     if (!node) return;
     var cfg = JSON.parse(node.textContent);
-    var G = window.TpGeo;
+    // Quy tắc nghiệp vụ đến từ máy chủ (PlannerRules::client()); TpGeo / TpSchedule chỉ đọc từ đây, không tự đặt hằng số.
+    var RULES = cfg.rules || {};
+    var G = window.TpGeo.configure(RULES.route);
+    var S = window.TpSchedule.create(RULES, G);
+    var API = window.TpApi.create(cfg);                     // mọi yêu cầu tới máy chủ (planner-api.js)
+    var fetchJson = API.getJson, post = API.post;
 
     var TYPE = { destination: "Điểm đến", place: "Địa điểm", food: "Món ăn", event: "Lễ hội", experience: "Trải nghiệm", tour: "Tour", note: "Mục tự thêm", transport: "Di chuyển" };
+    var ICON = { destination: "fa-map-marker-alt", place: "fa-landmark", food: "fa-utensils", event: "fa-calendar-alt", experience: "fa-hiking", tour: "fa-suitcase-rolling", note: "fa-sticky-note", transport: "fa-bus", lodging: "fa-bed", meal: "fa-utensils" };
     var CUSTOM = { note: true, transport: true };
-    var SLOT = { morning: "Sáng", noon: "Trưa", afternoon: "Chiều", evening: "Tối" };
+    var SLOT = {};
+    Object.keys(RULES.slots || {}).forEach(function (k) { SLOT[k] = RULES.slots[k].label; });
+    var SLOT_HEAD = { morning: ["fa-sun", "Buổi sáng"], noon: ["fa-utensils", "Buổi trưa"], afternoon: ["fa-cloud-sun", "Buổi chiều"], evening: ["fa-moon", "Buổi tối"] };
+    var DAY_START = RULES.dayStart, LATE_END = RULES.dayEnd;   // bắt đầu tự xếp; kết thúc sau giờ này là muộn
+    // Độ dày ngày (khớp App\Services\Planner\Health\DaySchedule): (hoạt động + di chuyển + bữa ăn chừa sẵn + đệm) / thời gian dùng được
+    var DAY_AVAIL = RULES.availableMin;   // sức chứa một ngày (độ dày = phút đã dùng / con số này), cùng DaySchedule
+    var DURS = [15, 30, 45, 60, 90, 120, 150, 180, 240, 300, 360, 480];
     var SUGG_TITLE = { tray: "Từ khay chuyến đi", tour: "Tour sắp khởi hành", experience: "Trải nghiệm", food: "Món nên thử", event: "Lễ hội" };
     var COLORS = ["#0d6f6a", "#c2410c", "#1d4ed8", "#a21caf", "#4d7c0f", "#be123c", "#0e7490", "#92400e", "#4338ca", "#15803d", "#b45309", "#6d28d9", "#0369a1", "#9f1239"];
-        var LIMITS = cfg.limits || { maxDays: 14, maxItems: 80 };
-    var DAY_ITEMS_WARN = 6, DAY_TRAVEL_WARN_MIN = 300, AUTOSAVE_MS = 2500;
+    var LIMITS = cfg.limits || { maxDays: 14, maxItems: 80 };
+    var DAY_ITEMS_WARN = RULES.itemsWarn || 7, DAY_TRAVEL_WARN_MIN = RULES.travelWarnMin || 180, AUTOSAVE_MS = 2500;
     var SRC = { link: "từ link", map: "chọn trên bản đồ", search: "từ tìm kiếm" };
     var SHORT_MSG = "Link rút gọn không chứa tọa độ. Hãy mở link trong trình duyệt rồi chép link đầy đủ ở thanh địa chỉ, hoặc bấm “Chọn trên bản đồ”.";
     var BAD_POS_MSG = "Chưa đọc được tọa độ. Dán link Google Maps đầy đủ hoặc nhập dạng 21.0285, 105.8542.";
@@ -39,10 +58,41 @@
         b.addEventListener("click", fn);
         return b;
     }
+    function icon(name) {
+        var i = el("i", "fas " + name);
+        i.setAttribute("aria-hidden", "true");
+        return i;
+    }
+    /** Nút có biểu tượng + chữ (chữ đặt bằng textContent). */
+    function ibtn(cls, ic, text, label, fn) {
+        var b = btn(cls, null, label, fn);
+        b.appendChild(icon(ic));
+        if (text) b.appendChild(el("span", null, text));
+        return b;
+    }
     function safeUrl(u) { return /^(\/|https?:\/\/)/.test(u || "") ? u : null; }
     function money(n) { return Math.round(n || 0).toLocaleString("vi-VN") + "đ"; }
+    function shortMoney(n) {
+        n = Math.round(n || 0);
+        if (n >= 1e6) return (Math.round(n / 1e5) / 10).toLocaleString("vi-VN") + " tr";
+        if (n >= 1e3) return Math.round(n / 1e3).toLocaleString("vi-VN") + "k";
+        return n + "đ";
+    }
     function dur(min) { return Math.floor(min / 60) + "h" + String(min % 60).padStart(2, "0"); }
+    function durText(min) {
+        min = Math.round(min);
+        if (min < 60) return min + " phút";
+        return Math.floor(min / 60) + " giờ" + (min % 60 ? " " + (min % 60) + " phút" : "");
+    }
     function pad2(n) { return String(n).padStart(2, "0"); }
+    function hhmm(m) { m = ((Math.round(m) % 1440) + 1440) % 1440; return pad2(Math.floor(m / 60)) + ":" + pad2(m % 60); }
+    function parseHHMM(v) {
+        var m = /^(\d{1,2}):(\d{2})$/.exec(String(v || ""));
+        if (!m) return null;
+        var h = +m[1], mi = +m[2];
+        return h > 23 || mi > 59 ? null : h * 60 + mi;
+    }
+    function dayColor(d) { return d == null ? "#6b7280" : COLORS[(d - 1) % COLORS.length]; }
 
     /* ---------------- trạng thái ---------------- */
     var seq = 0;
@@ -53,6 +103,10 @@
         x.note = x.note || "";
         x.slot = x.slot || null;
         x.reasons = x.reasons || [];
+        x.startMin = x.startMin == null ? null : +x.startMin;
+        x.durationMin = x.durationMin ? +x.durationMin : null;
+        x.defDur = x.defDur ? +x.defDur : null;
+        x.locked = !!x.locked;
         return x;
     });
     var sugg = cfg.suggestions || {};
@@ -66,7 +120,10 @@
     var RAIN_MAX = cfg.rainMax || 4;
     var undo = [], redo = [], last = "", savedSnap = "";
     var dirty = false, saving = false, pendingSave = false, autoFail = false, timer = null;
-    var ui = { tab: "plan", target: 1, mapDay: "", sel: {}, open: {}, tier: null, results: null, searchSeq: 0, res: null, br: null, drag: null, pick: null, draft: null };
+    var ui = { tab: "plan", target: 1, mapDay: "follow", curDay: null, view: "full", collapsed: {}, opt: null, healthOpen: null, dtab: "find",
+        around: { day: null, km: 1, group: "all", data: null, seq: 0, loading: false, pts: [] },
+        sel: {}, open: {}, tier: null, results: null, searchSeq: 0, res: null, br: null, drag: null, pick: null, draft: null };
+    try { if (localStorage.getItem("tpView") === "compact") ui.view = "compact"; } catch (e) { /* bỏ qua */ }
 
     var box = $("tpDaysBox"), msg = $("tpMsg");
 
@@ -98,7 +155,7 @@
         $("tpDest").value = m.dest == null ? "" : String(m.dest);
         items = o.i;
         rain = o.r || {};
-        ui.sel = {}; ui.open = {};
+        ui.sel = {}; ui.open = {}; ui.opt = null; ui.bal = null;
         renderAll();
     }
     function clampDays() {
@@ -123,15 +180,47 @@
     function targetLabel(d) { return d == null ? "Chưa xếp ngày" : dayLabel(d); }
 
     /* ---------------- chốt thay đổi / hoàn tác ---------------- */
-    function say(t, bad) {
-        msg.textContent = t;
-        msg.classList.toggle("tp-msg--bad", !!bad);
+    /** Thông báo ngắn cho thao tác vừa làm (hiện ở góc dưới, tự ẩn). */
+    function say(t, bad, acts) {
+        var tt = $("tpToast");
+        if (!tt) {
+            tt = el("div", "tpx-toast");
+            tt.id = "tpToast";
+            tt.setAttribute("role", "status");
+            tt.setAttribute("aria-live", "polite");
+            document.body.appendChild(tt);
+        }
+        tt.textContent = "";
+        tt.appendChild(el("span", null, t || ""));
+        (acts || []).forEach(function (a) {
+            tt.appendChild(btn("tpx-toast__b", a[0], null, function () { tt.classList.remove("is-on"); a[1](); }));
+        });
+        tt.classList.toggle("has-acts", !!(acts && acts.length));
+        tt.classList.toggle("is-bad", !!bad);
+        tt.classList.toggle("is-on", !!t);
+        clearTimeout(say.t);
+        if (t) say.t = setTimeout(function () { tt.classList.remove("is-on"); }, acts && acts.length ? 9000 : bad ? 6500 : 3200);
+    }
+    /** Trạng thái lưu ở đầu trang (tự lưu là chính, nút "Lưu ngay" chỉ hiện khi còn thay đổi chưa lưu). */
+    function saveState(state, text) {
+        if (!msg) return;
+        msg.textContent = "";
+        msg.className = "tpx-save tpx-save--" + state;
+        var ic = { saved: "fa-check-circle", dirty: "fa-pen", saving: "fa-sync-alt fa-spin", error: "fa-exclamation-triangle", ro: "fa-eye" }[state];
+        if (ic) msg.appendChild(icon(ic));
+        msg.appendChild(el("span", null, text));
+        var sv = $("tpSave");
+        if (sv && !RO) {
+            sv.hidden = !(state === "dirty" || state === "error");
+            sv.textContent = state === "error" ? "Thử lại" : "Lưu ngay";   // lưu lỗi: nói rõ và cho thử lại ngay
+            sv.classList.toggle("is-retry", state === "error");
+        }
     }
     function markDirty() {
         if (RO) return;
         dirty = true;
         autoFail = false;
-        say("Chưa lưu");
+        saveState("dirty", "Chưa lưu");
         clearTimeout(timer);
         timer = setTimeout(function () { save(false); }, AUTOSAVE_MS);
     }
@@ -173,8 +262,6 @@
     /* ---------------- giá tham khảo (ước tính khi chưa nhập) ---------------- */
     var REF = cfg.costRef || null;
     var TIER_LABEL = { low: "Tiết kiệm", mid: "Vừa phải", high: "Thoải mái" };
-    var LODGE_RE = /khách sạn|hotel|homestay|resort|nhà nghỉ|hostel|villa|lưu trú|căn hộ|bungalow/i;
-    var MEAL_RE = /nhà hàng|cà phê|cafe|coffee|phở|bún|buffet|cơm|lẩu|ăn uống|ăn sáng|ăn trưa|ăn tối|restaurant|(^|\s)quán(\s|$)/i;
     function tier() {
         if (ui.tier) return ui.tier;
         var m = meta();
@@ -184,17 +271,7 @@
         }
         return "mid";
     }
-    function kindOf(it) {
-        if (it.type === "food") return "meal";
-        if (it.type === "experience") return "experience";
-        if (it.type === "transport") return "transport";
-        if (it.type === "note") {
-            var t = (it.name || "") + " " + (it.sub || "");
-            if (LODGE_RE.test(t)) return "lodging";
-            if (MEAL_RE.test(t)) return "meal";
-        }
-        return null;
-    }
+    var kindOf = S.kindOf;   // lodging | meal | experience | transport | null (planner-schedule.js, mẫu nhận diện từ máy chủ)
     function roomsNeeded() { return Math.max(1, Math.ceil(meta().group / ((REF && REF.peoplePerRoom) || 2))); }
     function nightsCount() { return Math.max(1, daysCount() - 1); }
     /** Giá ước tính của MỘT mục chưa nhập chi phí; null nếu không ước tính được (địa điểm, lễ hội...). */
@@ -210,12 +287,15 @@
     function estimates() {
         var out = { items: [], itemsSum: 0, gaps: [], gapsSum: 0, total: 0 };
         if (!REF) return out;
+        // chỉ ước tính cho mục đã xếp vào ngày: mục trong "Đã lưu" chưa thuộc kế hoạch nên chưa cộng
         items.forEach(function (it) {
+            if (it.day == null) return;
             var e = estItem(it);
             if (e) { out.items.push({ it: it, est: e }); out.itemsSum += e; }
         });
         var n = daysCount(), t = tier(), g = meta().group, L = 0, M = 0, T = 0;
         items.forEach(function (it) {
+            if (it.day == null) return;
             var k = kindOf(it);
             if (k === "lodging") L++; else if (k === "meal") M++; else if (k === "transport") T++;
         });
@@ -231,19 +311,142 @@
         var g = G.legs(list);
         return { km: g.km, minutes: g.minutes, legs: g.legs, cost: list.reduce(function (s, x) { return s + (x.cost || 0); }, 0) };
     }
-    function liveWarnings() {
-        var w = [], n = daysCount();
-        for (var d = 1; d <= n; d++) {
-            var list = dayItems(d);
-            if (list.length > DAY_ITEMS_WARN) w.push("Ngày " + d + " có " + list.length + " mục, hơi dày.");
-            var st = dayStats(list);
-            if (st.minutes > DAY_TRAVEL_WARN_MIN) w.push("Ngày " + d + " di chuyển khoảng " + (Math.round(st.minutes / 6) / 10) + " giờ, nên bớt điểm hoặc chia sang ngày khác.");
+    /* ---------------- timeline: xếp giờ trong ngày ---------------- */
+    var itemDur = S.itemDur;
+    /** Nhãn loại trên thẻ: mục tự thêm có tên khách sạn / quán ăn thì gọi đúng là Lưu trú / Ăn uống. */
+    function typeLabel(it) {
+        if (it.type === "note" && it.source === "search") {   // lấy từ bản đồ (tìm kiếm / đề xuất mở rộng)
+            var k0 = kindOf(it);
+            return k0 === "lodging" ? "Lưu trú · từ bản đồ" : k0 === "meal" ? "Ăn uống · từ bản đồ" : "Từ bản đồ";
         }
+        if (CUSTOM[it.type]) {
+            var k = kindOf(it);
+            if (k === "lodging") return "Lưu trú";
+            if (k === "meal") return "Ăn uống";
+        }
+        return TYPE[it.type] || "";
+    }
+    function iconOf(it) {
+        var k = kindOf(it);
+        return ICON[k === "lodging" ? "lodging" : CUSTOM[it.type] && k === "meal" ? "meal" : it.type] || "fa-map-marker-alt";
+    }
+    var slotOfMin = S.slotOf;
+    /**
+     * Lịch một ngày: lõi xếp giờ ở planner-schedule.js (cùng hợp đồng với DaySchedule phía máy chủ),
+     * ở đây chỉ gắn thêm số liệu của trang (chi phí, ước tính, số mục chưa có vị trí, có tối ưu được không).
+     */
+    function schedule(d, listOverride) {
+        var list = listOverride || dayItems(d), r = S.day(list, { dow: dayDow(d) }), cost = 0, est = 0;
+        list.forEach(function (x) { cost += x.cost || 0; est += estItem(x) || 0; });
+        r.day = d;
+        r.cost = cost;
+        r.est = est;
+        r.noPos = list.filter(function (x) { return !G.hasPos(x); }).length;
+        r.canOpt = list.filter(isFree).length >= 3;
+        return r;
+    }
+    /** Mục "tự do" (FLEXIBLE): có vị trí, chưa ghim giờ (FIXED), chưa khóa vị trí (LOCKED), chưa chọn buổi. Chỉ mục tự do bị tối ưu / cân bằng đổi chỗ. */
+    function isFree(x) { return G.hasPos(x) && x.startMin == null && !x.locked && !x.slot; }
+    function allSched() {
+        var out = [];
+        for (var d = 1; d <= daysCount(); d++) out.push(schedule(d));
+        return out;
+    }
+    function loadLevel(s) { return S.level(s.load); }
+
+    /**
+     * Vấn đề của một ngày, kèm nút xử lý: quá dày, đi lại nhiều, kết thúc muộn, trùng giờ.
+     * @return [{lvl:'warn'|'bad', text, acts:[[label, fn]]}]
+     */
+    function dayIssues(s) {
+        var out = [], d = s.day;
+        if (!s.count) return out;
+        if (s.load >= 1) {
+            out.push({ lvl: "warn", text: "Lịch quá dày: " + s.count + " hoạt động, dùng " + dur(s.occ) + " trên " + dur(DAY_AVAIL) + " (" + Math.round(s.load * 100) + "%).",
+                acts: [["Tự cân bằng", function () { balanceDay(d); }], s.canOpt ? ["Tối ưu tuyến", function () { optimizeDay(d); }] : null].filter(Boolean) });
+        } else if (s.travel > DAY_TRAVEL_WARN_MIN) {
+            out.push({ lvl: "warn", text: "Đi lại khoảng " + durText(s.travel) + " (" + s.km + " km), nên gom các điểm gần nhau.",
+                acts: s.canOpt ? [["Tối ưu tuyến", function () { optimizeDay(d); }]] : [] });
+        }
+        if (s.count > DAY_ITEMS_WARN && s.load < 1) out.push({ lvl: "warn", text: s.count + " mục trong một ngày, hơi nhiều.", acts: [] });
+        if (s.end > LATE_END) out.push({ lvl: "warn", text: "Kết thúc khoảng " + hhmm(s.end) + ", khá muộn.", acts: [] });
+        // giờ mở cửa (cùng quy tắc OpeningHours phía máy chủ)
+        s.rows.forEach(function (r) {
+            if (!r.hours) return;
+            var it = r.it, open = S.hoursText(it.hours, s.dow), acts = [];
+            if (!RO) {
+                var od = openDayFor(it, d);
+                if (r.hours !== "closed" && r.fixed) {
+                    var fit = S.hoursFit(it.hours, s.dow, r.start, r.dur);
+                    if (fit != null) acts.push(["Dời sang " + hhmm(fit), function () { it.startMin = fit; commit(); }]);
+                }
+                if (r.fixed) acts.push(["Bỏ giờ cố định", function () { it.startMin = null; commit(); }]);
+                if (od) acts.push(["Chuyển sang ngày " + od, function () { moveItem(it, od, null); commit(); say("Đã chuyển “" + it.name + "” sang ngày " + od + ", hôm đó mở cửa."); }]);
+            }
+            out.push({ lvl: "bad", acts: acts,   // giờ mở cửa là ràng buộc cứng (TripHealth::HARD)
+                text: r.hours === "closed" ? "“" + it.name + "” đóng cửa hôm đó."
+                    : r.hours === "early" ? "Tới “" + it.name + "” lúc " + hhmm(r.start) + " nhưng giờ mở cửa " + open + "."
+                        : "“" + it.name + "” (" + hhmm(r.start) + "–" + hhmm(r.end) + ") quá giờ mở cửa " + open + "." });
+        });
+        s.conflicts.forEach(function (c) {
+            var txt = c.type === "travel"
+                ? "Không kịp di chuyển: từ “" + c.a.it.name + "” (xong " + hhmm(c.a.end) + ") cần ~" + c.need + " phút để tới “" + c.b.name + "” lúc " + hhmm(c.b.startMin) + "."
+                : "Trùng giờ: “" + c.a.it.name + "” đến " + hhmm(c.a.end) + " nhưng “" + c.b.name + "” đặt cố định lúc " + hhmm(c.b.startMin) + ".";
+            out.push({ lvl: "bad", text: txt,   // trùng giờ / không kịp đi: ràng buộc cứng
+                acts: RO ? [] : [["Dời “" + c.b.name + "” sang " + hhmm(Math.ceil((c.a.end + (c.need || 0)) / 5) * 5), function () { c.b.startMin = Math.ceil((c.a.end + (c.need || 0)) / 5) * 5; commit(); }],
+                    ["Bỏ giờ cố định", function () { c.b.startMin = null; commit(); }]] });
+        });
+        return out;
+    }
+    function dayLabelShort(d) { return "Ngày " + d; }
+    /** Ngày nhẹ nhất (khác ngày d) còn chỗ; null nếu không có. */
+    function lightestDay(d) {
+        var best = null, bl = Infinity;
+        allSched().forEach(function (s) { if (s.day !== d && s.load < 0.75 && s.load < bl) { bl = s.load; best = s.day; } });
+        return best;
+    }
+    function moveLast(from, to) {
+        var list = dayItems(from);
+        if (!list.length) return;
+        var it = list[list.length - 1];
+        moveItem(it, to, null);
+        commit();
+        say("Đã chuyển “" + it.name + "” sang ngày " + to + ".");
+    }
+    /** "Tự chọn ngày hợp": ngày có điểm gần nhất với mục mới (nếu có vị trí) và chưa quá dày, không thì ngày nhẹ nhất. */
+    function autoDay(o) {
+        var ss = allSched(), best = null, bestScore = Infinity;
+        var hasP = o.lat != null && o.lng != null;
+        ss.forEach(function (s) {
+            var near = Infinity;
+            if (hasP) dayItems(s.day).filter(G.hasPos).forEach(function (x) { near = Math.min(near, G.hav(x, o)); });
+            var score = (hasP && near < Infinity ? near : 50) + (s.load >= 1 ? 1000 : s.load * 10);
+            if (score < bestScore) { bestScore = score; best = s.day; }
+        });
+        return best || 1;
+    }
+    /** Sức khỏe chuyến đi: các kiểm tra tổng thể (gom từ từng ngày + toàn chuyến). */
+    function health() {
+        var bad = [], ok = [], ss = allSched(), m = meta();
+        var heavy = 0, conflict = 0;
+        ss.forEach(function (s) {
+            dayIssues(s).forEach(function (x) { bad.push({ lvl: x.lvl, text: "Ngày " + s.day + ": " + x.text, day: s.day }); });
+            if (s.load >= 1) heavy++;
+            conflict += s.conflicts.length;
+        });
+        if (!heavy) ok.push("Không có ngày nào quá dày");
+        if (!conflict) ok.push("Không trùng giờ");
         var un = dayItems(null).length;
-        if (un) w.push("Còn " + un + " mục chưa xếp vào ngày nào.");
-        var m = meta(), cost = totalCost();
-        if (m.budget != null && cost > m.budget) w.push("Chi phí dự kiến " + money(cost) + " vượt ngân sách " + money(m.budget) + ".");
-        return w.concat(cfg.contentWarnings || []);
+        if (un) bad.push({ lvl: "info", text: "Còn " + un + " mục trong “Đã lưu”, chưa xếp vào ngày nào.", day: "x" });
+        var noPos = items.filter(function (x) { return x.day != null && !G.hasPos(x); }).length;
+        if (noPos) bad.push({ lvl: "info", text: noPos + " mục chưa có vị trí nên chưa tính quãng đường." });
+        var es = estimates(), all = totalCost() + es.total;
+        if (m.budget != null && m.budget > 0) {
+            if (all > m.budget) bad.push({ lvl: "warn", text: "Chi phí dự kiến " + money(all) + " vượt ngân sách " + money(m.budget) + ".", tab: "cost" });
+            else ok.push("Trong ngân sách (dự kiến dùng " + Math.round(all / m.budget * 100) + "%)");
+        }
+        (cfg.contentWarnings || []).forEach(function (w) { bad.push({ lvl: "warn", text: w }); });
+        return { bad: bad, ok: ok };
     }
 
     /* ---------------- vẽ: Lịch trình ---------------- */
@@ -265,11 +468,11 @@
     function daySelect(it) {
         var sel = el("select", "no-nice");
         sel.setAttribute("aria-label", "Ngày của " + it.name);
-        var o0 = el("option", null, "Chưa xếp");
+        var o0 = el("option", null, it.day == null ? "Thêm vào ngày…" : "Đã lưu (bỏ khỏi ngày)");
         o0.value = "";
         sel.appendChild(o0);
         for (var d = 1; d <= daysCount(); d++) {
-            var o = el("option", null, "Ngày " + d);
+            var o = el("option", null, "Ngày " + d + (dayDate(d) ? " · " + dayDate(d) : ""));
             o.value = String(d);
             if (it.day === d) o.selected = true;
             sel.appendChild(o);
@@ -277,6 +480,7 @@
         sel.addEventListener("change", function () {
             moveItem(it, sel.value === "" ? null : +sel.value, null);
             commit();
+            checkPlaced(it);
         });
         return sel;
     }
@@ -310,104 +514,243 @@
         if (has) row.appendChild(btn("tp-mini tp-mini--danger", "Bỏ vị trí", "Bỏ vị trí của " + it.name, function () { setPos(it, null); }));
         return row;
     }
-    function itemRow(it, leg) {
-        var li = el("li", "tp-item" + (CUSTOM[it.type] ? " tp-item--custom" : ""));
+    /** Ô giờ cố định (trống = tự xếp). */
+    function timeInput(it, row) {
+        var wrap = el("label", "tpx-f");
+        wrap.appendChild(el("span", null, "Giờ bắt đầu"));
+        var t = el("input");
+        t.type = "time";
+        t.step = "300";
+        t.value = it.startMin != null ? hhmm(it.startMin) : "";
+        if (it.startMin == null && row && row.start != null) t.placeholder = hhmm(row.start);
+        t.setAttribute("aria-label", "Giờ bắt đầu cố định của " + it.name + " (để trống để tự xếp)");
+        t.addEventListener("change", function () { it.startMin = t.value ? parseHHMM(t.value) : null; commit(); });
+        wrap.appendChild(t);
+        if (it.startMin != null) wrap.appendChild(btn("tp-link tp-small", "Tự xếp", "Bỏ giờ cố định của " + it.name, function () { it.startMin = null; commit(); }));
+        return wrap;
+    }
+    function durInput(it) {
+        var wrap = el("label", "tpx-f");
+        wrap.appendChild(el("span", null, "Ở lại"));
+        var s = el("select", "no-nice");
+        s.setAttribute("aria-label", "Thời lượng ở " + it.name);
+        var o0 = el("option", null, "Mặc định (" + durText(it.defDur || itemDur({ type: it.type, name: it.name, sub: it.sub })) + ")");
+        o0.value = "";
+        s.appendChild(o0);
+        var list = DURS.slice();
+        if (it.durationMin && list.indexOf(it.durationMin) < 0) list.push(it.durationMin);
+        list.sort(function (a, b) { return a - b; }).forEach(function (m) {
+            var o = el("option", null, durText(m));
+            o.value = String(m);
+            if (it.durationMin === m) o.selected = true;
+            s.appendChild(o);
+        });
+        s.addEventListener("change", function () { it.durationMin = s.value ? +s.value : null; commit(); });
+        wrap.appendChild(s);
+        return wrap;
+    }
+    function field(label, node) {
+        var w = el("label", "tpx-f");
+        w.appendChild(el("span", null, label));
+        w.appendChild(node);
+        return w;
+    }
+    /** Nhãn chi phí trên thẻ: giá đã nhập, giá ước tính, hoặc không hiện gì. */
+    function costBadge(it) {
+        if (it.cost != null) {
+            var est = it.costType === "estimate", act = it.costType === "actual";
+            var k = el("span", "tpx-cost " + (est ? "is-est" : act ? "is-actual" : "is-known"), (est ? "≈ " : "") + (est ? shortMoney(it.cost) : money(it.cost)));
+            k.appendChild(el("small", "tpx-cost__t", est ? "ước tính" : act ? "đã chi" : "dự kiến"));
+            k.title = est ? "Giá điền từ bảng giá tham khảo" : act ? "Số tiền đã chi thật" : "Giá bạn đã nhập (dự kiến)";
+            return k;
+        }
+        var e = estItem(it);
+        if (e) {
+            var b = el("span", "tpx-cost is-est", "≈ " + shortMoney(e));
+            b.appendChild(el("small", "tpx-cost__t", "ước tính"));
+            b.title = "Ước tính theo giá tham khảo, chưa phải giá thật";
+            return b;
+        }
+        return null;
+    }
+    /**
+     * Số liệu đi lại THẬT (OSRM) chỉ khi máy chủ xác nhận đã dùng OSRM cho bản đã lưu và trình duyệt không còn thay đổi chưa lưu;
+     * mọi trường hợp khác là ƯỚC TÍNH (đường chim bay × hệ số) và được ghi rõ như vậy.
+     */
+    function realRoute() { return !!(ui.srv && !dirty && ui.srv.route && ui.srv.route.actual === "osrm"); }
+    function srvRow(day, n) {
+        var d = ui.srv && (ui.srv.days || []).filter(function (x) { return x.day === day; })[0];
+        return d && d.rows ? d.rows[n - 1] : null;
+    }
+    /** Đoạn nối giữa hai hoạt động: hoạt động -> di chuyển -> hoạt động. */
+    function legRow(leg, row) {
+        var li = el("li", "tpx-leg");
+        var real = realRoute() && row ? srvRow(row.it.day, row.n) : null;
+        var min = real ? real.travelMin : leg.min, km = real && real.travelKm != null ? real.travelKm : leg.kmExact != null ? Math.round(leg.kmExact * 10) / 10 : leg.km;
+        var walk = km <= 1;
+        li.appendChild(el("span", "tpx-leg__line"));
+        var chip = el("span", "tpx-leg__chip" + (real ? " is-real" : ""));
+        chip.appendChild(icon(walk ? "fa-walking" : "fa-car-side"));
+        chip.appendChild(el("b", null, (real ? "" : "≈ ") + durText(Math.max(1, min))));
+        chip.appendChild(el("span", null, " · " + String(km).replace(".", ",") + " km"));
+        chip.appendChild(el("small", "tpx-leg__src", real ? "đường thực tế" : "ước tính"));
+        li.appendChild(chip);
+        li.title = real ? "Quãng đường và thời gian theo bản đồ đường bộ (OSRM)" : "Ước tính: đường chim bay × " + RULES.route.factor + ", tốc độ " + RULES.route.speedKmh + " km/h";
+        return li;
+    }
+    /** Một điểm dừng trên timeline. row = kết quả schedule() (null với danh sách chờ). */
+    function itemRow(it, row) {
+        var color = dayColor(it.day);
+        var li = el("li", "tpx-stop" + (CUSTOM[it.type] ? " is-custom" : "") + (row && (row.conflict || row.hours === "closed") ? " is-conflict" : "") + (ui.sel[it.uid] ? " is-sel" : ""));
         li.setAttribute("data-uid", String(it.uid));
+        li.style.setProperty("--c", color);
 
-        var top = el("div", "tp-item__top");
-        var h = el("span", "tp-handle", "⠿");
-        h.setAttribute("title", "Kéo để đổi thứ tự hoặc chuyển ngày");
-        h.setAttribute("aria-hidden", "true");
-        h.draggable = true;
-        h.addEventListener("dragstart", function (e) {
-            ui.drag = it.uid;
-            li.classList.add("is-drag");
-            e.dataTransfer.effectAllowed = "move";
-            try { e.dataTransfer.setData("text/plain", String(it.uid)); e.dataTransfer.setDragImage(li, 16, 16); } catch (x) { /* một số trình duyệt không hỗ trợ */ }
-        });
-        h.addEventListener("dragend", clearDrag);
-        if (!RO) top.appendChild(h);
+        // cột giờ
+        var tm = el("div", "tpx-stop__time");
+        if (row) {
+            var b = el("b", null, hhmm(row.start));
+            tm.appendChild(b);
+            tm.appendChild(el("small", null, hhmm(row.end)));
+            if (row.fixed) { var pin = icon("fa-thumbtack"); pin.title = "Giờ cố định"; tm.appendChild(pin); }
+        }
+        li.appendChild(tm);
+        var hoursNow = row && it.day != null ? S.hoursText(it.hours, dayDow(it.day)) : null;
 
-        var cb = el("input");
-        cb.type = "checkbox";
-        cb.checked = !!ui.sel[it.uid];
-        cb.setAttribute("aria-label", "Chọn " + it.name);
-        cb.addEventListener("change", function () {
-            if (cb.checked) ui.sel[it.uid] = true; else delete ui.sel[it.uid];
-            renderBulk();
-        });
-        if (!RO) top.appendChild(cb);
+        // chấm số trên đường ray
         var nb = numberOf(it);
-        var badge = el("button", "tp-numbadge" + (G.hasPos(it) ? " is-link" : ""), nb === "" ? "•" : String(nb));
-        badge.type = "button";
-        badge.style.background = it.day == null ? "#6b7280" : COLORS[(it.day - 1) % COLORS.length];
-        badge.setAttribute("aria-label", "Số " + (nb === "" ? "chưa xếp" : nb) + ": xem " + it.name + " trên bản đồ");
-        badge.addEventListener("click", function () { showOnMap(it.uid); });
-        top.appendChild(badge);
+        var dot = btn("tpx-dot" + (G.hasPos(it) ? "" : " is-nopos"), nb === "" ? "" : String(nb), (G.hasPos(it) ? "Xem trên bản đồ: " : "Chưa có vị trí: ") + it.name, function () { showOnMap(it.uid); });
+        if (nb === "") dot.appendChild(icon(iconOf(it)));
+        li.appendChild(dot);
 
-        var main = el("div", "tp-item__main");
-        main.appendChild(el("span", "tp-type", TYPE[it.type] || ""));
-        var href = safeUrl(it.url);
-        if (href) {
-            var a = el("a", "tp-item__name", it.name);
-            a.href = href;
-            a.target = "_blank";
-            a.rel = "noopener";
-            main.appendChild(a);
-        } else {
-            main.appendChild(el("span", "tp-item__name", it.name));
+        var card = el("div", "tpx-stop__card");
+        var top = el("div", "tpx-stop__top");
+        if (!RO) {
+            var h = el("span", "tp-handle tpx-handle");
+            h.appendChild(icon("fa-grip-vertical"));
+            h.setAttribute("title", "Kéo để đổi thứ tự hoặc chuyển ngày");
+            h.setAttribute("aria-hidden", "true");
+            h.draggable = true;
+            h.addEventListener("dragstart", function (e) {
+                ui.drag = it.uid;
+                li.classList.add("is-drag");
+                e.dataTransfer.effectAllowed = "move";
+                try { e.dataTransfer.setData("text/plain", String(it.uid)); e.dataTransfer.setDragImage(li, 16, 16); } catch (x) { /* một số trình duyệt không hỗ trợ */ }
+            });
+            h.addEventListener("dragend", clearDrag);
+            top.appendChild(h);
         }
-        var sub = [it.sub, it.when ? "diễn ra " + it.when : ""].filter(Boolean).join(" · ");
-        if (sub) main.appendChild(el("small", "tp-item__sub", sub));
-        if (CUSTOM[it.type]) {
-            var hp = G.hasPos(it);
-            main.appendChild(el("span", "tp-badge" + (hp ? " is-ok" : ""), hp ? "Có vị trí" : "Chưa có vị trí"));
-        }
-        top.appendChild(main);
         if (it.image) {
-            var ph = el("img", "tp-item__photo");
+            var ph = el("img", "tpx-thumb");
             ph.src = it.image; ph.alt = ""; ph.loading = "lazy";
-            ph.addEventListener("click", function () { showOnMap(it.uid); });
             top.appendChild(ph);
         }
-        var right = el("div", "tp-item__right");
-        right.appendChild(costInput(it));
-        if (G.hasPos(it)) right.appendChild(btn("tp-mini", "Bản đồ", "Xem " + it.name + " trên bản đồ", function () { showOnMap(it.uid); }));
-        var open = !!ui.open[it.uid];
-        var tg = btn("tp-mini tp-item__toggle", open ? "Thu gọn" : "Sửa", "Sửa chi tiết " + it.name, function () {
-            ui.open[it.uid] = !ui.open[it.uid];
-            renderDays();
-        });
-        tg.setAttribute("aria-expanded", open ? "true" : "false");
-        if (!RO) right.appendChild(tg);
+        var main = el("div", "tpx-stop__main");
+        var kind = el("span", "tpx-kind");
+        kind.appendChild(icon(iconOf(it)));
+        kind.appendChild(el("span", null, typeLabel(it)));
+        if (it.locked) { var lk = icon("fa-lock tpx-lock"); lk.title = "Đã khóa vị trí: tối ưu tuyến và tự cân bằng không đổi mục này"; kind.appendChild(lk); }
+        if (row) {
+            var est = !it.durationMin;   // chưa nhập thời lượng: dùng mặc định theo loại -> ghi rõ là ước tính
+            var du = el("span", "tpx-kind__dur" + (est ? " is-est" : ""), " · " + (est ? "≈ " : "") + durText(row.dur));
+            du.title = est ? "Thời lượng ước tính (mặc định theo loại). Bấm “Sửa” để đặt thời lượng của bạn." : "Thời lượng bạn đã đặt";
+            kind.appendChild(du);
+        }
+        main.appendChild(kind);
+        var href = safeUrl(it.url);
+        if (href && !CUSTOM[it.type]) {
+            var a = el("a", "tpx-name", it.name);
+            a.href = href; a.target = "_blank"; a.rel = "noopener";
+            main.appendChild(a);
+        } else {
+            main.appendChild(el("span", "tpx-name", it.name));
+        }
+        var sub = [it.sub, it.when ? "diễn ra " + it.when : ""].filter(Boolean).join(" · ");
+        if (sub) main.appendChild(el("small", "tpx-sub", sub));
+        if (CUSTOM[it.type] && !G.hasPos(it)) main.appendChild(el("span", "tp-badge", "Chưa có vị trí"));
+        if (hoursNow) {
+            var hb = el("span", "tpx-hours" + (row.hours ? " is-" + row.hours : ""));
+            hb.appendChild(icon(row.hours === "closed" ? "fa-door-closed" : "fa-clock"));
+            hb.appendChild(el("span", null, row.hours === "closed" ? "Đóng cửa hôm nay" : row.hours === "early" ? "Chưa mở cửa · mở " + hoursNow
+                : row.hours === "late" ? "Quá giờ đóng cửa · " + hoursNow : "Mở " + hoursNow));
+            main.appendChild(hb);
+        }
+        if (it.outdoor === true && it.day != null && cfg.rainSuggestUrl && !RO) {
+            var rc = btn("tpx-rainchip", null, "Phương án khi mưa cho " + it.name, function () {
+                var h2 = card.querySelector(".tpx-rainbox");
+                if (h2) { h2.remove(); return; }
+                h2 = el("div", "tpx-rainbox");
+                card.appendChild(h2);
+                rainInline(it, h2);
+            });
+            rc.appendChild(icon("fa-umbrella"));
+            rc.appendChild(el("span", null, "Ngoài trời · phương án mưa"));
+            main.appendChild(rc);
+        }
+        top.appendChild(main);
+
+        var right = el("div", "tpx-stop__right");
+        var cb0 = costBadge(it);
+        if (cb0) right.appendChild(cb0);
+        if (!RO) {
+            var cb = el("input", "tpx-sel");
+            cb.type = "checkbox";
+            cb.checked = !!ui.sel[it.uid];
+            cb.setAttribute("aria-label", "Chọn " + it.name);
+            cb.addEventListener("change", function () {
+                if (cb.checked) ui.sel[it.uid] = true; else delete ui.sel[it.uid];
+                li.classList.toggle("is-sel", cb.checked);
+                renderBulk();
+            });
+            right.appendChild(cb);
+            if (it.day == null) { var qs = daySelect(it); qs.classList.add("tpx-quickday"); right.appendChild(qs); }
+            var open = !!ui.open[it.uid];
+            var tg = btn("tp-mini tpx-edit", open ? "Xong" : "Sửa", "Sửa chi tiết " + it.name, function () {
+                ui.open[it.uid] = !ui.open[it.uid];
+                renderDays();
+            });
+            tg.setAttribute("aria-expanded", open ? "true" : "false");
+            right.appendChild(tg);
+        }
         top.appendChild(right);
-        li.addEventListener("mouseenter", function () { if (map) map.highlight(it.uid); });
-        li.addEventListener("mouseleave", function () { if (map && !(ui.card && ui.card.uid === it.uid)) map.highlight(null); });
-        li.appendChild(top);
-        if (it.reasons && it.reasons.length) li.appendChild(el("p", "tp-why", "Vì sao chọn: " + it.reasons.join("; ")));
+        card.appendChild(top);
+
+        if (row && row.conflict) card.appendChild(el("p", "tpx-conflict", "Trùng giờ với “" + row.conflict.a.it.name + "” (đến " + hhmm(row.conflict.a.end) + ")."));
+        var det = el("div", "tpx-stop__more");
+        if (it.reasons && it.reasons.length) det.appendChild(el("p", "tp-why", "Vì sao chọn: " + it.reasons.join("; ")));
         if (it.fit && it.fit.length) {
             var fl = el("ul", "tp-fit");
             it.fit.forEach(function (f) { fl.appendChild(el("li", "tp-fit__i tp-fit--" + (f.k === "good" || f.k === "warn" ? f.k : "info"), f.x)); });
-            li.appendChild(fl);
+            det.appendChild(fl);
         }
-        if (it.src) li.appendChild(el("small", "tp-src", it.src));
-        else if (CUSTOM[it.type] && it.source === "search") li.appendChild(el("small", "tp-src", "Ngoài dữ liệu Travela, chỉ chi phí tham khảo chung"));
-        if (it.note && !open) li.appendChild(el("p", "tp-item__notepreview", it.note));
+        if (it.src) det.appendChild(el("small", "tp-src", it.src));
+        else if (CUSTOM[it.type] && it.source === "search") det.appendChild(el("small", "tp-src", "Ngoài dữ liệu Travela, chỉ chi phí tham khảo chung"));
+        if (it.note && !ui.open[it.uid]) {
+            var np = el("p", "tpx-note");
+            np.appendChild(icon("fa-sticky-note"));
+            np.appendChild(el("span", null, it.note));
+            det.appendChild(np);
+        }
+        if (det.children.length) card.appendChild(det);
 
-        if (open && !RO) {
-            var panel = el("div", "tp-item__panel");
-            var ctl = el("div", "tp-item__ctl");
-            ctl.appendChild(daySelect(it));
-            ctl.appendChild(slotSelect(it));
-            ctl.appendChild(btn("tp-mini", "↑", "Lên: " + it.name, function () { shift(it, -1); }));
-            ctl.appendChild(btn("tp-mini", "↓", "Xuống: " + it.name, function () { shift(it, 1); }));
-            ctl.appendChild(btn("tp-mini tp-mini--danger", "Bỏ khỏi chuyến", "Bỏ " + it.name + " khỏi chuyến đi", function () {
-                items.splice(items.indexOf(it), 1);
-                delete ui.sel[it.uid];
-                delete ui.open[it.uid];
-                commit();
-            }));
-            panel.appendChild(ctl);
+        if (ui.open[it.uid] && !RO) {
+            var panel = el("div", "tpx-panel-edit");
+            var r1 = el("div", "tpx-fields");
+            r1.appendChild(field("Ngày", daySelect(it)));
+            if (it.day != null) {
+                r1.appendChild(timeInput(it, row));
+                r1.appendChild(durInput(it));
+                r1.appendChild(field("Buổi", slotSelect(it)));
+            }
+            r1.appendChild(field("Chi phí (đ)", costInput(it)));
+            var lkl = el("label", "tp-check tp-small tpx-lockbox");
+            var lkc = el("input");
+            lkc.type = "checkbox";
+            lkc.checked = !!it.locked;
+            lkc.addEventListener("change", function () { it.locked = lkc.checked; commit(); });
+            lkl.appendChild(lkc);
+            lkl.appendChild(document.createTextNode(" Khóa vị trí (tối ưu tuyến và tự cân bằng không đổi mục này)"));
+            r1.appendChild(lkl);
+            panel.appendChild(r1);
             var note = el("input");
             note.type = "text";
             note.maxLength = 255;
@@ -416,12 +759,30 @@
             note.setAttribute("aria-label", "Ghi chú cho " + it.name);
             note.addEventListener("input", function () { it.note = note.value; });
             note.addEventListener("change", function () { commit(true); });
-            panel.appendChild(note);
+            panel.appendChild(field("Ghi chú", note));
             if (CUSTOM[it.type]) panel.appendChild(posRow(it));
-            li.appendChild(panel);
+            var ctl = el("div", "tpx-panel-edit__act");
+            ctl.appendChild(ibtn("tp-mini", "fa-arrow-up", "Lên", "Lên: " + it.name, function () { shift(it, -1); }));
+            ctl.appendChild(ibtn("tp-mini", "fa-arrow-down", "Xuống", "Xuống: " + it.name, function () { shift(it, 1); }));
+            ctl.appendChild(ibtn("tp-mini tp-mini--danger", "fa-trash-alt", "Bỏ khỏi chuyến", "Bỏ " + it.name + " khỏi chuyến đi", function () {
+                items.splice(items.indexOf(it), 1);
+                delete ui.sel[it.uid];
+                delete ui.open[it.uid];
+                commit();
+                say("Đã bỏ “" + it.name + "”. Bấm Hoàn tác (Ctrl+Z) nếu nhầm.");
+            }));
+            panel.appendChild(ctl);
+            card.appendChild(panel);
         }
+        li.appendChild(card);
 
-        if (leg) li.appendChild(el("p", "tp-leg", "↓ " + leg.km + " km · " + leg.min + " phút đến " + leg.to.name));
+        // liên kết với bản đồ: rê chuột -> sáng ghim; bấm vào thẻ (ngoài nút/ô nhập) -> mở thẻ chi tiết trên bản đồ
+        li.addEventListener("mouseenter", function () { if (map) map.highlight(it.uid); });
+        li.addEventListener("mouseleave", function () { if (map && !(ui.card && ui.card.uid === it.uid)) map.highlight(ui.card ? ui.card.uid : null); });
+        card.addEventListener("click", function (e) {
+            if (e.target.closest("a,button,input,select,textarea,label")) return;
+            if (G.hasPos(it)) showOnMap(it.uid);
+        });
 
         // thả lên một mục: chèn trước/sau tùy nửa trên/dưới
         li.addEventListener("dragover", function (e) {
@@ -450,10 +811,14 @@
         cost.min = "0";
         cost.step = "1000";
         var est = estItem(it);
-        cost.placeholder = est ? "~" + Math.round(est).toLocaleString("vi-VN") + " (ước tính)" : "Chi phí (đ)";
+        cost.placeholder = est ? "≈ " + Math.round(est).toLocaleString("vi-VN") + " (ước tính)" : "Chi phí (đ)";
         cost.value = it.cost == null ? "" : String(it.cost);
         cost.setAttribute("aria-label", "Chi phí của " + it.name);
-        cost.addEventListener("input", function () { it.cost = cost.value === "" ? null : Math.max(0, +cost.value); softUpdate(); });
+        cost.addEventListener("input", function () {
+            it.cost = cost.value === "" ? null : Math.max(0, +cost.value);
+            if (it.cost == null || it.costType === "estimate") it.costType = null;   // tự gõ giá: không còn là ước tính
+            softUpdate();
+        });
         cost.addEventListener("change", function () { commit(true); });
         return cost;
     }
@@ -476,8 +841,10 @@
         if (it === target) return;
         var grp = items.filter(function (x) { return x.day === target.day && x !== it; });
         var i = grp.indexOf(target);
+        var from = it.day;
         moveItem(it, target.day, after ? (grp[i + 1] || null) : target);
         commit();
+        if (from !== it.day) checkPlaced(it);
     }
     function shift(it, dir) {
         var group = items.filter(function (x) { return x.day === it.day; });
@@ -489,37 +856,17 @@
         commit();
     }
 
-    function dayHeader(d, list, st) {
-        var h = el("div", "tp-dayhead");
-        var title = el("h3", null, d === null ? "Chưa xếp ngày" : dayLabel(d));
-        if (d !== null) title.style.borderLeftColor = COLORS[(d - 1) % COLORS.length];
-        h.appendChild(title);
-        var bits = [list.length + " mục"];
-        if (st.km) bits.push("~" + st.km + " km, " + dur(st.minutes));
-        if (st.cost) bits.push(money(st.cost));
-        h.appendChild(el("span", "tp-daystat", bits.join(" · ")));
-        var act = el("div", "tp-dayact");
-        if (RO) { h.appendChild(act); return h; }
-        if (d !== null) act.appendChild(btn("tp-mini", "+ Thêm", "Thêm mục vào " + dayLabel(d), function () { ui.target = d; renderTarget(); switchTab("plan"); focusAdd(); }));
-        if (list.length) act.appendChild(btn("tp-mini", "Chọn hết", "Chọn tất cả mục " + (d === null ? "chưa xếp" : dayLabel(d)), function () {
-            list.forEach(function (x) { ui.sel[x.uid] = true; });
-            renderDays();
-            renderBulk();
-        }));
-        if (d !== null && list.filter(G.hasPos).length >= 3) act.appendChild(btn("tp-mini", "Tối ưu tuyến", "Tối ưu tuyến " + dayLabel(d), function () { optimizeDay(d); }));
-        h.appendChild(act);
-        return h;
-    }
+
     /* ---------------- Phương án khi mưa ---------------- */
     function rainKey(r) { return r.type + ":" + r.refId; }
     function rainPanel(d) {
         var det = el("details", "tp-rain");
         var list = rain[String(d)] || [];
-        var sum = el("summary", null, "Nếu trời mưa" + (list.length ? " (" + list.length + ")" : ""));
+        var sum = el("summary", null, "☂ Dự phòng khi mưa" + (list.length ? " (" + list.length + " nơi)" : ""));
         det.appendChild(sum);
         if (ui.rainOpen && ui.rainOpen[d]) det.open = true;
         det.addEventListener("toggle", function () { ui.rainOpen = ui.rainOpen || {}; ui.rainOpen[d] = det.open; });
-        det.appendChild(el("p", "tp-muted tp-small", "Chọn vài mục trong nhà để thay thế khi mưa. Không tính vào chi phí chính."));
+        det.appendChild(el("p", "tp-muted tp-small", "Lịch không đổi. Đây là danh sách nơi trong nhà để bạn chuyển sang nếu trời mưa; bạn quyết định khi nào dùng. Không tính vào chi phí chính."));
         var ul = el("ul", "tp-rain__list");
         list.forEach(function (r) {
             var li = el("li", "tp-rain__item");
@@ -537,6 +884,15 @@
         var box = el("div", "tp-rain__sugg");
         var b = btn("tp-mini", "Gợi ý mục trong nhà", "Gợi ý mục trong nhà cho ngày " + d, function () { loadRain(d, box, b); });
         det.appendChild(b);
+        // phương án mưa cả ngày theo kiểu Resolver: dự phòng hoặc đổi hẳn, xem trước ảnh hưởng rồi mới áp dụng
+        if (cfg.resolveUrl && !RO && ui.srv && (ui.srv.checks || []).some(function (c) { return c.code === "context.rain" && c.day === d; })) {
+            det.appendChild(btn("tp-mini tpx-rec__b", "Xem phương án mưa cho cả ngày", "Xem trước phương án mưa ngày " + d, function () {
+                if (dirty) { say("Đợi lưu xong rồi xem phương án mưa.", true); return; }
+                ui.healthOpen = true;
+                loadResolve({ code: "context.rain", day: d, index: null });
+                setTimeout(function () { var x = document.querySelector("#tpWarn .tpx-resolve"); if (x) x.scrollIntoView({ block: "center", behavior: "smooth" }); }, 500);
+            }));
+        }
         det.appendChild(box);
         return det;
     }
@@ -547,7 +903,7 @@
         box.textContent = "Đang tìm…";
         var have = (rain[String(d)] || []).map(rainKey);
         var q = "?day=" + d + have.map(function (k) { return "&have[]=" + encodeURIComponent(k); }).join("");
-        fetch(cfg.rainSuggestUrl + q, { credentials: "same-origin", headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" } })
+        API.raw(cfg.rainSuggestUrl + q)
             .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
             .then(function (j) {
                 box.textContent = "";
@@ -571,81 +927,297 @@
             .catch(function () { box.textContent = "Chưa tải được gợi ý, thử lại sau."; })
             .then(function () { b.disabled = false; });
     }
-    /** Danh sách ngày ở thanh bên trái: bấm để nhảy tới ngày đó (giống Wanderlog). */
+    /* ---------------- dải ngày + các ngày ---------------- */
+    /** Thứ ISO (1 = Thứ Hai ... 7 = Chủ nhật) của ngày d, null khi chưa chọn ngày đi (khi đó không kiểm tra giờ mở cửa). */
+    function dayDow(d) {
+        var s = $("tpStart").value;
+        if (!s) return null;
+        var dt = new Date(s + "T00:00:00");
+        if (isNaN(dt.getTime())) return null;
+        dt.setDate(dt.getDate() + d - 1);
+        return dt.getDay() || 7;
+    }
+    /** Ngày (khác d) trong chuyến mà mục mở cửa và còn đủ giờ; null nếu không có. */
+    function openDayFor(it, notDay) {
+        for (var d = 1; d <= daysCount(); d++) {
+            if (d === notDay) continue;
+            var w = dayDow(d);
+            if (w != null && S.hoursFit(it.hours, w, RULES.dayStart, itemDur(it)) != null) return d;
+        }
+        return null;
+    }
+    function dayDate(d) {
+        var s = $("tpStart").value;
+        if (!s) return "";
+        var dt = new Date(s + "T00:00:00");
+        if (isNaN(dt.getTime())) return "";
+        dt.setDate(dt.getDate() + d - 1);
+        return dt.toLocaleDateString("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit" });
+    }
+    function loadBar(s, cls) {
+        var lv = loadLevel(s), pct = Math.round(s.load * 100);
+        var bar = el("span", "tpx-load tpx-load--" + lv + (cls ? " " + cls : ""));
+        var f = el("span", "tpx-load__fill");
+        f.style.width = Math.min(100, pct) + "%";
+        bar.appendChild(f);
+        bar.setAttribute("role", "img");
+        bar.setAttribute("aria-label", "Độ dày của ngày: " + pct + "%");
+        bar.title = durText(s.act) + " hoạt động + " + durText(s.travel) + " di chuyển (" + pct + "% quỹ thời gian trong ngày)";
+        return bar;
+    }
+    function gotoDay(d) {
+        switchTab("plan");
+        var sec = document.getElementById(d === "x" ? "tpDayX" : "tpDay" + d);
+        if (ui.collapsed[d]) { delete ui.collapsed[d]; renderDays(); sec = document.getElementById(d === "x" ? "tpDayX" : "tpDay" + d); }
+        ui.lockDay = Date.now() + 900;
+        if (sec) sec.scrollIntoView({ block: "start", behavior: "smooth" });
+        setCurDay(d, true);
+    }
+    /** Dải ngày phía trên timeline: bấm để nhảy tới ngày; thanh màu cho biết ngày nào đã kín. */
     function renderDayNav() {
         var nav = $("tpDayNav");
         if (!nav) return;
         nav.textContent = "";
-        for (var d = 1; d <= daysCount(); d++) {
-            (function (day) {
-                var li = el("li");
-                var list = dayItems(day);
-                var b = btn("tp-daynav__b", "", dayLabel(day) + ", " + list.length + " mục", function () {
-                    switchTab("plan");
-                    var sec = document.getElementById("tpDay" + day);
-                    if (sec) { sec.scrollIntoView({ block: "start", behavior: "smooth" }); ui.mapDay = String(day); $("tpMapDay").value = String(day); renderMap(); }
-                });
-                var dot = el("span", "tp-daynav__dot");
-                dot.style.background = COLORS[(day - 1) % COLORS.length];
-                b.appendChild(dot);
-                b.appendChild(el("span", "tp-daynav__t", dayLabel(day)));
-                b.appendChild(el("small", null, list.length ? String(list.length) : ""));
-                li.appendChild(b);
-                nav.appendChild(li);
-            })(d);
+        var un = dayItems(null).length;
+        if (un) {
+            var lx = el("li");
+            var bx = btn("tpx-dchip tpx-dchip--wait" + (ui.curDay === "x" ? " is-on" : ""), null, "Đã lưu, " + un + " mục chưa xếp ngày", function () { gotoDay("x"); });
+            bx.setAttribute("data-day", "x");
+            bx.appendChild(el("b", null, "Đã lưu"));
+            bx.appendChild(el("small", null, un + " mục"));
+            lx.appendChild(bx);
+            nav.appendChild(lx);
         }
+        allSched().forEach(function (s) {
+            var li = el("li");
+            var b = btn("tpx-dchip" + (ui.curDay === s.day ? " is-on" : ""), null, null, function () { gotoDay(s.day); });
+            b.style.setProperty("--c", dayColor(s.day));
+            b.setAttribute("data-day", String(s.day));
+            b.setAttribute("aria-label", "Ngày " + s.day + (dayDate(s.day) ? ", " + dayDate(s.day) : "") + ", " + s.count + " mục, độ dày " + Math.round(s.load * 100) + "%");
+            if (ui.curDay === s.day) b.setAttribute("aria-current", "true");
+            var t = el("span", "tpx-dchip__t");
+            t.appendChild(el("b", null, "Ngày " + s.day));
+            if (dayIssues(s).some(function (x) { return x.lvl === "bad"; })) { var w = icon("fa-exclamation-circle tpx-dchip__warn"); t.appendChild(w); }
+            b.appendChild(t);
+            b.appendChild(el("small", null, (dayDate(s.day) || (s.count + " mục"))));
+            b.appendChild(loadBar(s, "tpx-load--mini"));
+            li.appendChild(b);
+            nav.appendChild(li);
+        });
+    }
+    function dropZone(dayNo, zone) {
+        zone.addEventListener("dragover", function (e) {
+            if (ui.drag == null) return;
+            e.preventDefault();
+            zone.classList.add("drop-zone");
+        });
+        zone.addEventListener("dragleave", function (e) { if (e.target === zone) zone.classList.remove("drop-zone"); });
+        zone.addEventListener("drop", function (e) {
+            if (ui.drag == null) return;
+            e.preventDefault();
+            var dragged = byUid(ui.drag);
+            clearDrag();
+            if (dragged) { var from = dragged.day; moveItem(dragged, dayNo, null); commit(); if (from !== dayNo) checkPlaced(dragged); }
+        });
+    }
+    function daySection(s) {
+        var d = s.day, color = dayColor(d), collapsed = !!ui.collapsed[d];
+        var sec = el("section", "tpx-day" + (collapsed ? " is-collapsed" : ""));
+        sec.id = "tpDay" + d;
+        sec.setAttribute("data-day", String(d));
+        sec.style.setProperty("--c", color);
+
+        var head = el("header", "tpx-dayhead");
+        var tg = btn("tpx-dayhead__t", null, null, function () { if (ui.collapsed[d]) delete ui.collapsed[d]; else ui.collapsed[d] = true; renderDays(); });
+        tg.setAttribute("aria-expanded", collapsed ? "false" : "true");
+        tg.appendChild(icon(collapsed ? "fa-chevron-right" : "fa-chevron-down"));
+        var h3 = el("h3", null, "Ngày " + d);
+        tg.appendChild(h3);
+        if (dayDate(d)) tg.appendChild(el("span", "tpx-dayhead__date", dayDate(d)));
+        head.appendChild(tg);
+
+        var sum = el("p", "tpx-daysum");
+        if (s.count) {
+            // tóm tắt ngắn: số điểm · hoạt động · di chuyển (ghi rõ ước tính) · km · chi phí · mức độ
+            var chips = [["fa-clock", hhmm(s.start) + "–" + hhmm(s.end)], ["fa-map-pin", s.count + " điểm"], ["fa-hourglass-half", durText(s.act) + " hoạt động"]];
+            if (s.travel) chips.push(["fa-car-side", (realRoute() ? "" : "≈ ") + durText(s.travel) + " di chuyển" + (realRoute() ? "" : " (ước tính)")]);
+            if (s.km) chips.push(["fa-road", s.km + " km"]);
+            var c = s.cost + s.est;
+            if (c) chips.push(["fa-wallet", (s.est ? "≈ " : "") + shortMoney(c) + (s.est ? " (có ước tính)" : "")]);
+            chips.forEach(function (x) {
+                var ch = el("span", "tpx-dchipx");
+                ch.appendChild(icon(x[0]));
+                ch.appendChild(el("span", null, x[1]));
+                sum.appendChild(ch);
+            });
+        } else {
+            sum.appendChild(el("span", "tpx-daysum__empty", "Chưa có điểm nào. Thêm từ ô tìm kiếm, kéo từ “Đã lưu”, hoặc tìm quanh tuyến."));
+        }
+        head.appendChild(sum);
+        if (s.count) {
+            head.appendChild(loadBar(s));
+            sum.appendChild(el("span", "tpx-loadlbl tpx-loadlbl--" + loadLevel(s), S.loadLabel(s.load) + " · " + Math.round(s.load * 100) + "%"));
+        }
+
+        var act = el("div", "tpx-dayhead__act");
+        if (!RO) {
+            act.appendChild(ibtn("tp-mini", "fa-plus", "Thêm", "Thêm vào ngày " + d, function () { openAdd(d); }));
+            if (s.canOpt) act.appendChild(ibtn("tp-mini", "fa-route", "Tối ưu tuyến", "Tối ưu tuyến ngày " + d, function () { optimizeDay(d); }));
+            act.appendChild(dayMenu(d));
+        }
+        head.appendChild(act);
+        sec.appendChild(head);
+        if (collapsed) return sec;
+
+        var iss = dayIssues(s);
+        if (iss.length) {
+            var ul0 = el("ul", "tpx-issues");
+            iss.forEach(function (x) {
+                var li = el("li", "tpx-issue tpx-issue--" + x.lvl);
+                li.appendChild(icon(x.lvl === "bad" ? "fa-exclamation-triangle" : "fa-info-circle"));
+                li.appendChild(el("span", null, x.text));
+                if (!RO) (x.acts || []).forEach(function (a) { li.appendChild(btn("tp-mini", a[0], null, a[1])); });
+                ul0.appendChild(li);
+            });
+            sec.appendChild(ul0);
+        }
+        if (ui.opt && ui.opt.day === d) sec.appendChild(optBox());
+        if (ui.bal && ui.bal.day === d) sec.appendChild(balBox());
+
+        var ol = el("ol", "tpx-stops");
+        ol.setAttribute("data-day", String(d));
+        if (!s.rows.length) {
+            ol.appendChild(el("li", "tp-empty tpx-empty", RO ? "Chưa có mục nào." : "Chưa có mục nào. Bấm “Thêm” để tìm địa điểm, hoặc kéo một mục từ ngày khác vào đây."));
+        } else {
+            var lastSlot = null;
+            s.rows.forEach(function (r) {
+                if (r.slot !== lastSlot) {
+                    var sh = el("li", "tpx-slot");
+                    sh.appendChild(icon(SLOT_HEAD[r.slot][0]));
+                    sh.appendChild(el("span", null, SLOT_HEAD[r.slot][1]));
+                    ol.appendChild(sh);
+                    lastSlot = r.slot;
+                }
+                if (r.wait >= 15) {
+                    var fr = el("li", "tpx-free");
+                    fr.appendChild(icon("fa-mug-hot"));
+                    fr.appendChild(el("span", null, "Thời gian trống " + durText(r.wait) + " (" + hhmm(r.start - r.wait) + "–" + hhmm(r.start) + ")"));
+                    if (!RO && cfg.aroundUrl && routePts(d).length) fr.appendChild(btn("tp-link tp-small", "Tìm gì gần đây", "Tìm điểm dừng quanh tuyến ngày " + d, function () { openAdd(d, "around"); }));
+                    ol.appendChild(fr);
+                }
+                ol.appendChild(itemRow(r.it, r));
+                if (r.leg) ol.appendChild(legRow(r.leg, r));
+            });
+        }
+        dropZone(d, ol);
+        sec.appendChild(ol);
+        if (cfg.rainSuggestUrl && !RO) sec.appendChild(rainPanel(d));
+        return sec;
+    }
+    /** "Đã lưu": mục chưa xếp ngày (hộp chờ, giống "Places to visit" của Wanderlog). Khám phá -> Lưu -> kéo vào ngày. */
+    function waitSection(list) {
+        var sec = el("section", "tpx-day tpx-day--wait" + (list.length ? "" : " is-empty"));
+        sec.id = "tpDayX";
+        sec.style.setProperty("--c", "#6b7280");
+        var head = el("header", "tpx-dayhead");
+        var t = el("div", "tpx-dayhead__t");
+        t.appendChild(icon("fa-inbox"));
+        t.appendChild(el("h3", null, "Đã lưu"));
+        head.appendChild(t);
+        head.appendChild(el("p", "tpx-daysum", list.length
+            ? list.length + " mục chưa xếp ngày. Kéo vào một ngày, hoặc chọn ngày ở ô cạnh mục."
+            : "Nơi cất những chỗ bạn thích nhưng chưa biết đi ngày nào: bấm 🔖 Lưu khi khám phá quanh tuyến, chọn “Đã lưu” khi thêm, hoặc kéo một mục từ ngày vào đây."));
+        var act = el("div", "tpx-dayhead__act");
+        if (!RO && list.length) act.appendChild(btn("tp-mini", "Chọn hết", "Chọn tất cả mục chưa xếp", function () {
+            list.forEach(function (x) { ui.sel[x.uid] = true; });
+            renderDays();
+            renderBulk();
+        }));
+        head.appendChild(act);
+        sec.appendChild(head);
+        var ol = el("ol", "tpx-stops tpx-stops--wait");
+        ol.setAttribute("data-day", "");
+        list.forEach(function (it) { ol.appendChild(itemRow(it, null)); });
+        dropZone(null, ol);
+        sec.appendChild(ol);
+        // nhiều mục chờ mà đã có lịch: thu gọn để các ngày không bị đẩy xuống quá xa (vẫn kéo thả vào được)
+        var many = list.length > 3 && items.some(function (x) { return x.day != null; });
+        if (many) {
+            var open = !!ui.waitOpen;
+            ol.classList.toggle("is-folded", !open);
+            var more = btn("tp-mini tpx-waitmore", open ? "Thu gọn" : "Hiện tất cả " + list.length + " mục", open ? "Thu gọn khu Đã lưu" : "Hiện tất cả mục trong Đã lưu", function () {
+                ui.waitOpen = !ui.waitOpen;
+                renderDays();
+            });
+            more.setAttribute("aria-expanded", open ? "true" : "false");
+            sec.appendChild(more);
+        }
+        return sec;
     }
     function renderDays() {
         box.textContent = "";
-        var n = daysCount();
-        var any = items.length > 0;
-        for (var d = 1; d <= n + 1; d++) {
-            var day = d <= n ? d : null;
-            var list = dayItems(day);
-            if (day === null && !list.length) continue;
-            var sec = el("section", "tp-day");
-            if (day !== null) sec.id = "tpDay" + day;
-            var st = dayStats(list);
-            sec.appendChild(dayHeader(day, list, st));
-            var legOf = {};
-            st.legs.forEach(function (l) { legOf[l.from.uid] = l; });
-            var ul = el("ul", "tp-items");
-            ul.setAttribute("data-day", day === null ? "" : String(day));
-            if (!list.length) {
-                var empty = el("li", "tp-empty", "Chưa có mục nào. Bấm “+ Thêm” rồi tìm địa điểm, hoặc kéo một mục từ ngày khác vào đây.");
-                ul.appendChild(empty);
-            } else {
-                list.forEach(function (it) { ul.appendChild(itemRow(it, legOf[it.uid])); });
-            }
-            (function (dayNo, zone) {
-                zone.addEventListener("dragover", function (e) {
-                    if (ui.drag == null) return;
-                    e.preventDefault();
-                    zone.classList.add("drop-zone");
-                });
-                zone.addEventListener("dragleave", function (e) { if (e.target === zone) zone.classList.remove("drop-zone"); });
-                zone.addEventListener("drop", function (e) {
-                    if (ui.drag == null) return;
-                    e.preventDefault();
-                    var dragged = byUid(ui.drag);
-                    clearDrag();
-                    if (dragged) { moveItem(dragged, dayNo, null); commit(); }
-                });
-            })(day, ul);
-            sec.appendChild(ul);
-            if (day !== null && cfg.rainSuggestUrl && !RO) sec.appendChild(rainPanel(day));
-            box.appendChild(sec);
+        box.classList.toggle("is-compact", ui.view === "compact");
+        var wait = dayItems(null);
+        if (!items.length) {
+            var em = el("div", "tpx-blank");
+            em.appendChild(icon("fa-map-signs"));
+            em.appendChild(el("b", null, "Chuyến đi chưa có điểm nào"));
+            em.appendChild(el("p", "tp-muted", "Tìm địa điểm, quán ăn, khách sạn hay trải nghiệm rồi xếp vào từng ngày. Giờ, quãng đường và chi phí sẽ tự tính."));
+            if (!RO) em.appendChild(ibtn("tp-btn", "fa-plus", "Thêm điểm đầu tiên", null, function () { openAdd(1); }));
+            box.appendChild(em);
         }
+        if (wait.length || !RO) box.appendChild(waitSection(wait));   // "Đã lưu" luôn có chỗ (kể cả rỗng) để kéo mục ra khỏi ngày
+        allSched().forEach(function (s) { box.appendChild(daySection(s)); });
         renderDayNav();
-        if (!any) box.insertBefore(el("p", "tp-muted", "Chuyến đi chưa có mục nào. Gõ tên địa điểm, quán ăn hoặc khách sạn vào ô tìm ở trên để thêm vào lịch."), box.firstChild);
+        renderSide();
+        observeDays();
     }
     function renderTotals() {
-        var sum = totalCost(), b = meta().budget, t = $("tpTotals");
-        var s = "Chi phí đã nhập: " + money(sum);
-        if (b != null) s += " / ngân sách " + money(b) + (sum > b ? " (vượt " + money(sum - b) + ")" : "");
+        var sum = totalCost(), es = estimates(), b = meta().budget, t = $("tpTotals");
+        var s = "Đã nhập " + money(sum);
+        if (es.total) s += " · ước tính thêm ≈ " + money(es.total);
+        if (b != null) s += " · ngân sách " + money(b) + (sum + es.total > b ? " (vượt " + money(sum + es.total - b) + ")" : "");
         t.textContent = s;
-        t.classList.toggle("tp-totals--over", b != null && sum > b);
+        t.classList.toggle("tp-totals--over", b != null && sum + es.total > b);
     }
+
+    /* ---------------- ngày đang xem (theo cuộn) ---------------- */
+    function setCurDay(d, fromClick) {
+        if (ui.curDay === d) return;
+        ui.curDay = d;
+        document.querySelectorAll("#tpDayNav .tpx-dchip").forEach(function (b) {
+            var on = b.getAttribute("data-day") === String(d === null ? "x" : d);
+            b.classList.toggle("is-on", on);
+            if (on) {
+                b.setAttribute("aria-current", "true");
+                if (!fromClick) { try { b.scrollIntoView({ block: "nearest", inline: "nearest" }); } catch (e) { /* bỏ qua */ } }
+            } else b.removeAttribute("aria-current");
+        });
+        document.querySelectorAll("#tpSideDays .tpx-side__day").forEach(function (b) { b.classList.toggle("is-on", b.getAttribute("data-day") === String(d)); });
+        syncSideTop();
+        if (ui.mapDay === "follow") renderMap();
+    }
+    /** Ngày đang xem = ngày có khung cắt qua một đường ngang ngay dưới dải ngày (dính). Gọi khi cuộn và sau khi vẽ lại. */
+    var obsRaf = 0;
+    function detectDay() {
+        obsRaf = 0;
+        if (ui.tab !== "plan" || Date.now() < (ui.lockDay || 0)) return;   // vừa bấm một ngày: chờ cuộn mượt xong
+        var strip = document.querySelector(".tpx-days"), top = strip ? strip.getBoundingClientRect().bottom : 100;
+        var y = top + Math.min(200, (window.innerHeight - top) * 0.3);
+        var secs = box.querySelectorAll(".tpx-day"), pick = null;
+        for (var i = 0; i < secs.length; i++) {
+            var r = secs[i].getBoundingClientRect();
+            if (r.top <= y) pick = secs[i]; else break;
+        }
+        if (!pick && secs.length) pick = secs[0];
+        if (!pick) return;
+        var dv = pick.getAttribute("data-day");
+        setCurDay(dv ? +dv : "x", false);
+    }
+    function observeDays() {
+        if (!obsRaf) obsRaf = requestAnimationFrame(detectDay);
+    }
+    window.addEventListener("scroll", observeDays, { passive: true });
 
     /* ---------------- chọn nhiều mục ---------------- */
     function selected() { return items.filter(function (x) { return ui.sel[x.uid]; }); }
@@ -682,7 +1254,481 @@
         b.appendChild(btn("tp-mini", "Bỏ chọn", "Bỏ chọn tất cả", function () { ui.sel = {}; renderDays(); renderBulk(); }));
     }
 
-    /* ---------------- tối ưu tuyến ---------------- */
+
+    /* ---------------- thanh bên kiểu Wanderlog ---------------- */
+    function renderSide() {
+        var ol = $("tpSideDays");
+        if (!ol) return;
+        ol.textContent = "";
+        allSched().forEach(function (s) {
+            var li = el("li");
+            var b = btn("tpx-side__day" + (ui.tab === "plan" && ui.curDay === s.day ? " is-on" : ""), null, "Ngày " + s.day + (dayDate(s.day) ? ", " + dayDate(s.day) : "") + ", " + s.count + " mục", function () { gotoDay(s.day); });
+            b.setAttribute("data-day", String(s.day));
+            b.style.setProperty("--c", dayColor(s.day));
+            var t = el("span", "tpx-side__dt");
+            t.appendChild(el("b", null, dayDate(s.day) || "Ngày " + s.day));
+            t.appendChild(el("small", null, dayDate(s.day) ? "Ngày " + s.day + " · " + s.count + " điểm" : s.count + " điểm"));
+            b.appendChild(t);
+            if (dayIssues(s).some(function (x) { return x.lvl === "bad"; })) b.appendChild(icon("fa-exclamation-circle tpx-dchip__warn"));
+            b.appendChild(loadBar(s, "tpx-load--mini"));
+            li.appendChild(b);
+            ol.appendChild(li);
+        });
+        var w = $("tpSideWait"), n = dayItems(null).length;
+        if (w) w.textContent = n ? String(n) : "";
+    }
+    function syncSideTop() {
+        document.querySelectorAll(".tpx-side__b[data-go]").forEach(function (b) {
+            var g = b.getAttribute("data-go");
+            var on = g === "cost" || g === "info" ? ui.tab === g : g === "x" ? ui.tab === "plan" && ui.curDay === "x" : g === "top" ? ui.tab === "plan" && ui.curDay == null : false;
+            b.classList.toggle("is-on", on);
+        });
+        if (ui.tab !== "plan") document.querySelectorAll("#tpSideDays .tpx-side__day").forEach(function (b) { b.classList.remove("is-on"); });
+    }
+    function sideGo(k) {
+        if (k === "top") { switchTab("plan"); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+        if (k === "around") { openAdd(ui.curDay && ui.curDay !== "x" ? ui.curDay : 1, "around"); return; }
+        if (k === "cost" || k === "info") { switchTab(k); try { $("tpBody").scrollIntoView({ block: "start", behavior: "smooth" }); } catch (e) { /* bỏ qua */ } return; }
+        gotoDay(k);
+    }
+
+    /* ---------------- khám phá quanh tuyến (Roadtrippers) ---------------- */
+    var AROUND_KM = [0.5, 1, 2, 3, 5];
+    var AROUND_GROUPS = [["all", "fa-th-large", "Tất cả"], ["eat", "fa-utensils", "Ăn uống"], ["cafe", "fa-coffee", "Cà phê"], ["sight", "fa-landmark", "Tham quan"],
+        ["nature", "fa-tree", "Thiên nhiên"], ["fun", "fa-ticket-alt", "Vui chơi"], ["experience", "fa-hiking", "Trải nghiệm"]];
+    function routePts(d) { return dayItems(d).filter(G.hasPos); }
+    function kmText(k) { return (Math.round(k * 10) / 10).toLocaleString("vi-VN") + " km"; }
+    function aroundDay() {
+        var a = ui.around;
+        if (a.day && routePts(a.day).length) return a.day;
+        for (var d = 1; d <= daysCount(); d++) if (routePts(d).length) return d;
+        return null;
+    }
+    function loadAround() {
+        var a = ui.around, d = aroundDay();
+        a.day = d;
+        if (!d || !cfg.aroundUrl) { a.data = null; renderAround(); return; }
+        var pts = routePts(d), mine = ++a.seq;
+        var have = items.filter(function (x) { return !CUSTOM[x.type]; }).map(key).slice(0, 80);
+        var url = cfg.aroundUrl + "?pts=" + encodeURIComponent(pts.map(function (p) { return (+p.lat).toFixed(6) + "," + (+p.lng).toFixed(6); }).join(";")) +
+            "&km=" + a.km + "&group=" + a.group + have.map(function (k) { return "&have[]=" + encodeURIComponent(k); }).join("");
+        a.loading = true;
+        renderAround();
+        fetchJson(url)
+            .then(function (j) { if (mine === a.seq) { a.loading = false; a.failed = false; a.data = j; a.pts = pts; renderAround(); renderMap(); } })
+            .catch(function () { if (mine === a.seq) { a.loading = false; a.failed = true; renderAround(); } });
+    }
+    function aroundAfterItem(r) {
+        var pts = ui.around.pts || [];
+        return pts[r.after] || null;
+    }
+    /** Thêm một kết quả vào ngày đang xem, ngay sau điểm mà nó nằm cạnh trên tuyến. */
+    function aroundAdd(r) {
+        var after = aroundAfterItem(r), d = ui.around.day;
+        if (items.length >= LIMITS.maxItems) { say("Chuyến đi đã đạt tối đa " + LIMITS.maxItems + " mục.", true); return; }
+        if (haveMap()[r.type + ":" + r.refId]) return;
+        var it = newItem({ type: r.type, refId: r.refId, name: r.name, sub: r.kind, url: r.url, lat: r.lat, lng: r.lng, day: d, defDur: r.durationMin, image: r.image });
+        if (after && items.indexOf(after) >= 0) {
+            var grp = dayItems(d), i = grp.indexOf(after), next = grp[i + 1] || null;
+            if (next) items.splice(items.indexOf(next), 0, it); else items.push(it);
+        } else items.push(it);
+        commit();
+        say("Đã thêm “" + r.name + "” vào ngày " + d + (after ? ", sau “" + after.name + "”" : "") + ".");
+        ui.around.data.results = ui.around.data.results.filter(function (x) { return x !== r; });
+        renderAround();
+        renderMap();
+    }
+    /** Khám phá -> Lưu: thêm vào "Đã lưu" (chưa xếp ngày), sau đó kéo vào ngày nào cũng được. */
+    function aroundSave(r) {
+        if (items.length >= LIMITS.maxItems) { say("Chuyến đi đã đạt tối đa " + LIMITS.maxItems + " mục.", true); return; }
+        if (haveMap()[r.type + ":" + r.refId]) return;
+        items.push(newItem({ type: r.type, refId: r.refId, name: r.name, sub: r.kind, url: r.url, lat: r.lat, lng: r.lng, day: null, defDur: r.durationMin, image: r.image }));
+        commit();
+        say("Đã lưu “" + r.name + "” vào Đã lưu. Kéo vào một ngày khi bạn quyết định.", false, [["Hoàn tác", undoOnce]]);
+        ui.around.data.results = ui.around.data.results.filter(function (x) { return x !== r; });
+        renderAround();
+        renderMap();
+    }
+    function aroundCardItem(r) {
+        var li = el("li", "tpx-arc");
+        var ph = el("div", "tpx-arc__ph");
+        if (r.image) { var im = el("img"); im.src = r.image; im.alt = ""; im.loading = "lazy"; ph.appendChild(im); }
+        else { ph.classList.add("is-icon"); ph.appendChild(icon((AROUND_GROUPS.filter(function (g) { return g[0] === r.group; })[0] || AROUND_GROUPS[3])[1])); }
+        if (!RO) {
+            ph.appendChild(btn("tpx-arc__add", "+", "Thêm " + r.name + " vào ngày " + ui.around.day, function () { aroundAdd(r); }));
+            var sv = btn("tpx-arc__save", null, "Lưu " + r.name + " vào Đã lưu", function () { aroundSave(r); });
+            sv.appendChild(icon("fa-bookmark"));
+            ph.appendChild(sv);
+        }
+        li.appendChild(ph);
+        var body = el("div", "tpx-arc__b");
+        var href = safeUrl(r.url);
+        if (href) { var a = el("a", "tpx-arc__n", r.name); a.href = href; a.target = "_blank"; a.rel = "noopener"; body.appendChild(a); }
+        else body.appendChild(el("b", "tpx-arc__n", r.name));
+        body.appendChild(el("small", "tpx-arc__k", r.kind || ""));
+        var why = [r.detourKm < 0.5 ? "Gần tuyến ngày " + ui.around.day : "", r.mustTry ? "Phải thử ở đây" : ""].filter(Boolean).slice(0, 2);
+        if (why.length) body.appendChild(el("small", "tpx-arc__why", "✓ " + why.join(" · ")));
+        var after = aroundAfterItem(r);
+        // người dùng quan tâm "mất thêm bao lâu": phút đi vòng (RouteService) + nhãn ngưỡng từ máy chủ (config planner.detour_levels)
+        var lv = r.detourLevel || { key: "good", label: "" };
+        var det = el("p", "tpx-arc__d tpx-arc__d--" + lv.key);
+        det.appendChild(icon("fa-route"));
+        det.appendChild(el("b", null, r.detourKm < 0.15 ? "Trên tuyến" : "+" + Math.max(1, r.detourMin) + " phút"));
+        det.appendChild(el("span", null, [r.detourKm < 0.15 ? "" : "+" + kmText(r.detourKm), lv.label].filter(Boolean).join(" · ")));
+        det.title = "Ước tính quãng đường và thời gian đi vòng (đường chim bay × hệ số), chưa phải đường bộ thật";
+        body.appendChild(det);
+        body.appendChild(el("small", "tpx-arc__k", "Cách tuyến " + kmText(r.offKm || 0) + " · ước tính đi vòng"));
+        if (after) body.appendChild(el("small", "tpx-arc__k", "Ghé sau: " + after.name));
+        var extra = [r.durationMin ? "ở ~" + durText(r.durationMin) : "", r.priceText || ""].filter(Boolean).join(" · ");
+        if (extra) body.appendChild(el("small", "tpx-arc__k", extra));
+        li.appendChild(body);
+        li.addEventListener("mouseenter", function () { if (map) map.highlight("ar" + r.type + r.refId); });
+        li.addEventListener("mouseleave", function () { if (map) map.highlight(null); });
+        return li;
+    }
+    function renderAround() {
+        var box3 = $("tpAround");
+        if (!box3 || !ui.around) return;
+        var a = ui.around;
+        box3.textContent = "";
+        box3.appendChild(el("p", "tp-muted tp-small", "Tìm điểm dừng nằm gần tuyến của một ngày, xếp theo quãng phải đi vòng thêm. Bấm + để chèn vào đúng chỗ trong ngày."));
+        // chọn ngày
+        var dRow = el("div", "tpx-around__row");
+        dRow.appendChild(el("span", "tp-small tp-muted", "Tuyến của"));
+        var any = false;
+        for (var d = 1; d <= daysCount(); d++) {
+            (function (day) {
+                var n = routePts(day).length;
+                var b = btn("tpx-tchip" + (a.day === day ? " is-on" : ""), null, null, function () { a.day = day; loadAround(); });
+                b.style.setProperty("--c", dayColor(day));
+                b.appendChild(el("span", null, "Ngày " + day));
+                if (!n) { b.disabled = true; b.title = "Ngày này chưa có điểm nào có vị trí"; } else any = true;
+                dRow.appendChild(b);
+            })(d);
+        }
+        box3.appendChild(dRow);
+        if (!any) {
+            var em = el("div", "tpx-blank tpx-blank--sm");
+            em.appendChild(icon("fa-route"));
+            em.appendChild(el("b", null, "Chưa có tuyến để tìm quanh"));
+            em.appendChild(el("p", "tp-muted", "Thêm ít nhất một điểm có vị trí vào một ngày, rồi quay lại đây."));
+            box3.appendChild(em);
+            return;
+        }
+        // bán kính
+        var kRow = el("div", "tpx-around__row");
+        kRow.appendChild(el("span", "tp-small tp-muted", "Cách tuyến tối đa"));
+        var seg = el("div", "tpx-seg");
+        AROUND_KM.forEach(function (k) {
+            var b = btn("tpx-seg__b" + (a.km === k ? " is-on" : ""), kmText(k), "Trong " + kmText(k) + " quanh tuyến", function () { a.km = k; loadAround(); });
+            b.setAttribute("aria-pressed", a.km === k ? "true" : "false");
+            seg.appendChild(b);
+        });
+        kRow.appendChild(seg);
+        box3.appendChild(kRow);
+        // nhóm
+        var gRow = el("div", "tpx-cats__row tpx-around__groups");
+        AROUND_GROUPS.forEach(function (g) {
+            var b = ibtn("tp-chip tpx-cat" + (a.group === g[0] ? " is-on" : ""), g[1], g[2], "Chỉ hiện " + g[2], function () { a.group = g[0]; loadAround(); });
+            b.setAttribute("aria-pressed", a.group === g[0] ? "true" : "false");
+            gRow.appendChild(b);
+        });
+        box3.appendChild(gRow);
+        // kết quả
+        var head = el("p", "tpx-around__head");
+        if (a.loading) head.appendChild(el("span", null, "Đang tìm quanh tuyến ngày " + a.day + "…"));
+        else if (a.failed) head.appendChild(el("span", null, "Chưa tải được kết quả, thử lại sau."));
+        else if (a.data) head.appendChild(el("b", null, a.data.total + " nơi trong " + kmText(a.data.km) + " quanh tuyến ngày " + a.day));
+        box3.appendChild(head);
+        if (a.data && !a.loading) {
+            var list = a.data.results || [];
+            if (!list.length) {
+                box3.appendChild(el("p", "tp-muted", "Không có nơi nào khớp. Thử nới khoảng cách hoặc chọn “Tất cả”."));
+            } else {
+                var ul = el("ul", "tpx-arcs");
+                list.forEach(function (r) { ul.appendChild(aroundCardItem(r)); });
+                box3.appendChild(ul);
+            }
+            box3.appendChild(el("p", "tp-muted tp-small", "Chỉ gồm địa điểm và trải nghiệm đã được biên tập duyệt trên Travela. “Đi thêm” = quãng đường tăng thêm khi ghé vào giữa hai điểm (đường chim bay × hệ số đường bộ), ước tính."));
+        }
+    }
+    /** Thẻ nhỏ trên bản đồ cho một kết quả "quanh tuyến" (Roadtrippers: popup có nút + Thêm). */
+    function openAroundCard(r) {
+        ui.card = null;
+        var c = $("tpPlaceCard");
+        if (!c) return;
+        c.textContent = "";
+        c.hidden = false;
+        var head = el("div", "tp-pcard__head");
+        head.appendChild(window.TpMap.pinEl("#e9a23b", "+", true));
+        var tt = el("div", "tp-pcard__title");
+        tt.appendChild(el("strong", null, r.name));
+        tt.appendChild(el("small", null, [r.kind, r.destName].filter(Boolean).join(" · ")));
+        head.appendChild(tt);
+        head.appendChild(btn("tp-mini tp-pcard__x", "✕", "Đóng thẻ", closeCard));
+        c.appendChild(head);
+        var body = el("div", "tp-pcard__body");
+        if (r.image) { var im = el("img", "tp-pcard__img tpx-pcard__wide"); im.src = r.image; im.alt = r.name; body.appendChild(im); }
+        var facts = el("ul", "tp-pcard__facts");
+        var after = aroundAfterItem(r);
+        [["Đi thêm", r.detourKm < 0.15 ? "nằm ngay trên tuyến" : "+" + Math.max(1, r.detourMin) + " phút (~" + kmText(r.detourKm) + ")" + (r.detourLevel ? " · " + r.detourLevel.label : "")], ["Ghé sau", after ? after.name : ""],
+            ["Thời gian ở", r.durationMin ? "≈ " + durText(r.durationMin) : ""], ["Giá", r.priceText || ""], ["Địa chỉ", r.address || ""]].forEach(function (f) {
+            if (!f[1]) return;
+            var li = el("li");
+            li.appendChild(el("b", null, f[0] + ": "));
+            li.appendChild(el("span", null, f[1]));
+            facts.appendChild(li);
+        });
+        body.appendChild(facts);
+        c.appendChild(body);
+        var act = el("div", "tp-pcard__act");
+        if (!RO) {
+            act.appendChild(ibtn("tp-btn", "fa-plus", "Thêm vào ngày " + ui.around.day, null, function () { aroundAdd(r); closeCard(); }));
+            act.appendChild(ibtn("tp-btn tp-btn--ghost", "fa-bookmark", "Lưu", "Lưu vào Đã lưu", function () { aroundSave(r); closeCard(); }));
+        }
+        var href = safeUrl(r.url);
+        if (href) { var a3 = el("a", "tp-btn tp-btn--ghost", "Xem trên Travela"); a3.href = href; a3.target = "_blank"; a3.rel = "noopener"; act.appendChild(a3); }
+        c.appendChild(act);
+        if (map) { map.highlight("ar" + r.type + r.refId); map.view(r.lat, r.lng, Math.max(map.zoom(), 15)); }
+    }
+    function aroundOnMap() {
+        var dr = $("tpAddDrawer");
+        return ((ui.dtab === "around" && dr && !dr.hidden) || ui.mapDay === "explore") && ui.around && ui.around.data && ui.around.day;
+    }
+    function setDtab(k) {
+        ui.dtab = k;
+        document.querySelectorAll(".tpx-dtab").forEach(function (b) {
+            var on = b.getAttribute("data-dtab") === k;
+            b.classList.toggle("is-on", on);
+            b.setAttribute("aria-selected", on ? "true" : "false");
+        });
+        $("tpAdd").hidden = k !== "find";
+        $("tpAround").hidden = k !== "around";
+        if (k === "around") { if (!ui.around.data && !ui.around.loading) loadAround(); else renderAround(); }
+        renderMap();
+    }
+
+    /* ---------------- thao tác cả ngày: chèn, đổi chỗ, xóa, nhân bản ---------------- */
+    function shiftRain(fn) {
+        var o = {};
+        Object.keys(rain).forEach(function (k) { var nk = fn(+k); if (nk) o[String(nk)] = rain[k]; });
+        rain = o;
+    }
+    function setDays(n) { $("tpDays").value = String(n); }
+    function insertDayAfter(d) {
+        if (daysCount() >= LIMITS.maxDays) { say("Chuyến đi tối đa " + LIMITS.maxDays + " ngày.", true); return false; }
+        items.forEach(function (x) { if (x.day != null && x.day > d) x.day++; });
+        shiftRain(function (k) { return k > d ? k + 1 : k; });
+        setDays(daysCount() + 1);
+        return true;
+    }
+    function swapDays(a, b) {
+        if (b < 1 || b > daysCount()) return;
+        var A = items.filter(function (x) { return x.day === a; }), B = items.filter(function (x) { return x.day === b; });
+        A.forEach(function (x) { x.day = b; });
+        B.forEach(function (x) { x.day = a; });
+        shiftRain(function (k) { return k === a ? b : k === b ? a : k; });
+        commit();
+        say("Đã đổi chỗ ngày " + a + " và ngày " + b + ".");
+    }
+    function deleteDay(d) {
+        var n = dayItems(d).length;
+        if (daysCount() <= 1) { say("Chuyến đi cần ít nhất một ngày.", true); return; }
+        if (n && !window.confirm("Xóa ngày " + d + "? " + n + " mục của ngày này sẽ chuyển vào “Đã lưu”.")) return;
+        items.forEach(function (x) { if (x.day === d) x.day = null; else if (x.day != null && x.day > d) x.day--; });
+        shiftRain(function (k) { return k === d ? null : k > d ? k - 1 : k; });
+        setDays(daysCount() - 1);
+        commit();
+        say("Đã xóa ngày " + d + ". Bấm Hoàn tác nếu nhầm.");
+    }
+    /** Nhân bản ngày: chèn ngày mới ngay sau, chép các mục tự thêm (khách sạn, xe, ghi chú...). Nội dung Travela chỉ có một lần trong chuyến. */
+    function duplicateDay(d) {
+        var src = dayItems(d);
+        if (!insertDayAfter(d)) return;
+        var copied = 0, skipped = [];
+        src.forEach(function (x) {
+            if (!CUSTOM[x.type]) { skipped.push(x.name); return; }
+            if (items.length >= LIMITS.maxItems) return;
+            var c = JSON.parse(JSON.stringify(x));
+            c.uid = ++seq;
+            c.day = d + 1;
+            items.push(c);
+            copied++;
+        });
+        commit();
+        say("Đã thêm ngày " + (d + 1) + " với " + copied + " mục tự thêm được chép" + (skipped.length ? "; " + skipped.length + " mục từ Travela không chép vì mỗi nơi chỉ có một lần trong chuyến" : "") + ".");
+    }
+    function dayMenu(d) {
+        var det = el("details", "tpx-menu");
+        var sum = el("summary", "tp-mini tpx-menu__s");
+        sum.setAttribute("aria-label", "Thao tác khác cho ngày " + d);
+        sum.appendChild(icon("fa-ellipsis-h"));
+        det.appendChild(sum);
+        var box4 = el("div", "tpx-menu__box");
+        function mi(ic, text, fn, dis) {
+            var b = ibtn("tpx-menu__i", ic, text, null, function () { det.open = false; fn(); });
+            if (dis) b.disabled = true;
+            box4.appendChild(b);
+        }
+        mi("fa-check-square", "Chọn tất cả mục (để chuyển hoặc xóa)", function () {
+            dayItems(d).forEach(function (x) { ui.sel[x.uid] = true; });
+            renderDays();
+            renderBulk();
+        }, !dayItems(d).length);
+        mi("fa-plus-square", "Chèn một ngày phía sau", function () { if (insertDayAfter(d)) { commit(); say("Đã chèn ngày " + (d + 1) + "."); } }, daysCount() >= LIMITS.maxDays);
+        mi("fa-clone", "Nhân bản ngày này", function () { duplicateDay(d); }, daysCount() >= LIMITS.maxDays);
+        mi("fa-arrow-up", "Đổi chỗ với ngày trước", function () { swapDays(d, d - 1); }, d <= 1);
+        mi("fa-arrow-down", "Đổi chỗ với ngày sau", function () { swapDays(d, d + 1); }, d >= daysCount());
+        mi("fa-route", "Tìm điểm dừng quanh tuyến", function () { openAdd(d, "around"); }, !routePts(d).length);
+        mi("fa-trash-alt", "Xóa ngày (mục chuyển vào Đã lưu)", function () { deleteDay(d); }, daysCount() <= 1);
+        det.appendChild(box4);
+        return det;
+    }
+
+
+    /* ---------------- tự cân bằng ngày quá dày (xem trước rồi áp dụng) ---------------- */
+    var BAL_TARGET = 0.9;
+    /** Lịch giả định sau khi chuyển: danh sách mục của ngày `d` nếu bỏ `out` và thêm `inn` vào cuối. */
+    function simLoad(d, out, inn) {
+        var list = dayItems(d).filter(function (x) { return out.indexOf(x) < 0; }).concat(inn || []);
+        return schedule(d, list).load;
+    }
+    /**
+     * Đề xuất cân bằng cho ngày d: lần lượt lấy mục "tự do" ít quan trọng nhất (không phải lưu trú / ăn uống / mục đầu ngày, ưu tiên mục dài và nằm cuối),
+     * chuyển sang ngày còn chỗ có điểm gần nhất; không ngày nào nhận được thì đưa về "Đã lưu". Dừng khi ngày d xuống dưới 90%.
+     */
+    function planBalance(d) {
+        var moves = [], out = [], gain = {};
+        var cands = dayItems(d).filter(function (x, i) { var k = kindOf(x); return i > 0 && x.startMin == null && !x.locked && k !== "lodging" && k !== "meal" && k !== "transport"; });
+        cands.sort(function (a, b) { return itemDur(b) - itemDur(a) || dayItems(d).indexOf(b) - dayItems(d).indexOf(a); });
+        for (var c = 0; c < cands.length && simLoad(d, out) >= BAL_TARGET; c++) {
+            var it = cands[c], best = null, bestScore = Infinity;
+            for (var t = 1; t <= daysCount(); t++) {
+                if (t === d) continue;
+                var add = (gain[t] || []).concat([it]);
+                if (simLoad(t, [], add) > BAL_TARGET) continue;
+                var near = 30;
+                if (G.hasPos(it)) dayItems(t).concat(gain[t] || []).filter(G.hasPos).forEach(function (x) { near = Math.min(near, G.hav(x, it)); });
+                var score = near + simLoad(t, [], add) * 5;
+                if (score < bestScore) { bestScore = score; best = t; }
+            }
+            out.push(it);
+            if (best) (gain[best] = gain[best] || []).push(it);
+            moves.push({ it: it, to: best });
+        }
+        return { day: d, moves: moves, before: schedule(d).load, after: simLoad(d, out) };
+    }
+    function balanceDay(d) {
+        var p = planBalance(d);
+        if (!p.moves.length) { say("Ngày " + d + " không còn mục nào chuyển được (mục đã khóa, có giờ cố định, lưu trú hoặc ăn uống được giữ lại).", true); return; }
+        ui.bal = p;
+        renderDays();
+        var sec = $("tpDay" + d);
+        if (sec) { try { sec.querySelector(".tpx-bal").scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) { /* bỏ qua */ } }
+    }
+    function balBox() {
+        var p = ui.bal;
+        var box5 = el("div", "tpx-opt tpx-bal");
+        var h = el("p", "tpx-opt__h");
+        h.appendChild(icon("fa-balance-scale"));
+        h.appendChild(el("b", null, "Đề xuất cân bằng ngày " + p.day));
+        box5.appendChild(h);
+        var g = el("div", "tpx-opt__nums");
+        [["Hiện tại", Math.round(p.before * 100) + "%"], ["Sau khi chuyển", Math.round(p.after * 100) + "%"], ["Chuyển", p.moves.length + " mục"]].forEach(function (c, i) {
+            var cell = el("div", "tpx-opt__n" + (i === 1 && p.after < 1 ? " is-good" : ""));
+            cell.appendChild(el("span", null, c[0]));
+            cell.appendChild(el("b", null, c[1]));
+            g.appendChild(cell);
+        });
+        box5.appendChild(g);
+        var ul = el("ul", "tpx-bal__list");
+        p.moves.forEach(function (m) {
+            var li = el("li");
+            li.appendChild(el("b", null, m.it.name));
+            li.appendChild(icon("fa-long-arrow-alt-right"));
+            li.appendChild(el("span", null, m.to ? "Ngày " + m.to + (dayDate(m.to) ? " (" + dayDate(m.to) + ")" : "") : "Đã lưu (chưa xếp ngày)"));
+            ul.appendChild(li);
+        });
+        box5.appendChild(ul);
+        var row = el("div", "tpx-opt__act");
+        row.appendChild(el("span", "tp-small tp-muted", "Mục khóa vị trí, có giờ cố định, lưu trú và ăn uống được giữ nguyên."));
+        row.appendChild(btn("tp-btn", "Áp dụng", "Áp dụng đề xuất cân bằng ngày " + p.day, function () {
+            p.moves.forEach(function (m) { moveItem(m.it, m.to, null); });
+            ui.bal = null;
+            commit();
+            say("Đã cân bằng ngày " + p.day + ".", false, [["Hoàn tác", undoOnce]]);
+        }));
+        row.appendChild(btn("tp-mini", "Giữ như cũ", "Hủy đề xuất cân bằng", function () { ui.bal = null; renderDays(); }));
+        box5.appendChild(row);
+        return box5;
+    }
+
+    /** Sau khi kéo / chuyển một mục vào ngày: kiểm tra ngày đó (độ dày, trùng giờ) và gợi ý cách xử lý ngay trong thông báo. */
+    function checkPlaced(it) {
+        if (RO || it.day == null) return;
+        var s = schedule(it.day), row = s.rows.filter(function (r) { return r.it === it; })[0];
+        var acts = [["Hoàn tác", undoOnce]];
+        if (row && row.conflict) {
+            say("“" + it.name + "” " + (row.conflict.type === "travel" ? "không kịp di chuyển tới lúc " : "trùng giờ lúc ") + hhmm(row.start) + " ở ngày " + it.day + ".", true,
+                [["Bỏ giờ cố định", function () { it.startMin = null; commit(); }]].concat(acts));
+            return;
+        }
+        if (s.load >= 1) {
+            var alt = null, bl = Infinity;
+            allSched().forEach(function (o) { if (o.day !== it.day && simLoad(o.day, [], [it]) < 1 && o.load < bl) { bl = o.load; alt = o.day; } });
+            say("Ngày " + it.day + " đã kín (" + Math.round(s.load * 100) + "%, " + hhmm(s.start) + "–" + hhmm(s.end) + "). “" + it.name + "” vào " + hhmm(row ? row.start : s.end) + ".", true,
+                (alt ? [["Chuyển sang ngày " + alt, function () { moveItem(it, alt, null); commit(); say("Đã chuyển “" + it.name + "” sang ngày " + alt + "."); }]] : [])
+                    .concat([["Tự cân bằng", function () { balanceDay(it.day); }]]).concat(acts));
+            return;
+        }
+        if (row) say("Đã xếp “" + it.name + "” vào ngày " + it.day + " lúc " + hhmm(row.start) + (row.leg ? ", đi tiếp " + row.leg.min + " phút" : "") + ".", false, acts);
+    }
+
+    /* ---------------- phương án mưa ngay tại hoạt động ngoài trời ---------------- */
+    function rainInline(it, holder) {
+        if (!cfg.rainSuggestUrl || it.day == null) return;
+        holder.textContent = "Đang tìm mục trong nhà gần đó…";
+        var have = items.filter(function (x) { return !CUSTOM[x.type]; }).map(key);
+        var q = "?day=" + it.day + have.slice(0, 20).map(function (k) { return "&have[]=" + encodeURIComponent(k); }).join("");
+        fetchJson(cfg.rainSuggestUrl + q).then(function (j) {
+            holder.textContent = "";
+            var list = (j.items || []).slice(0, 3);
+            if (!list.length) { holder.appendChild(el("p", "tp-muted tp-small", "Chưa có mục trong nhà đã duyệt ở gần. Bạn có thể tự thêm một quán cà phê hoặc bảo tàng.")); return; }
+            var ul = el("ul", "tpx-rainalt");
+            list.forEach(function (x) {
+                var li = el("li");
+                var t = el("div");
+                t.appendChild(el("b", null, x.name));
+                t.appendChild(el("small", "tp-muted", [x.sub].concat(x.reasons || []).filter(Boolean).slice(0, 2).join(" · ")));
+                li.appendChild(t);
+                li.appendChild(btn("tp-mini", "Thay thế", "Thay " + it.name + " bằng " + x.name + " khi mưa", function () { rainSwap(it, x); }));
+                li.appendChild(btn("tp-mini", "Giữ dự phòng", "Lưu " + x.name + " làm phương án mưa ngày " + it.day, function () {
+                    var cur = rain[String(it.day)] = rain[String(it.day)] || [];
+                    if (cur.length < RAIN_MAX && !cur.some(function (r) { return rainKey(r) === x.type + ":" + x.refId; })) {
+                        cur.push({ type: x.type, refId: x.refId, name: x.name, sub: x.sub || "", url: x.url || null, lat: x.lat == null ? null : x.lat, lng: x.lng == null ? null : x.lng });
+                        commit();
+                        say("Đã lưu “" + x.name + "” làm phương án mưa ngày " + it.day + ".");
+                    }
+                }));
+                ul.appendChild(li);
+            });
+            holder.appendChild(ul);
+        }).catch(function () { holder.textContent = "Chưa tải được gợi ý, thử lại sau."; });
+    }
+    /** Thay hoạt động ngoài trời bằng mục trong nhà: mục mới nhận đúng chỗ và giờ, mục cũ về "Đã lưu" (hoàn tác được). */
+    function rainSwap(it, x) {
+        if (haveMap()[x.type + ":" + x.refId]) { say("“" + x.name + "” đã có trong chuyến.", true); return; }
+        var n = newItem({ type: x.type, refId: x.refId, name: x.name, sub: x.sub, url: x.url, lat: x.lat, lng: x.lng, day: it.day });
+        n.startMin = it.startMin;
+        n.slot = it.slot;
+        items.splice(items.indexOf(it), 0, n);
+        it.day = null;
+        it.startMin = null;
+        commit();
+        say("Đã thay “" + it.name + "” bằng “" + x.name + "”. Mục cũ nằm trong Đã lưu.", false, [["Hoàn tác", undoOnce]]);
+    }
+
+    /* ---------------- tối ưu tuyến: xem trước rồi mới áp dụng ---------------- */
     function routeNote(text, canUndo) {
         var n = $("tpRouteNote");
         n.textContent = "";
@@ -692,50 +1738,393 @@
         if (canUndo) n.appendChild(btn("tp-mini", "Hoàn tác", "Hoàn tác tối ưu tuyến", function () { undoOnce(); routeNote("Đã hoàn tác.", false); }));
         n.appendChild(btn("tp-mini", "Đóng", "Đóng thông báo", function () { routeNote("", false); }));
     }
-    function optimizeDay(d) {
-        var group = dayItems(d), pos = group.filter(G.hasPos);
-        if (pos.length < 3) { routeNote("Cần ít nhất 3 mục có vị trí trong ngày để tối ưu.", false); return; }
-        var keepFirst = $("tpKeepFirst") ? $("tpKeepFirst").checked : true;
-        var before = G.roadKmExact(pos);
-        var order = G.optimize(pos, keepFirst);
-        var np = order.map(function (i) { return pos[i]; });
-        var after = G.roadKmExact(np);
-        if (before - after < 0.2) { routeNote(dayLabel(d) + ": thứ tự hiện tại đã gần tối ưu.", false); return; }
-        var k = 0, newGroup = group.map(function (x) { return G.hasPos(x) ? np[k++] : x; });
-        var slots = [];
-        items.forEach(function (x, i) { if (x.day === d) slots.push(i); });
-        slots.forEach(function (p, j) { items[p] = newGroup[j]; });
-        commit();
-        routeNote(dayLabel(d) + ": đã sắp lại, tiết kiệm khoảng " + Math.round(before - after) + " km (~" + Math.round((before - after) / G.SPEED_KMH * 60) + " phút), ước tính.", true);
+    /** Tính thứ tự mới cho ngày d (láng giềng gần nhất + 2-opt, trong planner-geo.js). */
+    function planRoute(d, keepFirst) {
+        var group = dayItems(d);
+        // chỉ sắp lại mục "tự do": có vị trí, chưa ghim giờ, chưa chọn buổi; các mục khác giữ nguyên chỗ
+        var free = isFree;
+        var mov = group.filter(free);
+        if (mov.length < 3) return null;
+        var np = G.optimize(mov, keepFirst).map(function (i) { return mov[i]; });
+        var k = 0, order = group.map(function (x) { return free(x) ? np[k++] : x; });
+        return { day: d, keepFirst: keepFirst, before: G.roadKmExact(group.filter(G.hasPos)), after: G.roadKmExact(order.filter(G.hasPos)), order: order };
+    }
+    /** Tối ưu tuyến qua máy chủ (RouteService: giữ mục cố định giờ / khóa / có buổi), lỗi mạng thì tính ngay trên trình duyệt. */
+    function optimizeDay(d, keepFirst) {
+        var kf = keepFirst != null ? keepFirst : (ui.opt && ui.opt.day === d ? ui.opt.keepFirst : true);
+        var group = dayItems(d);
+        if (!cfg.optimizeUrl || group.filter(isFree).length < 3) { optimizeLocal(d, kf); return; }
+        var body = { keepFirst: kf, stops: group.map(function (x) { return { key: String(x.uid), lat: G.hasPos(x) ? x.lat : null, lng: G.hasPos(x) ? x.lng : null, anchor: !isFree(x) }; }) };
+        post(cfg.optimizeUrl, body)
+            .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+            .then(function (j) {
+                var byKey = {};
+                group.forEach(function (x) { byKey[String(x.uid)] = x; });
+                var order = j.order.map(function (k) { return byKey[k]; });
+                if (order.some(function (x) { return !x; }) || order.length !== group.length) { optimizeLocal(d, kf); return; }
+                if (!j.changed) { ui.opt = null; renderDays(); say("Ngày " + d + ": thứ tự hiện tại đã gần tối ưu" + (kf ? " (giữ điểm đầu ngày)." : ".")); return; }
+                showOpt({ day: d, keepFirst: kf, before: j.beforeKm, after: j.afterKm, savedMin: j.savedMin, order: order, provider: j.provider });
+            })
+            .catch(function () { optimizeLocal(d, kf); });
+    }
+    function showOpt(p) {
+        ui.opt = p;
+        renderDays();
+        var sec = $("tpDay" + p.day);
+        if (sec) { try { sec.querySelector(".tpx-opt").scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) { /* bỏ qua */ } }
+        renderMap();
+    }
+    function optimizeLocal(d, kf) {
+        var p = planRoute(d, kf);
+        if (!p) { say("Cần ít nhất 3 mục có vị trí, chưa chọn buổi và chưa đặt giờ để tối ưu.", true); return; }
+        if (p.before - p.after < 0.2) {
+            ui.opt = null;
+            renderDays();
+            say("Ngày " + d + ": thứ tự hiện tại đã gần tối ưu" + (p.keepFirst ? " (giữ điểm đầu ngày)." : "."));
+            return;
+        }
+        showOpt(p);
+    }
+    /** Hộp quyết định: quãng đường hiện tại / sau tối ưu / tiết kiệm, thứ tự mới, Áp dụng hoặc Hủy. */
+    function optBox() {
+        var p = ui.opt, saved = p.before - p.after;
+        var box2 = el("div", "tpx-opt");
+        box2.setAttribute("role", "group");
+        box2.setAttribute("aria-label", "Đề xuất tối ưu tuyến ngày " + p.day);
+        var h = el("p", "tpx-opt__h");
+        h.appendChild(icon("fa-route"));
+        h.appendChild(el("b", null, "Đề xuất sắp lại tuyến ngày " + p.day));
+        box2.appendChild(h);
+        var g = el("div", "tpx-opt__nums");
+        [["Hiện tại", "≈ " + (Math.round(p.before * 10) / 10).toLocaleString("vi-VN") + " km"], ["Sau tối ưu", "≈ " + (Math.round(p.after * 10) / 10).toLocaleString("vi-VN") + " km"],
+            ["Tiết kiệm", "≈ " + (Math.round(saved * 10) / 10).toLocaleString("vi-VN") + " km · " + (p.savedMin != null ? p.savedMin : Math.round(saved / G.SPEED_KMH * 60)) + " phút"]].forEach(function (c, i) {
+            var cell = el("div", "tpx-opt__n" + (i === 2 ? " is-good" : ""));
+            cell.appendChild(el("span", null, c[0]));
+            cell.appendChild(el("b", null, c[1]));
+            g.appendChild(cell);
+        });
+        box2.appendChild(g);
+        // hiện tại -> đề xuất, để người dùng thấy thay đổi gì trước khi áp dụng
+        var cmp = el("div", "tpx-opt__cmp");
+        [["Hiện tại", dayItems(p.day).filter(G.hasPos)], ["Đề xuất", p.order]].forEach(function (pair, k) {
+            var col = el("div", "tpx-opt__col" + (k ? " is-new" : ""));
+            col.appendChild(el("small", null, pair[0]));
+            var ol = el("ol", "tpx-opt__order");
+            pair[1].forEach(function (x) { ol.appendChild(el("li", null, x.name)); });
+            col.appendChild(ol);
+            cmp.appendChild(col);
+        });
+        box2.appendChild(cmp);
+        var row = el("div", "tpx-opt__act");
+        var kf = el("label", "tp-check tp-small");
+        var cb = el("input");
+        cb.type = "checkbox";
+        cb.checked = !!p.keepFirst;
+        cb.addEventListener("change", function () { optimizeDay(p.day, cb.checked); });
+        kf.appendChild(cb);
+        kf.appendChild(document.createTextNode(" Giữ điểm đầu ngày (ví dụ khách sạn)"));
+        row.appendChild(kf);
+        row.appendChild(btn("tp-btn", "Áp dụng", "Áp dụng thứ tự mới cho ngày " + p.day, function () {
+            var slots = [];
+            items.forEach(function (x, i) { if (x.day === p.day) slots.push(i); });
+            if (slots.length !== p.order.length) { ui.opt = null; renderDays(); return; }
+            slots.forEach(function (pos, j) { items[pos] = p.order[j]; });
+            ui.opt = null;
+            commit();
+            routeNote("Ngày " + p.day + ": đã sắp lại tuyến, tiết kiệm khoảng " + Math.round(saved * 10) / 10 + " km (ước tính).", true);
+        }));
+        row.appendChild(btn("tp-mini", "Giữ như cũ", "Hủy đề xuất tối ưu", function () { ui.opt = null; renderDays(); renderMap(); }));
+        box2.appendChild(row);
+        box2.appendChild(el("p", "tp-muted tp-small", "Mục có giờ cố định, đã khóa vị trí, đã chọn buổi hoặc chưa có vị trí được giữ nguyên chỗ. Quãng đường " + (p.provider === "osrm" ? "theo đường bộ (OSRM)." : "ước tính theo đường chim bay × hệ số đường bộ.")));
+        return box2;
     }
 
-    /* ---------------- vẽ: Tổng quan, cảnh báo, chi phí ---------------- */
+    /* ---------------- đầu trang, tổng quan, sức khỏe chuyến đi ---------------- */
+    function fmtDate(d) { return pad2(d.getDate()) + "/" + pad2(d.getMonth() + 1); }
+    function destName() {
+        var d = meta().dest, x = d ? (cfg.dests || []).filter(function (z) { return z.id === d; })[0] : null;
+        return x ? x.name : "";
+    }
+    function renderBrief() {
+        var b = $("tpBrief");
+        if (!b) return;
+        b.textContent = "";
+        var m = meta(), bits = [];
+        if (destName()) bits.push(["fa-map-marker-alt", destName()]);
+        if (m.start) {
+            var s0 = new Date(m.start + "T00:00:00");
+            if (!isNaN(s0.getTime())) {
+                var e0 = new Date(s0.getTime());
+                e0.setDate(e0.getDate() + m.days - 1);
+                bits.push(["fa-calendar-alt", fmtDate(s0) + (m.days > 1 ? " – " + fmtDate(e0) : "") + " · " + m.days + " ngày"]);
+            }
+        } else bits.push(["fa-calendar-alt", m.days + " ngày, chưa chọn ngày đi"]);
+        bits.push(["fa-user-friends", m.group + " người"]);
+        if (m.budget != null) bits.push(["fa-wallet", "Ngân sách " + shortMoney(m.budget)]);
+        bits.forEach(function (x) {
+            var s = el("span", "tpx-meta__i");
+            s.appendChild(icon(x[0]));
+            s.appendChild(el("span", null, x[1]));
+            b.appendChild(s);
+        });
+        if (!RO) b.appendChild(btn("tp-link tpx-meta__edit", "Sửa", "Sửa thông tin chuyến đi", function () { switchTab("info"); }));
+    }
+    function tripTotals() {
+        var ss = allSched(), o = { km: 0, travel: 0, act: 0, placed: 0, heavy: 0 };
+        ss.forEach(function (s) { o.km += s.km; o.travel += s.travel; o.act += s.act; o.placed += s.count; if (s.load >= 1 || s.conflicts.length) o.heavy++; });
+        o.cost = totalCost();
+        o.est = estimates().total;
+        return o;
+    }
+    function renderKpis() {
+        var k = $("tpKpis");
+        if (!k) return;
+        k.textContent = "";
+        var o = tripTotals(), m = meta(), all = o.cost + o.est;
+        var list = [
+            ["fa-map-pin", String(o.placed), "điểm đã xếp"],
+            ["fa-road", o.km + " km", "quãng đường"],
+            ["fa-clock", dur(o.travel), "di chuyển"],
+            ["fa-wallet", (o.est ? "≈ " : "") + shortMoney(all), m.budget ? "/ " + shortMoney(m.budget) + " ngân sách" : "dự kiến"],
+        ];
+        list.forEach(function (x, i) {
+            var li = el("li", "tpx-kpi" + (i === 3 && m.budget && all > m.budget ? " is-over" : ""));
+            li.appendChild(icon(x[0]));
+            li.appendChild(el("b", null, x[1]));
+            li.appendChild(el("span", null, x[2]));
+            k.appendChild(li);
+        });
+    }
     function renderStats() {
         var s = $("tpStats");
         s.textContent = "";
-        var m = meta(), n = items.length;
-        var tours = items.filter(function (x) { return x.type === "tour"; }).length;
-        var custom = items.filter(function (x) { return CUSTOM[x.type]; }).length;
-        var un = dayItems(null).length;
-        [["Số ngày", String(m.days)], ["Số mục", String(n)], ["Tour", String(tours)], ["Mục tự thêm", String(custom)], ["Chưa xếp", String(un)], ["Chi phí", money(totalCost())]].forEach(function (c) {
+        var m = meta(), o = tripTotals();
+        [["Số ngày", String(m.days)], ["Điểm đã xếp", String(o.placed)], ["Đã lưu (chưa xếp)", String(dayItems(null).length)], ["Quãng đường", o.km + " km"],
+            ["Di chuyển", durText(o.travel)], ["Hoạt động", durText(o.act)], ["Ngày cần chú ý", String(o.heavy)], ["Chi phí dự kiến", money(o.cost + o.est)]].forEach(function (c) {
             var card = el("div", "tp-stat");
             card.appendChild(el("b", null, c[1]));
             card.appendChild(el("span", null, c[0]));
             s.appendChild(card);
         });
     }
-    function renderWarn() {
-        var w = liveWarnings(), box2 = $("tpWarn");
-        box2.textContent = "";
-        if (w.length) {
-            var ul = el("ul", "tp-warn");
-            w.forEach(function (x) { ul.appendChild(el("li", null, x)); });
-            box2.appendChild(ul);
-        } else {
-            box2.appendChild(el("p", "tp-ok", "Chưa thấy vấn đề gì với lịch hiện tại."));
-        }
-        box2.appendChild(el("p", "tp-muted tp-small", cfg.estimateNote || ""));
+    /** Sức khỏe chuyến đi: một dòng tóm tắt; mở ra để xem từng kiểm tra và nhảy tới ngày có vấn đề. */
+    /* Điểm sức khỏe từ Planner Engine phía máy chủ (TripHealth): chỉ phản ánh bản ĐÃ LƯU, nên tải lại sau mỗi lần lưu. */
+    var srvSeq = 0;
+    function loadServerHealth() {
+        if (!cfg.healthUrl) return;
+        var my = ++srvSeq;
+        ui.srvLoading = true;
+        API.health().then(function (j) {
+            if (my !== srvSeq || !j || typeof j.score !== "number") return;
+            ui.srv = j;
+            ui.srvLoading = false;
+            ui.rsv = null;   // đề xuất cũ tính trên bản đã lưu trước đó
+            renderWarn();
+        }).catch(function () { ui.srvLoading = false; ui.srvErr = true; renderWarn(); /* không chặn trình soạn: vẫn dùng kiểm tra ở trình duyệt */ });
     }
+    /* ---------------- Resolution Engine: đề xuất -> xem trước -> áp dụng (máy chủ đề xuất, trình duyệt áp dụng rồi tự lưu) ---------------- */
+    var RESOLVABLE = { "capacity.overload": 1, "capacity.tight": 1, "time.late": 1, "time.overlap": 1, "time.travel": 1, "hours.closed": 1, "hours.early": 1, "hours.late": 1, "route.long_day": 1, "context.rain": 1 };
+    function resKey(c) { return c.code + "|" + (c.day || "") + "|" + (c.index == null ? "" : c.index); }
+    function loadResolve(c) {
+        var k = resKey(c);
+        ui.rsv = { key: k, loading: true, data: null };
+        renderWarn();
+        API.resolve(c).then(function (j) {
+            if (!ui.rsv || ui.rsv.key !== k) return;
+            ui.rsv = { key: k, loading: false, data: j };
+            renderWarn();
+        }).catch(function () { if (ui.rsv && ui.rsv.key === k) { ui.rsv = { key: k, loading: false, data: { options: [] }, err: true }; renderWarn(); } });
+    }
+    /** Áp dụng một phương án: thao tác chỉ tới mục bằng (ngày, vị trí) trên bản đã lưu, nên chỉ chạy khi không còn thay đổi chưa lưu. */
+    function applyResolution(o) {
+        if (dirty) { say("Đang có thay đổi chưa lưu, đợi lưu xong rồi áp dụng.", true); return; }
+        var r = window.TpResolve.apply(items, rain, o.changes, newItem, RAIN_MAX);   // planner-resolve.js: cùng ngữ nghĩa TripResolver::apply
+        if (!r.ok) { say("Lịch đã thay đổi so với đề xuất, đang tải lại.", true); ui.rsv = null; loadServerHealth(); return; }
+        ui.rsv = null;
+        commit();
+        say("Đã áp dụng: " + o.label + ".", false, [["Hoàn tác", undoOnce]]);
+    }
+    function resolveSection(box) {
+        if (!cfg.resolveUrl || RO || !ui.srv || dirty || !items.length) return;
+        var probs = (ui.srv.checks || []).filter(function (c) { return RESOLVABLE[c.code] && (c.level === "bad" || c.level === "warn" || c.code === "context.rain"); }).slice(0, 6);
+        if (!probs.length) return;
+        var sec = el("div", "tpx-resolve");
+        var h = el("p", "tpx-resolve__h");
+        h.appendChild(icon("fa-magic"));
+        h.appendChild(el("b", null, "Cách xử lý đề xuất"));
+        h.appendChild(el("span", "tp-muted tp-small", " · xem trước rồi mới áp dụng, hoàn tác được"));
+        sec.appendChild(h);
+        probs.forEach(function (c) {
+            var row = el("div", "tpx-resolve__p tpx-check--" + c.level);
+            var top = el("div", "tpx-resolve__t");
+            top.appendChild(el("span", null, c.text));
+            var open = ui.rsv && ui.rsv.key === resKey(c);
+            top.appendChild(btn("tp-mini", open ? "Đóng" : "Xem cách xử lý", "Xem cách xử lý: " + c.text, function () { if (open) { ui.rsv = null; renderWarn(); } else loadResolve(c); }));
+            row.appendChild(top);
+            if (open) {
+                if (ui.rsv.loading) row.appendChild(el("p", "tp-muted tp-small", "Đang tính phương án…"));
+                else {
+                    var opts = (ui.rsv.data && ui.rsv.data.options) || [];
+                    if (!opts.length) row.appendChild(el("p", "tp-muted tp-small", ui.rsv.err ? "Chưa tải được đề xuất, thử lại sau." : "Không có phương án tự động cho vấn đề này; bạn có thể sửa tay."));
+                    var ul = el("ul", "tpx-resolve__opts");
+                    opts.forEach(function (o) {
+                        var li = el("li");
+                        var t = el("div", "tpx-resolve__o");
+                        t.appendChild(el("b", null, o.label));
+                        t.appendChild(el("span", "tpx-resolve__ok" + (o.resolves ? "" : " is-partial"), o.resolves ? "giải quyết được" : "chỉ đỡ hơn, chưa hết"));
+                        var rs = el("ul", "tpx-resolve__why");
+                        (o.reasons && o.reasons.length ? o.reasons : [o.reason]).forEach(function (x) { rs.appendChild(el("li", null, x)); });
+                        t.appendChild(rs);
+                        (o.newIssues || []).slice(0, 2).forEach(function (n) {
+                            t.appendChild(el("small", "tpx-resolve__new" + (n.severity === "hard" ? " is-hard" : ""), "Sau khi áp dụng: " + n.text));
+                        });
+                        if (o.after) t.appendChild(el("small", "tp-muted", "Cả chuyến sau khi áp dụng: " + o.after.summary + " (" + o.after.score + "/100)"));
+                        var fx = el("div", "tpx-resolve__fx");
+                        (o.effects || []).forEach(function (e) {
+                            var chip = el("span", "tpx-resolve__chip" + (e.afterPct >= 100 ? " is-bad" : e.afterPct < e.beforePct ? " is-good" : ""));
+                            var dm = e.afterMin - e.beforeMin, dk = Math.round((e.afterKm - e.beforeKm) * 10) / 10;
+                            chip.textContent = "Ngày " + e.day + ": " + e.beforePct + "% → " + e.afterPct + "%"
+                                + (dm ? " (" + (dm > 0 ? "+" : "−") + durText(Math.abs(dm)) + ")" : "") + (dk ? " · " + (dk > 0 ? "+" : "−") + Math.abs(dk) + " km" : "");
+                            fx.appendChild(chip);
+                        });
+                        t.appendChild(fx);
+                        li.appendChild(t);
+                        li.appendChild(btn("tp-btn tp-btn--sm", "Áp dụng", "Áp dụng: " + o.label, function () { applyResolution(o); }));
+                        ul.appendChild(li);
+                    });
+                    row.appendChild(ul);
+                }
+            }
+            sec.appendChild(row);
+        });
+        box.appendChild(sec);
+    }
+    function renderWarn() {
+        var hw = health(), box2 = $("tpWarn"), hh = $("tpWarnH"), sec = $("tpHealth");
+        var RANK = { bad: 0, warn: 1, info: 2 };
+        hw.bad.sort(function (a, b) { return (RANK[a.lvl] || 0) - (RANK[b.lvl] || 0); });   // lỗi (ràng buộc cứng) lên đầu, rồi cảnh báo, thông tin
+        var nErr = hw.bad.filter(function (x) { return x.lvl === "bad"; }).length, nWarn = hw.bad.filter(function (x) { return x.lvl === "warn"; }).length;
+        var nBad = nErr + nWarn, srvOk = ui.srv && items.length && !dirty;
+        // CHẨN ĐOÁN bằng lời là chính (máy chủ quyết khi đã lưu; đang sửa thì dùng bản xem trước ở trình duyệt); điểm chỉ là thông tin phụ
+        var label = !items.length ? "chưa có gì để kiểm tra" : srvOk && ui.srv.summary ? ui.srv.summary.label
+            : nErr ? "Cần sửa " + nErr + " lỗi lịch" + (nWarn ? ", " + nWarn + " điểm nên xem lại" : "") : nWarn ? "Chuyến đi khá ổn, " + nWarn + " điểm nên xem lại" : "Chuyến đi hợp lý";
+        hh.textContent = "";
+        var tb = btn("tpx-health__t", null, null, function () { ui.healthOpen = !ui.healthOpen; renderWarn(); });
+        var open = ui.healthOpen == null ? hw.bad.some(function (x) { return x.lvl === "bad"; }) : ui.healthOpen;
+        tb.setAttribute("aria-expanded", open ? "true" : "false");
+        tb.appendChild(icon(nErr ? "fa-exclamation-triangle" : nBad ? "fa-heartbeat" : "fa-check-circle"));
+        tb.appendChild(el("b", null, "Sức khỏe chuyến đi"));
+        tb.appendChild(el("span", "tpx-health__sum" + (nErr ? " is-err" : ""), label));
+        if (ui.srvLoading && items.length) tb.appendChild(el("span", "tpx-health__busy", "đang kiểm tra…"));
+        if (srvOk) {
+            var sc = el("span", "tpx-score tpx-score--" + (ui.srv.level || "ok"), ui.srv.score + "/100");
+            sc.title = "Điểm sức khỏe theo bản đã lưu (thời gian, tuyến, sức chứa, ngân sách, bối cảnh)";
+            tb.appendChild(sc);
+        }
+        tb.appendChild(icon(open ? "fa-chevron-up" : "fa-chevron-down"));
+        hh.appendChild(tb);
+        sec.classList.toggle("is-bad", nBad > 0);
+        sec.classList.toggle("is-err", nErr > 0);
+        box2.textContent = "";
+        box2.hidden = !open;
+        if (!open) return;
+        // HÀNH ĐỘNG nên làm trước (máy chủ đề xuất, bấm để xem cách xử lý có xem trước)
+        if (srvOk && cfg.resolveUrl && !RO && (ui.srv.recommended || []).length) {
+            var rec = el("div", "tpx-rec");
+            rec.appendChild(el("span", "tpx-rec__h", "Nên làm:"));
+            ui.srv.recommended.forEach(function (r) {
+                rec.appendChild(btn("tp-mini tpx-rec__b", r.label, "Xem cách xử lý: " + r.label, function () {
+                    loadResolve(r);
+                    setTimeout(function () { var x = box2.querySelector(".tpx-resolve"); if (x) x.scrollIntoView({ block: "nearest", behavior: "smooth" }); }, 400);
+                }));
+            });
+            box2.appendChild(rec);
+        }
+        var ul = el("ul", "tpx-checks");
+        hw.bad.forEach(function (x) {
+            var li = el("li", "tpx-check tpx-check--" + x.lvl);
+            li.appendChild(icon(x.lvl === "bad" ? "fa-exclamation-triangle" : x.lvl === "info" ? "fa-info-circle" : "fa-exclamation-circle"));
+            li.appendChild(el("span", null, x.text));
+            if (x.day) li.appendChild(btn("tp-link tp-small", "Xem", "Xem " + (x.day === "x" ? "danh sách chờ" : "ngày " + x.day), function () { gotoDay(x.day); }));
+            if (x.tab) li.appendChild(btn("tp-link tp-small", "Xem chi phí", null, function () { switchTab(x.tab); }));
+            ul.appendChild(li);
+        });
+        // kiểm tra bối cảnh chỉ máy chủ có (mùa, nội dung cần lưu ý…), chưa trùng với kiểm tra phía trình duyệt
+        var SRV_ONLY = { "hours.unknown": "fa-clock", "capacity.estimated_duration": "fa-hourglass-half" };   // INFO chỉ máy chủ biết
+        if (ui.srv && !dirty) (ui.srv.checks || []).filter(function (c) { return (c.group === "context" || SRV_ONLY[c.code]) && c.level !== "ok"; }).slice(0, 6).forEach(function (c) {
+            var li = el("li", "tpx-check tpx-check--" + (c.level === "bad" ? "bad" : c.level === "info" ? "info" : "warn"));
+            li.appendChild(icon(SRV_ONLY[c.code] || "fa-cloud-sun"));
+            li.appendChild(el("span", null, c.text));
+            if (c.day) li.appendChild(btn("tp-link tp-small", "Xem", "Xem ngày " + c.day, function () { gotoDay(c.day); }));
+            ul.appendChild(li);
+        });
+        if (items.length) hw.ok.forEach(function (t) {
+            var li = el("li", "tpx-check tpx-check--ok");
+            li.appendChild(icon("fa-check"));
+            li.appendChild(el("span", null, t));
+            ul.appendChild(li);
+        });
+        box2.appendChild(ul);
+        resolveSection(box2);
+        // nguồn số liệu tuyến minh bạch: OSRM lỗi thì nói rõ đang là ước tính
+        var rt = ui.srv && ui.srv.route;
+        if (rt && rt.fallback) {
+            var fb = el("p", "tpx-check tpx-check--info tpx-fallback");
+            fb.appendChild(icon("fa-route"));
+            fb.appendChild(el("span", null, "Chưa lấy được đường bộ thật (" + (rt.reason || "OSRM không phản hồi") + "), quãng đường và thời gian đang là ước tính."));
+            box2.appendChild(fb);
+        } else if (cfg.estimateNote) box2.appendChild(el("p", "tp-muted tp-small", cfg.estimateNote));
+    }
+    function renderLegend() {
+        var lg = $("tpLegend");
+        if (!lg) return;
+        lg.textContent = "";
+        var showAll = !aroundOnMap() && (ui.mapDay === "" || (ui.mapDay === "follow" && ui.curDay == null));
+        lg.hidden = !showAll || daysCount() < 2;
+        if (lg.hidden) return;
+        for (var d = 1; d <= daysCount(); d++) {
+            (function (day) {
+                var li = el("li");
+                var b = btn("tpx-legend__b", null, "Chỉ hiện ngày " + day + " trên bản đồ", function () { ui.mapDay = String(day); $("tpMapDay").value = ui.mapDay; renderMap(); });
+                var sw = el("span", "tpx-legend__sw");
+                sw.style.background = dayColor(day);
+                b.appendChild(sw);
+                b.appendChild(el("span", null, "N" + day));
+                li.appendChild(b);
+                lg.appendChild(li);
+            })(d);
+        }
+    }
+
+    /* ---------------- ngăn "Thêm vào chuyến đi" ---------------- */
+    var addLastFocus = null;
+    function openAdd(day, tab) {
+        if (RO) return;
+        if (day !== undefined) ui.target = day;
+        if (typeof day === "number" && day !== ui.around.day) { ui.around.day = day; ui.around.data = null; }
+        renderTarget();
+        var dr = $("tpAddDrawer");
+        addLastFocus = document.activeElement;
+        dr.hidden = false;
+        if ($("tpAddBack")) $("tpAddBack").hidden = false;
+        document.documentElement.classList.add("tpx-drawer-open");
+        if ($("tpAddOpen")) $("tpAddOpen").setAttribute("aria-expanded", "true");
+        setDtab(tab || "find");
+        if ((tab || "find") === "find") setTimeout(function () { $("tpQ").focus(); }, 30);
+    }
+    function closeAdd() {
+        var dr = $("tpAddDrawer");
+        if (!dr || dr.hidden) return;
+        dr.hidden = true;
+        if ($("tpAddBack")) $("tpAddBack").hidden = true;
+        document.documentElement.classList.remove("tpx-drawer-open");
+        if ($("tpAddOpen")) $("tpAddOpen").setAttribute("aria-expanded", "false");
+        if (map) map.clearPreview();
+        if (ui.dtab === "around") { closeCard(); renderMap(); }
+        if (addLastFocus && addLastFocus.focus) addLastFocus.focus();
+    }
+    function focusAdd() { openAdd(ui.target); }
+
     function renderSummary() {
         var s = $("tpSummary");
         s.textContent = "";
@@ -745,38 +2134,6 @@
         var ul = el("ul", "tp-list");
         adv.forEach(function (a) { ul.appendChild(el("li", null, a.dest + ", tháng " + a.month + ": " + a.label + (a.note ? " (" + a.note + ")" : ""))); });
         s.appendChild(ul);
-    }
-    function renderCostSummary() {
-        var c = $("tpCostSum");
-        if (!c) return;
-        c.textContent = "";
-        var m = meta(), sum = totalCost(), es = estimates(), all = sum + es.total;
-        var grid = el("div", "tp-costgrid");
-        function cell(label, val, cls) {
-            var d = el("div", "tp-costcell" + (cls ? " " + cls : ""));
-            d.appendChild(el("span", null, label));
-            d.appendChild(el("b", null, val));
-            grid.appendChild(d);
-        }
-        cell("Đã nhập", money(sum));
-        if (es.total) cell("Ước tính thêm", "~" + money(es.total), "is-est");
-        cell("Tổng dự kiến", money(all) + (es.total ? " *" : ""), "is-total");
-        cell("Bình quân/người", money(all / m.group));
-        c.appendChild(grid);
-        if (m.budget != null && m.budget > 0) {
-            var pct = Math.min(100, Math.round(all / m.budget * 100));
-            var bar = el("div", "tp-bar-track");
-            var fill = el("div", "tp-bar-fill" + (all > m.budget ? " is-over" : ""));
-            fill.style.width = pct + "%";
-            bar.appendChild(fill);
-            bar.setAttribute("role", "img");
-            bar.setAttribute("aria-label", "Dự kiến dùng " + pct + "% ngân sách");
-            c.appendChild(bar);
-            c.appendChild(el("p", all > m.budget ? "tp-totals tp-totals--over" : "tp-muted", all > m.budget ? "Vượt ngân sách " + money(all - m.budget) + " (ngân sách " + money(m.budget) + ")" : "Còn lại " + money(m.budget - all) + " trong ngân sách " + money(m.budget)));
-        } else {
-            c.appendChild(el("p", "tp-muted", "Nhập ngân sách ở tab Thông tin để so sánh."));
-        }
-        if (es.total) c.appendChild(el("p", "tp-muted tp-small", "* Gồm khoản ước tính theo giá tham khảo, không phải giá thật. Nhập giá thật vào từng mục để chính xác hơn."));
     }
     function renderEstimate(b) {
         if (!REF) return;
@@ -797,7 +2154,7 @@
         row.appendChild(lab);
         if (es.items.length) {
             row.appendChild(btn("tp-mini", "Điền giá ước tính vào " + es.items.length + " mục chưa có giá", "Điền giá ước tính vào các mục chưa có giá", function () {
-                es.items.forEach(function (x) { x.it.cost = Math.round(x.est / 1000) * 1000; });
+                es.items.forEach(function (x) { x.it.cost = Math.round(x.est / 1000) * 1000; x.it.costType = "estimate"; });
                 commit();
             }));
         }
@@ -807,82 +2164,205 @@
         es.items.forEach(function (x) {
             var tr = el("tr");
             tr.appendChild(el("td", null, x.it.name));
-            tr.appendChild(el("td", "tp-num", "~" + money(x.est)));
+            tr.appendChild(el("td", "tp-num", "≈ " + money(x.est)));
             t.appendChild(tr);
         });
         es.gaps.forEach(function (x) {
             var tr = el("tr", "tp-gap");
             tr.appendChild(el("td", null, x.label));
-            tr.appendChild(el("td", "tp-num", "~" + money(x.amount)));
+            tr.appendChild(el("td", "tp-num", "≈ " + money(x.amount)));
             t.appendChild(tr);
         });
         b.appendChild(t);
         b.appendChild(el("p", "tp-muted tp-small", "Giá tham khảo theo mức “" + TIER_LABEL[tier()] + "” do nhóm đặt sẵn (ăn uống, trải nghiệm tính theo số người; lưu trú theo số phòng và số đêm). Không phải giá thị trường chính thức."));
     }
+    /* ---------------- ngân sách ---------------- */
+    var CAT = [["lodging", "fa-bed", "Lưu trú"], ["meal", "fa-utensils", "Ăn uống"], ["transport", "fa-bus", "Di chuyển"], ["fun", "fa-hiking", "Trải nghiệm & tour"], ["sight", "fa-landmark", "Tham quan"], ["other", "fa-ellipsis-h", "Khác"]];
+    function catOf(it) {
+        var k = kindOf(it);
+        if (k === "lodging" || k === "meal" || k === "transport") return k;
+        if (it.type === "experience" || it.type === "tour") return "fun";
+        if (it.type === "place" || it.type === "destination" || it.type === "event") return "sight";
+        return "other";
+    }
+    /** Tổng hợp chi phí: dự kiến (giá đã nhập + ước tính cho mục chưa có giá + khoản còn thiếu), đã chi thật, theo nhóm, theo ngày. */
+    function budget() {
+        var es = estimates(), o = { planned: 0, estFilled: 0, actual: 0, est: es.total, gaps: es.gaps, byCat: {}, byDay: {}, noPrice: [] };
+        CAT.forEach(function (c) { o.byCat[c[0]] = 0; });
+        items.forEach(function (it) {
+            var v = it.cost != null ? it.cost : (estItem(it) || 0);
+            if (it.cost != null) { if (it.costType === "actual") o.actual += it.cost; else if (it.costType === "estimate") o.estFilled += it.cost; else o.planned += it.cost; }
+            else if (!estItem(it) && (it.type === "experience" || it.type === "tour" || CUSTOM[it.type])) o.noPrice.push(it);
+            o.byCat[catOf(it)] += v;
+            var dk = it.day == null ? "x" : String(it.day);
+            o.byDay[dk] = (o.byDay[dk] || 0) + v;
+        });
+        es.gaps.forEach(function (g) {
+            var c = /Lưu trú/.test(g.label) ? "lodging" : /Ăn uống/.test(g.label) ? "meal" : /Đi lại/.test(g.label) ? "transport" : "other";
+            o.byCat[c] += g.amount;
+        });
+        o.total = o.planned + o.estFilled + o.actual + es.total;
+        return o;
+    }
+    function hbar(label, ic, value, max, cls, note) {
+        var row = el("div", "tpx-hbar" + (cls ? " " + cls : ""));
+        var lb = el("span", "tpx-hbar__l");
+        if (ic) lb.appendChild(icon(ic));
+        lb.appendChild(el("span", null, label));
+        row.appendChild(lb);
+        var tr = el("span", "tpx-hbar__t");
+        var f = el("span", "tpx-hbar__f");
+        f.style.width = (max > 0 ? Math.max(value > 0 ? 2 : 0, Math.min(100, value / max * 100)) : 0) + "%";
+        tr.appendChild(f);
+        row.appendChild(tr);
+        row.appendChild(el("b", "tpx-hbar__v", value ? money(value) : "—"));
+        row.title = label + ": " + money(value) + (note ? " · " + note : "");
+        return row;
+    }
+    function renderCostSummary() {
+        var c = $("tpCostSum");
+        if (!c) return;
+        c.textContent = "";
+        var m = meta(), b = budget(), all = b.total;
+        var grid = el("div", "tpx-btiles");
+        function tile(label, val, sub, cls) {
+            var d = el("div", "tpx-btile" + (cls ? " " + cls : ""));
+            d.appendChild(el("span", null, label));
+            d.appendChild(el("b", null, val));
+            if (sub) d.appendChild(el("small", null, sub));
+            grid.appendChild(d);
+        }
+        tile("Ngân sách", m.budget ? money(m.budget) : "Chưa đặt", m.budget ? money(m.budget / m.group) + "/người" : "Đặt ở “Thông tin & chia sẻ”");
+        tile("Dự kiến", (b.est || b.estFilled ? "≈ " : "") + money(all), money(all / m.group) + "/người", "is-total");
+        tile("Đã chi thật", money(b.actual), b.actual ? "từ mục đánh dấu “Đã chi”" : "Chưa ghi khoản đã chi");
+        if (m.budget) tile(all > m.budget ? "Vượt" : "Còn lại", money(Math.abs(m.budget - all)), Math.round(all / m.budget * 100) + "% ngân sách", all > m.budget ? "is-over" : "is-ok");
+        c.appendChild(grid);
+        if (m.budget > 0) {
+            var bar = el("div", "tp-bar-track tpx-bbar");
+            var fill = el("div", "tp-bar-fill" + (all > m.budget ? " is-over" : ""));
+            fill.style.width = Math.min(100, Math.round(all / m.budget * 100)) + "%";
+            bar.appendChild(fill);
+            bar.setAttribute("role", "img");
+            bar.setAttribute("aria-label", "Dự kiến dùng " + Math.round(all / m.budget * 100) + "% ngân sách");
+            c.appendChild(bar);
+            if (all > m.budget) {
+                var w = el("p", "tpx-issue tpx-issue--bad");
+                w.appendChild(icon("fa-exclamation-triangle"));
+                w.appendChild(el("span", null, "Dự kiến vượt ngân sách " + money(all - m.budget) + ". Xem nhóm chi lớn nhất bên dưới, hoặc đổi mức chi tiêu sang “Tiết kiệm”."));
+                c.appendChild(w);
+            }
+        }
+        var legend = el("p", "tp-muted tp-small tpx-blegend");
+        [["is-known", money(b.planned), "tự nhập"], ["is-est", "≈ " + money(b.est + b.estFilled), "ước tính theo giá tham khảo"], ["is-actual", money(b.actual), "đã chi thật"]].forEach(function (x) {
+            var s = el("span", "tpx-cost " + x[0], x[1]);
+            legend.appendChild(s);
+            legend.appendChild(document.createTextNode(" " + x[2] + "  "));
+        });
+        c.appendChild(legend);
+    }
+    function costTypeSelect(it) {
+        var s = el("select", "no-nice tpx-ctype");
+        s.setAttribute("aria-label", "Loại chi phí của " + it.name);
+        [["planned", "Dự kiến"], ["actual", "Đã chi"], ["estimate", "Ước tính"]].forEach(function (o) {
+            var op = el("option", null, o[1]);
+            op.value = o[0];
+            s.appendChild(op);
+        });
+        s.value = it.costType || "planned";
+        s.disabled = it.cost == null;
+        s.addEventListener("change", function () { it.costType = s.value === "planned" ? null : s.value; commit(true); renderCostTable(); });
+        return s;
+    }
     function renderCostTable() {
-        var b = $("tpCostBox");
-        b.textContent = "";
-        b.appendChild(el("div", null)).id = "tpCostSum";
-        b.appendChild(el("p", "tp-muted tp-small", "Giá tour đã nhân với số người. Các mục khác bạn nhập ở ô Chi phí; mục chưa nhập sẽ được ước tính theo giá tham khảo bên dưới."));
-        renderEstimate(b);
-        if (!items.length) { renderCostSummary(); return; }
+        var b0 = $("tpCostBox");
+        b0.textContent = "";
+        b0.appendChild(el("h2", "tpx-costh", "Ngân sách chuyến đi"));
+        b0.appendChild(el("div", "tpx-costsum")).id = "tpCostSum";
+        var bd = budget(), m = meta();
 
-        var byType = {}, byDay = {};
-        items.forEach(function (x) {
-            var t = byType[x.type] || (byType[x.type] = { n: 0, sum: 0 });
-            t.n++; t.sum += x.cost || 0;
-            var dk = x.day == null ? "x" : String(x.day);
-            byDay[dk] = (byDay[dk] || 0) + (x.cost || 0);
-        });
-        b.appendChild(el("h3", null, "Theo loại (đã nhập)"));
-        var t1 = el("table", "tp-table");
-        Object.keys(byType).forEach(function (k) {
-            var tr = el("tr");
-            tr.appendChild(el("td", null, TYPE[k] || k));
-            tr.appendChild(el("td", null, byType[k].n + " mục"));
-            tr.appendChild(el("td", "tp-num", money(byType[k].sum)));
-            t1.appendChild(tr);
-        });
-        b.appendChild(t1);
+        // theo nhóm
+        var sec1 = el("section", "tpx-bsec");
+        sec1.appendChild(el("h3", null, "Theo nhóm chi"));
+        var maxC = Math.max.apply(null, CAT.map(function (c) { return bd.byCat[c[0]]; }).concat([1]));
+        CAT.forEach(function (c) { if (bd.byCat[c[0]] || c[0] !== "other") sec1.appendChild(hbar(c[2], c[1], bd.byCat[c[0]], maxC)); });
+        b0.appendChild(sec1);
 
-        b.appendChild(el("h3", null, "Theo ngày (đã nhập)"));
-        var t2 = el("table", "tp-table");
-        for (var d = 1; d <= daysCount(); d++) {
-            var tr2 = el("tr");
-            tr2.appendChild(el("td", null, dayLabel(d)));
-            tr2.appendChild(el("td", "tp-num", money(byDay[String(d)] || 0)));
-            t2.appendChild(tr2);
+        // theo ngày, so với ngân sách chia đều
+        var sec2 = el("section", "tpx-bsec");
+        sec2.appendChild(el("h3", null, "Theo ngày"));
+        var perDay = m.budget ? m.budget / m.days : null;
+        if (perDay) sec2.appendChild(el("p", "tp-muted tp-small", "Vạch đứng: ngân sách chia đều " + money(perDay) + "/ngày. Chi phí chung (lưu trú, ăn uống chưa lên kế hoạch) chỉ tính ở nhóm chi, không chia vào ngày."));
+        var vals = [];
+        for (var d = 1; d <= daysCount(); d++) vals.push(bd.byDay[String(d)] || 0);
+        var maxD = Math.max.apply(null, vals.concat([perDay || 0, 1]));
+        var nz = vals.filter(function (v) { return v > 0; }), avg = nz.length ? nz.reduce(function (a, b) { return a + b; }, 0) / nz.length : 0;
+        if (nz.length >= 2) sec2.appendChild(el("p", "tp-muted tp-small", "Trung bình " + money(avg) + "/ngày (các ngày đã có chi phí)."));
+        vals.forEach(function (v, i) {
+            var over = perDay && v > perDay, hi = nz.length >= 2 && avg > 0 && v > avg * 1.4;
+            var row = hbar("Ngày " + (i + 1) + (dayDate(i + 1) ? " · " + dayDate(i + 1) : ""), null, v, maxD, over ? "is-over" : "", over ? "cao hơn mức chia đều" : "");
+            if (perDay) {
+                var mk = el("i", "tpx-hbar__mark");
+                mk.style.left = Math.min(100, perDay / maxD * 100) + "%";
+                row.querySelector(".tpx-hbar__t").appendChild(mk);
+            }
+            if (over) { var w = icon("fa-exclamation-circle tpx-hbar__warn"); w.title = "Cao hơn ngân sách chia đều"; row.appendChild(w); }
+            if (hi) row.appendChild(el("small", "tpx-hbar__note", "cao hơn trung bình " + Math.round((v / avg - 1) * 100) + "%"));
+            row.addEventListener("click", function () { gotoDay(i + 1); });
+            row.classList.add("is-link");
+            sec2.appendChild(row);
+        });
+        if (bd.byDay.x) sec2.appendChild(hbar("Đã lưu (chưa xếp ngày)", null, bd.byDay.x, maxD));
+        b0.appendChild(sec2);
+
+        // chưa có giá
+        if (bd.noPrice.length && !RO) {
+            var sec3 = el("section", "tpx-bsec");
+            sec3.appendChild(el("h3", null, "Chưa có giá (" + bd.noPrice.length + ")"));
+            sec3.appendChild(el("p", "tp-muted tp-small", "Các mục này không có giá tham khảo. Nhập giá để dự kiến chính xác hơn."));
+            var ul = el("ul", "tpx-noprice");
+            bd.noPrice.forEach(function (it) {
+                var li = el("li");
+                li.appendChild(el("span", null, (it.day ? "N" + it.day + " · " : "") + it.name));
+                li.appendChild(costInput(it));
+                ul.appendChild(li);
+            });
+            sec3.appendChild(ul);
+            b0.appendChild(sec3);
         }
-        if (byDay.x) {
-            var tr3 = el("tr");
-            tr3.appendChild(el("td", null, "Chưa xếp ngày"));
-            tr3.appendChild(el("td", "tp-num", money(byDay.x)));
-            t2.appendChild(tr3);
-        }
-        b.appendChild(t2);
 
-        b.appendChild(el("h3", null, "Từng mục"));
-        var t3 = el("table", "tp-table tp-table--items");
-        var ordered = [];
-        for (var dd = 1; dd <= daysCount(); dd++) ordered = ordered.concat(dayItems(dd));
-        ordered = ordered.concat(dayItems(null));
-        ordered.forEach(function (it) {
-            var tr4 = el("tr");
-            tr4.appendChild(el("td", null, it.day == null ? "—" : "N" + it.day));
-            tr4.appendChild(el("td", null, it.name));
-            tr4.appendChild(el("td", null, TYPE[it.type] || ""));
-            var td = el("td", "tp-num");
-            td.appendChild(costInput(it));
-            tr4.appendChild(td);
-            t3.appendChild(tr4);
-        });
-        b.appendChild(t3);
+        // dự toán tham khảo
+        renderEstimate(b0);
+
+        // từng mục
+        if (items.length) {
+            b0.appendChild(el("h3", null, "Từng mục"));
+            var t3 = el("table", "tp-table tp-table--items");
+            var ordered = [];
+            for (var dd = 1; dd <= daysCount(); dd++) ordered = ordered.concat(dayItems(dd));
+            ordered = ordered.concat(dayItems(null));
+            ordered.forEach(function (it) {
+                var tr4 = el("tr");
+                tr4.appendChild(el("td", null, it.day == null ? "—" : "N" + it.day));
+                tr4.appendChild(el("td", null, it.name));
+                var td0 = el("td");
+                var cat = CAT.filter(function (c) { return c[0] === catOf(it); })[0];
+                td0.appendChild(el("span", "tp-small tp-muted", cat ? cat[2] : ""));
+                tr4.appendChild(td0);
+                var td = el("td", "tp-num");
+                td.appendChild(costInput(it));
+                tr4.appendChild(td);
+                var td2 = el("td");
+                if (!RO) td2.appendChild(costTypeSelect(it));
+                tr4.appendChild(td2);
+                t3.appendChild(tr4);
+            });
+            b0.appendChild(t3);
+            b0.appendChild(el("p", "tp-muted tp-small", "Giá tour đã nhân với số người. “Đã chi” dùng để ghi số tiền thật sau khi trả; “Ước tính” là giá điền từ bảng giá tham khảo."));
+        }
         renderCostSummary();
     }
 
     /* ---------------- Thêm vào chuyến: một ô tìm duy nhất ---------------- */
-    var SEARCH_CHIPS = [["Khách sạn", "khách sạn"], ["Nhà hàng", "nhà hàng"], ["Quán cà phê", "quán cà phê"], ["Chợ", "chợ"]];
-    var ADD_CHIPS = [["Taxi / Grab", "transport"], ["Vé máy bay / tàu / xe", "transport"]];
 
     function newItem(o) {
         return {
@@ -891,29 +2371,45 @@
             day: o.day == null ? null : o.day, note: o.note || "", cost: o.cost == null ? null : +o.cost, slot: null, reasons: [],
             lat: o.lat == null ? null : o.lat, lng: o.lng == null ? null : o.lng, when: null,
             source: CUSTOM[o.type] && o.lat != null ? (o.source || "map") : null,
+            startMin: null, durationMin: null, defDur: o.defDur || null, image: o.image || null, locked: false, outdoor: o.outdoor == null ? null : o.outdoor,
         };
     }
     function addItem(o, label) {
         if (items.length >= LIMITS.maxItems) { say("Chuyến đi đã đạt tối đa " + LIMITS.maxItems + " mục.", true); return false; }
         if (!CUSTOM[o.type] && haveMap()[o.type + ":" + o.refId]) return false;
+        var auto = o.day === "auto";
+        if (auto) o.day = autoDay(o);
         items.push(newItem(o));
         commit();
-        say("Đã thêm “" + (label || o.name) + "” vào " + targetLabel(o.day) + ". Chưa lưu.");
+        say("Đã thêm “" + (label || o.name) + "” vào " + targetLabel(o.day) + (auto ? " (ngày hợp nhất)" : "") + ".");
         return true;
     }
+    /** "Thêm vào": chip chọn danh sách chờ / từng ngày / để Travela tự chọn ngày hợp (ô select ẩn giữ cùng giá trị). */
     function renderTarget() {
-        var s = $("tpTarget");
+        var s = $("tpTarget"), chips = $("tpTargetChips");
+        if (ui.target != null && ui.target !== "auto" && ui.target > daysCount()) ui.target = daysCount();
         s.textContent = "";
-        var o0 = el("option", null, "Chưa xếp ngày");
-        o0.value = "";
-        s.appendChild(o0);
-        for (var d = 1; d <= daysCount(); d++) {
-            var o = el("option", null, dayLabel(d));
-            o.value = String(d);
-            s.appendChild(o);
-        }
-        if (ui.target != null && ui.target > daysCount()) ui.target = daysCount();
-        s.value = ui.target == null ? "" : String(ui.target);
+        var opts = [["", "Đã lưu"]];
+        for (var d = 1; d <= daysCount(); d++) opts.push([String(d), "Ngày " + d]);
+        opts.push(["auto", "Tự chọn ngày hợp"]);
+        opts.forEach(function (x) { var o = el("option", null, x[1]); o.value = x[0]; s.appendChild(o); });
+        var cur = ui.target == null ? "" : String(ui.target);
+        s.value = cur;
+        if (!chips) return;
+        chips.textContent = "";
+        opts.forEach(function (x) {
+            var on = x[0] === cur;
+            var b = btn("tpx-tchip" + (on ? " is-on" : "") + (x[0] === "auto" ? " tpx-tchip--auto" : ""), null, null, function () {
+                ui.target = x[0] === "" ? null : x[0] === "auto" ? "auto" : +x[0];
+                renderTarget();
+            });
+            b.setAttribute("role", "radio");
+            b.setAttribute("aria-checked", on ? "true" : "false");
+            if (x[0] === "auto") { b.appendChild(icon("fa-magic")); b.title = "Xếp vào ngày có điểm gần nhất và chưa quá dày"; }
+            else if (x[0] !== "") b.style.setProperty("--c", dayColor(+x[0]));
+            b.appendChild(el("span", null, x[1]));
+            chips.appendChild(b);
+        });
     }
     function resultList(list, emptyText) {
         var wrap = el("div");
@@ -993,14 +2489,41 @@
         try { m.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) { /* bỏ qua */ }
         $("tpCustomLabel").focus();
     }
+    /* Lọc kết quả tìm theo loại (máy chủ lọc qua ?type=) + lối tắt "gần tuyến" */
+    var Q_TYPES = [["", "Tất cả", "fa-th-large"], ["place", "Địa điểm", "fa-landmark"], ["food", "Ăn uống", "fa-utensils"], ["experience", "Trải nghiệm", "fa-hiking"],
+        ["event", "Lễ hội", "fa-calendar-alt"], ["tour", "Tour", "fa-suitcase-rolling"], ["destination", "Điểm đến", "fa-map-marker-alt"]];
+    function typeFilterRow(s) {
+        var row = el("div", "tpx-qtypes");
+        row.setAttribute("role", "tablist");
+        Q_TYPES.forEach(function (t) {
+            var on = (ui.qType || "") === t[0];
+            var b = ibtn("tp-chip tpx-qtype" + (on ? " is-on" : ""), t[2], t[1], "Chỉ hiện " + t[1].toLowerCase(), function () {
+                if (on) return;
+                ui.qType = t[0];
+                runNameSearch(s.q, ++ui.searchSeq);
+            });
+            b.setAttribute("role", "tab");
+            b.setAttribute("aria-selected", on ? "true" : "false");
+            row.appendChild(b);
+        });
+        var d = typeof ui.curDay === "number" ? ui.curDay : (typeof ui.target === "number" ? ui.target : null);
+        if (cfg.aroundUrl && d && routePts(d).length) {
+            row.appendChild(ibtn("tp-chip tpx-qtype tpx-qtype--around", "fa-route", "Gần tuyến ngày " + d, "Tìm điểm dừng quanh tuyến ngày " + d, function () {
+                if (d !== ui.around.day) { ui.around.day = d; ui.around.data = null; }
+                setDtab("around");
+            }));
+        }
+        return row;
+    }
     function renderResults() {
         var r = $("tpResults"), s = ui.res;
         if (ui.br && ui.br.built) renderBrowseList();
         r.textContent = "";
         r.hidden = !s;
         if (!s) return;
+        r.appendChild(typeFilterRow(s));
         r.appendChild(group("Có trên Travela", s.kho === null ? el("p", "tp-muted", "Đang tìm…") : resultList(s.kho, "Chưa có nội dung phù hợp trên Travela.")));
-        if (cfg.searchExtUrl) {
+        if (cfg.searchExtUrl && (!ui.qType || ui.qType === "place")) {   // bản đồ OSM chỉ có địa điểm
             var body;
             if (s.ext === null) body = el("p", "tp-muted", "Đang tìm trên bản đồ…");
             else if (!s.ext.ok) body = el("p", "tp-muted", "Chưa tìm được trên bản đồ lúc này. Bạn vẫn thêm được bằng tên ở bên dưới.");
@@ -1013,10 +2536,6 @@
         foot.appendChild(btn("tp-mini", "+ Thêm “" + s.q + "” như một ghi chú", "Thêm " + s.q + " như một ghi chú, chưa có vị trí", function () { addItem({ type: "note", refId: null, name: s.q, day: ui.target }); }));
         foot.appendChild(btn("tp-mini", "Tự nhập chi phí, vị trí...", "Mở biểu mẫu tự nhập", function () { openManual(s.q); }));
         r.appendChild(foot);
-    }
-    function fetchJson(url) {
-        return fetch(url, { credentials: "same-origin", headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" } })
-            .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); });
     }
     /** Điểm làm trung tâm khi tìm trên bản đồ: điểm đến chính, không có thì trung bình các mục đã có vị trí. */
     function biasCenter() {
@@ -1036,10 +2555,10 @@
         ui.res = { q: q, kho: null, ext: cfg.searchExtUrl ? null : { ok: true, list: [] } };
         renderResults();
         var main = meta().dest;
-        fetchJson(cfg.searchUrl + "?q=" + enc + (main && $("tpDestOnly").checked ? "&dest=" + main : ""))
+        fetchJson(cfg.searchUrl + "?q=" + enc + (main && $("tpDestOnly").checked ? "&dest=" + main : "") + (ui.qType ? "&type=" + ui.qType : ""))
             .then(function (j) { if (mine === ui.searchSeq) { ui.res.kho = j.results || []; renderResults(); } })
             .catch(function () { if (mine === ui.searchSeq) { ui.res.kho = []; renderResults(); } });
-        if (cfg.searchExtUrl) {
+        if (cfg.searchExtUrl && (!ui.qType || ui.qType === "place")) {
             var c = biasCenter();
             fetchJson(cfg.searchExtUrl + "?q=" + enc + (c ? "&lat=" + c.lat + "&lng=" + c.lng : ""))
                 .then(function (j) { if (mine === ui.searchSeq) { ui.res.ext = { ok: j.ok !== false, list: j.results || [] }; renderResults(); } })
@@ -1051,8 +2570,10 @@
         if (q.length < 2) { ui.searchSeq++; ui.res = null; ui.br = null; renderResults(); renderBrowse(); return; }
         var mine = ++ui.searchSeq;
         if (!cfg.browseUrl) { ui.br = null; renderBrowse(); runNameSearch(q, mine); return; }
-        // Hiểu câu tìm trước: "nhà hàng chay giá rẻ" -> tìm theo tiêu chí; "Hồ Gươm", "phở Thìn" -> tìm theo tên như cũ
-        fetchJson(cfg.browseUrl + "?q=" + encodeURIComponent(q) + brPos())
+        showSearching(q);
+        // Hiểu câu tìm trước: "nhà hàng chay giá rẻ" -> tìm theo tiêu chí; "Hồ Gươm", "phở Thìn" -> tìm theo tên như cũ.
+        // Lượt 1 (osm=0) chỉ đọc dữ liệu có sẵn nên trả ngay; nếu còn thiếu dữ liệu OpenStreetMap thì lượt 2 tải thêm (brMore).
+        fetchJson(cfg.browseUrl + "?q=" + encodeURIComponent(q) + brPos() + "&osm=0")
             .then(function (j) {
                 if (mine !== ui.searchSeq) return;
                 if (j && j.browse && j.filters) {
@@ -1060,6 +2581,7 @@
                     ui.br = { q: q, intent: j.intent || {}, f: brFromServer(j.filters), data: j.browse, loading: false, seq: 0, built: false };
                     renderResults();
                     renderBrowse();
+                    brMore(ui.br);
                 } else {
                     ui.br = null;
                     renderBrowse();
@@ -1127,10 +2649,31 @@
         if (!b) return;
         var mine = ++b.seq;
         b.loading = true;
+        b.more = false;
         renderBrowseList();
-        fetchJson(brQuery(b))
-            .then(function (j) { if (ui.br === b && mine === b.seq) { b.loading = false; b.data = j.browse || b.data; b.failed = false; renderBrowseList(); } })
+        fetchJson(brQuery(b) + "&osm=0")
+            .then(function (j) { if (ui.br === b && mine === b.seq) { b.loading = false; b.data = j.browse || b.data; b.failed = false; renderBrowseList(); brMore(b); } })
             .catch(function () { if (ui.br === b && mine === b.seq) { b.loading = false; b.failed = true; renderBrowseList(); } });
+    }
+    /** Lượt 2: bổ sung dữ liệu OpenStreetMap (máy chủ có hạn thời gian ngắn và tự ngắt khi dịch vụ ngoài lỗi). */
+    function brMore(b) {
+        if (!b || !b.data || !b.data.osmPending) return;
+        var mine = b.seq;
+        b.more = true;
+        renderBrowseList();
+        fetchJson(brQuery(b) + "&osm=1")
+            .then(function (j) { if (ui.br === b && mine === b.seq) { b.more = false; if (j && j.browse) b.data = j.browse; renderBrowseList(); } })
+            .catch(function () { if (ui.br === b && mine === b.seq) { b.more = false; b.data.note = "Chưa tải thêm được từ OpenStreetMap lúc này, đang hiện các mục có sẵn."; renderBrowseList(); } });
+    }
+    /** Hiện ngay trạng thái "đang tìm" khi vừa bấm, để người dùng biết yêu cầu đã nhận. */
+    function showSearching(q) {
+        var r = $("tpResults");
+        if (!r || ui.br) return;
+        r.hidden = false;
+        r.textContent = "";
+        var p = el("p", "tp-muted tp-searching", "Đang tìm “" + q + "”…");
+        p.setAttribute("role", "status");
+        r.appendChild(p);
     }
     function brNum(v) { var n = parseFloat(String(v).replace(",", ".")); return isNaN(n) || n < 0 ? null : Math.round(n * 1000); }   // ô nhập tính bằng nghìn đồng
     function brField(label, node, cls) {
@@ -1215,14 +2758,20 @@
         grid.appendChild(brField("Không gian", refs.indoor));
         refs.sort = brSelect([["", "Nổi bật trước"], ["near", "Gần nhất"], ["price", "Giá thấp đến cao"]], f.sort, function (v) { brChange(function (x) { x.sort = v; }, 0); });
         grid.appendChild(brField("Sắp xếp", refs.sort));
-        p.appendChild(grid);
+        // bộ lọc thu gọn mặc định để kết quả hiện ngay dưới ô tìm (nhất là khi bấm nhanh "Cà phê", "Khách sạn")
+        var more = el("details", "tp-br__filters");
+        more.open = !!ui.brFiltersOpen;
+        more.addEventListener("toggle", function () { ui.brFiltersOpen = more.open; });
+        more.appendChild(el("summary", null, "Bộ lọc: loại, mức giá, khoảng cách, sắp xếp…"));
+        more.appendChild(grid);
+        p.appendChild(more);
 
         var cks = el("div", "tp-br__cks");
         refs.free = brCheck("Miễn phí", f.free, function (v) { brChange(function (x) { x.free = v; if (v) x.levels = null; }, 0); });
         refs.veg = brCheck("Có món chay", f.veg, function (v) { brChange(function (x) { x.veg = v; }, 0); });
         refs.eatNodes.push(refs.veg);
         cks.appendChild(refs.free); cks.appendChild(refs.veg);
-        p.appendChild(cks);
+        more.appendChild(cks);
         brRefs = refs;
         syncBrInputs();
         return p;
@@ -1315,8 +2864,14 @@
         if (!b || !box) return;
         box.textContent = "";
         var d = b.data || {};
+        if (d.widenedKm && b.f.km < d.widenedKm) { b.f.km = d.widenedKm; syncBrInputs(); }   // máy chủ đã tự nới bán kính
         var bar = el("div", "tp-br__bar");
         bar.appendChild(el("b", null, b.loading ? "Đang tìm…" : (d.total || 0) + " kết quả"));
+        if (b.more && !b.loading) {
+            var mo = el("span", "tp-muted tp-small tp-br__more", "Đang tải thêm từ OpenStreetMap…");
+            mo.setAttribute("role", "status");
+            bar.appendChild(mo);
+        }
         if (!b.loading && d.hidden) {
             bar.appendChild(el("span", "tp-muted tp-small", "Đã ẩn " + d.hidden + " mục chưa có thông tin cho bộ lọc này."));
             bar.appendChild(btn("tp-mini", "Hiện cả mục chưa rõ", "Hiện cả mục chưa có thông tin", function () { brChange(function (x) { x.unknown = true; }, 0); }));
@@ -1325,7 +2880,7 @@
         }
         box.appendChild(bar);
         if (b.failed) box.appendChild(el("p", "tp-muted tp-small", "Chưa tải được kết quả lúc này, thử lại sau."));
-        if (d.note) box.appendChild(el("p", "tp-muted tp-small", d.note));
+        if (d.note && (d.results || []).length) box.appendChild(el("p", "tp-muted tp-small", d.note));   // danh sách rỗng: lời nhắn ở trạng thái trống bên dưới
         // loại con (từ dữ liệu vừa tìm được)
         var kinds = (d.facets && d.facets.kinds) || [];
         if (kinds.length > 1) {
@@ -1338,8 +2893,16 @@
             box.appendChild(kb);
         }
         var list = d.results || [];
-        if (!list.length && !b.loading) {
-            box.appendChild(el("p", "tp-muted", "Không có địa điểm khớp. Thử nới bộ lọc, tăng khoảng cách, hoặc bấm “Hiện cả mục chưa rõ”."));
+        if (!list.length && !b.loading && b.more) {
+            box.appendChild(el("p", "tp-muted", "Chưa có sẵn trên Travela, đang tìm trên OpenStreetMap…"));
+        } else if (!list.length && !b.loading) {
+            var em = el("div", "tp-br__empty");
+            em.appendChild(el("p", "tp-muted", d.osmOk === false
+                ? "Chưa có kết quả: Travela chưa có sẵn mục này ở khu vực này và máy chủ bản đồ chưa trả lời. Bạn có thể tự thêm bằng tên hoặc thử lại sau ít phút."
+                : "Không có địa điểm khớp. Thử nới bộ lọc, tăng khoảng cách, hoặc bấm “Hiện cả mục chưa rõ”."));
+            if (b.f.km < 10) em.appendChild(btn("tp-mini", "Mở rộng 10 km", "Tìm trong bán kính 10 km", function () { brChange(function (x) { x.km = 10; }, 0); }));
+            em.appendChild(btn("tp-mini", "Tự thêm “" + b.q + "”", "Tự nhập tên, vị trí, chi phí", function () { openManual(b.q); }));
+            box.appendChild(em);
         } else {
             var ul = el("ul", "tp-list tp-sugg tp-br__list");
             list.forEach(function (r) { ul.appendChild(brItem(r)); });
@@ -1391,44 +2954,43 @@
         });
         if (!any) s.appendChild(el("p", "tp-muted", "Chưa có gợi ý. Thêm một điểm đến trước, các món, lễ hội và tour tại đó sẽ hiện ở đây."));
     }
+    /** Danh mục tìm nhanh (kiểu Roadtrippers: chọn loại thay vì phải biết tên) và mục thêm nhanh không cần tìm. */
+    var CATS = [["fa-utensils", "Nhà hàng", "nhà hàng"], ["fa-coffee", "Cà phê", "quán cà phê"], ["fa-bed", "Khách sạn", "khách sạn"], ["fa-shopping-basket", "Chợ", "chợ"], ["fa-cocktail", "Quán bar", "quán bar"]];
+    var QUICK = [["fa-taxi", "Taxi / Grab", "transport"], ["fa-plane", "Vé máy bay / tàu / xe", "transport"]];
+    // mục tự thêm gọi đúng tên theo việc người dùng muốn làm (không gọi chung là "mục tùy chỉnh")
+    var OWN = [["fa-map-marker-alt", "Địa điểm của tôi", "note", "Tên nơi (ví dụ: Khách sạn Sen Vàng, nhà bạn)"], ["fa-bus", "Di chuyển", "transport", "Ví dụ: Xe khách Hà Nội – Ninh Bình 7:00"],
+        ["fa-sticky-note", "Ghi chú", "note", "Ví dụ: Đổi tiền, mua sim, gửi hành lý"]];
     function renderPresets() {
         var p = $("tpPresets");
         p.textContent = "";
-        p.appendChild(el("span", "tp-muted tp-small", "Tìm nhanh:"));
-        SEARCH_CHIPS.forEach(function (x) {
-            p.appendChild(btn("tp-chip", x[0], "Tìm " + x[0], function () { $("tpQ").value = x[1]; runSearch(); $("tpQ").focus(); }));
+        var g1 = el("div", "tpx-cats__row");
+        CATS.forEach(function (x) {
+            g1.appendChild(ibtn("tp-chip tpx-cat", x[0], x[1], "Tìm " + x[1], function () { $("tpQ").value = x[2]; runSearch(); $("tpQ").focus(); }));
         });
-        p.appendChild(el("span", "tp-muted tp-small", "Thêm ngay:"));
-        ADD_CHIPS.forEach(function (x) {
-            p.appendChild(btn("tp-chip tp-chip--add", "+ " + x[0], "Thêm " + x[0] + " vào chuyến đi", function () { addItem({ type: x[1], refId: null, name: x[0], day: ui.target }); }));
+        p.appendChild(g1);
+        var g2 = el("div", "tpx-cats__row");
+        g2.appendChild(el("span", "tp-muted tp-small", "Thêm nhanh:"));
+        QUICK.forEach(function (x) {
+            g2.appendChild(ibtn("tp-chip tp-chip--add", x[0], x[1], "Thêm " + x[1] + " vào chuyến đi", function () { addItem({ type: x[2], refId: null, name: x[1], day: ui.target }); }));
         });
+        p.appendChild(g2);
+        var g3 = el("div", "tpx-cats__row");
+        g3.appendChild(el("span", "tp-muted tp-small", "Tự thêm:"));
+        OWN.forEach(function (x) {
+            g3.appendChild(ibtn("tp-chip tp-chip--own", x[0], "+ " + x[1], "Tự thêm " + x[1].toLowerCase(), function () {
+                $("tpCustomKind").value = x[2];
+                $("tpCustomLabel").placeholder = x[3];
+                openManual("");
+            }));
+        });
+        p.appendChild(g3);
     }
     function renderDestOnly() {
         var d = meta().dest, x = d ? (cfg.dests || []).filter(function (z) { return z.id === d; })[0] : null;
         $("tpDestOnlyBox").hidden = !x;
         if (x) $("tpDestName").textContent = x.name;
     }
-    function focusAdd() {
-        try { $("tpAdd").scrollIntoView({ block: "start", behavior: "smooth" }); } catch (e) { /* bỏ qua */ }
-        $("tpQ").focus();
-    }
-    function fmtDate(d) { return pad2(d.getDate()) + "/" + pad2(d.getMonth() + 1); }
-    function renderBrief() {
-        var b = $("tpBrief");
-        if (!b) return;
-        var m = meta(), bits = [m.days + " ngày", m.group + " người"];
-        if (m.start) {
-            var s0 = new Date(m.start + "T00:00:00");
-            if (!isNaN(s0.getTime())) {
-                var e0 = new Date(s0.getTime());
-                e0.setDate(e0.getDate() + m.days - 1);
-                bits.push(fmtDate(s0) + (m.days > 1 ? " – " + fmtDate(e0) : ""));
-            }
-        }
-        if (m.budget != null) bits.push("ngân sách " + money(m.budget));
-        b.textContent = bits.join(" · ") + " · ";
-        b.appendChild(btn("tp-link", "Sửa thông tin", "Sửa thông tin chuyến đi", function () { switchTab("info"); }));
-    }
+
 
     /* ---------------- bản đồ (Google Maps, MapLibre hoặc OpenStreetMap, xem planner-map.js) ---------------- */
     var map = null, routeCache = {};
@@ -1445,7 +3007,9 @@
             m.setAttribute("data-map", map.kind);
             renderMap();
             renderDraft();
-            setTimeout(function () { map.resize(); }, 0);
+            // bố cục còn đổi sau khi tải xong (phông chữ, ảnh, thanh menu): đo lại khung bản đồ rồi canh lại các ghim
+            setTimeout(renderMap, 0);
+            if (document.readyState !== "complete") window.addEventListener("load", function () { renderMap(); });
         });
     }
 
@@ -1453,6 +3017,7 @@
     function startPick(uid) {
         if (!map) { say("Bản đồ chưa tải được. Hãy dán link Google Maps hoặc tọa độ.", true); return; }
         ui.pick = { uid: uid == null ? null : uid };
+        if (window.matchMedia && window.matchMedia("(max-width: 991.98px)").matches) setMapOpen(true);
         map.setPicking(true);
         say("Bấm vào một điểm trên bản đồ để chọn vị trí (Esc để hủy).");
         try { map.container().scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) { /* bỏ qua */ }
@@ -1465,6 +3030,7 @@
         if (!ui.pick) return;
         var uid = ui.pick.uid;
         endPick();
+        if (document.documentElement.classList.contains("tpx-map-open")) setMapOpen(false);
         var pos = { lat: Math.round(e.lat * 1e6) / 1e6, lng: Math.round(e.lng * 1e6) / 1e6, source: "map" };
         if (uid == null) { setDraft(pos); say("Đã chọn vị trí. Bấm “+ Thêm” để thêm mục."); return; }
         var it = items.filter(function (x) { return x.uid === uid; })[0];
@@ -1493,7 +3059,7 @@
         var gen = ++mapGen;
         function paint(g) { if (gen !== mapGen || !map) return; map.removeLine(line); line = map.geoLine(g, color); }
         if (routeCache[coords]) { paint(routeCache[coords]); return; }
-        fetch(cfg.osrmUrl.replace(/\/$/, "") + "/route/v1/driving/" + coords + "?overview=simplified&geometries=geojson")
+        fetch(cfg.osrmUrl.replace(/\/$/, "") + "/route/v1/" + (cfg.osrmProfile || "driving") + "/" + coords + "?overview=simplified&geometries=geojson")
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (j) {
                 if (j && j.routes && j.routes[0]) { routeCache[coords] = j.routes[0].geometry; paint(routeCache[coords]); }
@@ -1502,56 +3068,73 @@
     }
     var mapGen = 0;
     function focusItem(uid) {
-        switchTab("plan");
-        var li = document.querySelector('.tp-item[data-uid="' + uid + '"]');
+        if (ui.tab !== "plan") switchTab("plan");
+        var it = byUid(uid);
+        if (it && ui.collapsed[it.day]) { delete ui.collapsed[it.day]; renderDays(); }
+        var li = document.querySelector('.tpx-stop[data-uid="' + uid + '"]');
         if (!li) return;
-        li.scrollIntoView({ block: "center", behavior: "smooth" });
+        if (!document.documentElement.classList.contains("tpx-map-open")) li.scrollIntoView({ block: "center", behavior: "smooth" });
         li.classList.add("is-flash");
         setTimeout(function () { li.classList.remove("is-flash"); }, 1600);
     }
     function renderMapDays() {
         var s = $("tpMapDay"), cur = ui.mapDay;
         s.textContent = "";
-        var o0 = el("option", null, "Tất cả ngày");
-        o0.value = "";
-        s.appendChild(o0);
+        [["follow", "Ngày đang xem"], ["", "Toàn chuyến"]].concat(cfg.aroundUrl && !RO ? [["explore", "Khám phá quanh tuyến"]] : []).forEach(function (x) { var o = el("option", null, x[1]); o.value = x[0]; s.appendChild(o); });
         for (var d = 1; d <= daysCount(); d++) {
-            var o = el("option", null, "Ngày " + d);
+            var o = el("option", null, "Ngày " + d + (dayDate(d) ? " · " + dayDate(d) : ""));
             o.value = String(d);
             s.appendChild(o);
         }
-        var ou = el("option", null, "Chưa xếp");
+        var ou = el("option", null, "Đã lưu (chưa xếp)");
         ou.value = "x";
         s.appendChild(ou);
-        if (cur !== "" && cur !== "x" && +cur > daysCount()) cur = "";
+        if (cur !== "" && cur !== "x" && cur !== "follow" && cur !== "explore" && +cur > daysCount()) cur = "follow";
         ui.mapDay = cur;
         s.value = cur;
     }
+    /** Ngày đang hiển thị trên bản đồ: "" = cả chuyến, "x" = danh sách chờ, "N" = ngày N. */
+    function mapScope() {
+        if (aroundOnMap()) return String(ui.around.day);   // đang tìm quanh tuyến: bản đồ chỉ hiện tuyến của ngày đó
+        if (ui.mapDay !== "follow") return ui.mapDay;
+        return ui.curDay == null ? "" : String(ui.curDay);
+    }
     function renderMap() {
+        renderLegend();
+        renderMapSheet();
         if (!map) return;
         mapGen++;
+        map.resize();
         map.clear();
-        var all = [], n = daysCount();
+        var all = [], n = daysCount(), scope = mapScope();
         for (var d = 1; d <= n + 1; d++) {
             var day = d <= n ? d : null;
-            if (ui.mapDay !== "" && (day === null ? ui.mapDay !== "x" : String(day) !== ui.mapDay)) continue;
-            var color = day === null ? "#6b7280" : COLORS[(day - 1) % COLORS.length];
+            if (scope !== "" && (day === null ? scope !== "x" : String(day) !== scope)) continue;
+            var color = dayColor(day);
             var list = dayItems(day);
+            if (ui.opt && ui.opt.day === day) list = ui.opt.order;   // đang xem trước tối ưu: vẽ thứ tự mới
             var pts = list.filter(G.hasPos);
             if (!pts.length) continue;
-            drawRoute(pts, color);
+            if (day !== null) drawRoute(pts, color);
             list.forEach(function (p, i) {
                 if (!G.hasPos(p)) return;
                 map.marker({
                     id: p.uid, lat: p.lat, lng: p.lng, color: color, label: day === null ? "" : (i + 1),
-                    title: (day === null ? "" : "Ngày " + day + " · " + (i + 1) + " ") + p.name,
-                    onClick: function () { if (!ui.pick) openCard(p.uid); },
+                    title: (day === null ? "Đã lưu · " : "Ngày " + day + " · " + (i + 1) + " ") + p.name,
+                    onClick: function () { if (!ui.pick) { openCard(p.uid); focusItem(p.uid); } },
                 });
                 all.push(p);
             });
         }
-        map.fit(all, 13);
-        if (ui.card) renderCard();
+        if (aroundOnMap()) {
+            (ui.around.data.results || []).forEach(function (r) {
+                map.marker({ id: "ar" + r.type + r.refId, lat: r.lat, lng: r.lng, color: "#e9a23b", label: "+", title: r.name + " · đi thêm +" + Math.max(1, r.detourMin) + " phút",
+                    onClick: function () { openAroundCard(r); } });
+                all.push(r);
+            });
+        }
+        map.fit(all, 14);
+        if (ui.card) { if (all.indexOf(byUid(ui.card.uid)) >= 0) { renderCard(); map.highlight(ui.card.uid); } else closeCard(); }
     }
 
     /* ---------------- thẻ chi tiết địa điểm (bấm ghim hoặc ảnh để mở) ---------------- */
@@ -1691,13 +3274,81 @@
         }
         var href = safeUrl(it.url);
         if (href && !CUSTOM[it.type]) { var a3 = el("a", "tp-btn tp-btn--ghost", "Xem trên Travela"); a3.href = href; a3.target = "_blank"; a3.rel = "noopener"; act.appendChild(a3); }
+        if (!RO) act.appendChild(ibtn("tp-btn tp-btn--ghost", "fa-pen", "Sửa trong lịch", "Mở phần sửa của " + it.name + " trong lịch", function () {
+            ui.open[it.uid] = true;
+            if (document.documentElement.classList.contains("tpx-map-open")) setMapOpen(false);
+            renderDays();
+            focusItem(it.uid);
+        }));
         c.appendChild(act);
     }
     function showOnMap(uid) {
         var it = byUid(uid);
         if (!it) return;
         if (!G.hasPos(it)) { say("Mục này chưa có vị trí nên chưa hiện trên bản đồ.", true); return; }
+        if (isMobile() && !document.documentElement.classList.contains("tpx-map-open")) {   // điện thoại: bản đồ là màn hình riêng
+            if (it.day != null) { ui.mapDay = String(it.day); if ($("tpMapDay")) $("tpMapDay").value = ui.mapDay; }
+            setMapOpen(true);
+            setTimeout(function () { openCard(uid); }, 120);
+            return;
+        }
         openCard(uid);
+    }
+    function isMobile() { return window.matchMedia && window.matchMedia("(max-width: 991.98px)").matches; }
+
+    /* ---------------- điện thoại: bảng trượt dưới bản đồ ---------------- */
+    function sheetDay() {
+        var m = ui.mapDay;
+        if (m && m !== "follow" && m !== "x" && m !== "explore" && +m >= 1) return +m;
+        return typeof ui.curDay === "number" ? ui.curDay : (daysCount() ? 1 : null);
+    }
+    function renderMapSheet() {
+        var sh = $("tpMapSheet");
+        if (!sh) return;
+        sh.textContent = "";
+        if (!isMobile() || !document.documentElement.classList.contains("tpx-map-open")) return;
+        var d = sheetDay();
+        if (!d) return;
+        var s = schedule(d);
+        var head = el("div", "tpx-msheet__h");
+        var prev = ibtn("tpx-msheet__nav", "fa-chevron-left", null, "Ngày trước", function () { goSheet(d - 1); });
+        prev.disabled = d <= 1;
+        head.appendChild(prev);
+        var t = el("button", "tpx-msheet__t");
+        t.type = "button";
+        t.setAttribute("aria-expanded", ui.sheetMin ? "false" : "true");
+        t.appendChild(el("b", null, "Ngày " + d + (dayDate(d) ? " · " + dayDate(d) : "")));
+        t.appendChild(el("small", null, s.count ? s.count + " điểm · " + durText(s.travel) + " đi lại · " + S.loadLabel(s.load) : "Chưa có điểm nào"));
+        t.addEventListener("click", function () { ui.sheetMin = !ui.sheetMin; renderMapSheet(); });
+        head.appendChild(t);
+        var next = ibtn("tpx-msheet__nav", "fa-chevron-right", null, "Ngày sau", function () { goSheet(d + 1); });
+        next.disabled = d >= daysCount();
+        head.appendChild(next);
+        sh.appendChild(head);
+        sh.classList.toggle("is-min", !!ui.sheetMin);
+        if (ui.sheetMin || !s.count) return;
+        var ol = el("ol", "tpx-msheet__list");
+        s.rows.forEach(function (r) {
+            var li = el("li");
+            var b = el("button", "tpx-msheet__c" + (r.conflict || r.hours ? " is-bad" : ""));
+            b.type = "button";
+            b.appendChild(el("span", "tpx-msheet__n", String(r.n)));
+            var tx = el("span", "tpx-msheet__x");
+            tx.appendChild(el("small", null, hhmm(r.start) + "–" + hhmm(r.end)));
+            tx.appendChild(el("b", null, r.it.name));
+            if (r.leg) tx.appendChild(el("small", "tpx-msheet__leg", "→ " + r.leg.min + " phút · " + r.leg.km + " km"));
+            b.appendChild(tx);
+            b.addEventListener("click", function () { if (G.hasPos(r.it)) openCard(r.it.uid); else say("Mục này chưa có vị trí.", true); });
+            li.appendChild(b);
+            ol.appendChild(li);
+        });
+        sh.appendChild(ol);
+    }
+    function goSheet(d) {
+        if (d < 1 || d > daysCount()) return;
+        ui.mapDay = String(d);
+        if ($("tpMapDay")) $("tpMapDay").value = ui.mapDay;
+        renderMap();
     }
 
     /* ---------------- tab ---------------- */
@@ -1718,11 +3369,14 @@
         try { sessionStorage.setItem("tpTab" + cfg.trip.id, name); } catch (e) { /* bỏ qua */ }
         if (name === "cost") renderCostTable();
         if (name === "plan" && map) setTimeout(function () { map.resize(); }, 0);
+        document.querySelectorAll(".tpx-mob__b[data-mob]").forEach(function (b) { var k = b.getAttribute("data-mob"); if (k !== "map" && k !== "add") b.classList.toggle("is-on", k === name); });
+        syncSideTop();
     }
 
     /* ---------------- dựng lại ---------------- */
     function softUpdate() {
         renderBrief();
+        renderKpis();
         renderTotals();
         renderStats();
         renderWarn();
@@ -1731,6 +3385,7 @@
     function renderAll(keepList) {
         if (!keepList) { renderDays(); renderBulk(); if (ui.tab === "cost") renderCostTable(); }
         renderBrief();
+        renderKpis();
         renderDestOnly();
         renderTotals();
         renderStats();
@@ -1746,14 +3401,6 @@
     }
 
     /* ---------------- lưu / chia sẻ ---------------- */
-    function post(url, body) {
-        return fetch(url, {
-            method: "POST",
-            credentials: "same-origin",
-            headers: { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-TOKEN": cfg.csrf || "", "X-Requested-With": "XMLHttpRequest" },
-            body: JSON.stringify(body),
-        });
-    }
     function save(manual) {
         if (RO) return;
         clearTimeout(timer);
@@ -1762,36 +3409,18 @@
         if (!manual && autoFail) return;
         clampDays();
         var m = meta();
-        if (!m.title) { say("Hãy nhập tên chuyến đi (chưa lưu).", true); return; }
-        var body = {
-            rev: rev,
-            title: m.title, startDate: m.start, days: m.days, groupSize: m.group, budget: m.budget, destinationId: m.dest,
-            rainPlan: (function () {
-                var o = {}, n = daysCount();
-                Object.keys(rain).forEach(function (k) {
-                    if (+k >= 1 && +k <= n) o[k] = rain[k].map(function (r) { return { type: r.type, refId: r.refId }; });
-                });
-                return o;
-            })(),
-            items: items.map(function (x) {
-                var o = { type: x.type, refId: CUSTOM[x.type] ? null : x.refId, day: x.day, note: x.note, cost: x.cost, slot: x.slot || null, reasons: x.reasons || [] };
-                if (CUSTOM[x.type]) {
-                    o.label = x.name;
-                    if (G.hasPos(x)) { o.lat = x.lat; o.lng = x.lng; o.source = x.source || "map"; }
-                }
-                return o;
-            }),
-        };
+        if (!m.title) { saveState("error", "Thiếu tên chuyến"); say("Hãy nhập tên chuyến đi ở tab “Thông tin & chia sẻ” (chưa lưu).", true); return; }
+        var body = window.TpSave.body({ meta: m, items: items, rain: rain, rev: rev });   // planner-save.js: hợp đồng /luu
         var sent = snap();
         saving = true;
         $("tpSave").disabled = true;
-        say("Đang lưu…");
+        saveState("saving", "Đang lưu…");
         post(cfg.saveUrl, body)
             .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, status: r.status, j: j }; }); })
             .then(function (res) {
                 saving = false;
                 $("tpSave").disabled = false;
-                if (res.status === 409) { showSync(res.j.message || "Chuyến đi vừa được người khác cập nhật.", true); autoFail = true; return; }
+                if (res.status === 409) { showSync(res.j.message || "Chuyến đi vừa được người khác cập nhật.", true); autoFail = true; saveState("error", "Xung đột phiên bản"); return; }
                 if (res.ok) {
                     if (res.j.rev != null) rev = res.j.rev;
                     savedSnap = sent;
@@ -1808,11 +3437,13 @@
                     }
                     renderWarn();
                     renderSummary();
-                    if (snap() !== sent) { markDirty(); } else { dirty = false; autoFail = false; say("Đã lưu lúc " + (res.j.savedAt || "")); }
+                    if (snap() !== sent) { markDirty(); } else { dirty = false; autoFail = false; saveState("saved", "Đã lưu " + (res.j.savedAt || "")); loadServerHealth(); }
+                    if ($("tpLastEdit") && res.j.savedAt) $("tpLastEdit").textContent = "Bạn cập nhật lúc " + res.j.savedAt;
                 } else {
                     var errs = res.j && res.j.errors ? Object.keys(res.j.errors).map(function (k) { return res.j.errors[k][0]; }) : [];
                     autoFail = true;
-                    say(errs[0] || (res.j && res.j.message) || "Không lưu được, bấm “Lưu thay đổi” để thử lại.", true);
+                    saveState("error", "Chưa lưu được");
+                    say(errs[0] || (res.j && res.j.message) || "Không lưu được, bấm “Lưu ngay” để thử lại.", true);
                 }
                 if (pendingSave) { pendingSave = false; if (dirty) save(false); }
             })
@@ -1820,7 +3451,8 @@
                 saving = false;
                 autoFail = true;
                 $("tpSave").disabled = false;
-                say("Mất kết nối, chưa lưu được. Bấm “Lưu thay đổi” khi có mạng.", true);
+                saveState("error", "Mất kết nối");
+                say("Mất kết nối, chưa lưu được. Bấm “Lưu ngay” khi có mạng.", true);
             });
     }
     function share() {
@@ -1830,8 +3462,8 @@
         post(cfg.shareUrl, { on: on ? 1 : 0 })
             .then(function (r) { return r.json(); })
             .then(function (j) {
-                if (j.url) { inp.value = j.url; inp.hidden = false; b.textContent = "Tắt chia sẻ"; inp.select(); }
-                else { inp.value = ""; inp.hidden = true; b.textContent = "Bật liên kết chia sẻ"; }
+                if (j.url) { inp.value = j.url; inp.hidden = false; b.textContent = "Tắt liên kết"; inp.select(); say("Đã bật liên kết chỉ xem."); }
+                else { inp.value = ""; inp.hidden = true; b.textContent = "Bật liên kết chỉ xem"; say("Đã tắt liên kết chỉ xem."); }
             })
             .catch(function () { /* giữ trạng thái cũ */ })
             .then(function () { b.disabled = false; });
@@ -1865,8 +3497,151 @@
     $("tpBudget").addEventListener("change", function () { commit(true); });
     $("tpDest").addEventListener("change", function () { commit(true); });
 
-    $("tpTarget").addEventListener("change", function () { ui.target = $("tpTarget").value === "" ? null : +$("tpTarget").value; });
-    $("tpMapDay").addEventListener("change", function () { ui.mapDay = $("tpMapDay").value; renderMap(); });
+    $("tpTarget").addEventListener("change", function () { var v = $("tpTarget").value; ui.target = v === "" ? null : v === "auto" ? "auto" : +v; renderTarget(); });
+    $("tpMapDay").addEventListener("change", function () {
+        ui.mapDay = $("tpMapDay").value;
+        if (ui.mapDay === "explore") {
+            var d0 = typeof ui.curDay === "number" ? ui.curDay : null;
+            if (d0 !== ui.around.day) { ui.around.day = d0; ui.around.data = null; }
+            if (!aroundDay()) { say("Chưa có ngày nào có điểm với vị trí để khám phá quanh tuyến.", true); return; }
+            if (!ui.around.data) loadAround(); else renderMap();
+            say("Ghim cam là nơi gần tuyến ngày " + aroundDay() + ". Bấm ghim để thêm vào ngày hoặc lưu lại.");
+            return;
+        }
+        closeCard();
+        renderMap();
+    });
+
+    /* ---------------- bố cục: ngăn thêm, kiểu xem, bản đồ rộng, thanh điện thoại ---------------- */
+    if ($("tpAddOpen")) $("tpAddOpen").addEventListener("click", function () { openAdd(ui.target === undefined ? 1 : ui.target); });
+    $("tpAddClose").addEventListener("click", closeAdd);
+    if ($("tpAddBack")) $("tpAddBack").addEventListener("click", closeAdd);
+    document.querySelectorAll(".tpx-view__b").forEach(function (b) {
+        b.addEventListener("click", function () {
+            ui.view = b.getAttribute("data-view");
+            try { localStorage.setItem("tpView", ui.view); } catch (e) { /* bỏ qua */ }
+            document.querySelectorAll(".tpx-view__b").forEach(function (x) { var on = x === b; x.classList.toggle("is-on", on); x.setAttribute("aria-pressed", on ? "true" : "false"); });
+            renderDays();
+        });
+        var on = b.getAttribute("data-view") === ui.view;
+        b.classList.toggle("is-on", on);
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    $("tpWide").addEventListener("click", function () {
+        var root = $("tpRoot"), on = !root.classList.contains("tpx--wide");
+        root.classList.toggle("tpx--wide", on);
+        this.setAttribute("aria-pressed", on ? "true" : "false");
+        this.querySelector("span").textContent = on ? "Hiện lịch trình" : "Mở rộng";
+        this.querySelector(".fas").className = "fas " + (on ? "fa-compress-alt" : "fa-expand-alt");
+        this.title = on ? "Hiện lại cột lịch trình" : "Thu gọn lịch để bản đồ rộng hơn";
+        if (map) setTimeout(function () { map.resize(); renderMap(); }, 260);
+    });
+    function setMapOpen(on) {
+        document.documentElement.classList.toggle("tpx-map-open", on);
+        renderMapSheet();
+        document.querySelectorAll('.tpx-mob__b[data-mob="map"]').forEach(function (b) { b.classList.toggle("is-on", on); });
+        if (map) setTimeout(function () { map.resize(); renderMap(); }, 50);
+    }
+    $("tpMapClose").addEventListener("click", function () { setMapOpen(false); });
+    document.querySelectorAll(".tpx-mob__b").forEach(function (b) {
+        b.addEventListener("click", function () {
+            var k = b.getAttribute("data-mob");
+            if (k === "add") { setMapOpen(false); openAdd(ui.target); return; }
+            if (k === "map") { setMapOpen(!document.documentElement.classList.contains("tpx-map-open")); return; }
+            if (k === "plan" && ui.tab === "plan" && !document.documentElement.classList.contains("tpx-map-open")) { gotoDay(ui.curDay || 1); return; }
+            setMapOpen(false);
+            switchTab(k);
+            try { $("tpBody").scrollIntoView({ block: "start", behavior: "smooth" }); } catch (e) { /* bỏ qua */ }
+        });
+    });
+    /* Thanh menu của trang ẩn khi cuộn xuống, hiện khi cuộn lên: dải ngày và bản đồ "dính" ngay dưới mép dưới của nó. */
+    (function () {
+        var head = document.querySelector(".tv-header"), root = $("tpRoot"), raf = 0, cur = -1, rt = null;
+        if (!head || !root) return;
+        function sync() {
+            raf = 0;
+            var b = Math.max(0, Math.round(head.getBoundingClientRect().bottom));
+            if (b === cur) return;
+            cur = b;
+            root.style.setProperty("--tpx-stick", b + "px");
+            // khung bản đồ đổi chiều cao theo mép menu: báo cho bản đồ vẽ lại kích thước
+            clearTimeout(rt);
+            rt = setTimeout(function () { if (map) map.resize(); }, 120);
+        }
+        function req() { if (!raf) raf = requestAnimationFrame(sync); }
+        window.addEventListener("scroll", function () { req(); setTimeout(req, 320); }, { passive: true });
+        window.addEventListener("resize", req);
+        head.addEventListener("transitionend", req);
+        sync();
+    })();
+    document.querySelectorAll(".js-invite").forEach(function (b) { b.addEventListener("click", function () { openMembers(); }); });
+
+    /* thanh bên: đi tới phần tương ứng; thu gọn thành dải biểu tượng (nhớ theo trình duyệt) */
+    document.querySelectorAll(".tpx-side__b[data-go]").forEach(function (b) { b.addEventListener("click", function () { sideGo(b.getAttribute("data-go")); }); });
+    function setSideMini(on) {
+        $("tpRoot").classList.toggle("tpx--sidemini", on);
+        var h = $("tpSideHide");
+        if (h) { h.querySelector("span").textContent = on ? "Hiện thanh bên" : "Ẩn thanh bên"; h.querySelector(".fas").className = "fas " + (on ? "fa-angle-double-right" : "fa-angle-double-left"); h.setAttribute("aria-expanded", on ? "false" : "true"); }
+        try { localStorage.setItem("tpSideMini", on ? "1" : "0"); } catch (e) { /* bỏ qua */ }
+        if (map) setTimeout(function () { map.resize(); renderMap(); }, 60);
+    }
+    if ($("tpSideHide")) $("tpSideHide").addEventListener("click", function () { setSideMini(!$("tpRoot").classList.contains("tpx--sidemini")); });
+    try { if (localStorage.getItem("tpSideMini") === "1") setSideMini(true); } catch (e) { /* bỏ qua */ }
+
+    /* ngăn thêm: hai cách tìm */
+    document.querySelectorAll(".tpx-dtab").forEach(function (b) { b.addEventListener("click", function () { setDtab(b.getAttribute("data-dtab")); }); });
+    /* đóng menu "..." của ngày khi bấm ra ngoài */
+    document.addEventListener("click", function (e) {
+        document.querySelectorAll(".tpx-menu[open]").forEach(function (m) { if (!m.contains(e.target)) m.open = false; });
+    });
+
+    /* in / lưu PDF: mở hết các ngày, kiểu xem chi tiết; xong thì trả lại như cũ */
+    var printBak = null;
+    window.addEventListener("beforeprint", function () {
+        printBak = { c: ui.collapsed, v: ui.view };
+        ui.collapsed = {};
+        ui.view = "full";
+        renderDays();
+    });
+    window.addEventListener("afterprint", function () {
+        if (!printBak) return;
+        ui.collapsed = printBak.c;
+        ui.view = printBak.v;
+        printBak = null;
+        renderDays();
+    });
+    if ($("tpPrint")) $("tpPrint").addEventListener("click", function () { $("tpTopMenu").open = false; switchTab("plan"); window.print(); });
+    // menu "⋮" trên thanh công cụ: thao tác ít dùng, theo ngày đang xem
+    (function () {
+        var m = $("tpTopMenu");
+        if (!m) return;
+        function curDay() { return typeof ui.curDay === "number" ? ui.curDay : (daysCount() ? 1 : null); }
+        m.querySelectorAll("[data-top]").forEach(function (b) {
+            b.addEventListener("click", function () {
+                m.open = false;
+                var k = b.getAttribute("data-top"), d = curDay();
+                if (k === "health") { switchTab("plan"); ui.healthOpen = true; renderWarn(); var h = $("tpHealth"); if (h) h.scrollIntoView({ block: "start", behavior: "smooth" }); }
+                else if (k === "cost") switchTab("cost");
+                else if (!d) say("Chuyến đi chưa có ngày nào.", true);
+                else if (k === "optimize") { switchTab("plan"); gotoDay(d); optimizeDay(d); }
+                else if (k === "balance") { switchTab("plan"); gotoDay(d); balanceDay(d); }
+            });
+        });
+        document.addEventListener("click", function (e) { if (m.open && !m.contains(e.target)) m.open = false; });
+        document.addEventListener("keydown", function (e) { if (e.key === "Escape" && m.open) { m.open = false; m.querySelector("summary").focus(); } });
+    })();
+
+    /* nhân bản chuyến: còn thay đổi chưa lưu thì lưu trước, rồi mới gửi */
+    if ($("tpDupForm")) $("tpDupForm").addEventListener("submit", function (e) {
+        var f = this;
+        if (!window.confirm("Tạo một chuyến đi mới giống hệt chuyến này (bạn là chủ của bản sao)?")) { e.preventDefault(); return; }
+        if (!dirty || RO) return;
+        e.preventDefault();
+        save(true);
+        var tries = 0, iv = setInterval(function () {
+            if ((!saving && !dirty) || ++tries > 40) { clearInterval(iv); dirty = false; f.submit(); }
+        }, 250);
+    });
     var qTimer = null;
     $("tpQ").addEventListener("input", function () { clearTimeout(qTimer); qTimer = setTimeout(runSearch, 350); });
     $("tpQ").addEventListener("keydown", function (e) {
@@ -1926,12 +3701,15 @@
     var pollMs = 20000;
     function pollRev() {
         if (!cfg.revUrl || document.hidden) return;
-        fetch(cfg.revUrl, { credentials: "same-origin", headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" } })
+        API.raw(cfg.revUrl)
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (j) {
                 if (!j) return;
                 if (j.role && j.role !== ROLE) { showSync("Quyền của bạn trong chuyến đi vừa thay đổi.", false); return; }
-                if (j.rev > rev) showSync((j.by || "Người khác") + " vừa cập nhật chuyến đi" + (dirty ? ", bạn có thay đổi chưa lưu nên có thể bị xung đột." : "."), dirty);
+                if (j.rev > rev) {
+                    showSync((j.by || "Người khác") + " vừa cập nhật chuyến đi" + (dirty ? ", bạn có thay đổi chưa lưu nên có thể bị xung đột." : "."), dirty);
+                    if ($("tpLastEdit") && j.by) $("tpLastEdit").textContent = j.by + " vừa cập nhật";
+                }
             })
             .catch(function () { /* mất mạng: bỏ qua lần này */ });
     }
@@ -1979,7 +3757,7 @@
         });
     }
     function loadMembers() {
-        fetch(cfg.membersUrl, { credentials: "same-origin", headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" } })
+        API.raw(cfg.membersUrl)
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (j) { if (j) { memLoaded = true; renderMembers(j); } else memberMsg("Chưa tải được danh sách.", true); })
             .catch(function () { memberMsg("Mất kết nối.", true); });
@@ -2019,14 +3797,22 @@
     if ($("tpMembersClose")) $("tpMembersClose").addEventListener("click", closeMembers);
     if ($("tpMembers")) $("tpMembers").addEventListener("click", function (e) { if (e.target === $("tpMembers")) closeMembers(); });
     if ($("tpInvForm")) $("tpInvForm").addEventListener("submit", inviteSubmit);
-    document.addEventListener("keydown", function (e) { if (e.key === "Escape") { if ($("tpMembers") && !$("tpMembers").hidden) closeMembers(); else if (ui.card) closeCard(); } });
+    document.addEventListener("keydown", function (e) {
+        if (e.key !== "Escape" || ui.pick) return;
+        if ($("tpMembers") && !$("tpMembers").hidden) closeMembers();
+        else if (!$("tpAddDrawer").hidden) closeAdd();
+        else if (ui.card) closeCard();
+        else if (document.documentElement.classList.contains("tpx-map-open")) setMapOpen(false);
+    });
     if ($("tpPlaceCard")) $("tpPlaceCard").hidden = true;
 
     if (RO) {
         var root = document.querySelector(".tp");
         if (root) root.classList.add("tp--readonly");
         ["tpTitle", "tpStart", "tpDays", "tpGroup", "tpBudget", "tpDest"].forEach(function (id) { if ($(id)) $(id).disabled = true; });
-        say("Bạn đang xem chuyến đi này với quyền chỉ xem.");
+        saveState("ro", "Bạn đang xem với quyền chỉ xem");
+    } else {
+        saveState("saved", "Đã lưu");
     }
 
     clampDays();
@@ -2034,9 +3820,11 @@
     savedSnap = last;
     renderAll();
     initMap();
+    if (items.length) loadServerHealth();
     var startTab = (location.hash || "").replace("#", "");
     if (!/^(plan|cost|info|overview|explore)$/.test(startTab)) {
         try { startTab = sessionStorage.getItem("tpTab" + cfg.trip.id) || "plan"; } catch (e) { startTab = "plan"; }
     }
     switchTab(startTab);
 })();
+

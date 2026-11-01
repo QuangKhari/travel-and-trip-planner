@@ -87,7 +87,11 @@ class PlannerEngineTest extends TestCase
             $this->assertCount(2, $meals, 'mỗi ngày đủ bữa trưa và bữa tối');
             $this->assertSame('noon', $meals[0]['slot']);
             $this->assertSame('evening', $meals[1]['slot']);
-            $this->assertGreaterThanOrEqual(3, count($d['items']) - 2, 'nhịp normal: ít nhất 3 hoạt động');
+            // nhịp normal: số hoạt động do độ dày quyết định (≤ 80% ngày, cùng thang với Sức khỏe chuyến đi), không ép đủ 3 mục dài
+            $this->assertGreaterThanOrEqual(2, count($d['items']) - 2, 'nhịp normal: ít nhất 2 hoạt động');
+            $rules = new \App\Services\Planner\PlannerRules(require __DIR__ . '/../../config/planner.php');
+            $all = array_sum(array_column($d['items'], 'durationMin'));
+            $this->assertLessThanOrEqual(0.8, $rules->occupied($all, $d['travelMin'], true, true)['occupied'] / $rules->availableMin(), 'ngày vừa tạo không bị chấm Bận');
             foreach ($d['items'] as $i) {
                 $this->assertContains($i['slot'], ['morning', 'noon', 'afternoon', 'evening']);
                 $this->assertNotEmpty($i['key']);
@@ -254,9 +258,66 @@ class PlannerEngineTest extends TestCase
     {
         $unknown = $this->engine()->plan([$this->exp(1, 'A')], $this->req(['days' => 1]), ['center' => self::CENTER])['budget'];
         $this->assertSame('UNKNOWN', $unknown['status']);
-        $full = $this->engine()->plan([$this->exp(1, 'A', ['priceMin' => 100000])], $this->req(['days' => 1, 'budget' => 100000, 'groupSize' => 2]), ['center' => self::CENTER])['budget'];
+        $full = $this->engine()->plan([$this->exp(1, 'A', ['priceMin' => 100000])], $this->req(['days' => 1, 'budget' => 300000, 'groupSize' => 2]), ['center' => self::CENTER])['budget'];
         $this->assertSame('FULL', $full['status']);
-        $this->assertTrue($full['overKnown'], 'phần đã biết giá (200.000) vượt ngân sách 100.000');
+        $this->assertFalse($full['overKnown']);
+    }
+
+    /** Ngân sách là ràng buộc cứng: mục làm tổng giá đã biết vượt ngân sách bị loại (có lý do), mục rẻ hơn được thay vào. */
+    public function test_budget_is_a_hard_constraint_on_known_prices(): void
+    {
+        $c = [$this->exp(1, 'Đắt', ['priceMin' => 900000, 'mustTry' => true]), $this->exp(2, 'Vừa', ['priceMin' => 200000]), $this->exp(3, 'Miễn phí', ['priceMin' => 0])];
+        $p = $this->engine()->plan($c, $this->req(['days' => 1, 'budget' => 500000, 'groupSize' => 2, 'pace' => 'normal']), ['center' => self::CENTER]);
+        $names = array_column($p['days'][0]['items'], 'name');
+        $this->assertNotContains('Đắt', $names);
+        $this->assertContains('Vừa', $names);
+        $this->assertFalse($p['budget']['overKnown']);
+        $this->assertLessThanOrEqual(500000, $p['budget']['knownMin']);
+        $this->assertNotNull(collect($p['filterLog'])->first(fn($x) => $x['code'] === 'budget' && $x['name'] === 'Đắt'));
+    }
+
+    public function test_children_are_counted_in_known_prices(): void
+    {
+        $p = $this->engine()->plan([$this->exp(1, 'A', ['priceMin' => 100000])], $this->req(['days' => 1, 'adults' => 2, 'children' => 1]), ['center' => self::CENTER]);
+        $this->assertSame(3, $p['budget']['groupSize']);
+        $this->assertSame(300000.0, $p['budget']['knownMin']);
+        $this->assertStringContainsString('trẻ em', $p['budget']['message']);
+    }
+
+    /** Biết ngày đi: nơi đóng cửa ngày đó không được xếp vào ngày đó; nơi mở muộn được chờ tới giờ mở. */
+    public function test_opening_hours_are_respected_when_start_date_is_known(): void
+    {
+        // 2026-12-07 là Thứ Hai
+        $closedMon = ['1' => [], '2' => [[480, 1020]], '3' => [[480, 1020]], '4' => [[480, 1020]], '5' => [[480, 1020]], '6' => [[480, 1020]], '7' => [[480, 1020]]];
+        $late = array_fill_keys(['1', '2', '3', '4', '5', '6', '7'], [[840, 1020]]);
+        $c = [$this->exp(1, 'Bảo tàng nghỉ thứ Hai', ['hours' => $closedMon, 'mustTry' => true]), $this->exp(2, 'Chợ chiều', ['hours' => $late]), $this->exp(3, 'Đi bộ')];
+        $p = $this->engine()->plan($c, $this->req(['days' => 1, 'startDate' => '2026-12-07']), ['center' => self::CENTER]);
+        $items = collect($p['days'][0]['items']);
+        $this->assertNull($items->firstWhere('name', 'Bảo tàng nghỉ thứ Hai'));
+        $this->assertGreaterThanOrEqual(840, $items->firstWhere('name', 'Chợ chiều')['startMin']);
+        $this->assertSame(1, $p['days'][0]['dow']);
+        // không mất: nằm trong unplaced để đưa vào "Đã lưu"
+        $this->assertContains('Bảo tàng nghỉ thứ Hai', array_column($p['unplaced'], 'name'));
+    }
+
+    public function test_food_without_coordinates_creates_no_fake_travel_leg(): void
+    {
+        $c = [$this->exp(1, 'A', ['lat' => 21.03, 'lng' => 105.85]), $this->exp(2, 'B', ['lat' => 21.031, 'lng' => 105.851]),
+            ['key' => 'food:9', 'type' => 'food', 'refId' => 9, 'name' => 'Phở', 'category' => 'mon', 'lat' => null, 'lng' => null, 'mustTry' => true]];
+        $p = $this->engine()->plan($c, $this->req(['days' => 1]), ['center' => [21.10, 105.95]]);
+        $pho = collect($p['days'][0]['items'])->firstWhere('name', 'Phở');
+        $this->assertNotNull($pho);
+        $this->assertSame(0, $pho['travelMin']);
+        $this->assertTrue($pho['coordsApprox']);
+        $this->assertLessThan(10, $p['days'][0]['travelMin'], 'không có chặng giả về tâm điểm đến');
+    }
+
+    public function test_dislike_long_travel_limits_distance(): void
+    {
+        $c = [$this->exp(1, 'Gần', ['lat' => self::CENTER[0] + 0.01, 'lng' => self::CENTER[1]]), $this->exp(2, 'Xa 50km', ['lat' => self::CENTER[0] + 0.45, 'lng' => self::CENTER[1]])];
+        $p = $this->engine()->plan($c, $this->req(['days' => 1, 'dislikes' => ['long_travel']]), ['center' => self::CENTER]);
+        $this->assertNotContains('Xa 50km', array_column($p['days'][0]['items'], 'name'));
+        $this->assertSame('far', collect($p['filterLog'])->firstWhere('name', 'Xa 50km')['code']);
     }
 
     public function test_warns_when_data_is_too_thin(): void

@@ -118,7 +118,7 @@ class Week13SharingTest extends TestCase
     {
         $id = $this->trip();
         $this->actAs($this->stranger)->get("/len-ke-hoach/$id")->assertNotFound();
-        $this->actAs($this->stranger)->postJson("/len-ke-hoach/$id/luu", $this->body())->assertForbidden();
+        $this->actAs($this->stranger)->postJson("/len-ke-hoach/$id/luu", $this->body())->assertNotFound();   // không lộ chuyến tồn tại (như các API khác); người được mời chỉ xem mới nhận 403
         $this->actAs($this->stranger)->getJson("/len-ke-hoach/$id/phien-ban")->assertNotFound();
         $this->actAs($this->stranger)->getJson("/len-ke-hoach/$id/thanh-vien")->assertNotFound();
     }

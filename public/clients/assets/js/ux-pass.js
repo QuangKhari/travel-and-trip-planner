@@ -579,11 +579,11 @@
        4. YÊU THÍCH (trang tours): nói rõ là lưu trên thiết bị này
        ===================================================================== */
     function initFavHint() {
-        if (!$(".wt-heart")) {
+        if (!$(".trc-heart")) {
             return;
         }
         document.addEventListener("click", function (e) {
-            var h = e.target.closest && e.target.closest(".wt-heart");
+            var h = e.target.closest && e.target.closest(".trc-heart");
             if (!h) {
                 return;
             }
@@ -1641,15 +1641,15 @@
         return parseInt(String(t || "").replace(/\D+/g, ""), 10) || 0;
     }
     function snapshotFromCard(id) {
-        var heart = document.querySelector('.wt-heart[data-fav="' + id + '"]');
-        var card = heart && heart.closest(".wt-card");
+        var heart = document.querySelector('.trc-heart[data-fav="' + id + '"]');
+        var card = heart && heart.closest(".trc");
         if (!card) {
             return null;
         }
-        var a = $(".wt-card__title a", card),
-            img = $(".wt-card__img img", card),
-            pl = $(".wt-card__place", card),
-            pr = $(".wt-card__price b", card);
+        var a = $(".trc__title a", card),
+            img = $(".trc__img img", card),
+            pl = $(".trc__place", card),
+            pr = $(".trc__price b", card);
         if (!a) {
             return null;
         }

@@ -19,7 +19,7 @@ final class ItineraryValidator
         $slots = (array) config('itinerary.slots');
         $minM = (int) config('itinerary.min_minutes', 5);
         $maxM = (int) config('itinerary.max_minutes', 1440);
-        $budget = (int) config('planner.day_budget_min', 480);
+        $budget = \App\Services\Planner\PlannerRules::fromConfig()->itemBudgetMin();
         $maxStops = (int) config('itinerary.max_stops_per_day', 6);
         $defaults = (array) config('itinerary.default_minutes');
 

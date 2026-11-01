@@ -64,10 +64,14 @@ class PlaceGeocoder
             return ['ok' => true, 'provider' => $provider, 'results' => $hit];
         }
 
+        if (!ExternalGuard::allowed('geocoder')) {
+            return ['ok' => false, 'provider' => $provider, 'results' => []];   // vừa lỗi gần đây: trả ngay, không chặn máy chủ
+        }
         try {
             $json = $provider === 'geoapify' ? $this->fetchGeoapify($q, $lat, $lng) : $this->fetchPhoton($q, $lat, $lng);
         } catch (Throwable $e) {
             Log::warning('PlaceGeocoder ' . $provider . ': ' . $e->getMessage());
+            ExternalGuard::trip('geocoder', mb_substr($e->getMessage(), 0, 120));
 
             return ['ok' => false, 'provider' => $provider, 'results' => []];
         }
@@ -80,9 +84,89 @@ class PlaceGeocoder
 
     private function http()
     {
-        return Http::timeout((int) config('planner.geocode_timeout', 6))
-            ->withHeaders(['User-Agent' => (string) config('discover.user_agent', 'TravelaGraduationProject/1.0'), 'Accept' => 'application/json'])
-            ->retry(1, 300, throw: false);
+        // không thử lại: một lần chậm đã đủ làm cả trang (php artisan serve 1 luồng) chờ theo
+        return Http::connectTimeout(3)->timeout((int) config('planner.geocode_timeout', 5))
+            ->withHeaders(['User-Agent' => (string) config('discover.user_agent', 'TravelaGraduationProject/1.0'), 'Accept' => 'application/json']);
+    }
+
+    /** Nhóm của PlaceFinder => [từ khóa, thẻ OSM] cho Photon. */
+    private const NEARBY = [
+        'hotel' => ['hotel', ['tourism:hotel', 'tourism:guest_house', 'tourism:hostel', 'tourism:motel', 'tourism:apartment']],
+        'cafe' => ['cafe', ['amenity:cafe']],
+        'restaurant' => ['restaurant', ['amenity:restaurant', 'amenity:fast_food', 'amenity:food_court']],
+        'bar' => ['bar', ['amenity:bar', 'amenity:pub', 'amenity:nightclub']],
+        'market' => ['market', ['amenity:marketplace', 'shop:mall', 'shop:supermarket']],
+        'sight' => ['attraction', ['tourism:attraction', 'tourism:museum', 'tourism:viewpoint', 'historic:monument']],
+    ];
+
+    /**
+     * Nguồn trực tiếp mặc định khi bấm "Cà phê", "Khách sạn"...: hỏi Photon các địa điểm có thẻ OSM của nhóm quanh tâm.
+     * Photon là máy chủ tìm kiếm (trả lời trong ~1 giây), khác Overpass là máy chủ truy vấn dữ liệu (hay quá tải, có khi > 50 giây).
+     * Trả về theo dạng mục của PlaceFinder; null = không gọi được (tắt, đang ngắt, lỗi).
+     *
+     * @return ?list<array<string,mixed>>
+     */
+    public function nearby(string $cat, float $lat, float $lng, int $radiusM): ?array
+    {
+        if (!isset(self::NEARBY[$cat]) || $this->provider() !== 'photon' || !ExternalGuard::allowed('geocoder')) {
+            return null;
+        }
+        [$word, $tags] = self::NEARBY[$cat];
+        $tagQs = implode('', array_map(fn($t) => '&osm_tag=' . rawurlencode($t), $tags));
+        $base = rtrim((string) config('planner.photon_url'), '/?');
+        try {
+            // 1) /reverse: các nơi GẦN NHẤT có đúng thẻ (khách sạn, cà phê...) quanh tâm, bán kính tính bằng km — nhanh (~1 giây)
+            $rev = preg_replace('#/api$#', '/reverse', $base);
+            $res = $this->http()->get($rev . '?lat=' . $lat . '&lon=' . $lng . '&radius=' . max(1, (int) ceil($radiusM / 1000))
+                . '&limit=50&distance_sort=true' . $tagQs);
+            $list = $res->ok() ? self::photonAsPlaces((array) $res->json(), $cat) : [];
+            if ($list) {
+                return $list;
+            }
+            // 2) máy chủ không hỗ trợ lọc khi tìm ngược: tìm theo từ khóa loại trong khung quanh tâm
+            $dLat = $radiusM / 111000.0;
+            $dLng = $radiusM / (111000.0 * max(0.2, cos(deg2rad($lat))));
+            $res = $this->http()->get($base . '?q=' . rawurlencode($word) . '&limit=50&lat=' . $lat . '&lon=' . $lng
+                . '&bbox=' . round($lng - $dLng, 5) . ',' . round($lat - $dLat, 5) . ',' . round($lng + $dLng, 5) . ',' . round($lat + $dLat, 5) . $tagQs);
+            if (!$res->ok()) {
+                throw new \RuntimeException('HTTP ' . $res->status());
+            }
+
+            return self::photonAsPlaces((array) $res->json(), $cat);
+        } catch (Throwable $e) {
+            ExternalGuard::trip('geocoder', mb_substr($e->getMessage(), 0, 120));
+
+            return null;
+        }
+    }
+
+    /** Hàm thuần: GeoJSON Photon -> mục dạng PlaceFinder (src = osm, không có giá). */
+    public static function photonAsPlaces(array $json, string $cat): array
+    {
+        $out = [];
+        foreach ($json['features'] ?? [] as $f) {
+            $p = (array) ($f['properties'] ?? []);
+            $c = $f['geometry']['coordinates'] ?? null;
+            $name = trim((string) ($p['name'] ?? ''));
+            if ($name === '' || !is_array($c) || !is_numeric($c[0] ?? null) || !is_numeric($c[1] ?? null)) {
+                continue;
+            }
+            $kindKey = strtolower((string) ($p['osm_value'] ?? $cat));
+            $street = trim(trim((string) ($p['housenumber'] ?? '')) . ' ' . trim((string) ($p['street'] ?? '')));
+            $addr = implode(', ', array_filter([$street, $p['district'] ?? null, $p['city'] ?? null]));
+            $id = ($p['osm_type'] ?? 'X') . '/' . ($p['osm_id'] ?? md5($name . $c[0] . $c[1]));
+            $type = ['N' => 'node', 'W' => 'way', 'R' => 'relation'][$p['osm_type'] ?? ''] ?? 'x';
+            $out[] = [
+                'key' => 'osm:' . $type . '/' . ($p['osm_id'] ?? $id), 'src' => 'osm', 'type' => 'note', 'refId' => null,
+                'name' => mb_substr($name, 0, 160), 'kindKey' => $kindKey, 'kind' => self::KIND[$kindKey] ?? 'Địa điểm',
+                'address' => $addr !== '' ? mb_substr($addr, 0, 255) : null, 'lat' => round((float) $c[1], 6), 'lng' => round((float) $c[0], 6),
+                'priceLevel' => null, 'priceSource' => null, 'priceVnd' => null, 'stars' => null, 'veg' => null, 'cuisine' => null,
+                'indoor' => null, 'durationMin' => null, 'wifi' => null, 'hours' => null, 'website' => null, 'phone' => null,
+                'rank' => 1, 'url' => null, 'cost' => null,
+            ];
+        }
+
+        return $out;
     }
 
     private function fetchPhoton(string $q, ?float $lat, ?float $lng): array

@@ -1,4 +1,5 @@
-{{-- Thẻ tour dùng chung (trang /tours, /search, "tour gợi ý" ở trang chi tiết). Biến: $tour --}}
+{{-- Thẻ tour dùng chung (Trang chủ, /tours, /search, "tour gợi ý" ở trang chi tiết). Biến: $tour. CSS: tv3.css (.trc)
+     Các class trc, trc-heart, trc__title, trc__img, trc__place, trc__price được ux-pass.js đọc để lưu "Tour đã lưu". --}}
 @php
     $daysToGo = (int) now()
         ->startOfDay()
@@ -6,54 +7,48 @@
     $qty = (int) $tour->quantity;
     $hasRate = !empty($tour->rating);
     $cnt = (int) ($tour->ratingCount ?? 0);
+    $imgs = collect($tour->images ?? []);
+    $cover = $imgs->first() ?? 'default.jpg';
 
     // Huy hiệu: chỉ hiện khi có căn cứ thật trong dữ liệu
-    if ($qty <= 5) {
+    if ($qty > 0 && $qty <= 5) {
         $badge = ['Sắp hết chỗ', 'is-hot'];
     } elseif ($daysToGo >= 0 && $daysToGo <= 14) {
         $badge = ['Sắp khởi hành', ''];
-    } elseif ($hasRate && $tour->rating >= 4.8 && $cnt >= 3) {
-        $badge = ['Được yêu thích', 'is-green'];
     } else {
         $badge = null;
     }
 @endphp
-<article class="wt-card">
-    <div class="wt-card__img">
-        @if ($badge)
-            <span class="wt-badge {{ $badge[1] }}">{{ $badge[0] }}</span>
+<article class="trc">
+    <div class="trc__img">
+        @if ($hasRate)
+            <span class="trc__rate"><i class="fas fa-star" aria-hidden="true"></i>{{ number_format($tour->rating, 1) }}
+                <span class="sr-only">điểm, {{ $cnt }} đánh giá</span></span>
+        @else
+            <span class="trc__rate is-new">Tour mới</span>
         @endif
-        <button type="button" class="wt-heart" data-fav="{{ $tour->tourId }}" aria-pressed="false"
+        <button type="button" class="trc-heart" data-fav="{{ $tour->tourId }}" aria-pressed="false"
             aria-label="Lưu tour vào danh sách yêu thích"><i class="fas fa-heart" aria-hidden="true"></i></button>
-        <img loading="lazy" decoding="async" width="800" height="600"
-            src="{{ \App\Support\TourImage::url($tour->images->first() ?? 'default.jpg', 800) }}"
-            alt="{{ $tour->title }}">
+        <img loading="lazy" decoding="async" width="800" height="500"
+            src="{{ \App\Support\TourImage::url($cover, 800) }}" alt="{{ $tour->title }}">
+        @if ($badge)
+            <span class="trc__badge {{ $badge[1] }}">{{ $badge[0] }}</span>
+        @endif
     </div>
-    <div class="wt-card__body">
-        <p class="wt-card__place">{{ $tour->destination }}</p>
-        <h3 class="wt-card__title"><a href="{{ route('tour-detail', ['id' => $tour->tourId]) }}">{{ $tour->title }}</a>
-        </h3>
-        <div class="wt-card__rate">
-            @if ($hasRate)
-                <i class="fas fa-star" aria-hidden="true"></i><b>{{ number_format($tour->rating, 1) }}</b>
-                <span>({{ $cnt }} đánh giá)</span>
-            @else
-                <span class="is-new">Tour mới · chưa có đánh giá</span>
-            @endif
-        </div>
-        <ul class="wt-card__meta">
-            <li>{{ $tour->time }}</li>
-            <li>Khởi hành {{ \Carbon\Carbon::parse($tour->startDate)->format('d/m/Y') }}</li>
-            <li class="{{ $qty <= 10 ? 'is-low' : '' }}">Còn {{ $qty }} chỗ</li>
-            @if (($tour->bookingCount ?? 0) >= 2)
-                <li class="is-proof">{{ $tour->bookingCount }} lượt đặt</li>
-            @endif
+    <div class="trc__body">
+        <h3 class="trc__title"><a href="{{ route('tour-detail', ['id' => $tour->tourId]) }}">{{ $tour->title }}</a></h3>
+        <p class="trc__place"><i class="fal fa-map-marker-alt" aria-hidden="true"></i>{{ $tour->destination }}</p>
+        <ul class="trc__meta">
+            <li><i class="fal fa-clock" aria-hidden="true"></i>{{ $tour->time }}</li>
+            <li class="{{ $qty <= 10 ? 'is-low' : '' }}"><i class="fal fa-users" aria-hidden="true"></i>Còn
+                {{ $qty }} chỗ</li>
         </ul>
-        <div class="wt-card__price">
-            <small>Từ</small>
-            <b>{{ number_format($tour->priceAdult, 0, ',', '.') }}đ</b>
-            <span>/ người</span>
+        <div class="trc__foot">
+            <div class="trc__price">
+                <small>Giá từ</small>
+                <b>{{ number_format($tour->priceAdult, 0, ',', '.') }}đ</b>
+            </div>
+            <span class="trc__date">Khởi hành<br>{{ \Carbon\Carbon::parse($tour->startDate)->format('d/m/Y') }}</span>
         </div>
-        <span class="wt-card__cta" aria-hidden="true">Xem chi tiết<span class="wt-card__arr"></span></span>
     </div>
 </article>

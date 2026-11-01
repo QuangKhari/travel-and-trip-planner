@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Services\Planner\TripConflict;
 use App\Services\Planner\TripPlanner;
+use App\Services\Planner\TripSharing;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -14,7 +16,9 @@ use Illuminate\Http\Request;
  *  GET    /api/v1/trips            danh sách
  *  POST   /api/v1/trips            tạo  {title, startDate?, days, groupSize, budget?, fromTray?}
  *  GET    /api/v1/trips/{id}       chi tiết đầy đủ (ngày, quãng đường, chi phí, cảnh báo)
- *  PUT    /api/v1/trips/{id}       lưu  {title, startDate?, days, groupSize, budget?, items:[{type,refId,day?,note?,cost?}]}
+ *  PUT    /api/v1/trips/{id}       lưu  {rev?, title, startDate?, days, groupSize, budget?, items:[{type,refId,day?,note?,cost?}]}
+ *                                  rev (bản đang sửa) cũ hơn bản trên máy chủ -> 409 {conflict:true, rev} (cùng cơ chế với trang web /luu)
+ *  GET / PUT trả thêm "rev" để lần lưu sau gửi lại.
  *  DELETE /api/v1/trips/{id}
  */
 class TripController extends Controller
@@ -36,7 +40,11 @@ class TripController extends Controller
     public function store(Request $request, TripPlanner $planner): JsonResponse
     {
         $data = $request->validate(TripPlanner::tripRules());
-        $id = $planner->create($this->uid(), $data, $request->boolean('fromTray'));
+        try {
+            $id = $planner->create($this->uid(), $data, $request->boolean('fromTray'));
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
         $trip = $planner->owned($this->uid(), $id);
 
         return response()->json($planner->payload($trip), 201);
@@ -46,17 +54,23 @@ class TripController extends Controller
     {
         $trip = $planner->owned($this->uid(), $id);
 
-        return $trip ? response()->json($planner->payload($trip)) : response()->json(['message' => 'Không tìm thấy chuyến đi.'], 404);
+        return $trip ? response()->json($planner->payload($trip) + ['rev' => app(TripSharing::class)->revision($id)['rev']])
+            : response()->json(['message' => 'Không tìm thấy chuyến đi.'], 404);
     }
 
     public function update(Request $request, int $id, TripPlanner $planner): JsonResponse
     {
-        $data = $request->validate(TripPlanner::tripRules() + TripPlanner::itemRules());
-        if (!$planner->save($this->uid(), $id, $data, $data['items'] ?? [])) {
+        $data = $request->validate(TripPlanner::tripRules() + TripPlanner::itemRules() + ['rev' => ['nullable', 'integer', 'min:0']]);
+        try {
+            $ok = $planner->save($this->uid(), $id, $data, $data['items'] ?? []);
+        } catch (TripConflict $e) {
+            return response()->json(['message' => $e->getMessage(), 'conflict' => true, 'rev' => $e->currentRev, 'by' => $e->by], 409);
+        }
+        if (!$ok) {
             return response()->json(['message' => 'Không tìm thấy chuyến đi.'], 404);
         }
 
-        return response()->json($planner->payload($planner->owned($this->uid(), $id)));
+        return response()->json($planner->payload($planner->owned($this->uid(), $id)) + ['rev' => app(TripSharing::class)->revision($id)['rev']]);
     }
 
     public function destroy(int $id, TripPlanner $planner): JsonResponse

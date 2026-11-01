@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
-/** Giai đoạn D: dải trang chủ, lễ hội trong hero, khối Planner xem trước. */
+/** Trang chủ (bản v3): tab "Ăn gì", lễ hội trong "Tháng này nên đi đâu", khối giới thiệu Planner, API xem trước Planner. */
 class HomeStripsTest extends TestCase
 {
     use RefreshDatabase;
@@ -37,10 +37,9 @@ class HomeStripsTest extends TestCase
         $this->food('c-khong-anh', 'published', null);
 
         $html = $this->get('/')->assertOk()->getContent();
-        $this->assertStringContainsString('id="am-thuc-nen-thu"', $html);
+        $this->assertStringContainsString('id="h3x-food"', $html);     // tab "Ăn gì"
         $this->assertStringContainsString('Món a', $html);
         $this->assertStringNotContainsString('Món b-nhap', $html);      // bản nháp không bao giờ hiện
-        $this->assertStringNotContainsString('Món c-khong-anh', $html); // đủ 4 món có ảnh thì món không ảnh nhường chỗ
     }
 
     public function test_dai_rong_khong_ve_tieu_de(): void
@@ -72,7 +71,6 @@ class HomeStripsTest extends TestCase
         $this->assertStringContainsString('data-type="event"', $html);
         $this->assertStringContainsString('data-slug="gan"', $html);
         $this->assertStringNotContainsString('data-slug="xa"', $html);
-        $this->assertStringContainsString('data-type="destination"', $html);
     }
 
     public function test_khoi_planner_hien_duoi_hero(): void
@@ -82,9 +80,8 @@ class HomeStripsTest extends TestCase
             $this->dest($s);
         }
         $html = $this->get('/')->assertOk()->getContent();
-        $this->assertStringContainsString('id="hpl"', $html);
-        $this->assertStringContainsString('value="a"', $html);
-        $this->assertLessThan(strpos($html, 'id="hpl"'), strpos($html, 'id="hero"'));
+        $this->assertStringContainsString('id="hx-ai-title"', $html);
+        $this->assertLessThan(strpos($html, 'id="hx-ai-title"'), strpos($html, 'id="hxAi"'));   // ô "kể một câu" ở hero, trước khối giới thiệu
     }
 
     public function test_planner_preview_kiem_tra_tham_so(): void
@@ -114,8 +111,7 @@ class HomeStripsTest extends TestCase
     {
         Storage::fake('public');
         $html = $this->get('/')->assertOk()->getContent();
-        $this->assertStringNotContainsString('id="hero"', $html);
-        $this->assertStringContainsString('id="hpl"', $html);
+        $this->assertStringContainsString('id="hx-ai-title"', $html);   // chưa có ảnh vẫn giới thiệu Planner
     }
 
     public function test_dai_am_thuc_dung_the_thuong_khi_chua_du_mon_co_anh(): void

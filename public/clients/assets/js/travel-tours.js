@@ -265,7 +265,7 @@
             });
     }
     function scrollToTop() {
-        var t = $(".tl-toolbar");
+        var t = $("#tvToolbar");
         if (t)
             window.scrollTo({
                 top: t.getBoundingClientRect().top + window.pageYOffset - 100,
@@ -442,7 +442,7 @@
     if (ds)
         ds.addEventListener("input", function () {
             var q = ds.value.trim().toLowerCase();
-            $$("#tvDestList .tl-opt").forEach(function (b) {
+            $$("#tvDestList [data-filter]").forEach(function (b) {
                 b.hidden = q && b.dataset.name.indexOf(q) === -1;
             });
         });

@@ -30,10 +30,14 @@ class Week7bCustomPositionTest extends TestCase
         return app(TripPlanner::class)->create($this->uid, ['title' => 'Chuyến thử', 'days' => 2, 'groupSize' => 2, 'startDate' => null, 'budget' => null]);
     }
 
-    private function food(): int
+    /** Món ăn; $atPlace = gắn với một quán có tọa độ (tbl_foods.placeId), không thì món chưa có vị trí. */
+    private function food(bool $atPlace = true): int
     {
+        $place = $atPlace ? DB::table('tbl_external_places')->insertGetId(['destinationId' => $this->hn, 'name' => 'Phở Thìn', 'kind' => 'restaurant',
+            'latitude' => 21.0285, 'longitude' => 105.8542, 'source' => 'osm', 'externalId' => 'node/991', 'category' => 'amenity', 'reviewStatus' => 'published', 'syncedAt' => now()]) : null;
+
         return DB::table('tbl_foods')->insertGetId(['slug' => 'pho', 'name' => 'Phở', 'destinationId' => $this->hn, 'category' => 'bún phở',
-            'description' => 'Mô tả đủ dài cho món phở', 'license' => 'Tự viết', 'reviewStatus' => 'published']);
+            'description' => 'Mô tả đủ dài cho món phở', 'license' => 'Tự viết', 'reviewStatus' => 'published', 'placeId' => $place]);
     }
 
     private function body(array $items): array
@@ -106,7 +110,7 @@ class Week7bCustomPositionTest extends TestCase
     {
         $f = $this->food();
         $id = $this->trip();
-        // Món ở Hà Nội (tọa độ lấy từ tâm điểm đến) rồi một nơi tự thêm ở Huế
+        // Món ở Hà Nội (tọa độ lấy từ quán đã gắn) rồi một nơi tự thêm ở Huế
         $this->saveItems($id, [
             ['type' => 'food', 'refId' => $f, 'day' => 1],
             ['type' => 'note', 'label' => 'Khách sạn ở Huế', 'day' => 1, 'lat' => 16.4637, 'lng' => 107.5909, 'source' => 'map'],
@@ -164,9 +168,24 @@ class Week7bCustomPositionTest extends TestCase
         $row = DB::table('tbl_trip_items')->where('tripId', $id)->first();
         $this->assertNull($row->latitude);
         $this->assertNull($row->source);
-        // tọa độ của món vẫn là tâm điểm đến, không phải giá trị khách gửi
+        // tọa độ của món là của quán đã gắn, không phải giá trị khách gửi
         $it = $this->loadPayload($id)['days'][0]['items'][0];
         $this->assertEqualsWithDelta(21.0285, $it['lat'], 1e-6);
+    }
+
+    /** Món chưa gắn quán: không có vị trí (không lấy tâm điểm đến), nên không sinh đoạn đi giả. */
+    public function test_food_without_place_has_no_position_and_no_fake_leg(): void
+    {
+        $f = $this->food(false);
+        $id = $this->trip();
+        $this->saveItems($id, [
+            ['type' => 'note', 'label' => 'A', 'day' => 1, 'lat' => 21.03, 'lng' => 105.85, 'source' => 'map'],
+            ['type' => 'food', 'refId' => $f, 'day' => 1],
+            ['type' => 'note', 'label' => 'B', 'day' => 1, 'lat' => 21.06, 'lng' => 105.88, 'source' => 'map'],
+        ])->assertOk();
+        $day = $this->loadPayload($id)['days'][0];
+        $this->assertNull($day['items'][1]['lat']);
+        $this->assertCount(1, $day['legs']);   // chỉ A -> B
     }
 
     public function test_editor_page_exposes_position_to_the_script(): void

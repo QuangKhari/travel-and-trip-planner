@@ -217,7 +217,7 @@ class Week45PlannerTest extends TestCase
     public function test_service_refuses_not_ready_destination_but_force_works(): void
     {
         $svc = app(PlannerService::class);
-        $r = $svc->generate(['slug' => 'con-dao', 'month' => 6, 'days' => 2]);
+        $r = $svc->generate(['slug' => 'con-dao', 'month' => 6, 'days' => 2, 'mode' => 'curated']);
         $this->assertFalse($r['ok']);
         $this->assertSame('not_ready', $r['code']);
         $this->assertNotEmpty($r['missing']);
@@ -274,10 +274,13 @@ class Week45PlannerTest extends TestCase
         $this->assertSame('planner', $trip->source);
         $this->assertSame(6, (int) $trip->month);
         $this->assertSame(['culture'], json_decode($trip->interests, true));
-        $n = DB::table('tbl_trip_items')->where('tripId', $id)->count();
+        $n = DB::table('tbl_trip_items')->where('tripId', $id)->whereNotNull('dayNo')->count();
         $this->assertSame($r['plan']['stats']['selected'], $n);
         $this->assertGreaterThan(0, DB::table('tbl_trip_items')->where('tripId', $id)->whereNotNull('reasons')->count());
-        $this->assertSame(0, DB::table('tbl_trip_items')->where('tripId', $id)->whereNull('slot')->count());
+        $this->assertSame(0, DB::table('tbl_trip_items')->where('tripId', $id)->whereNotNull('dayNo')->whereNull('slot')->count());
+        // mục điểm cao chưa xếp được nằm ở khu "Đã lưu" (dayNo = null), không bị bỏ
+        $spare = count(array_filter($r['plan']['unplaced'], fn($u) => !empty($u['refId'])));
+        $this->assertSame($spare, DB::table('tbl_trip_items')->where('tripId', $id)->whereNull('dayNo')->count());
 
         $this->withSession($this->s)->get(route('planner.edit', ['id' => $id]))->assertOk()->assertSee('Hợp sở thích: Văn hóa, lịch sử', false);   // lý do chọn nằm trong dữ liệu #tpData cho planner.js
     }
@@ -296,7 +299,7 @@ class Week45PlannerTest extends TestCase
         $this->withSession($this->s)->postJson(route('planner.save', ['id' => $id]), $payload)->assertOk();
         $after = DB::table('tbl_trip_items')->where('tripId', $id)->get();
         $this->assertCount(count($items), $after);
-        $this->assertSame(0, $after->whereNull('slot')->count(), 'lưu tay không làm mất khung giờ');
+        $this->assertSame(0, $after->whereNotNull('dayNo')->whereNull('slot')->count(), 'lưu tay không làm mất khung giờ');
         $this->assertGreaterThan(0, $after->whereNotNull('reasons')->count(), 'lưu tay không làm mất lý do chọn');
     }
 
@@ -339,5 +342,127 @@ class Week45PlannerTest extends TestCase
             'priceAdult' => 2000000, 'priceChild' => 1000000, 'quantity' => 10, 'availability' => 1, 'time' => '3 ngày', 'description' => 'd', 'domain' => 'b', 'destination' => 'Hà Nội'];
 
         return array_intersect_key($row, $cols);
+    }
+
+    // ---- Đợt 9: xem trước trước khi lưu, ngày đi, nhịp, độ khó, người lớn/trẻ em, giờ mở cửa, giới hạn chuyến ----
+
+    private function suggestQuery(array $x = []): array
+    {
+        return $x + ['destinationId' => $this->hn, 'month' => 6, 'days' => 2, 'adults' => 2, 'children' => 0, 'interests' => ['culture']];
+    }
+
+    public function test_preview_shows_plan_and_reasons_without_saving(): void
+    {
+        $this->fillHanoi();
+        $html = $this->withSession($this->s)->get(route('planner.preview', $this->suggestQuery()))->assertOk()
+            ->assertSee('Xem trước · chưa lưu')->assertSee('Lưu thành chuyến')->assertSee('Vì sao chọn mục này?')->assertSee('Vì sao không có')
+            ->assertSee('Thong thả')->getContent();
+        $this->assertSame(0, DB::table('tbl_trips')->where('userId', $this->uid)->count(), 'xem trước không lưu gì');
+        $this->assertStringContainsString('action="' . route('planner.generate') . '"', $html);
+        $this->assertStringContainsString('name="adults" value="2"', $html);   // form lưu gửi lại đúng yêu cầu
+    }
+
+    public function test_saving_from_preview_creates_the_same_plan(): void
+    {
+        $this->fillHanoi();
+        $q = $this->suggestQuery(['pace' => 'relaxed']);
+        $r = app(PlannerService::class)->generate(['destinationId' => $this->hn, 'month' => 6, 'days' => 2, 'groupSize' => 2, 'adults' => 2, 'children' => 0, 'interests' => ['culture'], 'pace' => 'relaxed']);
+        $this->withSession($this->s)->post(route('planner.generate'), $q)->assertRedirect();
+        $id = (int) DB::table('tbl_trips')->where('userId', $this->uid)->value('tripId');
+        $rows = DB::table('tbl_trip_items')->where('tripId', $id)->whereNotNull('dayNo')->orderBy('dayNo')->orderBy('orderNo')->get();
+        $expect = [];
+        foreach ($r['plan']['days'] as $d) {
+            foreach ($d['items'] as $it) {
+                $expect[] = $d['day'] . ':' . $it['type'] . ':' . $it['refId'];
+            }
+        }
+        $this->assertSame($expect, $rows->map(fn($x) => $x->dayNo . ':' . $x->refType . ':' . $x->refId)->all(), 'lưu ra đúng lịch đã xem trước');
+    }
+
+    public function test_start_date_sets_month_and_pins_festival_to_its_day(): void
+    {
+        $this->fillHanoi();
+        $year = (int) date('Y') + 1;
+        $html = $this->withSession($this->s)->get(route('planner.preview', $this->suggestQuery(['month' => null, 'startDate' => "$year-06-14", 'days' => 3])))->assertOk()->getContent();
+        $this->assertStringContainsString('14/06/' . $year, $html);
+        $r = app(PlannerService::class)->generate(['destinationId' => $this->hn, 'month' => 6, 'startDate' => "$year-06-14", 'days' => 3, 'groupSize' => 2]);
+        $day2 = array_column($r['plan']['days'][1]['items'], 'name');
+        $this->assertContains('Lễ hội tháng sáu', $day2, 'lễ hội ngày 15/6 nằm đúng ngày 2 của chuyến bắt đầu 14/6');
+    }
+
+    public function test_generate_validates_pace_difficulty_and_people(): void
+    {
+        $this->fillHanoi();
+        $this->withSession($this->s)->get(route('planner.preview', $this->suggestQuery(['maxDifficulty' => 'extreme'])))->assertSessionHasErrors('maxDifficulty');
+        $this->withSession($this->s)->get(route('planner.preview', $this->suggestQuery(['pace' => 'turbo'])))->assertSessionHasErrors('pace');
+        $this->withSession($this->s)->get(route('planner.preview', $this->suggestQuery(['adults' => 0])))->assertSessionHasErrors('adults');
+        $this->withSession($this->s)->get(route('planner.preview', $this->suggestQuery(['month' => null])))->assertSessionHasErrors('month');
+    }
+
+    public function test_children_are_priced_and_shown(): void
+    {
+        $this->fillHanoi();
+        $r = app(PlannerService::class)->generate(['destinationId' => $this->hn, 'month' => 6, 'days' => 2, 'adults' => 2, 'children' => 1, 'interests' => ['culture']]);
+        $this->assertSame(3, $r['request']['groupSize']);
+        $html = $this->withSession($this->s)->get(route('planner.preview', $this->suggestQuery(['children' => 1])))->assertOk()->getContent();
+        $this->assertStringContainsString('2 người lớn, 1 trẻ em', $html);
+    }
+
+    public function test_closed_place_is_not_scheduled_on_its_closed_day_and_goes_to_saved_tray(): void
+    {
+        $this->fillHanoi();
+        $year = (int) date('Y') + 1;
+        $start = date('Y-m-d', strtotime("monday next week", strtotime("$year-06-01")));   // một ngày Thứ Hai
+        $must = (int) DB::table('tbl_external_places')->where('isMustTry', 1)->value('placeId');
+        app(\App\Services\Planner\OpeningHours::class)->store('place', $must, 'Tu-Su 08:00-17:00; Mo off');
+        $r = app(PlannerService::class)->generate(['destinationId' => $this->hn, 'month' => 6, 'startDate' => $start, 'days' => 1, 'groupSize' => 2]);
+        $this->assertNotContains('place:' . $must, array_column($r['plan']['days'][0]['items'], 'key'));
+        $this->assertContains('place:' . $must, array_column($r['plan']['unplaced'], 'key'));
+        $id = app(PlannerService::class)->save($this->uid, $r);
+        $this->assertSame(1, DB::table('tbl_trip_items')->where(['tripId' => $id, 'refType' => 'place', 'refId' => $must])->whereNull('dayNo')->count());
+        // chuyến vừa tạo không có lỗi cứng về giờ mở cửa
+        $h = $this->withSession($this->s)->getJson("/len-ke-hoach/$id/suc-khoe")->assertOk()->json();
+        $this->assertEmpty(array_filter($h['checks'], fn($c) => str_starts_with($c['code'], 'hours.') && in_array($c['code'], ['hours.closed', 'hours.early', 'hours.late'], true)));
+    }
+
+    public function test_not_ready_destination_explains_whats_missing_and_offers_others(): void
+    {
+        $this->fillHanoi();
+        $html = $this->withSession($this->s)->get(route('planner.suggest', ['diem-den' => 'con-dao', 'thang' => 6]))->assertOk()->getContent();
+        $this->assertStringContainsString('Côn Đảo chưa đủ dữ liệu để Travela tự xếp lịch', $html);
+        $this->assertStringContainsString('Còn thiếu', $html);
+        $this->assertStringContainsString('diem-den=ha-noi', $html);   // gợi ý điểm đến đã sẵn sàng
+    }
+
+    public function test_trip_limit_applies_to_every_way_of_creating(): void
+    {
+        $this->fillHanoi();
+        config(['planner.max_trips_per_user' => 1]);
+        $svc = app(PlannerService::class);
+        $svc->save($this->uid, $svc->generate(['slug' => 'ha-noi', 'month' => 6, 'days' => 1]));
+        $this->withSession($this->s)->post(route('planner.generate'), $this->suggestQuery())->assertSessionHasErrors('generate');
+        $this->expectException(\DomainException::class);
+        app(TripPlanner::class)->create($this->uid, ['title' => 'Thêm', 'days' => 1, 'groupSize' => 1]);
+    }
+
+    public function test_tray_is_recognised_by_kind_not_title(): void
+    {
+        // một chuyến THẬT có tên trùng tên khay vẫn là chuyến (trước đây bị ẩn vì so theo tên)
+        $id = DB::table('tbl_trips')->insertGetId(['userId' => $this->uid, 'kind' => 'trip', 'title' => \App\Services\Content\TripTray::TITLE, 'days' => 1, 'groupSize' => 1, 'status' => 'draft']);
+        $tray = DB::table('tbl_trips')->insertGetId(['userId' => $this->uid, 'kind' => 'tray', 'title' => 'Khay', 'days' => 1, 'groupSize' => 1, 'status' => 'draft']);
+        $this->assertNotNull(app(TripPlanner::class)->owned($this->uid, $id));
+        $this->assertNull(app(TripPlanner::class)->owned($this->uid, $tray));
+        $this->withSession($this->s)->get("/len-ke-hoach/$tray")->assertNotFound();
+    }
+
+    public function test_scenario_command_reports_each_core_destination(): void
+    {
+        $this->fillHanoi();
+        config(['core_destinations.slugs' => ['ha-noi', 'con-dao']]);
+        $this->artisan('planner:scenario', ['--days' => 2, '--month' => 6])
+            ->expectsOutputToContain('Kịch bản: 2 ngày')
+            ->expectsOutputToContain('Hà Nội')
+            ->expectsOutputToContain('chưa sẵn sàng');   // Côn Đảo
+        $this->assertSame(0, DB::table('tbl_trips')->count(), 'kịch bản không lưu gì');
     }
 }
