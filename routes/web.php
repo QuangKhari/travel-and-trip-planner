@@ -320,6 +320,8 @@ Route::prefix('admin')->group(function () {
 
         Route::get('/chat-logs', [ChatLogController::class, 'index'])->name('admin.chat');
         Route::get('/chat-logs/export', [ChatLogController::class, 'export'])->name('admin.chat.export');
+        Route::get('/chat-logs/ai', [ChatLogController::class, 'ai'])->name('admin.chat.ai');
+        Route::get('/chat-logs/ai/export', [ChatLogController::class, 'aiExport'])->name('admin.chat.ai.export');
 
         Route::get('/blog-posts', [BlogAdminController::class, 'index'])->name('admin.blog');
         Route::get('/blog-posts/create', [BlogAdminController::class, 'create'])->name('admin.blog.create');

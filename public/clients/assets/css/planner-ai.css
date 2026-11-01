@@ -259,3 +259,15 @@ html.ai-ghost-off #tpDaysBox .ai-gday { box-shadow: none; }
 }
 @media (prefers-reduced-motion: reduce) { .ai-co, .ai-trace li.is-run::before, .ai-fx__bar span { animation: none; transition: none; } }
 @media print { .ai-co, .ai-co-open, .ai-co-fab, .ai-draft, .ai-gin, .ai-gtag { display: none !important; } }
+
+/* ---------------- F5: trả lời có nguồn trong ngăn La bàn ---------------- */
+.ai-ans { margin: 0 0 6px; }
+.ai-cite { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin: 0 1px; padding: 0 4px; border: 0; border-radius: 6px; background: var(--ai-brand-l); color: var(--ai-brand-d); font-size: .7rem; font-weight: 800; vertical-align: 2px; }
+.ai-cite:hover { background: var(--ai-brand); color: #fff; }
+.ai-src { list-style: none; margin: 6px 0 4px; padding: 6px 0 0; border-top: 1px dashed var(--ai-line); display: grid; gap: 4px; font-size: .8rem; }
+.ai-src li { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.ai-src__n { flex: none; min-width: 18px; text-align: center; border-radius: 6px; background: var(--ai-soft); color: var(--ai-mut); font-weight: 700; font-size: .7rem; }
+.ai-src a { color: var(--ai-brand-d); }
+.ai-src__day { border: 0; background: none; padding: 0; color: var(--ai-brand-d); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+.ai-msg__b .ai-chip { display: inline-block; margin: 4px 6px 0 0; text-decoration: none; color: inherit; }
+.tpx-day.ai-flash-day { box-shadow: 0 0 0 3px var(--ai-brand-l), 0 0 0 4px var(--ai-brand); transition: box-shadow .3s; }

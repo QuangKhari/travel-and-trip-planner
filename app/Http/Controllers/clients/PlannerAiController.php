@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
+use App\Services\Ai\Ask\QuestionRouter;
+use App\Services\Ai\Ask\TripAskService;
 use App\Services\Ai\Brief\BriefService;
 use App\Services\Ai\Copilot\CopilotService;
 use App\Services\Ai\Explain\ExplainService;
@@ -15,6 +17,7 @@ use Illuminate\Http\Request;
  *   POST /len-ke-hoach/hieu-yeu-cau        F1: câu mô tả -> vé hành trình (điền form), chưa tạo lịch
  *   POST /len-ke-hoach/{id}/tom-tat-ai     F2: tóm tắt + giải thích lịch hiện tại (bản đã lưu)
  *   POST /len-ke-hoach/{id}/la-ban         F3: sửa lịch bằng lời -> đề xuất đã kiểm chứng (trình duyệt áp dụng + lưu như thường)
+ *                                          F5: câu hỏi ("ngày 2 có chỗ cho trẻ nhỏ không?") -> trả lời có nguồn (QuestionRouter chia luồng)
  *   POST /len-ke-hoach/{id}/la-ban/kiem-tra-lai   F3: lịch vừa đổi -> ánh xạ + mô phỏng lại đề xuất cũ, không gọi LLM
  *   POST /len-ke-hoach/{id}/la-ban/ket-qua        F3: ghi người dùng Áp dụng / Bỏ qua (đo tỷ lệ chấp nhận)
  * Copilot chỉ cho người SỬA được chuyến (chủ, người được mời sửa); người chỉ xem nhận 404.
@@ -53,6 +56,11 @@ class PlannerAiController extends Controller
             'history.*.role' => ['required', 'string', 'in:user,ai'],
             'history.*.text' => ['required', 'string', 'max:600'],
         ]);
+
+        // F5: câu HỎI (không có động từ sửa lịch) -> trả lời có nguồn từ lịch + cẩm nang, không đổi lịch, không gọi Copilot
+        if (config('ai.features.ask', true) && QuestionRouter::isQuestion($v['text'])) {
+            return response()->json(app(TripAskService::class)->ask($trip, $this->uid() ?: null, $v['text']));
+        }
 
         return response()->json($copilot->chat($trip, $this->uid() ?: null, $v['text'], $v['mentions'] ?? [], $v['history'] ?? []));
     }

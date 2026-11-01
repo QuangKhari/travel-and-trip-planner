@@ -108,7 +108,7 @@
             else if (k === "route.long_day" || k === "route.long_leg") add("Đi lại nhiều ngày " + d, "Ngày " + d + " đi lại nhiều quá, sắp lại cho gọn.");
             else if (k === "context.rain") add("Nếu mưa ngày " + d, "Ngày " + d + " nếu mưa thì có nơi nào trong nhà gần đó?");
         });
-        [["Thêm quán cà phê", "Thêm một quán cà phê gần lịch ngày 1."], ["Ngày nào còn trống?", "Ngày nào còn trống, gợi ý thêm một hoạt động hợp với chuyến."]]
+        [["Thêm quán cà phê", "Thêm một quán cà phê gần lịch ngày 1."], ["Cần mang gì?", "Chuyến này cần mang theo gì?"], ["Món nên thử?", "Đồ ăn phải thử ở đây là gì?"]]
             .forEach(function (x) { if (out.length < 4) out.push({ label: x[0], prompt: x[1] }); });
         return out;
     }
@@ -132,7 +132,7 @@
         feed.textContent = "";
         var box = el("div", "ai-co__idle");
         box.appendChild(el("h3", null, "Bạn muốn chỉnh gì trong chuyến này?"));
-        box.appendChild(el("p", null, "La bàn đề xuất thay đổi, công cụ Sức khỏe chuyến đi kiểm tra giờ mở cửa, trùng giờ, quãng đường. Lịch chỉ đổi khi bạn bấm Áp dụng."));
+        box.appendChild(el("p", null, "Nhờ sửa: La bàn đề xuất, công cụ Sức khỏe chuyến đi kiểm tra giờ mở cửa, trùng giờ, quãng đường; lịch chỉ đổi khi bạn bấm Áp dụng. Hỏi (“cần mang áo mưa không?”): La bàn trả lời từ lịch của bạn và cẩm nang Travela, có ghi nguồn."));
         var acts = el("div", "ai-co__acts");
         quick().forEach(function (x) {
             var b = button("ai-act" + (x.hot ? " is-hot" : ""), null, function () { send(x.prompt); });
@@ -208,7 +208,11 @@
         renderChips();
         var bubble = aiBubble();
         var trace = el("ol", "ai-trace");
-        var steps = [el("li", null, "Đọc lịch đã lưu"), el("li", null, "Tìm nơi phù hợp và soạn đề xuất"), el("li", null, "Kiểm chứng bằng Sức khỏe chuyến đi")];
+        // câu hỏi (F5) và yêu cầu sửa (F3) đi hai luồng khác nhau ở máy chủ: kể đúng việc sẽ làm
+        var asking = looksLikeQuestion(text);
+        var steps = asking
+            ? [el("li", null, "Đọc lịch đã lưu"), el("li", null, "Tìm trong lịch và cẩm nang Travela"), el("li", null, "Kiểm tra từng ý có nguồn")]
+            : [el("li", null, "Đọc lịch đã lưu"), el("li", null, "Tìm nơi phù hợp và soạn đề xuất"), el("li", null, "Kiểm chứng bằng Sức khỏe chuyến đi")];
         steps.forEach(function (li) { trace.appendChild(li); });
         bubble.body.appendChild(trace);
         scroll();
@@ -227,6 +231,7 @@
                     st.history.push({ role: "ai", text: plain(r.say) });
                     st.history = st.history.slice(-6);
                     if (r.kind === "proposal") proposal(bubble, r);
+                    else if (r.kind === "answer") answer(bubble, r);
                     else reply(bubble, r);
                 })
                 .catch(function (s) {
@@ -324,6 +329,68 @@
         if (r.notice) bubble.body.appendChild(el("p", "ai-notice", r.notice));
         bubble.body.appendChild(segs(el("p"), r.say));
         if (r.remaining != null && r.remaining <= 5) bubble.body.appendChild(el("p", "ai-small", "Còn " + r.remaining + " lượt La bàn hôm nay."));
+    }
+
+    /** Chỉ để chọn lời kể tiến trình; máy chủ (QuestionRouter) mới quyết định luồng thật. */
+    function looksLikeQuestion(t) {
+        var low = " " + t.toLowerCase() + " ";
+        if (/(chuyển|thêm|đổi|dời|bớt|bỏ|xóa|xoá|xếp|thay bằng|nhẹ hơn|sửa|tối ưu|cân bằng|lùi)(?![a-zà-ỹ])/.test(low)) return false;
+        return t.indexOf("?") >= 0 || /\s(có|không|nên|cần|gì|nào|mấy giờ|bao nhiêu|ở đâu|thế nào)\s/.test(low);
+    }
+
+    /* ---------------- F5: trả lời có nguồn (lịch của bạn + cẩm nang), không đổi lịch ---------------- */
+    function answer(bubble, r) {
+        if (r.notice) bubble.body.appendChild(el("p", "ai-notice", r.notice));
+        var txt = (r.say && r.say[0] && r.say[0].t) || "";
+        var byN = {};
+        (r.sources || []).forEach(function (s) { byN[s.n] = s; });
+        txt.split("\n").forEach(function (line) {
+            if (!line.trim()) return;
+            var p = el("p", "ai-ans");
+            line.split(/(\s?\[\d{1,2}\])/).forEach(function (part) {
+                var m = part.match(/\[(\d{1,2})\]/);
+                if (!m) { p.appendChild(document.createTextNode(part)); return; }
+                var s = byN[+m[1]];
+                var sup = button("ai-cite", m[1], function () { if (s && s.day) jumpDay(s.day); else if (s && s.url) window.open(s.url, "_blank", "noopener"); }, s ? s.title : "");
+                p.appendChild(sup);
+            });
+            bubble.body.appendChild(p);
+        });
+        var src = (r.sources || []).filter(function (s) { return s.cited; });
+        if (!src.length) src = r.sources || [];
+        if (src.length) {
+            var ul = el("ul", "ai-src");
+            src.forEach(function (s) {
+                var li = el("li");
+                li.appendChild(el("span", "ai-src__n", String(s.n)));
+                if (s.day) li.appendChild(button("ai-src__day", "Ngày " + s.day + " trong lịch của bạn", function () { jumpDay(s.day); }));
+                else if (s.url) {
+                    var a = el("a", null, s.title);
+                    a.href = s.url;
+                    a.target = "_blank";
+                    a.rel = "noopener";
+                    li.appendChild(a);
+                } else li.appendChild(el("span", null, s.title));
+                if (s.trip && !s.day) li.appendChild(el("small", null, " · từ chuyến của bạn"));
+                ul.appendChild(li);
+            });
+            bubble.body.appendChild(ul);
+        }
+        (r.suggest || []).forEach(function (x) {
+            var a = el("a", "ai-chip", x.title);
+            a.href = x.url;
+            bubble.body.appendChild(a);
+        });
+        var meta = el("p", "ai-small", r.refused ? "La bàn không đoán khi thiếu căn cứ." : "Chỉ trả lời từ lịch đã lưu và cẩm nang đã duyệt của Travela. Lịch không đổi.");
+        bubble.body.appendChild(meta);
+    }
+    function jumpDay(d) {
+        var sec = document.querySelector('#tpDaysBox .tpx-day[data-day="' + d + '"]');
+        if (!sec) return;
+        if (small()) setOpen(false);
+        sec.scrollIntoView({ behavior: "smooth", block: "start" });
+        sec.classList.add("ai-flash-day");
+        setTimeout(function () { sec.classList.remove("ai-flash-day"); }, 1500);
     }
 
     /* ---------------- thẻ đề xuất ---------------- */

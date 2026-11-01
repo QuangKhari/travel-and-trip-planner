@@ -1,7 +1,7 @@
 @include('clients.blocks.header')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=21">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai.css') }}?v=3">
 
 {{-- /len-ke-hoach/{id}. Biến: $payload (TripPlanner::payload), $client (dữ liệu cho planner.js), $role, $members, $tourFit.
      Bố cục "Timeline + Bản đồ" (tham khảo Wanderlog: lịch theo ngày cạnh bản đồ; Roadtrippers: bản đồ lớn, tuyến nối các điểm, thêm điểm dừng theo danh mục).
@@ -318,7 +318,7 @@
         <aside class="ai-co" id="aiCo" aria-labelledby="aiCoH" hidden>
             <header class="ai-co__h">
                 <span class="ai-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.6"/><path d="M12 4.5 14.2 12 12 19.5 9.8 12Z" fill="#e9a23b"/><path d="M12 12 14.2 12 12 19.5Z" fill="#0d6f6a"/></svg></span>
-                <div><b id="aiCoH">La bàn</b><small>Đề xuất cho chuyến này · bạn duyệt rồi mới áp dụng</small></div>
+                <div><b id="aiCoH">La bàn</b><small>Hỏi hoặc nhờ sửa chuyến này · lịch chỉ đổi khi bạn bấm Áp dụng</small></div>
                 <button type="button" class="tpx-icon" id="aiCoClose" aria-label="Đóng La bàn"><i class="fas fa-times" aria-hidden="true"></i></button>
             </header>
             <div class="ai-co__ctx" id="aiCoCtx"></div>
@@ -328,7 +328,7 @@
                 <div class="ai-co__sug" id="aiCoSug"></div>
                 <form class="ai-co__box" id="aiCoForm">
                     <span class="ai-co__chips" id="aiCoChips"></span>
-                    <input id="aiCoQ" maxlength="400" autocomplete="off" placeholder="Ví dụ: ngày 2 nhẹ hơn, thêm quán cà phê…" aria-label="Yêu cầu cho La bàn">
+                    <input id="aiCoQ" maxlength="400" autocomplete="off" placeholder="Ví dụ: ngày 2 nhẹ hơn · cần mang áo mưa không?" aria-label="Yêu cầu cho La bàn">
                     <button type="button" class="ai-co__icon" id="aiCoPick" aria-pressed="false" title="Chạm vào một mục trong lịch để nhắc tới nó" aria-label="Chọn mục trong lịch">@</button>
                     <button type="submit" class="ai-co__icon ai-co__icon--send" aria-label="Gửi"><i class="fas fa-paper-plane" aria-hidden="true"></i></button>
                 </form>
@@ -381,7 +381,7 @@
         'feedbackUrl' => route('planner.ai.feedback', ['id' => $t['id']])] : null], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
 <script src="{{ asset('clients/assets/js/planner-ai-explain.js') }}?v=1" defer></script>
 @if ($aiCopilotOn)
-    <script src="{{ asset('clients/assets/js/planner-ai-copilot.js') }}?v=1" defer></script>
+    <script src="{{ asset('clients/assets/js/planner-ai-copilot.js') }}?v=2" defer></script>
 @endif
 
 @include('clients.blocks.footer')

@@ -6,6 +6,7 @@
     <div class="page-title"><div class="title_left"><h3>Nhật ký <small>Hỏi đáp</small></h3></div>
         <div class="title_right text-right"><a class="btn btn-default" href="{{ route('admin.chat.export', request()->query()) }}">Xuất CSV</a></div></div>
     <div class="clearfix"></div>
+    @include('admin.chat.tabs', ['tab' => 'chat'])
     <div class="x_panel"><div class="x_content">
         <div class="row text-center">
             <div class="col-md-2"><h3>{{ $s->total }}</h3>câu hỏi</div>
@@ -23,7 +24,7 @@
 
     <div class="x_panel"><div class="x_content">
         <form method="GET" class="form-inline" style="margin-bottom:12px">
-            <select name="f" class="form-control">@foreach (['' => 'Tất cả', 'refused' => 'Bị từ chối', 'uncited' => 'Trả lời không dẫn nguồn', 'error' => 'Có lỗi', 'cached' => 'Từ bộ nhớ đệm'] as $k => $l)<option value="{{ $k }}" @selected($f === $k)>{{ $l }}</option>@endforeach</select>
+            <select name="f" class="form-control">@foreach (['' => 'Tất cả', 'refused' => 'Bị từ chối', 'uncited' => 'Trả lời không dẫn nguồn', 'error' => 'Có lỗi', 'cached' => 'Từ bộ nhớ đệm', 'trip' => 'Hỏi về chuyến (La bàn)'] as $k => $l)<option value="{{ $k }}" @selected($f === $k)>{{ $l }}</option>@endforeach</select>
             <input class="form-control" name="q" value="{{ $search }}" placeholder="Tìm câu hỏi">
             <input type="date" class="form-control" name="from" value="{{ $from }}"> – <input type="date" class="form-control" name="to" value="{{ $to }}">
             <button class="btn btn-default">Lọc</button>
@@ -34,7 +35,7 @@
             <td>{{ $r->question }}@if ($r->answer)<details><summary class="text-muted">xem trả lời</summary><div style="white-space:pre-wrap">{{ $r->answer }}</div></details>@endif</td>
             <td>@if ($r->refused)<span class="label label-warning">từ chối</span>@elseif ($r->cited)<span class="label label-success">dẫn nguồn</span>@else<span class="label label-default">không dẫn nguồn</span>@endif
                 @if ($r->cached)<span class="label label-info">cache</span>@endif @if ($r->error)<span class="label label-danger" title="{{ $r->error }}">lỗi</span>@endif</td>
-            <td>{{ $r->engine }}</td><td>{{ $r->latencyMs }}</td></tr>@endforeach
+            <td>{{ $r->engine }}@if ($r->mode === 'trip') <span class="label label-primary">chuyến</span>@endif</td><td>{{ $r->latencyMs }}</td></tr>@endforeach
         </tbody></table>
         {{ $rows->links() }}
     </div></div>

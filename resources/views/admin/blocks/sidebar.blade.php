@@ -95,7 +95,7 @@
                                 @if ($badge['contact'] > 0)<span class="ad-pill">{{ $badge['contact'] }}</span>@endif
                             </a>
                         </li>
-                        <li class="{{ $on('admin.chat*') ? 'ad-on' : '' }}"><a href="{{ route('admin.chat') }}"><i class="fa fa-comments"></i> Nhật ký hỏi đáp</a></li>
+                        <li class="{{ $on('admin.chat*') ? 'ad-on' : '' }}"><a href="{{ route('admin.chat') }}"><i class="fa fa-comments"></i> Nhật ký hỏi đáp &amp; AI</a></li>
                     </ul>
 
                     <h3>Hệ thống</h3>

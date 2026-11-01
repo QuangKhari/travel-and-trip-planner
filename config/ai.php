@@ -16,6 +16,7 @@ return [
         'brief' => (bool) env('AI_FEATURE_BRIEF', true),       // F1: hiểu câu mô tả chuyến đi, điền form
         'explain' => (bool) env('AI_FEATURE_EXPLAIN', true),   // F2: tóm tắt và giải thích lịch
         'copilot' => (bool) env('AI_FEATURE_COPILOT', true),   // F3: La bàn Copilot (sửa lịch bằng lời, engine kiểm chứng)
+        'ask' => (bool) env('AI_FEATURE_ASK', true),           // F5: hỏi về chuyến trong ngăn La bàn (dùng AskService + hạn mức của Hỏi đáp)
     ],
 
     // anthropic | openai | none. Mặc định dùng chung driver với RAG để chỉ cần một khóa API.
