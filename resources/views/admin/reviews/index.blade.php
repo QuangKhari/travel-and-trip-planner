@@ -85,6 +85,14 @@
 
                                         </div>
 
+                                        <div class="col-md-3">
+                                            <select name="visibility" class="form-control">
+                                                <option value="">Mọi đánh giá</option>
+                                                <option value="shown" @selected($visibility === 'shown')>Đang hiện</option>
+                                                <option value="hidden" @selected($visibility === 'hidden')>Đang ẩn ({{ $stats['hidden'] }})</option>
+                                            </select>
+                                        </div>
+
                                         <div class="col-md-2">
 
                                             <button class="btn btn-primary">
@@ -151,6 +159,7 @@
                                                 <td>
 
                                                     {{ Str::limit($review->comment, 60) }}
+                                                    @if (!empty($review->isHidden))<span class="label label-default">đang ẩn</span>@endif
 
                                                 </td>
 
@@ -169,6 +178,14 @@
                                                             <i class="fa fa-eye"></i>
                                                         </a>
 
+                                                        <form action="{{ route('admin.reviews.toggle', $review->reviewId) }}" method="POST" style="margin:0">
+                                                            @csrf
+                                                            <button type="submit" class="btn btn-xs {{ !empty($review->isHidden) ? 'btn-success' : 'btn-warning' }}"
+                                                                title="{{ !empty($review->isHidden) ? 'Hiện lại' : 'Ẩn khỏi trang khách' }}">
+                                                                <i class="fa {{ !empty($review->isHidden) ? 'fa-eye' : 'fa-eye-slash' }}"></i>
+                                                            </button>
+                                                        </form>
+
                                                         <form action="{{ route('admin.reviews.destroy', $review->reviewId) }}"
                                                                 method="POST"
                                                                 style="margin:0">
@@ -178,7 +195,7 @@
 
                                                             <button type="submit"
                                                                 class="btn btn-danger btn-xs"
-                                                                onclick="return confirm('Xóa đánh giá này?')">
+                                                                onclick="return confirm('Xóa hẳn đánh giá này? Nên dùng nút Ẩn để giữ lịch sử.')">
                                                                 <i class="fa fa-trash"></i>
                                                             </button>
 

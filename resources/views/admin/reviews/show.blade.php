@@ -168,11 +168,11 @@
                                     {{ $review->tour->title ?? 'N/A' }}
                                 </p>
 
-                                @if(isset($review->tour->price))
+                                @if(isset($review->tour->priceAdult))
                                     <p>
-                                        <strong>Giá tour:</strong><br>
+                                        <strong>Giá người lớn:</strong><br>
 
-                                        {{ number_format($review->tour->price, 0, ',', '.') }}
+                                        {{ number_format($review->tour->priceAdult, 0, ',', '.') }}
                                         VNĐ
                                     </p>
                                 @endif
@@ -191,9 +191,17 @@
 
                             <div class="x_content">
 
+                                <form action="{{ route('admin.reviews.toggle', $review->reviewId) }}" method="POST" style="margin-bottom:8px">
+                                    @csrf
+                                    <button type="submit" class="btn btn-block {{ !empty($review->isHidden) ? 'btn-success' : 'btn-warning' }}">
+                                        <i class="fa {{ !empty($review->isHidden) ? 'fa-eye' : 'fa-eye-slash' }}"></i>
+                                        {{ !empty($review->isHidden) ? 'Hiện lại đánh giá' : 'Ẩn khỏi trang khách' }}
+                                    </button>
+                                </form>
+
                                 <form action="{{ route('admin.reviews.destroy', $review->reviewId) }}"
                                       method="POST"
-                                      onsubmit="return confirm('Bạn có chắc muốn xóa đánh giá này?')">
+                                      onsubmit="return confirm('Xóa hẳn đánh giá này? Nên dùng nút Ẩn để giữ lịch sử.')">
 
                                     @csrf
                                     @method('DELETE')

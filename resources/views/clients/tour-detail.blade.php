@@ -13,7 +13,8 @@
         ->diffInDays($start->copy()->startOfDay(), false);
     $weekdays = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
 
-    $soldOut = $tourDetail->quantity <= 0 || $daysToGo < 0;
+    // L-B-23: đúng ngày khởi hành cũng không đặt được nữa (trang đặt và BookingService đều từ chối)
+    $soldOut = $tourDetail->quantity <= 0 || $daysToGo <= 0;
     $avg = (float) ($reviewStats->averageRating ?? 0);
     $reviewCount = (int) ($reviewStats->reviewCount ?? 0);
     $timelineCount = $tourDetail->timeline->count();

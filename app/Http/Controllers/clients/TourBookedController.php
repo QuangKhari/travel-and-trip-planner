@@ -87,8 +87,14 @@ class TourBookedController extends Controller
                 return;
             }
 
+            // Đơn đã thanh toán: hủy tại đây sẽ mất dấu khoản tiền khách đã trả (admin cũng không hủy trực tiếp đơn đã thanh toán)
+            if (DB::table('tbl_checkout')->where('bookingId', $bookingId)->value('paymentStatus') === 'y') {
+                $refusal = 'Đơn đã thanh toán. Vui lòng liên hệ Travela để được hủy và hoàn tiền.';
+                return;
+            }
+
             // Đổi trạng thái, trả chỗ đúng một lần và nhả mã giảm giá
-            $bookings->cancelLocked($booking);
+            $bookings->cancelLocked($booking, 'customer');
 
             $cancelled = true;
         });

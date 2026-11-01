@@ -58,7 +58,7 @@
         {{-- Tiến trình đơn (đơn đã hủy thì hiện thông báo thay vì tiến trình) --}}
         @if ($status === 'c')
             <div class="bk-alert bk-alert--bad" role="status">
-                <b>Đơn này đã được hủy.</b> Chỗ đã được trả lại cho tour. Bạn có thể
+                <b>Đơn này đã được hủy{{ ['expired' => ' vì quá hạn giữ chỗ (chưa đến văn phòng xác nhận)', 'admin' => ' bởi Travela', 'customer' => ' theo yêu cầu của bạn'][$tour_booked->cancelReason ?? ''] ?? '' }}.</b> Chỗ đã được trả lại cho tour. Bạn có thể
                 <a href="{{ route('tours') }}">xem các tour khác</a> bất cứ lúc nào.
             </div>
         @else

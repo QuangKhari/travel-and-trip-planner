@@ -34,10 +34,11 @@
     try {
         $trust['tours'] = (int) DB::table('tbl_tours')->where('availability', 1)->count();
         $trust['completed'] = (int) DB::table('tbl_booking')->where('bookingStatus', 'f')->count();
-        $trust['reviews'] = (int) DB::table('tbl_reviews')->count();
-        $trust['rating'] = round((float) DB::table('tbl_reviews')->avg('rating'), 1);
+        $trust['reviews'] = (int) \App\Support\ReviewScope::visible(DB::table('tbl_reviews'))->count();
+        $trust['rating'] = round((float) \App\Support\ReviewScope::visible(DB::table('tbl_reviews'))->avg('rating'), 1);
         $review = DB::table('tbl_reviews as r')
             ->join('tbl_users as u', 'u.userId', '=', 'r.userId')
+            ->when(\App\Support\ReviewScope::enabled(), fn($q) => $q->where('r.isHidden', 0))
             ->whereNotNull('r.comment')
             ->where('r.rating', '>=', 4)
             ->orderByDesc('r.rating')

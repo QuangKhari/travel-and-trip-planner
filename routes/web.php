@@ -115,6 +115,7 @@ Route::get('/chuyen-di/{token}', [PlannerController::class, 'shared'])->where('t
 Route::get('/explore', [ExploreController::class, 'index'])->middleware('throttle:60,1,explore')->name('explore');
 Route::get('/travel-guides', [TravelGuidesController::class, 'index'])->name('team');
 Route::get('/tour-detail/{id}', [TourDetailController::class, 'index'])->whereNumber('id')->name('tour-detail');
+Route::get('/tour-detail/{id}/danh-gia', [TourDetailController::class, 'moreReviews'])->whereNumber('id')->middleware('throttle:60,1,tour-reviews')->name('tour-reviews');
 Route::get('/blogs', [BlogController::class, 'index'])->name('blogs');
 Route::get('/blog-detail/{slug?}', [BlogDetailController::class, 'index'])->name('blog-detail');
 Route::get('/search', [SearchController::class, 'index'])->middleware('throttle:60,1,search')->name('search');
@@ -253,6 +254,7 @@ Route::prefix('admin')->group(function () {
         Route::post('/delete-tour', [ToursManagementController::class, 'deleteTour'])->name('admin.delete-tour');
         Route::post('/toggle-tour', [ToursManagementController::class, 'toggleTour'])->name('admin.toggle-tour');
         Route::post('/add-temp-images', [ToursManagementController::class, 'uploadTempImagesTours'])->name('admin.add-temp-images');
+        Route::post('/delete-temp-image', [ToursManagementController::class, 'deleteTempImage'])->name('admin.delete-temp-image');
         Route::post('/upload-tour-image', [ToursManagementController::class, 'uploadTourImage'])->name('admin.upload-tour-image');
         Route::post('/add-timeline', [ToursManagementController::class, 'addTimeline'])->name('admin.add-timeline');
 
@@ -333,6 +335,8 @@ Route::prefix('admin')->group(function () {
 
         //Reviews - xóa
         Route::delete('/reviews/{id}', [ReviewManagementController::class, 'destroy'])->name('admin.reviews.destroy');
+        // Ẩn / hiện thay vì xóa cứng (L-F-10): giữ lịch sử, khách không thấy, không tính vào điểm trung bình
+        Route::post('/reviews/{id}/toggle', [ReviewManagementController::class, 'toggle'])->whereNumber('id')->name('admin.reviews.toggle');
 
         //Management Staff - manager thêm/xóa staff
         Route::get('/admin', [AdminManagementController::class, 'index'])->name('admin.admin');

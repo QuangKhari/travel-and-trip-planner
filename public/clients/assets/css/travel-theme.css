@@ -2883,6 +2883,19 @@ select:focus,
     color: #fff;
     cursor: not-allowed;
 }
+.td-btn--ghost {
+    background: #fff;
+    color: var(--tv-teal);
+    border: 1px solid var(--tv-teal);
+}
+.td-btn--ghost:hover {
+    background: var(--tv-teal);
+    color: #fff;
+}
+.td-more-reviews {
+    display: flex;
+    margin: 14px auto 0;
+}
 
 /* tour gợi ý */
 .td-related {

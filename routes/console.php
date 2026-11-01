@@ -10,8 +10,11 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Dọn ảnh tour mồ côi (file không còn được tbl_images tham chiếu, cũ hơn 24h) - chạy hằng tuần.
-Schedule::command('media:cleanup-orphans')->weekly()->withoutOverlapping();
+// Dọn ảnh tour mồ côi, ảnh tạm quá hạn và tour nháp bỏ dở (chúng chiếm hạn mức ảnh) - mỗi đêm.
+Schedule::command('media:cleanup-orphans')->dailyAt('04:00')->withoutOverlapping();
+
+// Tự hoàn tất đơn đã thanh toán của tour đã kết thúc, để khách đánh giá được ngay (L-F-11) - mỗi đêm.
+Schedule::command('bookings:complete-finished')->dailyAt('00:30')->withoutOverlapping();
 
 // Hủy đơn quá hạn giữ chỗ, trả chỗ và nhả mã giảm giá - mỗi 5 phút
 Schedule::command('bookings:expire-holds')->everyFiveMinutes()->withoutOverlapping();

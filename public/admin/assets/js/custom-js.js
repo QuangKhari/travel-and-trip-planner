@@ -174,6 +174,14 @@ $(document).ready(function () {
                     timeline.forEach((item) => {
                         editTimelineEntry(item);
                     });
+
+                    // Đổi ngày tour thì số ngày lộ trình phải đổi theo: cho thêm ngày / bớt ngày cuối ngay trong modal
+                    $("#step-3").append(
+                        '<div class="timeline-edit-tools" style="margin-top:14px;display:flex;gap:8px">' +
+                            '<button type="button" class="btn btn-round btn-info" id="edit-add-day">+ Thêm ngày</button>' +
+                            '<button type="button" class="btn btn-round btn-default" id="edit-remove-day">Bớt ngày cuối</button>' +
+                            "</div>",
+                    );
                 } else {
                     toastr.error(response.message);
 
@@ -196,7 +204,9 @@ $(document).ready(function () {
         }
 
         dropzoneOldImages.files.forEach(function (file) {
-            if (file.status !== "accepted" && file.status !== "complete") {
+            // L-E-17: Dropzone 4.x gán "success" cho ảnh vừa tải xong (ảnh cũ do code gán "accepted").
+            // Trước đây chỉ nhận accepted / complete nên ảnh mới tải ở modal Sửa bị bỏ qua khi Lưu.
+            if (["accepted", "complete", "success"].indexOf(file.status) < 0) {
                 return;
             }
 
@@ -263,6 +273,16 @@ $(document).ready(function () {
 
         if (!finishStep1) {
             toastr.error("Vui lòng kiểm tra lại thông tin Bước 1.");
+            return;
+        }
+
+        // Còn ảnh đang tải: đợi xong rồi mới Lưu, không thì ảnh đó bị bỏ sót
+        if (
+            dropzoneOldImages &&
+            (dropzoneOldImages.getUploadingFiles().length > 0 ||
+                dropzoneOldImages.getQueuedFiles().length > 0)
+        ) {
+            toastr.warning("Ảnh đang tải lên, đợi xong rồi bấm Lưu.");
             return;
         }
 
@@ -490,7 +510,12 @@ $(document).ready(function () {
     `;
 
         // Thêm HTML tĩnh trước, không đưa dữ liệu từ database vào template HTML
-        $("#step-3").append(timelineEntry);
+        var $tools = $("#step-3 .timeline-edit-tools");
+        if ($tools.length) {
+            $tools.before(timelineEntry);
+        } else {
+            $("#step-3").append(timelineEntry);
+        }
 
         // Gán dữ liệu bằng .val() để dữ liệu không được HTML parser xử lý
         $(`#day-${timelineCounter_edit}`).val(title);
@@ -505,6 +530,23 @@ $(document).ready(function () {
 
         timelineCounter_edit++;
     }
+
+    $(document).on("click", "#edit-add-day", function () {
+        editTimelineEntry();
+    });
+    $(document).on("click", "#edit-remove-day", function () {
+        var $last = $("#step-3 .timeline-entry").last();
+        if ($("#step-3 .timeline-entry").length <= 1 || !$last.length) {
+            toastr.warning("Lộ trình phải có ít nhất 1 ngày.");
+            return;
+        }
+        var id = $last.find("textarea").attr("id");
+        if (CKEDITOR.instances[id]) {
+            CKEDITOR.instances[id].destroy();
+        }
+        $last.remove();
+        timelineCounter_edit--;
+    });
 
     // Khi modal đóng
     $("#edit-tour-modal").on("hidden.bs.modal", function () {
@@ -632,11 +674,22 @@ $(document).ready(function () {
         addTimelineEntry();
     });
 
-    // Xử lý khi nhấn nút xóa timeline
+    // Xử lý khi nhấn nút xóa timeline. L-E-18: chỉ xóa NGÀY CUỐI để số ngày luôn liên tục (1..n);
+    // trước đây xóa ngày giữa làm hỏng thứ tự và không còn cách nào hoàn tất tour ngoài tải lại trang.
     $("#step-3").on("click", ".remove-btn", function () {
-        const id = $(this).data("id");
+        const id = Number($(this).data("id"));
 
+        if (id !== timelineCounter - 1) {
+            toastr.warning("Chỉ xóa được ngày cuối cùng. Muốn bỏ ngày giữa, hãy sửa nội dung của ngày đó.");
+            return;
+        }
+
+        const editorId = `itinerary-${id}`;
+        if (CKEDITOR.instances[editorId]) {
+            CKEDITOR.instances[editorId].destroy();
+        }
         $(`#timeline-entry-${id}`).remove();
+        timelineCounter--;
     });
 
     // Thêm nút thêm timeline vào div#step-3

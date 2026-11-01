@@ -3,7 +3,13 @@
     $payMethod = ['office-payment' => 'Tại văn phòng', 'vnpay' => 'VNPay', 'momo-payment' => 'MoMo', 'paypal-payment' => 'PayPal'];
 @endphp
 @foreach ($list_booking as $booking)
-    @php [$sClass, $sLabel] = $statusMap[$booking->bookingStatus] ?? ['mute', $booking->bookingStatus]; @endphp
+    @php
+        [$sClass, $sLabel] = $statusMap[$booking->bookingStatus] ?? ['mute', $booking->bookingStatus];
+        // L-B-24: phân biệt khách hủy / admin hủy / hết hạn giữ chỗ
+        if ($booking->bookingStatus === 'c' && !empty($booking->cancelReason)) {
+            $sLabel .= ' (' . (['customer' => 'khách hủy', 'admin' => 'admin hủy', 'expired' => 'hết hạn giữ chỗ'][$booking->cancelReason] ?? $booking->cancelReason) . ')';
+        }
+    @endphp
     <tr data-status="{{ $booking->bookingStatus }}" data-pay="{{ $booking->paymentStatus }}">
         <td style="min-width:200px"><b>{{ \Illuminate\Support\Str::limit($booking->title, 48) }}</b></td>
         <td>{{ $booking->fullName }}</td>

@@ -126,7 +126,9 @@ class ToursManagementController extends Controller
             'startDate'   => $start->format('Y-m-d'),
             'endDate'     => $end->format('Y-m-d'),
             'video_url'   => \App\Support\TourVideo::normalize($request->input('video_url')),
-            $this->extraTourFields($request),
+            // L-E-15: phải trải mảng ("..."), không thì PHP coi đây là phần tử khóa 0 -> SQL "Unknown column '0'" (lỗi 500)
+            ...$this->extraTourFields($request),
+            ...$this->durationField($days),
         ], null];
     }
 
@@ -144,6 +146,12 @@ class ToursManagementController extends Controller
         };
 
         return ['includes' => $clean($request->input('includes')), 'excludes' => $clean($request->input('excludes'))];
+    }
+
+    /** Số ngày thật của tour (L-D-11), chỉ khi đã chạy migration 2026_11_21_000001. */
+    private function durationField(int $days): array
+    {
+        return \Illuminate\Support\Facades\Schema::hasColumn('tbl_tours', 'durationDays') ? ['durationDays' => $days] : [];
     }
 
 
@@ -228,23 +236,14 @@ class ToursManagementController extends Controller
         }
 
         ksort($timelines);
+        // L-E-18: form có thể còn khóa day-1, day-3 (đã xóa một mục giữa chừng): lấy đúng thứ tự trên form rồi đánh số lại 1..n
+        $timelines = $timelines ? array_combine(range(1, count($timelines)), array_values($timelines)) : [];
 
         if (empty($timelines)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Vui lòng nhập lộ trình cho tour. Tour vẫn đang ở trạng thái ẩn.'
             ], 422);
-        }
-
-        $timelineDays = array_keys($timelines);
-
-        foreach ($timelineDays as $index => $day) {
-            if ($day !== $index + 1) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Ngày trong lộ trình phải bắt đầu từ ngày 1 và liên tục.'
-                ], 422);
-            }
         }
 
         try {
@@ -487,6 +486,44 @@ class ToursManagementController extends Controller
     }
 
     /**
+     * Gỡ một ảnh tạm khỏi tour NHÁP (Dropzone bước 2, nút "Xóa ảnh"). Trước đây chỉ gỡ trên giao diện: ảnh vẫn nằm trong
+     * tbl_temp_images nên vẫn được đăng cùng tour và vẫn tính vào hạn mức (L-E-19).
+     */
+    public function deleteTempImage(Request $request)
+    {
+        $v = Validator::make($request->all(), [
+            'tourId'   => 'required|integer|min:1',
+            'filename' => 'required|string|max:255',
+        ]);
+        if ($v->fails()) {
+            return response()->json(['success' => false, 'message' => $v->errors()->first()], 422);
+        }
+        $tourId = (int) $request->input('tourId');
+        $stem = (string) $request->input('filename');
+
+        $result = DB::transaction(function () use ($tourId, $stem) {
+            $tour = DB::table('tbl_tours')->where('tourId', $tourId)->lockForUpdate()->first();
+            if (!$tour) {
+                return [404, 'Tour không tồn tại.', false];
+            }
+            if ((int) $tour->availability === 1) {
+                return [409, 'Tour đã đăng, hãy sửa ảnh trong danh sách tour.', false];
+            }
+            $deleted = DB::table('tbl_temp_images')->where('tourId', $tourId)->where('imageTempURL', $stem)->delete();
+            $stillUsed = DB::table('tbl_images')->where('imageURL', $stem)->exists();
+
+            return [200, $deleted ? 'Đã gỡ ảnh.' : 'Ảnh không còn trong tour.', $deleted && !$stillUsed];
+        });
+        [$status, $message, $dropFile] = $result;
+        if ($dropFile && $this->images->isStemForTour($stem, $tourId)) {
+            $this->images->delete($stem);   // xóa file SAU khi transaction xong
+        }
+        $left = DB::table('tbl_temp_images')->where('tourId', $tourId)->distinct()->count('imageTempURL');
+
+        return response()->json(['success' => $status === 200, 'message' => $message, 'remaining' => $left], $status);
+    }
+
+    /**
      * Kiểm tra request + lưu ảnh qua TourImageService.
      *
      * @return array{0:?array,1:?\Illuminate\Http\JsonResponse} [meta, lỗi]
@@ -565,7 +602,8 @@ class ToursManagementController extends Controller
             'tourId'      => 'required|integer|exists:tbl_tours,tourId',
             'name'        => 'required|string|max:255',
             'destination' => 'required|string|max:255',
-            'destinationId' => 'nullable|integer|exists:tbl_destinations,destinationId',
+            // L-E-21: như Thêm tour: tour phải gắn điểm đến (không thì rơi khỏi lọc cảm hứng, Planner, Hỏi đáp)
+            'destinationId' => 'required|integer|exists:tbl_destinations,destinationId',
             'domain'      => 'required|in:b,t,n',
             'number'      => 'required|integer|min:0|max:100000',
             'original_number' => 'nullable|integer|min:0',
@@ -583,6 +621,8 @@ class ToursManagementController extends Controller
             'timeline'    => 'nullable|array',
         ], [
             'tourId.exists'        => 'Không tìm thấy tour.',
+            'destinationId.required' => 'Vui lòng chọn điểm đến từ danh sách.',
+            'destinationId.exists'   => 'Điểm đến không tồn tại.',
             'name.required'        => 'Vui lòng nhập tên tour.',
             'destination.required' => 'Vui lòng nhập điểm đến.',
             'domain.in'            => 'Khu vực không hợp lệ.',
@@ -632,13 +672,14 @@ class ToursManagementController extends Controller
             'priceAdult'  => $request->input('price_adult'),
             'priceChild'  => $request->input('price_child'),
             'destination' => $request->input('destination'),
-            'destinationId' => $request->input('destinationId') ?: null,
+            'destinationId' => (int) $request->input('destinationId'),
             'domain'      => $request->input('domain'),
             'startDate'   => $start->format('Y-m-d'),
             'endDate'     => $end->format('Y-m-d'),
             'time'        => "{$days} ngày {$nights} đêm",
             'video_url'   => \App\Support\TourVideo::normalize($request->input('video_url')),
-            $this->extraTourFields($request),
+            ...$this->extraTourFields($request),
+            ...$this->durationField($days),
         ];
 
         $images = $request->input('images');
@@ -665,12 +706,13 @@ class ToursManagementController extends Controller
             $title = $timeline['title'] ?? '';
             $itinerary = $timeline['itinerary'] ?? '';
 
-            if (!is_string($title) || mb_strlen($title) > 255) {
+            if (!is_string($title) || trim($title) === '' || mb_strlen($title) > 255) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Tiêu đề ngày trong lộ trình không hợp lệ.',
+                    'message' => 'Mỗi ngày trong lộ trình cần có tiêu đề (tối đa 255 ký tự).',
                 ], 422);
             }
+            $timeline['title'] = trim($title);
 
             if (!is_string($itinerary)) {
                 return response()->json([
@@ -783,6 +825,15 @@ class ToursManagementController extends Controller
                     'success' => false,
                     'status' => 409,
                     'message' => 'Tour đã có lịch sử booking nên không thể thay đổi ngày khởi hành.',
+                ];
+            }
+
+            // L-E-21: tour đang hiện mà dời ngày khởi hành về hôm nay / quá khứ thì khách thấy tour nhưng không đặt được
+            if ($dateChanged && (int) $tour->availability === 1 && $dataTours['startDate'] <= now()->toDateString()) {
+                return [
+                    'success' => false,
+                    'status' => 422,
+                    'message' => 'Tour đang hiển thị nên ngày khởi hành phải sau hôm nay. Muốn lưu ngày cũ, hãy ẩn tour trước.',
                 ];
             }
 

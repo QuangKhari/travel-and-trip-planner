@@ -40,7 +40,7 @@ class Home extends Model
             ->get(['tourId', 'title'])
             ->groupBy('tourId');
 
-        $ratingsByTour = DB::table('tbl_reviews')
+        $ratingsByTour = \App\Support\ReviewScope::visible(DB::table('tbl_reviews'))
             ->whereIn('tourId', $tourIds)
             ->groupBy('tourId')
             ->select('tourId', DB::raw('AVG(rating) as avgRating'), DB::raw('COUNT(*) as ratingCount'))

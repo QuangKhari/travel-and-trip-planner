@@ -120,8 +120,11 @@ class BookingController extends Controller
             ? 'Đơn này đã được ghi nhận trước đó. Mã đơn: '
             : 'Đặt tour thành công! Mã đơn: ';
 
+        // hạn giữ chỗ thật (48 giờ, nhưng không quá 0h ngày khởi hành)
+        $hold = DB::table('tbl_booking')->where('bookingId', $result['bookingId'])->value('holdExpiresAt');
         toastr()->success($prefix . $result['bookingCode']
-            . '. Chỗ được giữ trong ' . (int) config('travela.hold_hours', 48) . ' giờ, vui lòng đến văn phòng để xác nhận.');
+            . '. Chỗ được giữ đến ' . ($hold ? \Carbon\Carbon::parse($hold)->format('H:i d/m/Y') : (int) config('travela.hold_hours', 48) . ' giờ nữa')
+            . ', vui lòng đến văn phòng để xác nhận.');
 
         // UX: đưa người dùng tới trang chi tiết đơn vừa tạo (trước đây về danh sách tour)
         $checkoutId = (int) DB::table('tbl_checkout')

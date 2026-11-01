@@ -32,27 +32,16 @@
         </div>
     </div>
 
-    <div class="td-rlist">
-        @foreach ($getReviews as $review)
-            <article class="td-review">
-                <img src="{{ \App\Support\Avatar::url($review->avatar) }}" alt="" loading="lazy">
-                <div>
-                    <header>
-                        <h4>{{ $review->fullName }}</h4>
-                        <time>{{ \Carbon\Carbon::parse($review->timestamp)->format('d/m/Y') }}</time>
-                    </header>
-                    <div class="td-stars-static td-stars-static--sm">
-                        @for ($i = 1; $i <= 5; $i++)
-                            <i class="{{ $review->rating && $i <= $review->rating ? 'fas' : 'far' }} fa-star"></i>
-                        @endfor
-                    </div>
-                    @if (!empty($review->comment))
-                        <p>{{ $review->comment }}</p>
-                    @endif
-                </div>
-            </article>
-        @endforeach
+    <div class="td-rlist" id="td-rlist">
+        @include('clients.partials.review-items')
     </div>
+    @if ($count > $getReviews->count() && isset($tourDetail))
+        {{-- L-C-05: phân trang đánh giá --}}
+        <button type="button" class="td-btn td-btn--ghost td-more-reviews" id="td-more-reviews"
+            data-url="{{ route('tour-reviews', ['id' => $tourDetail->tourId]) }}" data-page="2">
+            Xem thêm đánh giá ({{ $count - $getReviews->count() }})
+        </button>
+    @endif
 @else
     <div class="td-noreview">
         <i class="fal fa-comment-alt-lines"></i>

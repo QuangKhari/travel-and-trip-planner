@@ -105,7 +105,8 @@ class BookingService
                 'totalPrice'   => $total,
                 'bookingCode'  => $bookingCode,
                 'requestToken' => $token,
-                'holdExpiresAt' => now()->addHours((int) config('travela.hold_hours', 48)),
+                // giữ chỗ 48 giờ nhưng không quá 0h ngày khởi hành: đặt sát ngày đi thì đơn chưa xác nhận không được "treo" qua ngày đi
+                'holdExpiresAt' => min(now()->addHours((int) config('travela.hold_hours', 48)), \Carbon\Carbon::parse($tour->startDate)->startOfDay()),
             ]));
 
             if ($promotionId !== null) {
@@ -133,12 +134,13 @@ class BookingService
     /**
      * Hủy một đơn: đổi trạng thái, trả chỗ, nhả mã giảm giá.
      * Phải gọi TRONG transaction, sau khi đã khóa dòng đơn (lockForUpdate) và kiểm tra trạng thái.
+     * $reason: customer (khách tự hủy) | admin | expired (hết hạn giữ chỗ). Thống kê phân biệt được các loại hủy (L-B-24).
      */
-    public function cancelLocked(object $booking): void
+    public function cancelLocked(object $booking, string $reason = 'customer'): void
     {
         DB::table('tbl_booking')
             ->where('bookingId', $booking->bookingId)
-            ->update(['bookingStatus' => 'c', 'holdExpiresAt' => null]);
+            ->update(['bookingStatus' => 'c', 'holdExpiresAt' => null] + (self::hasReason() ? ['cancelReason' => $reason] : []));
 
         DB::table('tbl_tours')
             ->where('tourId', $booking->tourId)
@@ -173,13 +175,41 @@ class BookingService
                     && $booking->holdExpiresAt !== null
                     && \Carbon\Carbon::parse($booking->holdExpiresAt)->isPast()
                 ) {
-                    $this->cancelLocked($booking);
+                    $this->cancelLocked($booking, 'expired');
                     $cancelled++;
                 }
             });
         }
 
         return $cancelled;
+    }
+
+    /**
+     * Hoàn tất (f) các đơn đã xác nhận + đã thanh toán của tour đã kết thúc (L-F-11). Trước đây chỉ admin bấm tay từng đơn,
+     * mà khách chỉ đánh giá được khi đơn là f. Đơn chưa thanh toán vẫn để admin xử lý (không đoán).
+     * @return int số đơn đã hoàn tất
+     */
+    public function completeFinished(): int
+    {
+        $today = now()->toDateString();
+        $ids = DB::table('tbl_booking as b')
+            ->join('tbl_tours as t', 't.tourId', '=', 'b.tourId')
+            ->join('tbl_checkout as c', 'c.bookingId', '=', 'b.bookingId')
+            ->where('b.bookingStatus', 'y')->where('c.paymentStatus', 'y')->where('t.endDate', '<', $today)
+            ->pluck('b.bookingId');
+        $done = 0;
+        foreach ($ids as $id) {
+            $done += DB::table('tbl_booking')->where('bookingId', $id)->where('bookingStatus', 'y')->update(['bookingStatus' => 'f']);
+        }
+
+        return $done;
+    }
+
+    private static ?bool $hasReason = null;
+
+    private static function hasReason(): bool
+    {
+        return self::$hasReason ??= \Illuminate\Support\Facades\Schema::hasColumn('tbl_booking', 'cancelReason');
     }
 
     private function newBookingCode(): string

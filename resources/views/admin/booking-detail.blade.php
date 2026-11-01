@@ -123,8 +123,8 @@
                                             <div class="col-md-6">
                                                 <p class="lead">Phương thức thanh toán:</p>
                                                 @if ($invoice_booking->paymentMethod == 'momo-payment')
-                                                    <img src="{{ asset('admin/assets/images/icon/icon_momo.png') }}"
-                                                        class="invoice_payment-method" alt="">
+                                                    {{-- MoMo đã gỡ (L-B-12); đơn cũ vẫn hiện đúng phương thức, không trỏ tới ảnh không còn --}}
+                                                    <span class="badge badge-secondary">MoMo (đơn cũ)</span>
                                                 @elseif ($invoice_booking->paymentMethod == 'banking')
                                                     <i class="fa fa-university"
                                                         style="font-size: 40px; color: #26B99A;"></i>

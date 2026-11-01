@@ -22,12 +22,13 @@ class AboutController extends Controller
             $stats['tours'] = (int) DB::table('tbl_tours')->where('availability', 1)->count();
             $stats['destinations'] = (int) DB::table('tbl_tours')->where('availability', 1)->distinct()->count('destination');
             $stats['completed'] = (int) DB::table('tbl_booking')->where('bookingStatus', 'f')->count();
-            $stats['reviews'] = (int) DB::table('tbl_reviews')->count();
-            $stats['rating'] = round((float) DB::table('tbl_reviews')->avg('rating'), 1);
+            $stats['reviews'] = (int) \App\Support\ReviewScope::visible(DB::table('tbl_reviews'))->count();
+            $stats['rating'] = round((float) \App\Support\ReviewScope::visible(DB::table('tbl_reviews'))->avg('rating'), 1);
 
             // Một đánh giá thật để làm lời trích: điểm cao nhất, có nội dung, mới nhất
             $review = DB::table('tbl_reviews as r')
                 ->join('tbl_users as u', 'u.userId', '=', 'r.userId')
+                ->when(\App\Support\ReviewScope::enabled(), fn($q) => $q->where('r.isHidden', 0))
                 ->whereNotNull('r.comment')
                 ->whereRaw('CHAR_LENGTH(r.comment) >= 20')
                 ->orderByDesc('r.rating')

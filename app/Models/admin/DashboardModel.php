@@ -13,8 +13,11 @@ class DashboardModel extends Model
 
     public function getSummary()
     {
+        // L-F-12: "đang hoạt động" = khách đặt được ngay (cùng điều kiện với danh sách tour phía khách, TourCatalog)
         $tourWorking = DB::table('tbl_tours')
             ->where('availability', 1)
+            ->where('quantity', '>', 0)
+            ->whereDate('startDate', '>', now()->toDateString())
             ->count();
         $countBooking = DB::table('tbl_booking')
             ->where('bookingStatus', '!=', 'c')
@@ -40,6 +43,7 @@ class DashboardModel extends Model
         return DB::table('tbl_tours')
             ->select(DB::raw('domain, COUNT(*) as count'))
             ->whereIn('domain', ['b', 't', 'n'])  // Chỉ lấy các miền có domain b, t, n
+            ->where('availability', 1)            // L-F-12: không đếm tour đang ẩn / nháp
             ->groupBy('domain')  // Nhóm theo domain
             ->get()
             ->pluck('count', 'domain');  // Trả về mảng với key là domain và value là count

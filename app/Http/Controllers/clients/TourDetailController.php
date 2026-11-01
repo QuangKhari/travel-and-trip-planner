@@ -35,8 +35,10 @@ class TourDetailController extends Controller
         $reviewStats = $this->tours->reviewStats($id);
         $breakdown = $this->ratingBreakdown($id);
 
+        // Chỉ hiện form đánh giá cho khách CÓ đơn hoàn tất và chưa đánh giá (máy chủ cũng kiểm lại khi gửi)
         $checkReviewExist = $this->tours->checkReviewExist($id, $userId);
-        $checkDisplay = $checkReviewExist ? 'hide' : '';
+        $completed = $userId && DB::table('tbl_booking')->where('userId', $userId)->where('tourId', $id)->where('bookingStatus', 'f')->exists();
+        $checkDisplay = !$checkReviewExist && $completed ? '' : 'hide';
 
         $related = $this->relatedTours($tourDetail);
 
@@ -126,10 +128,28 @@ class TourDetailController extends Controller
         ]);
     }
 
+    /** "Xem thêm đánh giá" (L-C-05): trang tiếp theo, 10 đánh giá / trang. */
+    public function moreReviews(Request $req, $id)
+    {
+        $page = max(2, min(500, (int) $req->query('page', 2)));
+        $tour = DB::table('tbl_tours')->where('tourId', (int) $id)->where('availability', 1)->exists();
+        if (!$tour) {
+            abort(404);
+        }
+        $getReviews = $this->tours->getReviews((int) $id, $page);
+        $total = (int) ($this->tours->reviewStats((int) $id)->reviewCount ?? 0);
+
+        return response()->json([
+            'html' => view('clients.partials.review-items', compact('getReviews'))->render(),
+            'hasMore' => $page * Tours::REVIEWS_PER_PAGE < $total,
+            'next' => $page + 1,
+        ]);
+    }
+
     /** Số lượt đánh giá theo từng mức sao: [5 => n, 4 => n, ... 1 => n]. */
     private function ratingBreakdown($tourId): array
     {
-        $rows = DB::table('tbl_reviews')
+        $rows = \App\Support\ReviewScope::visible(DB::table('tbl_reviews'))
             ->where('tourId', $tourId)
             ->selectRaw('ROUND(rating) as star, COUNT(*) as total')
             ->groupBy('star')

@@ -42,6 +42,8 @@ return [
     // Dọn ảnh mồ côi: chỉ xóa file chưa được tbl_images tham chiếu và cũ hơn N giờ
     // (để không xóa nhầm ảnh vừa upload trong wizard chưa bấm Hoàn tất).
     'orphan_min_age_hours' => (int) env('MEDIA_ORPHAN_MIN_AGE_HOURS', 24),
+    // Tour nháp (wizard Thêm tour bỏ dở, chưa từng đăng, không có đơn) cũ hơn N ngày thì media:cleanup-orphans xóa hẳn
+    'draft_max_age_days' => (int) env('MEDIA_DRAFT_MAX_AGE_DAYS', 7),
 
         // ---- Ảnh đại diện (công khai, disk = media.disk) ----
     'avatar' => [

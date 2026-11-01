@@ -42,7 +42,7 @@ class TourCatalog
             ->groupBy('tourId');
 
         $q = DB::table('tbl_tours')
-            ->leftJoin('tbl_reviews', 'tbl_tours.tourId', '=', 'tbl_reviews.tourId')
+            ->leftJoin('tbl_reviews', fn($j) => \App\Support\ReviewScope::join($j, 'tbl_tours.tourId'))
             ->leftJoinSub($bookingCounts, 'bk', 'bk.tourId', '=', 'tbl_tours.tourId')
             ->select(array_merge($cols, [
                 DB::raw('AVG(tbl_reviews.rating) as averageRating'),
@@ -98,7 +98,10 @@ class TourCatalog
         }
         if (!empty($f['days']) && isset(self::DAY_GROUPS[$f['days']])) {
             [$a, $b] = self::DAY_GROUPS[$f['days']];
-            $q->whereRaw("CAST(SUBSTRING_INDEX(tbl_tours.time, ' ', 1) AS UNSIGNED) BETWEEN ? AND ?", [$a, $b]);
+            // L-D-11: số ngày thật (ngày đầu và cuối đều tính), không cắt chuỗi "4 ngày 3 đêm"
+            $q->whereRaw(\Illuminate\Support\Facades\Schema::hasColumn('tbl_tours', 'durationDays')
+                ? 'COALESCE(tbl_tours.durationDays, DATEDIFF(tbl_tours.endDate, tbl_tours.startDate) + 1) BETWEEN ? AND ?'
+                : 'DATEDIFF(tbl_tours.endDate, tbl_tours.startDate) + 1 BETWEEN ? AND ?', [$a, $b]);
         }
         if (!empty($f['rating'])) {
             $q->havingRaw('AVG(tbl_reviews.rating) >= ?', [(int) $f['rating']]);

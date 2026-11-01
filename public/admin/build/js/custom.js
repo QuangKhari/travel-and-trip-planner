@@ -2318,7 +2318,8 @@ function init_SmartWizard() {
                 var endDateFormatted = new Date(convertDateFormat(endDate));
 
                 var timeDifference = endDateFormatted - startDateFormatted;
-                daysDifference = timeDifference / (1000 * 3600 * 24);
+                // L-E-16: ngày đầu và ngày cuối đều tính (giống server: diffInDays + 1). Tour 10 -> 13/10 có 4 ngày lộ trình
+                daysDifference = Math.round(timeDifference / (1000 * 3600 * 24)) + 1;
 
                 var today = new Date();
                 today.setHours(0, 0, 0, 0);
@@ -2460,8 +2461,36 @@ function init_SmartWizard() {
 
         myDropzone.on("success", function (file, response) {
             if (response && response.data && response.data.filename) {
-                window.uploadedTempImages.push(response.data.filename);
+                file._stem = response.data.filename;
+                // đếm theo ảnh KHÁC NHAU (server cũng gộp trùng): tải trùng một ảnh không được tính là 2
+                if (window.uploadedTempImages.indexOf(file._stem) < 0) {
+                    window.uploadedTempImages.push(file._stem);
+                }
             }
+        });
+
+        // L-E-19: "Xóa ảnh" phải gỡ ảnh tạm ở máy chủ, không thì ảnh vẫn được đăng cùng tour và vẫn chiếm hạn mức
+        myDropzone.on("removedfile", function (file) {
+            if (!file._stem) {
+                return; // ảnh chưa tải lên (hoặc tải lỗi): không có gì trên máy chủ
+            }
+            var stem = file._stem;
+            window.uploadedTempImages = window.uploadedTempImages.filter(function (s) {
+                return s !== stem;
+            });
+            if (window.uploadedTempImages.length < 5) {
+                finishStep2 = false;
+            }
+            $.post($("#myDropzone").data("delete-url"), {
+                tourId: tourId,
+                filename: stem,
+                _token: $('#myDropzone input[name="_token"]').val(),
+            }).fail(function (xhr) {
+                toastr.error(
+                    (xhr.responseJSON && xhr.responseJSON.message) ||
+                        "Chưa gỡ được ảnh trên máy chủ, hãy tải lại trang.",
+                );
+            });
         });
 
         myDropzone.on("error", function (file, errorMessage) {

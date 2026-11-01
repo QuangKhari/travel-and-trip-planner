@@ -583,3 +583,23 @@ $(document).ready(function () {
         toastr.error("Trình duyệt của bạn không hỗ trợ nhận diện giọng nói.");
     }
 });
+
+/* Trang chi tiết tour: "Xem thêm đánh giá" (L-C-05), mỗi lần 10 đánh giá */
+$(document).on("click", "#td-more-reviews", function () {
+    var $b = $(this);
+    if ($b.prop("disabled")) return;
+    $b.prop("disabled", true);
+    $.getJSON($b.data("url"), { page: $b.attr("data-page") })
+        .done(function (r) {
+            $("#td-rlist").append(r.html);
+            if (r.hasMore) {
+                $b.attr("data-page", r.next).prop("disabled", false);
+            } else {
+                $b.remove();
+            }
+        })
+        .fail(function () {
+            $b.prop("disabled", false);
+            toastr.error("Chưa tải được thêm đánh giá, thử lại sau.");
+        });
+});

@@ -233,7 +233,7 @@ class BookingManagementController extends Controller
                         ->where('bookingId', $bookingId)
                         ->update(['holdExpiresAt' => null]);
                 } else {
-                    $bookings->cancelLocked($booking);
+                    $bookings->cancelLocked($booking, 'expired');
 
                     return [
                         'ok' => false,
@@ -326,7 +326,7 @@ class BookingManagementController extends Controller
                 return ['ok' => false, 'message' => 'Đơn đã thanh toán: hãy hoàn tiền cho khách trước, không hủy trực tiếp ở đây.'];
             }
 
-            $bookings->cancelLocked($booking);   // đổi trạng thái, trả chỗ, nhả mã giảm giá
+            $bookings->cancelLocked($booking, 'admin');   // đổi trạng thái, trả chỗ, nhả mã giảm giá
 
             return ['ok' => true, 'message' => 'Đã hủy đơn và trả lại chỗ.'];
         });
