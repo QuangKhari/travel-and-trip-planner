@@ -26,7 +26,7 @@ use Illuminate\Support\Facades\Cache;
  */
 class AiEval extends Command
 {
-    protected $signature = 'ai:eval {--suite=brief : brief | plan | copilot | explain} {--mode= : plan: engine|llm_data|llm · copilot: verified|unchecked} {--file= : bộ mẫu khác (mặc định database/ai/eval_<suite>.json)} {--engine=llm : llm | rules} {--limit=0} {--out=} {--today=2026-11-01} {--model= : đổi model cho lần chạy này, vd gemini-3.8-flash} {--sleep=4 : giây nghỉ giữa hai câu (tránh vượt hạn mức phút của gói miễn phí)} {--retry=2 : số lần thử lại khi lỗi} {--timeout= : giây chờ mỗi lệnh gọi (mặc định theo config ai.timeout.brief)} {--effort= : reasoning_effort low|medium|high}';
+    protected $signature = 'ai:eval {--suite=brief : brief | plan | copilot | explain} {--mode= : plan: engine|llm_data|llm · copilot: verified|unchecked} {--file= : bộ mẫu khác (mặc định database/ai/eval_<suite>.json)} {--engine=llm : llm | rules} {--limit=0} {--from= : bắt đầu từ mẫu có id này (chạy tiếp sau khi hết hạn mức), vd c07} {--out=} {--today=2026-11-01} {--model= : đổi model cho lần chạy này, vd gemini-3.8-flash} {--sleep=4 : giây nghỉ giữa hai câu (tránh vượt hạn mức phút của gói miễn phí)} {--retry=2 : số lần thử lại khi lỗi} {--timeout= : giây chờ mỗi lệnh gọi (mặc định theo config ai.timeout.brief)} {--effort= : reasoning_effort low|medium|high} {--allow-fallback : cho phép gói dự phòng AI_FALLBACK_MODEL (mặc định TẮT: số liệu phải từ một model)}';
     protected $description = 'Chạy bộ đánh giá La bàn (F1 brief) và in độ chính xác từng trường';
 
     private const FIELDS = ['destination', 'month', 'days', 'adults', 'children', 'pace', 'interests', 'dislikes', 'budget'];
@@ -34,6 +34,11 @@ class AiEval extends Command
     public function handle(BriefService $brief, BriefValidator $validator, AiGateway $gateway): int
     {
         $suite = (string) $this->option('suite');
+        if (!$this->option('allow-fallback')) {
+            config(['ai.fallback.disabled' => true]);
+        } elseif (config('ai.fallback.model')) {
+            $this->warn('Đang cho phép gói dự phòng ' . config('ai.fallback.model') . ': xem cột model trong tbl_ai_runs, đừng trộn số liệu hai model trong một bảng.');
+        }
         if (in_array($suite, ['plan', 'copilot', 'explain'], true)) {
             return $this->suite($suite);
         }
@@ -42,8 +47,16 @@ class AiEval extends Command
 
             return self::FAILURE;
         }
+        if (!is_file($this->file('brief'))) {
+            $this->error('Không có bộ mẫu ' . $this->file('brief'));
+
+            return self::FAILURE;
+        }
         $data = json_decode((string) file_get_contents($this->file('brief')), true);
         $cases = $data['cases'] ?? [];
+        if ($cases === []) {
+            return $this->emptySuite($this->file('brief'));
+        }
         if ((int) $this->option('limit') > 0) {
             $cases = array_slice($cases, 0, (int) $this->option('limit'));
         }
@@ -262,6 +275,18 @@ class AiEval extends Command
             return self::FAILURE;
         }
         $cases = json_decode((string) file_get_contents($path), true)['cases'] ?? [];
+        if ($cases === []) {
+            return $this->emptySuite($path);
+        }
+        if ($from = (string) $this->option('from')) {
+            $at = array_search($from, array_column($cases, 'id'), true);
+            if ($at === false) {
+                $this->error('Không có mẫu id = ' . $from);
+
+                return self::FAILURE;
+            }
+            $cases = array_slice($cases, (int) $at);
+        }
         if ((int) $this->option('limit') > 0) {
             $cases = array_slice($cases, 0, (int) $this->option('limit'));
         }
@@ -275,13 +300,33 @@ class AiEval extends Command
         $runner = app(['plan' => PlanExperiment::class, 'copilot' => CopilotExperiment::class, 'explain' => ExplainExperiment::class][$suite]);
         $usesLlm = !($suite === 'plan' && $mode === 'engine');
         $rows = [];
-        foreach ($cases as $i => $c) {
+        $quota = 0;
+        $stoppedAt = null;
+        foreach (array_values($cases) as $i => $c) {
             $r = $suite === 'explain' ? $runner->run($c) : $runner->run($c, $mode);
+            if (self::isQuota($r) && !app()->runningUnitTests()) {
+                // 429 theo phút: nghỉ rồi thử lại một lần; vẫn 429 thì nhiều khả năng đã hết hạn mức NGÀY
+                $this->line('  <fg=yellow>' . $r['id'] . ': 429, nghỉ 60 giây rồi thử lại…</>');
+                sleep(60);
+                $r = $suite === 'explain' ? $runner->run($c) : $runner->run($c, $mode);
+            }
             $rows[] = $r;
             $this->line(sprintf('  %-6s %s', $r['id'], isset($r['error']) ? '<fg=red>lỗi: ' . $r['error'] . '</>' : $this->brief($suite, $r)));
+            $quota = self::isQuota($r) ? $quota + 1 : 0;
+            if ($quota >= 2) {
+                array_pop($rows);
+                array_pop($rows);
+                $stoppedAt = $cases[$i - 1]['id'];
+                break;
+            }
             if ($usesLlm && $i < count($cases) - 1 && (int) $this->option('sleep') > 0 && !app()->runningUnitTests()) {
                 sleep((int) $this->option('sleep'));
             }
+        }
+        if ($stoppedAt !== null) {
+            $this->error('Nhà cung cấp báo hết hạn mức (HTTP 429) hai mẫu liền: dừng để không ghi kết quả rỗng. '
+                . 'Hai mẫu cuối không được tính. Đợi hạn mức hồi lại rồi chạy tiếp từ ' . $stoppedAt
+                . ' với --from=' . $stoppedAt . ' và một tên --out khác, sau đó ghép hai tệp CSV.');
         }
         $ok = array_values(array_filter($rows, fn($r) => !isset($r['error'])));
         $this->info(sprintf('Bộ %s · mode=%s · %s · %d mẫu (%d lỗi, không tính)', $suite, $mode,
@@ -299,9 +344,12 @@ class AiEval extends Command
     private function brief(string $suite, array $r): string
     {
         return match ($suite) {
-            'plan' => sprintf('mục %d · có thật %.0f%% · lỗi cứng %d · cảnh báo %d · điểm %d', $r['items'], $r['exist'] * 100, $r['hard'], $r['warn'], $r['score']),
-            'copilot' => sprintf('%s%s · lỗi cứng mới %d · %d bước · %s', $r['kind'], $r['ops'] ? ' (' . $r['ops'] . ')' : '', $r['newHard'], $r['steps'], $r['human'] ?: '-'),
-            default => sprintf('%s · thay %d đoạn · %d ms', $r['engine'], $r['replaced'], $r['ms']),
+            'plan' => sprintf('viết %d · giữ %d · có thật %.0f%% · lỗi cứng %d · cảnh báo %d · điểm %d', $r['out'], $r['items'], $r['exist'] * 100, $r['hard'], $r['warn'], $r['score']),
+            'copilot' => sprintf('%s%s · lỗi cứng mới %d · %d bước%s · %s', $r['kind'], $r['ops'] ? ' (' . $r['ops'] . ')' : '', $r['newHard'], $r['steps'],
+                $r['searches'] ? ' · tìm ' . $r['searches'] . ' lần, ' . $r['hits'] . ' kết quả' : '',
+                $r['human'] ?: '<fg=gray>' . mb_substr($r['say'], 0, 90) . '</>'),
+            default => sprintf('%s · thay %d đoạn · %d ms', $r['engine'], $r['replaced'], $r['ms'])
+                . ($r['engine'] !== 'llm' ? ' · <fg=yellow>' . ($r['outcome'] ?: '?') . ($r['llmError'] !== '' ? ': ' . $r['llmError'] : '') . '</>' : ''),
         };
     }
 
@@ -321,6 +369,7 @@ class AiEval extends Command
 
         return match ($suite) {
             'plan' => [
+                ['Mục mô hình viết / còn lại để xếp lịch (tổng)', array_sum(array_column($ok, 'out')) . ' / ' . array_sum(array_column($ok, 'items'))],
                 ['Tỷ lệ mục có thật trong CSDL', round(100 * $avg('exist'), 1) . '%'],
                 ['Mục lặp (tổng)', (string) array_sum(array_column($ok, 'dup'))],
                 ['Lỗi cứng TripHealth: tổng / TB mỗi chuyến', array_sum(array_column($ok, 'hard')) . ' / ' . $avg('hard')],
@@ -339,16 +388,58 @@ class AiEval extends Command
                 ['Giải quyết đúng vấn đề mong đợi', $rate('resolvesOk')],
                 ['Đúng thao tác mong đợi', $rate('opsOk')],
                 ['Đụng đúng mục được nêu', $rate('touchOk')],
+                ['Cảnh báo mới tới người dùng (tổng)', (string) array_sum(array_column($ok, 'newWarn'))],
+                ['Bẫy dùng mục có giờ mở cửa ({h1}, {h2}): đề xuất vẫn tới người dùng', $this->trapLeak($ok)],
+                ['Trả lời thay vì đề xuất sau khi tìm không ra (hits = 0)', (string) count(array_filter($ok, fn($r) => $r['kind'] === 'reply' && $r['searches'] > 0 && $r['hits'] === 0))],
                 ['Số bước LLM TB / số lần sửa TB', $avg('steps') . ' / ' . $avg('repairs')],
                 $lat, $tok,
             ],
             default => [
                 ['Có gọi được AI', round(100 * count(array_filter($ok, fn($r) => $r['engine'] === 'llm')) / $n, 1) . '%'],
+                ['Lý do lùi về câu mẫu', $this->reasons($ok)],
                 ['Qua guard trọn vẹn (0 đoạn bị thay)', $rate('passed')],
                 ['Số đoạn phải thay (tổng)', (string) array_sum(array_column($ok, 'replaced'))],
                 ['Số bịa lọt tới người dùng', '0 (guard thay mọi đoạn có số / tên không có trong dữ kiện)'],
                 $lat, $tok,
             ],
         };
+    }
+
+    /** Bẫy {hN}: mục CÓ giờ mở cửa bị dời ra ngoài giờ. B2 phải chặn (0 / n), B1 để lọt. */
+    private function trapLeak(array $ok): string
+    {
+        $t = array_values(array_filter($ok, fn($r) => !empty($r['trap'])));
+        if (!$t) {
+            return '—';
+        }
+        $leak = count(array_filter($t, fn($r) => $r['kind'] === 'proposal' && $r['newHard'] > 0));
+
+        return $leak . ' / ' . count($t);
+    }
+
+    private function reasons(array $ok): string
+    {
+        $c = [];
+        foreach ($ok as $r) {
+            if (($r['engine'] ?? '') !== 'llm') {
+                $k = ($r['outcome'] ?: '?') . ($r['llmError'] !== '' ? ' (' . mb_substr($r['llmError'], 0, 50) . ')' : '');
+                $c[$k] = ($c[$k] ?? 0) + 1;
+            }
+        }
+        arsort($c);
+
+        return $c ? implode('; ', array_map(fn($k, $v) => $v . ' × ' . $k, array_keys($c), $c)) : '—';
+    }
+
+    private function emptySuite(string $path): int
+    {
+        $this->error('Bộ mẫu ' . str_replace(base_path() . DIRECTORY_SEPARATOR, '', $path) . ' chưa có câu nào ("cases": []). Điền câu trước rồi chạy lại; không ghi CSV.');
+
+        return self::FAILURE;
+    }
+
+    private static function isQuota(array $r): bool
+    {
+        return str_contains((string) ($r['error'] ?? ''), 'HTTP 429') || str_contains((string) ($r['llmError'] ?? ''), 'HTTP 429');
     }
 }

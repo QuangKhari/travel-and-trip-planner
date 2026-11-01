@@ -20,21 +20,34 @@ return [
     ],
 
     // anthropic | openai | none. Mặc định dùng chung driver với RAG để chỉ cần một khóa API.
-    'driver' => env('AI_DRIVER', env('RAG_LLM_DRIVER', 'none')),
+    'driver' => env('AI_DRIVER') ?: (env('RAG_LLM_DRIVER') ?: 'none'),
 
     // Model theo tác vụ: việc nhẹ (đọc câu, viết lời) dùng model nhỏ, nhanh, rẻ.
     'models' => [
         'anthropic' => [
-            'brief' => env('AI_MODEL_BRIEF', 'claude-haiku-5-5'),
-            'explain' => env('AI_MODEL_EXPLAIN', 'claude-haiku-5-5'),
-            'copilot' => env('AI_MODEL_COPILOT', 'claude-sonnet-5-5'),
+            'brief' => env('AI_MODEL_BRIEF') ?: 'claude-haiku-5-5',
+            'explain' => env('AI_MODEL_EXPLAIN') ?: 'claude-haiku-5-5',
+            'copilot' => env('AI_MODEL_COPILOT') ?: 'claude-sonnet-5-5',
         ],
         // chuẩn OpenAI (OpenAI, Gemini qua cổng tương thích, Ollama...): không đặt AI_MODEL_* thì dùng chung RAG_LLM_MODEL
         'openai' => [
-            'brief' => env('AI_MODEL_BRIEF', env('RAG_LLM_MODEL', 'gpt-4o-mini')),
-            'explain' => env('AI_MODEL_EXPLAIN', env('RAG_LLM_MODEL', 'gpt-4o-mini')),
-            'copilot' => env('AI_MODEL_COPILOT', env('RAG_LLM_MODEL', 'gpt-4o')),
+            // dòng "AI_MODEL_COPILOT=" để trống trong .env cũng được coi là chưa đặt (trước đây chuỗi rỗng bị gửi đi -> HTTP 400 "model is not specified")
+            'brief' => env('AI_MODEL_BRIEF') ?: (env('RAG_LLM_MODEL') ?: 'gpt-4o-mini'),
+            'explain' => env('AI_MODEL_EXPLAIN') ?: (env('RAG_LLM_MODEL') ?: 'gpt-4o-mini'),
+            'copilot' => env('AI_MODEL_COPILOT') ?: (env('RAG_LLM_MODEL') ?: 'gpt-4o'),
         ],
+    ],
+
+    // Gói dự phòng (FallbackLlm): model chính báo hết hạn mức (429), quá tải (5xx) hoặc quá giờ thì gọi model này.
+    // Gemini tính hạn mức theo dự án + model: cùng khóa, model khác (vd gemini-3.1-flash-lite) đã có hạn mức riêng.
+    // Khóa của dự án Google khác / nhà cung cấp khác: đặt thêm AI_FALLBACK_KEY, AI_FALLBACK_BASE_URL, AI_FALLBACK_DRIVER.
+    // Để trống AI_FALLBACK_MODEL = không dùng dự phòng. ai:eval luôn tắt dự phòng (số liệu phải từ một model).
+    'fallback' => [
+        'model' => env('AI_FALLBACK_MODEL') ?: null,
+        'driver' => env('AI_FALLBACK_DRIVER') ?: null,      // để trống = như AI_DRIVER
+        'key' => env('AI_FALLBACK_KEY') ?: null,            // để trống = dùng chung khóa
+        'base_url' => env('AI_FALLBACK_BASE_URL') ?: null,  // để trống = như model chính
+        'cooldown' => (int) (env('AI_FALLBACK_COOLDOWN') ?: 600),   // giây đi thẳng sang dự phòng sau khi model chính báo 429
     ],
 
     'timeout' => [   // giây, MỖI lệnh gọi HTTP; quá hạn thì lùi về chế độ cơ bản
@@ -72,8 +85,8 @@ return [
     'cooldown' => ['fail_threshold' => 3, 'seconds' => 90],
 
     // Giá USD / 1 triệu token, chỉ để báo cáo chi phí ở ai:eval. Để trống thì chỉ hiện số token.
-    'price_in' => env('AI_PRICE_IN') !== null ? (float) env('AI_PRICE_IN') : null,
-    'price_out' => env('AI_PRICE_OUT') !== null ? (float) env('AI_PRICE_OUT') : null,
+    'price_in' => is_numeric(env('AI_PRICE_IN')) ? (float) env('AI_PRICE_IN') : null,
+    'price_out' => is_numeric(env('AI_PRICE_OUT')) ? (float) env('AI_PRICE_OUT') : null,
 
     // Lưu nguyên văn câu người dùng trong log để phân tích lỗi? Mặc định KHÔNG (chỉ lưu độ dài, kết quả, cờ).
     'log_text' => (bool) env('AI_LOG_TEXT', false),

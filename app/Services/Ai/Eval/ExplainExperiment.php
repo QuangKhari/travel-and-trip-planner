@@ -32,6 +32,10 @@ final class ExplainExperiment
             Cache::forget('ai:cb:fails');
             $r = $this->explain->forTrip($trip, null, true);
             $run = DB::table('tbl_ai_runs')->where('tripId', $tripId)->where('feature', 'explain')->orderByDesc('runId')->first();
+            if (($run->outcome ?? '') === 'error') {
+                // lỗi phía nhà cung cấp (429 hết hạn mức, 400...): không tính là F2 thất bại
+                return $row + ['error' => 'LLM: ' . ($run->error ?: 'lỗi gọi API')];
+            }
             $flat = fn($segs) => implode('', array_map(fn($s) => $s['t'] ?? ($s['name'] ?? ''), (array) $segs));
             $story = $flat($r['headline'] ?? []) . "\n" . implode("\n", array_map(fn($d) => $d['label'] . ': ' . $flat($d['summary']), $r['days'] ?? []))
                 . "\n" . implode("\n", array_map(fn($t) => '- ' . $flat($t['text']), $r['tips'] ?? []));
@@ -40,6 +44,7 @@ final class ExplainExperiment
                 'items' => array_sum(array_map(fn($d) => count($d['items'] ?? []), $r['days'] ?? [])),
                 'engine' => $r['engine'] ?? 'none',
                 'outcome' => $run->outcome ?? '',
+                'llmError' => (string) ($run->error ?? ''),   // vì sao lùi về câu mẫu (HTTP 400, JSON bị cắt...): hộp cát hoàn tác nên phải chép ra ở đây
                 'replaced' => (int) ($r['guards']['replaced'] ?? 0),
                 'passed' => ($r['engine'] ?? '') === 'llm' && (int) ($r['guards']['replaced'] ?? 0) === 0 ? 1 : 0,
                 'flags' => $r['guards']['flags'] ?? [],

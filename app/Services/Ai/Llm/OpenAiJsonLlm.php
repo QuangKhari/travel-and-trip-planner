@@ -4,6 +4,7 @@ namespace App\Services\Ai\Llm;
 
 use App\Services\Ai\SchemaViolation;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -56,14 +57,48 @@ final class OpenAiJsonLlm implements StructuredLlm
         if ($this->jsonMode === 'object') {
             $system .= "\n\nChỉ trả về MỘT đối tượng JSON theo schema sau, không thêm chữ nào khác:\n" . json_encode($schema, JSON_UNESCAPED_UNICODE);
         }
-        $r = $this->post($system, $user, ['response_format' => $format], (int) ($opt['timeout'] ?? $this->timeout), (int) ($opt['max_tokens'] ?? $this->maxTokens));
+        $timeout = (int) ($opt['timeout'] ?? $this->timeout);
+        $maxTokens = (int) ($opt['max_tokens'] ?? $this->maxTokens);
+        // Nhà cung cấp từ chối json_schema của tác vụ này (vd Gemini: "Request contains an invalid argument" vì từ khóa schema không hỗ trợ)
+        // -> dùng json_object + schema trong lời nhắc; nhớ 1 ngày để không tốn thêm một lượt gọi lỗi mỗi lần.
+        $memo = 'ai:llm:objmode:' . $this->model . ':' . ($opt['name'] ?? 'ket_qua');
+        if ($this->jsonMode !== 'object' && Cache::get($memo)) {
+            $r = $this->postObject($system, $user, $schema, $timeout, $maxTokens);
+        } else {
+            try {
+                $r = $this->post($system, $user, ['response_format' => $format], $timeout, $maxTokens);
+            } catch (RuntimeException $e) {
+                if ($this->jsonMode === 'object' || !self::schemaRejected($e->getMessage())) {
+                    throw $e;
+                }
+                Cache::put($memo, true, 86400);
+                $r = $this->postObject($system, $user, $schema, $timeout, $maxTokens);
+            }
+        }
         $raw = (string) ($r['choices'][0]['message']['content'] ?? '');
         $data = json_decode(self::stripFence($raw), true);
         if (!is_array($data)) {
-            throw new SchemaViolation('Không đọc được JSON từ mô hình.');
+            $finish = (string) ($r['choices'][0]['finish_reason'] ?? '');
+            throw new SchemaViolation($finish === 'length'
+                ? 'JSON bị cắt vì hết max_tokens (' . $maxTokens . '): tăng AI_MAX_TOKENS_* của tính năng này.'
+                : 'Không đọc được JSON từ mô hình' . ($finish !== '' && $finish !== 'stop' ? ' (finish_reason=' . $finish . ')' : '') . ': ' . mb_substr($raw, 0, 60));
         }
 
         return ['data' => $data, 'input_tokens' => $r['usage']['prompt_tokens'] ?? null, 'output_tokens' => $r['usage']['completion_tokens'] ?? null, 'raw' => $raw];
+    }
+
+    private function postObject(string $system, string $user, array $schema, int $timeout, int $maxTokens): array
+    {
+        $system .= "\n\nChỉ trả về MỘT đối tượng JSON theo schema sau, không thêm chữ nào khác:\n" . json_encode($schema, JSON_UNESCAPED_UNICODE);
+
+        return $this->post($system, $user, ['response_format' => ['type' => 'json_object']], $timeout, $maxTokens);
+    }
+
+    /** HTTP 400 vì response_format / schema (không phải vì khóa, model hay hạn mức). */
+    public static function schemaRejected(string $msg): bool
+    {
+        // 400 do model / khóa / tham số khác thì thử lại cũng vô ích
+        return str_starts_with($msg, 'LLM HTTP 400') && !preg_match('/model|api[ _-]?key|token|reasoning|temperature|quota/i', $msg);
     }
 
     /** Một số mô hình vẫn bọc JSON trong ```json ... ```. */
@@ -94,7 +129,10 @@ final class OpenAiJsonLlm implements StructuredLlm
             throw new RuntimeException('timeout: ' . mb_substr($e->getMessage(), 0, 120), 0, $e);
         }
         if (!$res->successful()) {
-            throw new RuntimeException('LLM HTTP ' . $res->status() . ': ' . mb_substr($res->body(), 0, 160));
+            // lấy đúng câu báo lỗi của nhà cung cấp (OpenAI: {error:{message}}, Gemini: [{error:{message}}]) cho log dễ đọc
+            $j = $res->json();
+            $msg = is_array($j) ? ($j['error']['message'] ?? $j[0]['error']['message'] ?? null) : null;
+            throw new RuntimeException('LLM HTTP ' . $res->status() . ': ' . mb_substr(preg_replace('/\s+/u', ' ', (string) ($msg ?? $res->body())) ?? '', 0, 160));
         }
 
         return (array) $res->json();

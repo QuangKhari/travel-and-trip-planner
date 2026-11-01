@@ -119,6 +119,53 @@ class AiEvalSuitesTest extends TestCase
         $this->assertStringContainsString('judgeFaithful', file_get_contents(base_path('storage/framework/testing/ex.csv')));
     }
 
+    public function test_explain_suite_shows_why_it_fell_back_to_template(): void
+    {
+        $f = $this->file('explain', [['id' => 'e1', 'slug' => 'ha-noi', 'days' => 2, 'startDate' => '2026-12-08', 'interests' => ['culture'], 'pace' => 'normal']]);
+        $this->app->instance(StructuredLlm::class, new FakeLlm([], 'schema'));
+        $this->artisan('ai:eval', ['--suite' => 'explain', '--file' => $f, '--out' => 'storage/framework/testing/ex.csv'])
+            ->expectsOutputToContain('invalid: fake schema')
+            ->expectsOutputToContain('Lý do lùi về câu mẫu')->assertSuccessful();
+        $this->assertStringContainsString('llmError', file_get_contents(base_path('storage/framework/testing/ex.csv')));
+    }
+
+    public function test_copilot_hours_placeholder_picks_an_item_with_opening_hours(): void
+    {
+        // {h1} = mục có giờ mở cửa đúng thứ của ngày đó (ở đây chỉ Bảo tàng Dân tộc học có): bẫy dời 23:00 chắc chắn thành hours.late nếu làm theo
+        $f = $this->file('copilot', [['id' => 'c1', 'group' => 'bay', 'trap' => true, 'trip' => ['slug' => 'ha-noi', 'days' => 2, 'startDate' => '2026-12-08', 'interests' => ['culture']],
+            'request' => 'Dời {h1} sang 23:00', 'expect' => ['kind' => 'any']]]);
+        $this->app->instance(StructuredLlm::class, new FakeLlm(['copilot' => ['action' => 'reply', 'say' => 'Bảo tàng đóng cửa lúc đó.']]));
+        $this->artisan('ai:eval', ['--suite' => 'copilot', '--mode' => 'unchecked', '--file' => $f, '--out' => 'storage/framework/testing/b1.csv'])->assertSuccessful();
+        $rows = array_map('str_getcsv', file(base_path('storage/framework/testing/b1.csv')));
+        $h = array_flip(array_map(fn($x) => trim($x, "\xEF\xBB\xBF"), $rows[0]));
+        if (isset($h['error'])) {
+            $this->assertStringContainsString('giờ mở cửa', $rows[1][$h['error']], 'chuyến không có bảo tàng thì mẫu bị bỏ, có ghi lý do');
+
+            return;
+        }
+        $this->assertSame('Dời Bảo tàng Dân tộc học sang 23:00', $rows[1][$h['request']]);
+        $this->assertSame('1', $rows[1][$h['trap']]);
+        $this->assertSame('Bảo tàng đóng cửa lúc đó.', $rows[1][$h['say']]);
+    }
+
+    public function test_provider_errors_are_excluded_not_counted_as_answers(): void
+    {
+        $f = $this->file('copilot', [['id' => 'c1', 'trip' => ['slug' => 'ha-noi', 'days' => 2, 'startDate' => '2026-12-07', 'interests' => ['culture']],
+            'request' => 'Ngày 1 nhẹ hơn', 'expect' => ['kind' => 'proposal']]]);
+        $this->app->instance(StructuredLlm::class, new FakeLlm([], 'error'));
+        $this->artisan('ai:eval', ['--suite' => 'copilot', '--mode' => 'verified', '--file' => $f])
+            ->expectsOutputToContain('lỗi: LLM: fake down')
+            ->expectsOutputToContain('1 mẫu (1 lỗi, không tính)')->assertSuccessful();
+    }
+
+    public function test_empty_suite_fails_with_a_clear_message_and_no_csv(): void
+    {
+        $f = $this->file('plan', []);
+        $this->artisan('ai:eval', ['--suite' => 'brief', '--engine' => 'rules', '--file' => $f, '--out' => 'storage/framework/testing/ex.csv'])
+            ->expectsOutputToContain('chưa có câu nào')->assertFailed();
+        $this->assertFileDoesNotExist(base_path('storage/framework/testing/ex.csv'));
+    }
+
     public function test_prompts_are_frozen_by_version(): void
     {
         foreach (PromptLock::status() as $f => $s) {

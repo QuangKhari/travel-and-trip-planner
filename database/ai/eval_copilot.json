@@ -1,5 +1,5 @@
 {
- "about": "Thí nghiệm B (mục 8.3): 30 yêu cầu chỉnh lịch trên chuyến do engine sinh (cùng yêu cầu thì cùng chuyến). {dNiM} = tên mục thứ M của ngày N. mutate: overload_day1 (dồn mọi mục vào ngày 1), fix_first_late (mục đầu ngày 1 cố định 21:00). Cần ≥ 10 yêu cầu do người khác viết: thêm case với \"source\": \"peer\".",
+ "about": "Thí nghiệm B (mục 8.3): 34 yêu cầu chỉnh lịch trên chuyến do engine sinh (cùng yêu cầu thì cùng chuyến). {dNiM} = tên mục thứ M của ngày N. {hK} = tên mục thứ K trong chuyến CÓ dữ liệu giờ mở cửa đúng thứ của ngày đó: bẫy dời ra ngoài giờ chắc chắn tạo lỗi cứng nếu được làm theo (chuyến không đủ mục có giờ mở cửa thì mẫu bị bỏ, ghi lỗi). \"trap\": true = mẫu bẫy (c16, c31 cần dữ liệu giờ mở cửa; c32–c34 là chồng giờ, chạy được trên mọi dữ liệu), dùng cho chỉ số 'đề xuất có lỗi cứng vẫn tới người dùng' (B2 phải là 0). mutate: overload_day1 (dồn mọi mục vào ngày 1), fix_first_late (mục ngày 1 có giờ mở cửa sớm nhất bị cố định 21:00; không có thì mục đầu ngày 1). Cần ≥ 10 yêu cầu do người khác viết: thêm case với \"source\": \"peer\".",
  "cases": [
   {
    "id": "c01",
@@ -355,10 +355,11 @@
      "food"
     ]
    },
-   "request": "Dời {d1i1} sang 23:00",
+   "request": "Dời {h1} sang 23:00",
    "expect": {
     "kind": "any"
-   }
+   },
+   "trap": true
   },
   {
    "id": "c17",
@@ -650,6 +651,86 @@
    "expect": {
     "kind": "any"
    }
+  },
+  {
+   "id": "c31",
+   "group": "bay",
+   "source": "author",
+   "trip": {
+    "slug": "ha-noi",
+    "days": 2,
+    "startDate": "2026-12-08",
+    "pace": "normal",
+    "interests": [
+     "culture",
+     "food"
+    ]
+   },
+   "request": "Cho {h1} bắt đầu lúc 5 giờ sáng",
+   "expect": {
+    "kind": "any"
+   },
+   "trap": true
+  },
+  {
+   "id": "c32",
+   "group": "bay",
+   "source": "author",
+   "trip": {
+    "slug": "da-nang",
+    "days": 2,
+    "startDate": "2026-12-14",
+    "pace": "normal",
+    "interests": [
+     "culture",
+     "food"
+    ]
+   },
+   "request": "Cho {d1i1} và {d1i2} cùng bắt đầu lúc 9:00",
+   "expect": {
+    "kind": "any"
+   },
+   "trap": true
+  },
+  {
+   "id": "c33",
+   "group": "bay",
+   "source": "author",
+   "trip": {
+    "slug": "hue",
+    "days": 2,
+    "startDate": "2026-12-09",
+    "pace": "normal",
+    "interests": [
+     "culture",
+     "food"
+    ]
+   },
+   "request": "Xếp {d2i1} và {d2i2} cùng lúc 14:00",
+   "expect": {
+    "kind": "any"
+   },
+   "trap": true
+  },
+  {
+   "id": "c34",
+   "group": "doi_gio",
+   "source": "author",
+   "trip": {
+    "slug": "hoi-an",
+    "days": 2,
+    "startDate": "2026-12-12",
+    "pace": "normal",
+    "interests": [
+     "culture",
+     "food"
+    ]
+   },
+   "request": "Xếp {d1i1} và {d1i2} cùng bắt đầu lúc 10:00",
+   "expect": {
+    "kind": "any"
+   },
+   "trap": true
   }
  ]
 }

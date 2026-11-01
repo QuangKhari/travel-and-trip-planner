@@ -126,7 +126,7 @@ final class CopilotService
         $runId = $this->gateway->log(['feature' => 'copilot', 'userId' => $userId, 'tripId' => (int) $trip->tripId, 'engine' => 'llm',
             'outcome' => $last ? ($last['reason'] ?? 'error') : ($result['kind'] === 'proposal' ? 'proposed' : (!empty($result['failed']) ? 'refused' : 'reply')),
             'model' => $model, 'inputChars' => mb_strlen($message), 'in' => $stat['in'], 'out' => $stat['out'], 'ms' => $ms,
-            'flags' => ['steps' => $stat['steps'], 'repairs' => $stat['repairs'], 'searches' => $stat['searches']], 'error' => $last['error'] ?? null, 'text' => $message]);
+            'flags' => ['steps' => $stat['steps'], 'repairs' => $stat['repairs'], 'searches' => $stat['searches'], 'hits' => count($cands)], 'error' => $last['error'] ?? null, 'text' => $message]);
         if ($result['kind'] === 'proposal' && $runId) {
             $this->remember($result['id'], ['runId' => $runId]);
         }
@@ -288,6 +288,7 @@ final class CopilotService
                 'warnings' => array_map($pick, array_slice($sim['newIssues'], 0, 3)),
                 'effects' => $sim['effects'],
                 'newHard' => $sim['newHard'],
+                'newWarn' => count($sim['newIssues']) - $sim['newHard'],
                 'checked' => ['giờ mở cửa', 'trùng giờ', 'thời gian đi lại', 'độ dày ngày'],
             ],
         ]];
