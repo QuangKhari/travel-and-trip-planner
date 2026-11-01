@@ -39,6 +39,8 @@ Thumbs.db
 !/public/admin/assets/images/user-profile/user_avatar.jpg
 !/public/admin/assets/images/user-profile/avt_admin.jpg
 
+/tests/Feature/Videos/Screen Recordings/
+
 *.sql
 *.zip
 *.bak
