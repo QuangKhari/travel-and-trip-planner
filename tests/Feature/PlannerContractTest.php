@@ -66,7 +66,7 @@ class PlannerContractTest extends TestCase
 
     private function node(array $input): array
     {
-        $bin = trim((string) shell_exec('command -v node'));
+        $bin = trim(strtok((string) shell_exec(PHP_OS_FAMILY === 'Windows' ? 'where node 2>NUL' : 'command -v node'), "\r\n") ?: '');
         if ($bin === '') {
             $this->markTestSkipped('Không có Node.js để chạy phần trình duyệt.');
         }

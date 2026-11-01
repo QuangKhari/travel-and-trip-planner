@@ -31,6 +31,7 @@ use App\Http\Controllers\clients\DataSourcesController;
 use App\Http\Controllers\clients\JournalController;
 use App\Http\Controllers\clients\AskPageController;
 use App\Http\Controllers\clients\PlannerController;
+use App\Http\Controllers\clients\PlannerAiController;
 
 
 use App\Http\Controllers\admin\LoginAdminController;
@@ -188,6 +189,12 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::get('/len-ke-hoach/tim-noi', [PlannerController::class, 'placeSearch'])->middleware('throttle:60,1,planner-place')->name('planner.placeSearch');
     Route::get('/len-ke-hoach/de-xuat/xem-truoc', [PlannerController::class, 'preview'])->middleware('throttle:30,1,planner-preview')->name('planner.preview');
     Route::post('/len-ke-hoach/tao-tu-dong', [PlannerController::class, 'generate'])->middleware('throttle:10,1,planner-generate')->name('planner.generate');
+    // La bàn (AI): F1 đọc câu mô tả -> vé hành trình; F2 tóm tắt lịch. Không ghi vào chuyến đi.
+    Route::post('/len-ke-hoach/hieu-yeu-cau', [PlannerAiController::class, 'brief'])->middleware('throttle:10,1,planner-ai-brief')->name('planner.ai.brief');
+    Route::post('/len-ke-hoach/{id}/tom-tat-ai', [PlannerAiController::class, 'explain'])->whereNumber('id')->middleware('throttle:10,1,planner-ai-explain')->name('planner.ai.explain');
+    Route::post('/len-ke-hoach/{id}/la-ban', [PlannerAiController::class, 'copilot'])->whereNumber('id')->middleware('throttle:12,1,planner-ai-copilot')->name('planner.ai.copilot');
+    Route::post('/len-ke-hoach/{id}/la-ban/kiem-tra-lai', [PlannerAiController::class, 'recheck'])->whereNumber('id')->middleware('throttle:30,1,planner-ai-recheck')->name('planner.ai.recheck');
+    Route::post('/len-ke-hoach/{id}/la-ban/ket-qua', [PlannerAiController::class, 'feedback'])->whereNumber('id')->middleware('throttle:60,1,planner-ai-feedback')->name('planner.ai.feedback');
     Route::post('/len-ke-hoach/{id}/trang-thai', [PlannerController::class, 'status'])->whereNumber('id')->middleware('throttle:60,1,planner-status')->name('planner.status');
     Route::post('/len-ke-hoach', [PlannerController::class, 'store'])->middleware('throttle:20,1,planner-store')->name('planner.store');
     Route::get('/len-ke-hoach/{id}', [PlannerController::class, 'edit'])->whereNumber('id')->name('planner.edit');

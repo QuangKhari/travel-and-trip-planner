@@ -1,0 +1,214 @@
+--- a/.env.example
++++ b/.env.example
+@@ -73,3 +73,17 @@
+ PLANNER_ROUTE_PROVIDER=haversine
+ #PLANNER_OSRM_URL=https://router.project-osrm.org
+ #PLANNER_TRAVEL_MODE=driving
++
++# ---- La bàn: trợ lý AI của Trip Planner (config/ai.php) ----
++# Tắt (false) thì Planner vẫn dùng đầy đủ: F1 đọc câu bằng luật, F2 ghép câu mẫu.
++AI_PLANNER_ENABLED=false
++# anthropic | openai | none (mặc định dùng chung RAG_LLM_DRIVER và khóa của RAG)
++AI_DRIVER=
++AI_MODEL_BRIEF=
++AI_MODEL_EXPLAIN=
++AI_DAILY_LIMIT=40
++# openai-compatible không hỗ trợ json_schema thì đặt object
++AI_OPENAI_JSON_MODE=schema
++AI_PRICE_IN=
++AI_PRICE_OUT=
++AI_LOG_TEXT=false
+--- a/app/Http/Controllers/clients/PlannerController.php
++++ b/app/Http/Controllers/clients/PlannerController.php
+@@ -86,6 +86,7 @@
+                 'pace' => is_string($qv['pace'] ?? null) ? $qv['pace'] : null, 'maxDifficulty' => is_string($qv['maxDifficulty'] ?? null) ? $qv['maxDifficulty'] : null,
+                 'interests' => array_values(array_intersect((array) ($qv['interests'] ?? []), array_keys((array) config('interests')))),
+                 'dislikes' => array_values(array_intersect((array) ($qv['dislikes'] ?? []), array_keys((array) config('planner.dislikes')))),
++                'notes' => is_string($qv['notes'] ?? null) ? mb_substr(strip_tags($qv['notes']), 0, 500) : null,
+             ]);
+         } elseif (is_string($q = $request->query('q')) && trim($q) !== '') {
+             $i = $intent->parse(mb_substr($q, 0, 200));
+@@ -121,6 +122,7 @@
+                 'img' => $d->coverImage ? \Illuminate\Support\Facades\Storage::disk('public')->url($d->coverImage) : null])->values()->all();
+ 
+         return view('clients.planner.suggest', [
++            'aiOn' => app(\App\Services\Ai\AiGateway::class)->featureOn('brief'),
+             'unknown' => $unknown,
+             'dests' => $dests,
+             'allDests' => $all,
+@@ -226,6 +228,8 @@
+             'interests.*' => ['string', 'in:' . implode(',', array_keys((array) config('interests')))],
+             'dislikes' => ['nullable', 'array', 'max:6'],
+             'dislikes.*' => ['string', 'in:' . implode(',', array_keys((array) config('planner.dislikes')))],
++            // ghi chú từ câu mô tả (La bàn F1: ăn chay, đi cùng ông bà...): lưu vào tbl_trips.notes, F2 đọc lại
++            'notes' => ['nullable', 'string', 'max:500'],
+         ];
+     }
+ 
+@@ -346,6 +350,9 @@
+         } catch (\DomainException $e) {
+             return redirect()->route('planner.suggest')->withInput()->withErrors(['generate' => $e->getMessage()]);
+         }
++        if (!empty($data['notes']) && \Illuminate\Support\Facades\Schema::hasColumn('tbl_trips', 'notes')) {
++            DB::table('tbl_trips')->where('tripId', $id)->update(['notes' => mb_substr(strip_tags((string) $data['notes']), 0, 500)]);
++        }
+         $spare = count(array_filter($result['plan']['unplaced'] ?? [], fn($u) => !empty($u['refId']) || !empty($u['osm'])));
+         $how = $result['mode'] === 'open'
+             ? ' bằng đề xuất mở rộng: các mục ghi "Ngoài dữ liệu Travela" lấy từ bản đồ OpenStreetMap, nên kiểm tra lại giờ mở cửa và giá trước khi đi. '
+@@ -446,6 +453,7 @@
+         $rv = app(TripSharing::class)->revision($id);
+ 
+         return view('clients.planner.edit', [
++            'aiExplainOn' => app(\App\Services\Ai\AiGateway::class)->featureOn('explain'),
+             'cover' => $cover ? \App\Support\DiscoverImage::url((string) $cover) : null,
+             'lastEdit' => ['by' => $rv['by'], 'at' => $trip->updatedAt ?? null, 'byMe' => (int) ($trip->lastEditorId ?? 0) === $uid],
+             'title' => $trip->title,
+--- a/public/clients/assets/js/planner-suggest.js
++++ b/public/clients/assets/js/planner-suggest.js
+@@ -265,4 +265,26 @@
+     ready = true;
+     renderPicked();
+     syncMonths();
++
++    /* ---------- API nhỏ cho La bàn (planner-ai-brief.js) điền form từ "vé hành trình" ---------- */
++    function setNum(id, v) { var x = $(id); if (!x || v == null) return; x.value = v; x.dispatchEvent(new Event("change")); }
++    window.TpSuggest = {
++        selectDest: function (id) {
++            var d = DESTS.filter(function (x) { return String(x.id) === String(id); })[0];
++            if (d) select({ type: "destination", id: d.id, name: d.name, sub: d.sub, ready: d.ready });
++            return !!d;
++        },
++        setStart: function (ymd) { start.value = ymd || ""; syncMonths(); },
++        setMonth: function (m) { if (start.value) return; month.value = m ? String(m) : ""; syncMonths(); },
++        setDays: function (n) { setNum("sgDays", n); },
++        setPeople: function (ad, ch) { setNum("sgAdults", ad); setNum("sgChildren", ch == null ? 0 : ch); },
++        setBudget: function (b) { budget.value = b == null ? "" : b; summary(); },
++        setRadio: function (name, v) { var r = form.querySelector('input[name="' + name + '"][value="' + v + '"]'); if (r) { r.checked = true; summary(); } },
++        setChecks: function (name, vals) {
++            form.querySelectorAll('input[name="' + name + '[]"]').forEach(function (c) { c.checked = vals.indexOf(c.value) >= 0; });
++            summary();
++        },
++        people: function () { return (parseInt($("sgAdults").value, 10) || 1) + (parseInt($("sgChildren").value, 10) || 0); },
++        submit: function () { if (form.requestSubmit) form.requestSubmit(); else form.submit(); },
++    };
+ })();
+--- a/resources/views/clients/planner/edit.blade.php
++++ b/resources/views/clients/planner/edit.blade.php
+@@ -1,6 +1,7 @@
+ @include('clients.blocks.header')
+ <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+ <link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=21">
++<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai.css') }}?v=1">
+ 
+ {{-- /len-ke-hoach/{id}. Biến: $payload (TripPlanner::payload), $client (dữ liệu cho planner.js), $role, $members, $tourFit.
+      Bố cục "Timeline + Bản đồ" (tham khảo Wanderlog: lịch theo ngày cạnh bản đồ; Roadtrippers: bản đồ lớn, tuyến nối các điểm, thêm điểm dừng theo danh mục).
+@@ -127,6 +128,16 @@
+                     </div>
+                 </div>
+ 
++                {{-- La bàn F2: lời kể từng ngày + vì sao có mục này + lưu ý có căn cứ. Nằm TRÊN lịch, không thay lịch. --}}
++                <section class="ai-story" id="aiStory" aria-labelledby="aiStoryH">
++                    <button type="button" class="ai-story__open" id="aiStoryBtn" aria-expanded="false" aria-controls="aiStoryBody">
++                        <span class="ai-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.6"/><path d="M12 4.5 14.2 12 12 19.5 9.8 12Z" fill="#e9a23b"/><path d="M12 12 14.2 12 12 19.5Z" fill="#0d6f6a"/></svg></span>
++                        <span><b id="aiStoryH">{{ $aiExplainOn ? 'Tóm tắt chuyến đi bằng AI' : 'Tóm tắt chuyến đi' }}</b><small>Lời kể từng ngày, vì sao có từng nơi, lưu ý có căn cứ</small></span>
++                        <i class="fas fa-chevron-down" aria-hidden="true"></i>
++                    </button>
++                    <div class="ai-story__body" id="aiStoryBody" hidden></div>
++                </section>
++
+                 <section class="tpx-health" id="tpHealth" aria-labelledby="tpWarnH">
+                     <h2 id="tpWarnH" class="tpx-health__h"></h2>
+                     <div id="tpWarn"></div>
+@@ -331,5 +342,7 @@
+ <script src="{{ asset('clients/assets/js/planner-resolve.js') }}?v=1"></script>
+ <script src="{{ asset('clients/assets/js/planner-map.js') }}?v=5"></script>
+ <script src="{{ asset('clients/assets/js/planner.js') }}?v=22" defer></script>
++<script type="application/json" id="aiData">{!! json_encode(['explainUrl' => route('planner.ai.explain', ['id' => $t['id']]), 'csrf' => csrf_token(), 'on' => $aiExplainOn], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
++<script src="{{ asset('clients/assets/js/planner-ai-explain.js') }}?v=1" defer></script>
+ 
+ @include('clients.blocks.footer')
+--- a/resources/views/clients/planner/suggest.blade.php
++++ b/resources/views/clients/planner/suggest.blade.php
+@@ -1,6 +1,7 @@
+ @include('clients.blocks.header')
+ <link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=21">
+ <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-flow.css') }}?v=3">
++<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai.css') }}?v=1">
+ 
+ {{-- /len-ke-hoach/de-xuat. Biến: $dests (điểm đến lõi + mức sẵn sàng), $allDests (mọi điểm đến cho ô "Đi đâu?"), $pre (điền sẵn),
+      $notReady (điểm đến đang chọn chưa đủ dữ liệu), $unknown (nơi người dùng gõ mà Travela chưa có), $openMode (bật đề xuất mở rộng).
+@@ -16,6 +17,9 @@
+     $core = collect($allDests)->where('core', true)->values();
+     $clientData = ['dests' => $allDests, 'searchUrl' => route('planner.placeSearch'), 'openMode' => $openMode,
+         'pre' => ['dest' => $preDest && ($preDest['ready'] || $openMode) ? $preDest['id'] : null, 'place' => $pre['place'] ?? null]];
++    $aiData = ['briefUrl' => route('planner.ai.brief'), 'csrf' => csrf_token(), 'on' => $aiOn,
++        'labels' => ['interests' => collect(config('interests'))->map(fn($d) => $d['label'])->all(),
++            'dislikes' => array_map(fn($x) => $x[0], $dislikes), 'pace' => array_map(fn($x) => $x[0], $paces), 'maxDifficulty' => array_map(fn($x) => $x[0], $diffs)]];
+ @endphp
+ <main class="tp tpf" id="sgPage">
+     <div class="container">
+@@ -24,12 +28,21 @@
+             <p class="tpf-eyebrow">Lập kế hoạch tự động</p>
+             <h1>Để Travela đề xuất lịch trình</h1>
+             <p class="tpf-lead">Chọn nơi muốn đến, ngày đi và phong cách. Travela xếp sẵn từng ngày; bạn xem trước, rồi mới lưu và chỉnh tiếp.</p>
+-            <form method="GET" action="{{ route('planner.suggest') }}" class="tpf-quick" role="search" aria-label="Điền sẵn bằng một câu">
+-                <i class="fas fa-magic" aria-hidden="true"></i>
+-                <label class="sr-only" for="sgQuick">Hoặc mô tả chuyến đi bằng một câu</label>
+-                <input id="sgQuick" type="text" name="q" maxlength="200" value="{{ request('q') }}" placeholder="Hoặc mô tả bằng một câu: “Hà Nội 3 ngày văn hóa, không trekking”">
+-                <button type="submit" class="tp-btn tp-btn--ghost">Điền sẵn giúp tôi</button>
++            {{-- La bàn F1 "Vé hành trình": kể chuyến đi bằng một câu -> AI (hoặc luật khi AI tắt) điền form bên dưới, người dùng xem lại rồi mới xếp lịch.
++                 Không có JS thì form vẫn gửi ?q= như cũ (SearchIntent điền sẵn). --}}
++            <form method="GET" action="{{ route('planner.suggest') }}" class="ai-say" id="aiSay" aria-labelledby="aiSayH">
++                <div class="ai-say__head">
++                    <span class="ai-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.6"/><path d="M12 4.5 14.2 12 12 19.5 9.8 12Z" fill="#e9a23b"/><path d="M12 12 14.2 12 12 19.5Z" fill="#0d6f6a"/></svg></span>
++                    <label id="aiSayH" for="aiText">Kể chuyến đi bằng một câu</label>
++                    <span class="ai-say__mode" id="aiMode">{{ $aiOn ? 'La bàn đọc giúp bạn' : 'Chế độ cơ bản' }}</span>
++                </div>
++                <textarea id="aiText" name="q" rows="2" maxlength="500" placeholder="Ví dụ: Tôi đi Hà Nội 3 ngày cuối tháng 11, 2 người, khoảng 5 triệu, thích văn hóa và ăn uống, không thích đi quá nhiều">{{ request('q') }}</textarea>
++                <div class="ai-say__row">
++                    <p class="ai-say__priv">{{ $aiOn ? 'Câu bạn nhập được gửi tới nhà cung cấp AI để đọc hiểu. Đừng ghi email hay số điện thoại.' : 'Travela đọc câu bằng luật có sẵn, không gửi đi đâu.' }}</p>
++                    <button type="submit" class="tp-btn ai-btn" id="aiGo">Hiểu giúp mình</button>
++                </div>
+             </form>
++            <div class="ai-result" id="aiResult" hidden aria-live="polite"></div>
+         </header>
+ 
+         @if ($errors->any())
+@@ -106,6 +119,7 @@
+                         <input type="hidden" name="placeName" id="sgPlaceName" value="{{ $pre['place']['name'] ?? '' }}">
+                         <input type="hidden" name="placeLat" id="sgPlaceLat" value="{{ $pre['place']['lat'] ?? '' }}">
+                         <input type="hidden" name="placeLng" id="sgPlaceLng" value="{{ $pre['place']['lng'] ?? '' }}">
++                        <input type="hidden" name="notes" id="sgNotes" value="{{ $pre['notes'] ?? '' }}">
+                         <p class="tpf-err" id="sgWhereErr" hidden>Hãy chọn một điểm đến hoặc một nơi trên bản đồ.</p>
+                     </div>
+                     <div class="tpf-popular" aria-label="Điểm đến nổi bật">
+@@ -237,6 +251,8 @@
+     </div>
+ </main>
+ <script type="application/json" id="sgData">@json($clientData)</script>
+-<script src="{{ asset('clients/assets/js/planner-suggest.js') }}?v=1" defer></script>
++<script type="application/json" id="aiData">{!! json_encode($aiData, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
++<script src="{{ asset('clients/assets/js/planner-suggest.js') }}?v=2" defer></script>
++<script src="{{ asset('clients/assets/js/planner-ai-brief.js') }}?v=1" defer></script>
+ 
+ @include('clients.blocks.footer')
+--- a/routes/web.php
++++ b/routes/web.php
+@@ -31,6 +31,7 @@
+ use App\Http\Controllers\clients\JournalController;
+ use App\Http\Controllers\clients\AskPageController;
+ use App\Http\Controllers\clients\PlannerController;
++use App\Http\Controllers\clients\PlannerAiController;
+ 
+ 
+ use App\Http\Controllers\admin\LoginAdminController;
+@@ -188,6 +189,9 @@
+     Route::get('/len-ke-hoach/tim-noi', [PlannerController::class, 'placeSearch'])->middleware('throttle:60,1,planner-place')->name('planner.placeSearch');
+     Route::get('/len-ke-hoach/de-xuat/xem-truoc', [PlannerController::class, 'preview'])->middleware('throttle:30,1,planner-preview')->name('planner.preview');
+     Route::post('/len-ke-hoach/tao-tu-dong', [PlannerController::class, 'generate'])->middleware('throttle:10,1,planner-generate')->name('planner.generate');
++    // La bàn (AI): F1 đọc câu mô tả -> vé hành trình; F2 tóm tắt lịch. Không ghi vào chuyến đi.
++    Route::post('/len-ke-hoach/hieu-yeu-cau', [PlannerAiController::class, 'brief'])->middleware('throttle:10,1,planner-ai-brief')->name('planner.ai.brief');
++    Route::post('/len-ke-hoach/{id}/tom-tat-ai', [PlannerAiController::class, 'explain'])->whereNumber('id')->middleware('throttle:10,1,planner-ai-explain')->name('planner.ai.explain');
+     Route::post('/len-ke-hoach/{id}/trang-thai', [PlannerController::class, 'status'])->whereNumber('id')->middleware('throttle:60,1,planner-status')->name('planner.status');
+     Route::post('/len-ke-hoach', [PlannerController::class, 'store'])->middleware('throttle:20,1,planner-store')->name('planner.store');
+     Route::get('/len-ke-hoach/{id}', [PlannerController::class, 'edit'])->whereNumber('id')->name('planner.edit');

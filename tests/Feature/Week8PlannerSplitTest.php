@@ -55,7 +55,7 @@ class Week8PlannerSplitTest extends TestCase
             ->assertSee('Tạo chuyến đi mới')
             ->assertSee('Bắt đầu lên kế hoạch')
             ->assertSee('/len-ke-hoach/de-xuat', false)
-            ->assertDontSee('Điền sẵn giúp tôi');
+            ->assertDontSee('Kể chuyến đi bằng một câu');   // ô La bàn (F1) chỉ ở trang đề xuất
     }
 
     public function test_old_prefill_links_redirect_to_suggest_page_keeping_query(): void
@@ -67,7 +67,7 @@ class Week8PlannerSplitTest extends TestCase
     public function test_suggest_page_has_auto_form_and_back_link(): void
     {
         $this->withSession($this->s)->get('/len-ke-hoach/de-xuat')->assertOk()
-            ->assertSee('Điền sẵn giúp tôi')
+            ->assertSee('Kể chuyến đi bằng một câu')                      // La bàn F1 thay ô "Điền sẵn giúp tôi" cũ
             ->assertSee('/len-ke-hoach/de-xuat/xem-truoc', false)   // gửi sang màn xem trước, chưa lưu
             ->assertSee('name="startDate"', false)->assertSee('name="pace"', false)->assertSee('name="maxDifficulty"', false)
             ->assertSee('name="adults"', false)->assertSee('name="children"', false);

@@ -221,6 +221,7 @@
         dirty = true;
         autoFail = false;
         saveState("dirty", "Chưa lưu");
+        emit("tp:dirty");
         clearTimeout(timer);
         timer = setTimeout(function () { save(false); }, AUTOSAVE_MS);
     }
@@ -1171,6 +1172,10 @@
         renderDayNav();
         renderSide();
         observeDays();
+        emit("tp:render");   // La bàn vẽ lại dấu xem trước (ghost) lên timeline mới
+    }
+    function emit(name, detail) {
+        try { document.dispatchEvent(new CustomEvent(name, { detail: detail || {} })); } catch (e) { /* trình duyệt quá cũ: bỏ qua */ }
     }
     function renderTotals() {
         var sum = totalCost(), es = estimates(), b = meta().budget, t = $("tpTotals");
@@ -3437,7 +3442,7 @@
                     }
                     renderWarn();
                     renderSummary();
-                    if (snap() !== sent) { markDirty(); } else { dirty = false; autoFail = false; saveState("saved", "Đã lưu " + (res.j.savedAt || "")); loadServerHealth(); }
+                    if (snap() !== sent) { markDirty(); } else { dirty = false; autoFail = false; saveState("saved", "Đã lưu " + (res.j.savedAt || "")); loadServerHealth(); emit("tp:saved", { rev: rev }); }
                     if ($("tpLastEdit") && res.j.savedAt) $("tpLastEdit").textContent = "Bạn cập nhật lúc " + res.j.savedAt;
                 } else {
                     var errs = res.j && res.j.errors ? Object.keys(res.j.errors).map(function (k) { return res.j.errors[k][0]; }) : [];
@@ -3826,5 +3831,27 @@
         try { startTab = sessionStorage.getItem("tpTab" + cfg.trip.id) || "plan"; } catch (e) { startTab = "plan"; }
     }
     switchTab(startTab);
+
+    /* Cửa DUY NHẤT cho La bàn Copilot (planner-ai-copilot.js): đọc trạng thái, áp dụng đề xuất đã được máy chủ kiểm chứng.
+       Áp dụng = CHÍNH planner-resolve.js như nút "Xem cách xử lý" (xem trước = áp dụng), rồi commit -> tự lưu -> hoàn tác được. */
+    window.TpPlanner = {
+        state: function () { return { rev: rev, dirty: dirty || saving, ro: RO, count: items.length }; },
+        item: function (uid) {
+            var x = items.filter(function (i) { return i.uid === +uid; })[0];
+            return x ? { name: x.name, day: x.day } : null;
+        },
+        saveNow: function () { if (!RO && (dirty || saving)) save(true); },
+        applyAi: function (p) {
+            if (RO) return { ok: false, reason: "ro" };
+            if (dirty || saving) return { ok: false, reason: "dirty" };
+            if (p.baseRev !== rev) return { ok: false, reason: "stale" };
+            var r = window.TpResolve.apply(items, rain, p.changes, newItem, RAIN_MAX);
+            if (!r.ok) { loadServerHealth(); return { ok: false, reason: "stale" }; }
+            commit();
+            say("La bàn đã áp dụng đề xuất.", false, [["Hoàn tác", undoOnce]]);
+            return { ok: true };
+        },
+    };
+    emit("tp:ready", { rev: rev });
 })();
 

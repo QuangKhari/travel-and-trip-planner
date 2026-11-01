@@ -1,6 +1,7 @@
 @include('clients.blocks.header')
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=21">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-flow.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai.css') }}?v=1">
 
 {{-- /len-ke-hoach/de-xuat. Biến: $dests (điểm đến lõi + mức sẵn sàng), $allDests (mọi điểm đến cho ô "Đi đâu?"), $pre (điền sẵn),
      $notReady (điểm đến đang chọn chưa đủ dữ liệu), $unknown (nơi người dùng gõ mà Travela chưa có), $openMode (bật đề xuất mở rộng).
@@ -16,6 +17,9 @@
     $core = collect($allDests)->where('core', true)->values();
     $clientData = ['dests' => $allDests, 'searchUrl' => route('planner.placeSearch'), 'openMode' => $openMode,
         'pre' => ['dest' => $preDest && ($preDest['ready'] || $openMode) ? $preDest['id'] : null, 'place' => $pre['place'] ?? null]];
+    $aiData = ['briefUrl' => route('planner.ai.brief'), 'csrf' => csrf_token(), 'on' => $aiOn,
+        'labels' => ['interests' => collect(config('interests'))->map(fn($d) => $d['label'])->all(),
+            'dislikes' => array_map(fn($x) => $x[0], $dislikes), 'pace' => array_map(fn($x) => $x[0], $paces), 'maxDifficulty' => array_map(fn($x) => $x[0], $diffs)]];
 @endphp
 <main class="tp tpf" id="sgPage">
     <div class="container">
@@ -24,12 +28,21 @@
             <p class="tpf-eyebrow">Lập kế hoạch tự động</p>
             <h1>Để Travela đề xuất lịch trình</h1>
             <p class="tpf-lead">Chọn nơi muốn đến, ngày đi và phong cách. Travela xếp sẵn từng ngày; bạn xem trước, rồi mới lưu và chỉnh tiếp.</p>
-            <form method="GET" action="{{ route('planner.suggest') }}" class="tpf-quick" role="search" aria-label="Điền sẵn bằng một câu">
-                <i class="fas fa-magic" aria-hidden="true"></i>
-                <label class="sr-only" for="sgQuick">Hoặc mô tả chuyến đi bằng một câu</label>
-                <input id="sgQuick" type="text" name="q" maxlength="200" value="{{ request('q') }}" placeholder="Hoặc mô tả bằng một câu: “Hà Nội 3 ngày văn hóa, không trekking”">
-                <button type="submit" class="tp-btn tp-btn--ghost">Điền sẵn giúp tôi</button>
+            {{-- La bàn F1 "Vé hành trình": kể chuyến đi bằng một câu -> AI (hoặc luật khi AI tắt) điền form bên dưới, người dùng xem lại rồi mới xếp lịch.
+                 Không có JS thì form vẫn gửi ?q= như cũ (SearchIntent điền sẵn). --}}
+            <form method="GET" action="{{ route('planner.suggest') }}" class="ai-say" id="aiSay" aria-labelledby="aiSayH">
+                <div class="ai-say__head">
+                    <span class="ai-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.6"/><path d="M12 4.5 14.2 12 12 19.5 9.8 12Z" fill="#e9a23b"/><path d="M12 12 14.2 12 12 19.5Z" fill="#0d6f6a"/></svg></span>
+                    <label id="aiSayH" for="aiText">Kể chuyến đi bằng một câu</label>
+                    <span class="ai-say__mode" id="aiMode">{{ $aiOn ? 'La bàn đọc giúp bạn' : 'Chế độ cơ bản' }}</span>
+                </div>
+                <textarea id="aiText" name="q" rows="2" maxlength="500" placeholder="Ví dụ: Tôi đi Hà Nội 3 ngày cuối tháng 11, 2 người, khoảng 5 triệu, thích văn hóa và ăn uống, không thích đi quá nhiều">{{ request('q') }}</textarea>
+                <div class="ai-say__row">
+                    <p class="ai-say__priv">{{ $aiOn ? 'Câu bạn nhập được gửi tới nhà cung cấp AI để đọc hiểu. Đừng ghi email hay số điện thoại.' : 'Travela đọc câu bằng luật có sẵn, không gửi đi đâu.' }}</p>
+                    <button type="submit" class="tp-btn ai-btn" id="aiGo">Hiểu giúp mình</button>
+                </div>
             </form>
+            <div class="ai-result" id="aiResult" hidden aria-live="polite"></div>
         </header>
 
         @if ($errors->any())
@@ -106,6 +119,7 @@
                         <input type="hidden" name="placeName" id="sgPlaceName" value="{{ $pre['place']['name'] ?? '' }}">
                         <input type="hidden" name="placeLat" id="sgPlaceLat" value="{{ $pre['place']['lat'] ?? '' }}">
                         <input type="hidden" name="placeLng" id="sgPlaceLng" value="{{ $pre['place']['lng'] ?? '' }}">
+                        <input type="hidden" name="notes" id="sgNotes" value="{{ $pre['notes'] ?? '' }}">
                         <p class="tpf-err" id="sgWhereErr" hidden>Hãy chọn một điểm đến hoặc một nơi trên bản đồ.</p>
                     </div>
                     <div class="tpf-popular" aria-label="Điểm đến nổi bật">
@@ -237,6 +251,8 @@
     </div>
 </main>
 <script type="application/json" id="sgData">@json($clientData)</script>
-<script src="{{ asset('clients/assets/js/planner-suggest.js') }}?v=1" defer></script>
+<script type="application/json" id="aiData">{!! json_encode($aiData, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
+<script src="{{ asset('clients/assets/js/planner-suggest.js') }}?v=2" defer></script>
+<script src="{{ asset('clients/assets/js/planner-ai-brief.js') }}?v=1" defer></script>
 
 @include('clients.blocks.footer')

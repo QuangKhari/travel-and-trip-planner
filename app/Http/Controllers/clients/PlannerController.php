@@ -86,6 +86,7 @@ class PlannerController extends Controller
                 'pace' => is_string($qv['pace'] ?? null) ? $qv['pace'] : null, 'maxDifficulty' => is_string($qv['maxDifficulty'] ?? null) ? $qv['maxDifficulty'] : null,
                 'interests' => array_values(array_intersect((array) ($qv['interests'] ?? []), array_keys((array) config('interests')))),
                 'dislikes' => array_values(array_intersect((array) ($qv['dislikes'] ?? []), array_keys((array) config('planner.dislikes')))),
+                'notes' => is_string($qv['notes'] ?? null) ? mb_substr(strip_tags($qv['notes']), 0, 500) : null,
             ]);
         } elseif (is_string($q = $request->query('q')) && trim($q) !== '') {
             $i = $intent->parse(mb_substr($q, 0, 200));
@@ -121,6 +122,7 @@ class PlannerController extends Controller
                 'img' => $d->coverImage ? \Illuminate\Support\Facades\Storage::disk('public')->url($d->coverImage) : null])->values()->all();
 
         return view('clients.planner.suggest', [
+            'aiOn' => app(\App\Services\Ai\AiGateway::class)->featureOn('brief'),
             'unknown' => $unknown,
             'dests' => $dests,
             'allDests' => $all,
@@ -226,6 +228,8 @@ class PlannerController extends Controller
             'interests.*' => ['string', 'in:' . implode(',', array_keys((array) config('interests')))],
             'dislikes' => ['nullable', 'array', 'max:6'],
             'dislikes.*' => ['string', 'in:' . implode(',', array_keys((array) config('planner.dislikes')))],
+            // ghi chú từ câu mô tả (La bàn F1: ăn chay, đi cùng ông bà...): lưu vào tbl_trips.notes, F2 đọc lại
+            'notes' => ['nullable', 'string', 'max:500'],
         ];
     }
 
@@ -346,6 +350,9 @@ class PlannerController extends Controller
         } catch (\DomainException $e) {
             return redirect()->route('planner.suggest')->withInput()->withErrors(['generate' => $e->getMessage()]);
         }
+        if (!empty($data['notes']) && \Illuminate\Support\Facades\Schema::hasColumn('tbl_trips', 'notes')) {
+            DB::table('tbl_trips')->where('tripId', $id)->update(['notes' => mb_substr(strip_tags((string) $data['notes']), 0, 500)]);
+        }
         $spare = count(array_filter($result['plan']['unplaced'] ?? [], fn($u) => !empty($u['refId']) || !empty($u['osm'])));
         $how = $result['mode'] === 'open'
             ? ' bằng đề xuất mở rộng: các mục ghi "Ngoài dữ liệu Travela" lấy từ bản đồ OpenStreetMap, nên kiểm tra lại giờ mở cửa và giá trước khi đi. '
@@ -446,6 +453,9 @@ class PlannerController extends Controller
         $rv = app(TripSharing::class)->revision($id);
 
         return view('clients.planner.edit', [
+            'aiExplainOn' => app(\App\Services\Ai\AiGateway::class)->featureOn('explain'),
+            // La bàn Copilot chỉ cho người sửa được chuyến; tắt cờ thì không có nút, không tải script
+            'aiCopilotOn' => app(\App\Services\Ai\AiGateway::class)->featureOn('copilot') && TripSharing::canEdit($role),
             'cover' => $cover ? \App\Support\DiscoverImage::url((string) $cover) : null,
             'lastEdit' => ['by' => $rv['by'], 'at' => $trip->updatedAt ?? null, 'byMe' => (int) ($trip->lastEditorId ?? 0) === $uid],
             'title' => $trip->title,

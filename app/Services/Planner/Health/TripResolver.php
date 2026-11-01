@@ -84,6 +84,69 @@ final class TripResolver
             'before' => ['score' => $this->before['score'], 'level' => $this->before['level']], 'options' => array_values($options)];
     }
 
+    /**
+     * Mô phỏng một danh sách thao tác (dạng ngày/vị trí, đã biên dịch) trên bản sao của chuyến, chấm lại bằng CHÍNH TripHealth.
+     * Dùng cho La bàn Copilot. So vấn đề trước / sau theo DANH TÍNH (mã + mục, hoặc mã + ngày), không theo vị trí.
+     * @return array{before:array,after:array,effects:list<array>,newIssues:list<array>,resolvedIssues:list<array>,newHard:int,days:array,unassigned:list<array>}
+     * @throws \InvalidArgumentException khi thao tác trỏ tới vị trí không còn
+     */
+    public function simulate(object $trip, array $changes): array
+    {
+        $this->trip = $trip;
+        $this->payload = $this->planner->payload($trip);
+        $this->days = [];
+        foreach ($this->payload['days'] as $d) {
+            $this->days[(int) $d['day']] = array_values($d['items']);
+            $this->dows[(int) $d['day']] = $d['dow'] ?? null;
+        }
+        $this->unassigned = $this->payload['unassigned'];
+        $this->before = $this->healthOf($this->days, $this->unassigned);
+        [$days, $unassigned, $payload] = $this->apply($changes);
+        $after = $this->healthOf($days, $unassigned, $payload);
+        $relevant = fn($c) => in_array($c['level'], ['bad', 'warn'], true);
+        $bk = [];
+        foreach ($this->before['checks'] as $c) {
+            if ($relevant($c)) {
+                $bk[self::checkKey($c, $this->days)] = $c;
+            }
+        }
+        $ak = [];
+        foreach ($after['checks'] as $c) {
+            if ($relevant($c)) {
+                $ak[self::checkKey($c, $days)] = $c;
+            }
+        }
+        $pick = fn($c) => ['code' => $c['code'], 'level' => $c['level'], 'severity' => $c['severity'], 'day' => $c['day'], 'text' => $c['text']];
+        $new = array_values(array_map($pick, array_diff_key($ak, $bk)));
+        $gone = array_values(array_map($pick, array_diff_key($bk, $ak)));
+
+        return [
+            'before' => ['score' => $this->before['score'], 'level' => $this->before['level'], 'summary' => $this->before['summary']['label']],
+            'after' => ['score' => $after['score'], 'level' => $after['level'], 'summary' => $after['summary']['label']],
+            'effects' => $this->effects($changes, $days),
+            'newIssues' => $new,
+            'resolvedIssues' => $gone,
+            'newHard' => count(array_filter($new, fn($x) => $x['severity'] === 'hard')),
+            'days' => $days,
+            'unassigned' => $unassigned,
+            'afterDays' => $after['days'],
+        ];
+    }
+
+    /**
+     * Mục ứng viên dạng trình duyệt (itemForClient) dựng ĐÚNG như resolvedItem, cho thao tác replace / add của La bàn.
+     * null nếu nội dung không còn (bị ẩn / xóa).
+     */
+    public function candidate(object $trip, string $type, int $refId, array $old = []): ?array
+    {
+        $this->trip = $trip;
+        if (!$this->planner->resolve([['type' => $type, 'refId' => $refId]])) {
+            return null;
+        }
+
+        return TripPlanner::itemForClient($this->resolvedItem($type, $refId, $old));
+    }
+
     // ---------------------------------------------------------------- mô phỏng (dùng CHÍNH TripHealth)
 
     private function schedule(int $day, ?array $items = null): DaySchedule
@@ -108,40 +171,9 @@ final class TripResolver
      */
     private function apply(array $changes): array
     {
-        $days = $this->days;
-        $unassigned = $this->unassigned;
-        $payload = $this->payload;
-        $moved = [];
-        foreach ($changes as $c) {
-            if ($c['op'] === 'time') {
-                $days[$c['day']][$c['index']]['startMin'] = $c['startMin'];
-            } elseif ($c['op'] === 'reorder') {
-                $days[$c['day']] = array_map(fn($i) => $this->days[$c['day']][$i], $c['order']);
-            } elseif ($c['op'] === 'rainplan') {
-                $payload['rain']['plan'][$c['day']] = $c['items'];
-            } elseif ($c['op'] === 'replace') {
-                $old = $this->days[$c['day']][$c['index']];
-                $days[$c['day']][$c['index']] = $this->resolvedItem($c['with']['type'], (int) $c['with']['refId'], $old);
-                $old['startMin'] = null;
-                $old['day'] = null;
-                $unassigned[] = $old;
-            } elseif ($c['op'] === 'move') {
-                $it = $this->days[$c['day']][$c['index']];
-                $it['startMin'] = null;
-                $it['day'] = $c['toDay'];
-                $moved[$c['day']][] = $c['index'];
-                if ($c['toDay'] !== null) {
-                    $days[$c['toDay']][] = $it;
-                } else {
-                    $unassigned[] = $it;
-                }
-            }
-        }
-        foreach ($moved as $d => $idx) {
-            $days[$d] = array_values(array_filter($days[$d], fn($k) => !in_array($k, $idx, true), ARRAY_FILTER_USE_KEY));
-        }
-
-        return [$days, $unassigned, $payload];
+        // Một nguồn ngữ nghĩa thao tác cho Resolution Engine và La bàn Copilot (đã kiểm tra tương đương với bản cũ)
+        return ChangeSimulator::apply($this->days, $this->unassigned, $this->payload, $changes,
+            fn(string $type, int $refId, ?array $old) => $this->resolvedItem($type, $refId, $old ?? []));
     }
 
     /** Khóa nhận diện một kiểm tra theo MỤC (không theo vị trí, vì vị trí đổi sau khi áp dụng). */
@@ -197,16 +229,8 @@ final class TripResolver
     /** @return list<array{day:int,beforePct:int,afterPct:int,beforeMin:int,afterMin:int,beforeCount:int,afterCount:int,beforeKm:float,afterKm:float}> */
     private function effects(array $changes, array $after): array
     {
-        $touched = [];
-        foreach ($changes as $c) {
-            $touched[$c['day']] = true;
-            if (($c['toDay'] ?? null) !== null) {
-                $touched[$c['toDay']] = true;
-            }
-        }
-        ksort($touched);
         $out = [];
-        foreach (array_keys($touched) as $d) {
+        foreach (ChangeSimulator::touchedDays($changes) as $d) {
             $b = $this->schedule($d);
             $a = $this->schedule($d, $after[$d] ?? []);
             $out[] = ['day' => $d, 'beforePct' => (int) round($b->load() * 100), 'afterPct' => (int) round($a->load() * 100),

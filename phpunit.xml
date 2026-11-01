@@ -35,5 +35,14 @@
         <env name="JWT_SECRET" value="test-secret-key-test-secret-key-1234567890"/>
         <env name="JWT_BLACKLIST_ENABLED" value="true"/>
         <env name="JWT_BLACKLIST_GRACE_PERIOD" value="0"/>
+        <!-- test không bao giờ gọi dịch vụ ngoài thật, kể cả khi .env máy dev đang bật -->
+        <env name="PLANNER_ROUTE_PROVIDER" value="haversine" force="true"/>
+        <env name="PLANNER_OSRM_URL" value="null" force="true"/>
+        <env name="PLANNER_TRAVEL_MODE" value="driving" force="true"/>
+        <env name="AI_PLANNER_ENABLED" value="false" force="true"/>
+        <!-- config/flasher.php: tắt đổi session('success'/'error') thành thông báo nổi, để assertSessionHas kiểm tra được -->
+        <env name="FLASHER_FLASH_BAG" value="false" force="true"/>
+        <env name="AI_DRIVER" value="none" force="true"/>
+        <env name="RAG_LLM_DRIVER" value="none" force="true"/>
     </php>
 </phpunit>

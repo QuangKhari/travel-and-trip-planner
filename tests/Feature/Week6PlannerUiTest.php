@@ -88,6 +88,8 @@ class Week6PlannerUiTest extends TestCase
 
     public function test_destination_not_planner_ready_is_blocked_on_web(): void
     {
+        // không gọi Overpass/Photon thật: có mạng thì đề xuất mở rộng lấy được địa điểm thật và lịch không bị chặn
+        config(['planner.external.enabled' => false]);
         $this->withSession($this->s)->post('/len-ke-hoach/tao-tu-dong', $this->form(['destinationId' => $this->cd]))->assertSessionHasErrors('generate');
         $this->assertSame(0, DB::table('tbl_trips')->where('userId', $this->uid)->count());
     }

@@ -5,6 +5,7 @@
  *   reorder  : sắp lại thứ tự trong ngày theo order (chỉ số trên bản đã lưu)
  *   replace  : chèn mục mới đúng chỗ, giữ giờ cố định + buổi của mục cũ; mục cũ về "Đã lưu"
  *   rainplan : lưu phương án dự phòng khi mưa cho ngày (lịch không đổi)
+ *   add      : (La bàn) thêm mục mới vào ngày toDay, ngay sau mục `after` (vị trí trên bản đã lưu) hoặc cuối ngày; toDay null = "Đã lưu"
  * Mục được chỉ bằng (ngày, vị trí trong ngày) trên BẢN ĐÃ LƯU: chỉ gọi khi không còn thay đổi chưa lưu.
  * Hàm thuần (không DOM). Trả {ok:false} nếu lịch đã khác bản đề xuất (vị trí không còn mục).
  */
@@ -25,10 +26,15 @@
      * @param rainMax số mục dự phòng tối đa mỗi ngày
      */
     function apply(items, rain, changes, newItem, rainMax) {
+        var NOREF = { reorder: true, rainplan: true, add: true };
         var refs = changes.map(function (c) {
-            return { c: c, it: c.op === "reorder" || c.op === "rainplan" ? null : dayItems(items, c.day)[c.index], list: c.op === "reorder" ? dayItems(items, c.day) : null };
+            return {
+                c: c, it: NOREF[c.op] ? null : dayItems(items, c.day)[c.index], list: c.op === "reorder" ? dayItems(items, c.day) : null,
+                after: c.op === "add" && c.toDay != null && c.after != null ? dayItems(items, c.toDay)[c.after] : null,
+            };
         });
-        if (refs.some(function (r) { return r.c.op !== "reorder" && r.c.op !== "rainplan" && !r.it; })) return { ok: false };
+        if (refs.some(function (r) { return !NOREF[r.c.op] && !r.it; })) return { ok: false };
+        if (refs.some(function (r) { return r.c.op === "add" && r.c.toDay != null && r.c.after != null && !r.after; })) return { ok: false };
         refs.forEach(function (r) {
             var c = r.c;
             if (c.op === "time") r.it.startMin = c.startMin;
@@ -45,6 +51,12 @@
                 items.splice(items.indexOf(r.it), 0, n);
                 r.it.day = null;
                 r.it.startMin = null;
+            } else if (c.op === "add") {
+                var a = newItem(Object.assign({}, c.with, { day: c.toDay == null ? null : c.toDay }));
+                a.startMin = null;
+                a.hours = c.with.hours || null;
+                if (r.after && r.after.day === c.toDay && items.indexOf(r.after) >= 0) items.splice(items.indexOf(r.after) + 1, 0, a);
+                else items.push(a);
             } else if (c.op === "reorder") {
                 var slots = r.list.map(function (x) { return items.indexOf(x); }).sort(function (a, b) { return a - b; });
                 c.order.forEach(function (k, j) { items[slots[j]] = r.list[k]; });

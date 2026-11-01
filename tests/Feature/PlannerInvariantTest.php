@@ -122,7 +122,7 @@ class PlannerInvariantTest extends TestCase
      */
     private function applyViaBrowserJs(int $id, array $changes, array $days, array $inbox, ?string $start): void
     {
-        $node = trim((string) shell_exec('command -v node'));
+        $node = trim(strtok((string) shell_exec(PHP_OS_FAMILY === 'Windows' ? 'where node 2>NUL' : 'command -v node'), "\r\n") ?: '');
         if ($node === '') {
             [$d2, $i2] = $this->applyLikeBrowser($days, $inbox, $changes);
             $this->save($id, $d2, $i2, $start);

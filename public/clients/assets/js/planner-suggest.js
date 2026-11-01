@@ -265,4 +265,26 @@
     ready = true;
     renderPicked();
     syncMonths();
+
+    /* ---------- API nhỏ cho La bàn (planner-ai-brief.js) điền form từ "vé hành trình" ---------- */
+    function setNum(id, v) { var x = $(id); if (!x || v == null) return; x.value = v; x.dispatchEvent(new Event("change")); }
+    window.TpSuggest = {
+        selectDest: function (id) {
+            var d = DESTS.filter(function (x) { return String(x.id) === String(id); })[0];
+            if (d) select({ type: "destination", id: d.id, name: d.name, sub: d.sub, ready: d.ready });
+            return !!d;
+        },
+        setStart: function (ymd) { start.value = ymd || ""; syncMonths(); },
+        setMonth: function (m) { if (start.value) return; month.value = m ? String(m) : ""; syncMonths(); },
+        setDays: function (n) { setNum("sgDays", n); },
+        setPeople: function (ad, ch) { setNum("sgAdults", ad); setNum("sgChildren", ch == null ? 0 : ch); },
+        setBudget: function (b) { budget.value = b == null ? "" : b; summary(); },
+        setRadio: function (name, v) { var r = form.querySelector('input[name="' + name + '"][value="' + v + '"]'); if (r) { r.checked = true; summary(); } },
+        setChecks: function (name, vals) {
+            form.querySelectorAll('input[name="' + name + '[]"]').forEach(function (c) { c.checked = vals.indexOf(c.value) >= 0; });
+            summary();
+        },
+        people: function () { return (parseInt($("sgAdults").value, 10) || 1) + (parseInt($("sgChildren").value, 10) || 0); },
+        submit: function () { if (form.requestSubmit) form.requestSubmit(); else form.submit(); },
+    };
 })();
