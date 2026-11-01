@@ -1,0 +1,17 @@
+{
+    "note": "Sinh bởi php artisan ai:prompts --lock. Không sửa tay.",
+    "features": {
+        "brief": {
+            "version": "brief-3",
+            "hash": "ad70bfc7a1223fe9a53b88849a3df598aead227b093ccdc3677e36b86a3ced8f"
+        },
+        "explain": {
+            "version": "explain-1",
+            "hash": "da100665dd98d74f408f2fa7fea25da1f34cdbb592c3169f080a271460793b46"
+        },
+        "copilot": {
+            "version": "copilot-1",
+            "hash": "ebb27b7eeb8efd2226e13d0d20de07fa8da454b7c5569ce4660b05547d042575"
+        }
+    }
+}

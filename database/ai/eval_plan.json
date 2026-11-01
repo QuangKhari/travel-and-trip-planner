@@ -1,0 +1,240 @@
+{
+ "about": "Thí nghiệm A (mục 8.3): 20 yêu cầu có cấu trúc, cùng cho engine (A2), LLM + dữ liệu (A1b), LLM một mình (A1). Slug phải có trong tbl_destinations; ngày 07/12/2026, 14/12, 21/12, 04/01/2027, 11/01, 18/01, 25/01 là Thứ Hai (bẫy đóng cửa). Ngày phải ở tương lai khi chạy.",
+ "cases": [
+  {
+   "id": "p01",
+   "slug": "ha-noi",
+   "days": 3,
+   "startDate": "2026-12-07",
+   "groupSize": 2,
+   "interests": [
+    "culture",
+    "food"
+   ],
+   "pace": "normal"
+  },
+  {
+   "id": "p02",
+   "slug": "ha-noi",
+   "days": 2,
+   "startDate": "2026-12-14",
+   "groupSize": 2,
+   "interests": [
+    "culture"
+   ],
+   "pace": "relaxed"
+  },
+  {
+   "id": "p03",
+   "slug": "ha-noi",
+   "days": 1,
+   "startDate": "2026-12-21",
+   "groupSize": 2,
+   "interests": [
+    "food"
+   ],
+   "pace": "packed"
+  },
+  {
+   "id": "p04",
+   "slug": "da-nang",
+   "days": 3,
+   "startDate": "2026-12-10",
+   "groupSize": 2,
+   "interests": [
+    "nature",
+    "food"
+   ],
+   "pace": "normal"
+  },
+  {
+   "id": "p05",
+   "slug": "da-nang",
+   "days": 4,
+   "startDate": "2027-01-04",
+   "groupSize": 2,
+   "interests": [
+    "nature",
+    "family"
+   ],
+   "pace": "relaxed"
+  },
+  {
+   "id": "p06",
+   "slug": "hue",
+   "days": 2,
+   "startDate": "2026-12-07",
+   "groupSize": 2,
+   "interests": [
+    "culture"
+   ],
+   "pace": "normal"
+  },
+  {
+   "id": "p07",
+   "slug": "hue",
+   "days": 3,
+   "startDate": "2027-01-11",
+   "groupSize": 2,
+   "interests": [
+    "culture",
+    "food"
+   ],
+   "pace": "packed"
+  },
+  {
+   "id": "p08",
+   "slug": "hoi-an",
+   "days": 2,
+   "startDate": "2026-12-12",
+   "groupSize": 2,
+   "interests": [
+    "culture",
+    "food"
+   ],
+   "pace": "relaxed"
+  },
+  {
+   "id": "p09",
+   "slug": "hoi-an",
+   "days": 1,
+   "startDate": "2026-12-28",
+   "groupSize": 2,
+   "interests": [
+    "culture"
+   ],
+   "pace": "normal"
+  },
+  {
+   "id": "p10",
+   "slug": "da-lat",
+   "days": 3,
+   "startDate": "2026-12-18",
+   "groupSize": 2,
+   "interests": [
+    "nature",
+    "relax"
+   ],
+   "pace": "normal"
+  },
+  {
+   "id": "p11",
+   "slug": "da-lat",
+   "days": 2,
+   "startDate": "2027-01-18",
+   "groupSize": 2,
+   "interests": [
+    "nature"
+   ],
+   "pace": "packed"
+  },
+  {
+   "id": "p12",
+   "slug": "ninh-binh",
+   "days": 2,
+   "startDate": "2026-12-05",
+   "groupSize": 2,
+   "interests": [
+    "nature",
+    "culture"
+   ],
+   "pace": "normal"
+  },
+  {
+   "id": "p13",
+   "slug": "ninh-binh",
+   "days": 1,
+   "startDate": "2026-12-14",
+   "groupSize": 2,
+   "interests": [
+    "nature"
+   ],
+   "pace": "relaxed"
+  },
+  {
+   "id": "p14",
+   "slug": "sa-pa",
+   "days": 3,
+   "startDate": "2026-12-09",
+   "groupSize": 2,
+   "interests": [
+    "nature",
+    "adventure"
+   ],
+   "pace": "normal"
+  },
+  {
+   "id": "p15",
+   "slug": "sa-pa",
+   "days": 2,
+   "startDate": "2027-01-02",
+   "groupSize": 2,
+   "interests": [
+    "nature"
+   ],
+   "pace": "relaxed"
+  },
+  {
+   "id": "p16",
+   "slug": "phu-quoc",
+   "days": 4,
+   "startDate": "2026-12-20",
+   "groupSize": 2,
+   "interests": [
+    "nature",
+    "relax"
+   ],
+   "pace": "relaxed"
+  },
+  {
+   "id": "p17",
+   "slug": "phu-quoc",
+   "days": 3,
+   "startDate": "2027-01-07",
+   "groupSize": 2,
+   "interests": [
+    "nature",
+    "family",
+    "food"
+   ],
+   "pace": "normal"
+  },
+  {
+   "id": "p18",
+   "slug": "ha-noi",
+   "days": 4,
+   "startDate": "2027-01-25",
+   "groupSize": 2,
+   "interests": [
+    "culture",
+    "food",
+    "relax"
+   ],
+   "pace": "packed"
+  },
+  {
+   "id": "p19",
+   "slug": "da-nang",
+   "days": 2,
+   "startDate": "2026-12-14",
+   "groupSize": 2,
+   "interests": [
+    "culture",
+    "food"
+   ],
+   "pace": "normal"
+  },
+  {
+   "id": "p20",
+   "slug": "hue",
+   "days": 1,
+   "startDate": "2026-12-21",
+   "groupSize": 2,
+   "interests": [
+    "culture",
+    "food"
+   ],
+   "pace": "normal"
+  }
+ ]
+}

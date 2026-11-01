@@ -1,0 +1,125 @@
+{
+ "about": "Bộ F2 (mục 8.1): 10 chuyến do engine sinh ở 5 điểm đến, 2 độ dài. Cột judgeFaithful / judgeUseful trong CSV để người chấm 1–5.",
+ "cases": [
+  {
+   "id": "e01",
+   "slug": "ha-noi",
+   "days": 2,
+   "startDate": "2026-12-08",
+   "groupSize": 2,
+   "interests": [
+    "culture",
+    "food"
+   ],
+   "pace": "normal"
+  },
+  {
+   "id": "e02",
+   "slug": "ha-noi",
+   "days": 4,
+   "startDate": "2026-12-09",
+   "groupSize": 2,
+   "interests": [
+    "culture",
+    "food"
+   ],
+   "pace": "normal"
+  },
+  {
+   "id": "e03",
+   "slug": "da-nang",
+   "days": 2,
+   "startDate": "2026-12-07",
+   "groupSize": 2,
+   "interests": [
+    "culture",
+    "food"
+   ],
+   "pace": "normal"
+  },
+  {
+   "id": "e04",
+   "slug": "da-nang",
+   "days": 4,
+   "startDate": "2026-12-08",
+   "groupSize": 2,
+   "interests": [
+    "culture",
+    "food"
+   ],
+   "pace": "normal"
+  },
+  {
+   "id": "e05",
+   "slug": "hue",
+   "days": 2,
+   "startDate": "2026-12-09",
+   "groupSize": 2,
+   "interests": [
+    "culture",
+    "food"
+   ],
+   "pace": "normal"
+  },
+  {
+   "id": "e06",
+   "slug": "hue",
+   "days": 3,
+   "startDate": "2026-12-07",
+   "groupSize": 2,
+   "interests": [
+    "culture",
+    "food"
+   ],
+   "pace": "normal"
+  },
+  {
+   "id": "e07",
+   "slug": "hoi-an",
+   "days": 1,
+   "startDate": "2026-12-08",
+   "groupSize": 2,
+   "interests": [
+    "culture",
+    "food"
+   ],
+   "pace": "normal"
+  },
+  {
+   "id": "e08",
+   "slug": "hoi-an",
+   "days": 3,
+   "startDate": "2026-12-09",
+   "groupSize": 2,
+   "interests": [
+    "culture",
+    "food"
+   ],
+   "pace": "normal"
+  },
+  {
+   "id": "e09",
+   "slug": "da-lat",
+   "days": 2,
+   "startDate": "2026-12-07",
+   "groupSize": 2,
+   "interests": [
+    "culture",
+    "food"
+   ],
+   "pace": "normal"
+  },
+  {
+   "id": "e10",
+   "slug": "da-lat",
+   "days": 4,
+   "startDate": "2026-12-08",
+   "groupSize": 2,
+   "interests": [
+    "culture",
+    "food"
+   ],
+   "pace": "normal"
+  }
+ ]
+}

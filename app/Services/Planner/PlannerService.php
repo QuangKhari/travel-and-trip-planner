@@ -214,6 +214,24 @@ final class PlannerService
 
     // ------------------------------------------------------------------ nạp ứng viên
 
+    /**
+     * Danh sách ứng viên ĐÚNG như engine nhận vào (trước lọc cứng) cho một yêu cầu, dùng cho thí nghiệm A1b
+     * ("LLM + dữ liệu thật, không engine"): LLM và engine nhận cùng dữ liệu, khác nhau ở cách lọc và xếp.
+     * @return array{ok:bool,dest?:object,req?:array,cands?:list<array>}
+     */
+    public function candidatesFor(array $req): array
+    {
+        $dest = DB::table('tbl_destinations')->where('isActive', 1)->where('slug', (string) ($req['slug'] ?? ''))->first();
+        if (!$dest) {
+            return ['ok' => false];
+        }
+        $nreq = $this->engine->normalizeRequest($req);
+        $year = $nreq['startDate'] ? (int) date('Y', strtotime($nreq['startDate'])) : DestinationMonthBrief::defaultYear($nreq['month']);
+        $log = [];
+
+        return ['ok' => true, 'dest' => $dest, 'req' => $nreq, 'cands' => $this->candidates($dest, $nreq, $year, $log)];
+    }
+
     /** @return list<array<string,mixed>> */
     private function candidates(object $dest, array $req, int $year, array &$log): array
     {

@@ -1,0 +1,13 @@
+{
+ "about": "Câu F1 do NGƯỜI KHÁC viết (held-out, mục 8.1): chỉ đưa họ mô tả nhóm câu, không đưa lời nhắc. Mỗi case như eval_brief.json và đặt \"source\": \"peer\". Chạy: php artisan ai:eval --suite=brief --engine=llm --file=database/ai/eval_brief_peer.json (3 lần).",
+ "groups": {
+  "du": "đủ thông tin",
+  "thieu": "thiếu một trường",
+  "mo_ho": "mơ hồ",
+  "khong_dau": "không dấu / viết tắt",
+  "ngoai": "ngoài phạm vi",
+  "nhieu_diem": "nhiều điểm đến",
+  "injection": "chèn câu lệnh lạ"
+ },
+ "cases": []
+}

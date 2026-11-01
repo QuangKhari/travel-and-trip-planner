@@ -40,9 +40,12 @@ final class CopilotService
     /**
      * @param list<array{name?:string,day?:?int}> $mentions
      * @param list<array{role:string,text:string}> $history
+     * @param array{verify?:bool} $opt verify = false CHỈ dùng cho thí nghiệm B1 (ai:eval --suite=copilot --mode=unchecked):
+     *        bỏ bước chặn "vấn đề cứng mới" và vòng sửa, để đo xem không có engine kiểm chứng thì chuyện gì xảy ra
      */
-    public function chat(object $trip, ?int $userId, string $message, array $mentions = [], array $history = []): array
+    public function chat(object $trip, ?int $userId, string $message, array $mentions = [], array $history = [], array $opt = []): array
     {
+        $verify = $opt['verify'] ?? true;
         $t0 = microtime(true);
         $rev = (int) ($trip->rev ?? 0);
         $ctx = $this->context($trip);
@@ -96,7 +99,7 @@ final class CopilotService
                 continue;
             }
             if ($action === 'propose') {
-                $p = $this->propose($trip, $ctx, (array) ($a['changes'] ?? []), $cands, $explicit, $say);
+                $p = $this->propose($trip, $ctx, (array) ($a['changes'] ?? []), $cands, $explicit, $say, $verify);
                 if ($p['ok']) {
                     $result = $p['body'];
                     break;
@@ -222,7 +225,7 @@ final class CopilotService
      * Biên dịch + mô phỏng một đề xuất. ok=false kèm lỗi viết cho LLM (để sửa) / người dùng.
      * @return array{ok:bool,errors?:list<string>,body?:array}
      */
-    private function propose(object $trip, array $ctx, array $keyed, array $cands, array $explicit, string $say): array
+    private function propose(object $trip, array $ctx, array $keyed, array $cands, array $explicit, string $say, bool $verify = true): array
     {
         $c = $this->compiler->compile($keyed, $ctx['keys'], $cands, $ctx['days'], $explicit);
         if (!$c['ok']) {
@@ -244,7 +247,7 @@ final class CopilotService
         } catch (InvalidArgumentException $e) {
             return ['ok' => false, 'errors' => [$e->getMessage()]];
         }
-        if ($sim['newHard'] > 0) {
+        if ($verify && $sim['newHard'] > 0) {
             $txt = array_map(fn($x) => ($x['day'] ? 'Ngày ' . $x['day'] . ': ' : '') . $x['text'],
                 array_values(array_filter($sim['newIssues'], fn($x) => $x['severity'] === 'hard')));
 
@@ -269,7 +272,7 @@ final class CopilotService
         $unknown = $ctx['facts']['guard']->unknown(preg_replace('/\{\{[^}]*\}\}/u', ' ', $say) ?? '');
         $sayOk = $say !== '' && !array_diff($unknown, \App\Services\Ai\Explain\NumberGuard::extract($human));
         $sayText = $sayOk ? $say : 'Đề xuất: ' . $human . '.';
-        $pick = fn($x) => ['day' => $x['day'], 'text' => $x['text'], 'level' => $x['level']];
+        $pick = fn($x) => ['day' => $x['day'], 'text' => $x['text'], 'level' => $x['level'], 'code' => $x['code']];
 
         return ['ok' => true, 'body' => [
             'kind' => 'proposal',
@@ -284,6 +287,7 @@ final class CopilotService
                 'resolved' => array_map($pick, array_slice($sim['resolvedIssues'], 0, 4)),
                 'warnings' => array_map($pick, array_slice($sim['newIssues'], 0, 3)),
                 'effects' => $sim['effects'],
+                'newHard' => $sim['newHard'],
                 'checked' => ['giờ mở cửa', 'trùng giờ', 'thời gian đi lại', 'độ dày ngày'],
             ],
         ]];

@@ -1,0 +1,128 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Services\Ai\Llm\FakeLlm;
+use App\Services\Ai\Llm\StructuredLlm;
+use App\Services\Ai\PromptLock;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
+
+/**
+ * Gói 4: bộ đánh giá (thí nghiệm A, B, F2) chạy được, đo bằng TripHealth và KHÔNG để lại gì trong CSDL;
+ * lời nhắc được đóng băng theo prompt_version.
+ */
+class AiEvalSuitesTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private int $hn;
+    private array $pl = [];
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Cache::flush();
+        config(['core_destinations.slugs' => []]);
+        $this->hn = DB::table('tbl_destinations')->insertGetId(['slug' => 'ha-noi', 'name' => 'Hà Nội', 'province' => 'Hà Nội', 'domain' => 'b',
+            'description' => 'Thủ đô.', 'latitude' => 21.0285, 'longitude' => 105.8542, 'isActive' => 1]);
+        foreach ([['Văn Miếu', 21.0277, 105.8355, 'historic'], ['Hoàng thành Thăng Long', 21.035, 105.84, 'historic'], ['Bảo tàng Dân tộc học', 21.04, 105.80, 'museum'],
+            ['Hồ Tây', 21.06, 105.82, 'viewpoint'], ['Nhà hát Lớn', 21.024, 105.857, 'attraction'], ['Cà phê Giảng', 21.034, 105.853, 'cafe'], ['Chùa Trấn Quốc', 21.048, 105.836, 'place_of_worship']] as $i => [$n, $la, $lo, $k]) {
+            $this->pl[$n] = DB::table('tbl_external_places')->insertGetId(['destinationId' => $this->hn, 'source' => 'manual', 'externalId' => $n, 'name' => $n,
+                'category' => 'sight', 'kind' => $k, 'latitude' => $la, 'longitude' => $lo, 'rank' => $i + 1, 'reviewStatus' => 'published', 'syncedAt' => now(), 'isMustTry' => 0]);
+        }
+        app(\App\Services\Planner\OpeningHours::class)->store('place', $this->pl['Bảo tàng Dân tộc học'], 'Tu-Su 08:30-17:30; Mo off');
+    }
+
+    protected function tearDown(): void
+    {
+        foreach (glob(base_path('storage/framework/testing/{plan,copilot,explain,plan-engine,plan-llm,b1,b2,ex}.{json,csv}'), GLOB_BRACE) ?: [] as $f) {
+            @unlink($f);
+        }
+        parent::tearDown();
+    }
+
+    private function file(string $name, array $cases): string
+    {
+        $p = 'storage/framework/testing/' . $name . '.json';
+        @mkdir(base_path('storage/framework/testing'), 0777, true);
+        file_put_contents(base_path($p), json_encode(['cases' => $cases], JSON_UNESCAPED_UNICODE));
+
+        return $p;
+    }
+
+    private function counts(): array
+    {
+        return [DB::table('tbl_trips')->count(), DB::table('tbl_trip_items')->count(), DB::table('tbl_ai_runs')->count(), DB::table('tbl_users')->count()];
+    }
+
+    public function test_plan_engine_vs_llm_with_data_measured_by_trip_health_and_rolled_back(): void
+    {
+        $before = $this->counts();
+        $f = $this->file('plan', [['id' => 'p1', 'slug' => 'ha-noi', 'days' => 2, 'startDate' => '2026-12-07', 'interests' => ['culture'], 'pace' => 'normal']]);
+
+        $this->artisan('ai:eval', ['--suite' => 'plan', '--mode' => 'engine', '--file' => $f, '--out' => 'storage/framework/testing/plan-engine.csv'])
+            ->expectsOutputToContain('Tỷ lệ mục có thật trong CSDL')->assertSuccessful();
+        $csv = file_get_contents(base_path('storage/framework/testing/plan-engine.csv'));
+        $this->assertStringContainsString('hard', $csv);
+
+        // A1b: LLM đặt bảo tàng vào Thứ Hai (đóng cửa) và đè giờ hai mục, kèm một khóa bịa
+        $mu = 'place:' . $this->pl['Bảo tàng Dân tộc học'];
+        $this->app->instance(StructuredLlm::class, new FakeLlm(['copilot' => ['days' => [
+            ['day' => 1, 'items' => [['key' => $mu, 'start' => '09:00'], ['key' => 'place:' . $this->pl['Văn Miếu'], 'start' => '09:30'], ['key' => 'place:999999', 'start' => '12:00']]],
+            ['day' => 2, 'items' => [['key' => 'place:' . $this->pl['Hồ Tây'], 'start' => '08:00']]],
+        ]]]));
+        config(['ai.driver' => 'openai']);
+        $this->artisan('ai:eval', ['--suite' => 'plan', '--mode' => 'llm_data', '--file' => $f, '--out' => 'storage/framework/testing/plan-llm.csv'])->assertSuccessful();
+        $rows = array_map('str_getcsv', file(base_path('storage/framework/testing/plan-llm.csv')));
+        $h = array_flip(array_map(fn($x) => trim($x, "\xEF\xBB\xBF"), $rows[0]));
+        $this->assertSame('0.75', $rows[1][$h['exist']], '3/4 khóa có thật');
+        $this->assertGreaterThanOrEqual(1, (int) $rows[1][$h['hard']], 'TripHealth bắt lỗi cứng (đóng cửa Thứ Hai / chồng giờ)');
+
+        $this->assertSame($before, $this->counts(), 'hộp cát: không để lại chuyến, mục, log, người dùng tạm');
+    }
+
+    public function test_copilot_unchecked_lets_hard_issue_through_but_verified_does_not(): void
+    {
+        $f = $this->file('copilot', [['id' => 'c1', 'group' => 'bay', 'trip' => ['slug' => 'ha-noi', 'days' => 2, 'startDate' => '2026-12-07', 'interests' => ['culture']],
+            'request' => 'Cho {d1i1} và {d1i2} cùng bắt đầu lúc 10:00', 'expect' => ['kind' => 'any']]]);
+        // làm đúng nguyên văn thì hai mục chồng giờ (time.overlap, lỗi cứng)
+        $this->app->instance(StructuredLlm::class, new FakeLlm(['copilot' => ['action' => 'propose', 'say' => 'Dời.',
+            'changes' => [['op' => 'time', 'item' => 'i1', 'startMin' => 600], ['op' => 'time', 'item' => 'i2', 'startMin' => 600]]]]));
+        $before = $this->counts();
+
+        $this->artisan('ai:eval', ['--suite' => 'copilot', '--mode' => 'unchecked', '--file' => $f, '--out' => 'storage/framework/testing/b1.csv'])->assertSuccessful();
+        $this->artisan('ai:eval', ['--suite' => 'copilot', '--mode' => 'verified', '--file' => $f, '--out' => 'storage/framework/testing/b2.csv'])->assertSuccessful();
+        $read = function ($p) {
+            $rows = array_map('str_getcsv', file(base_path($p)));
+            $h = array_flip(array_map(fn($x) => trim($x, "\xEF\xBB\xBF"), $rows[0]));
+
+            return [$rows[1][$h['kind']], (int) $rows[1][$h['newHard']]];
+        };
+        [$k1, $hard1] = $read('storage/framework/testing/b1.csv');
+        [$k2, $hard2] = $read('storage/framework/testing/b2.csv');
+        $this->assertSame('proposal', $k1);
+        $this->assertGreaterThanOrEqual(1, $hard1, 'B1: không có engine kiểm chứng thì lỗi cứng tới tay người dùng');
+        $this->assertSame('reply', $k2, 'B2: bị chặn sau 2 lần sửa');
+        $this->assertSame(0, $hard2);
+        $this->assertSame($before, $this->counts());
+    }
+
+    public function test_explain_suite_reports_guard_pass(): void
+    {
+        $f = $this->file('explain', [['id' => 'e1', 'slug' => 'ha-noi', 'days' => 2, 'startDate' => '2026-12-08', 'interests' => ['culture'], 'pace' => 'normal']]);
+        $this->app->instance(StructuredLlm::class, new FakeLlm(['explain' => ['headline' => '{{dest}} hai ngày', 'days' => [], 'tips' => [['text' => 'Vé chỉ 35.000đ', 'basedOn' => ['health:x']]]]]));
+        $this->artisan('ai:eval', ['--suite' => 'explain', '--file' => $f, '--out' => 'storage/framework/testing/ex.csv'])
+            ->expectsOutputToContain('Qua guard trọn vẹn')->assertSuccessful();
+        $this->assertStringContainsString('judgeFaithful', file_get_contents(base_path('storage/framework/testing/ex.csv')));
+    }
+
+    public function test_prompts_are_frozen_by_version(): void
+    {
+        foreach (PromptLock::status() as $f => $s) {
+            $this->assertSame('khớp', $s['state'], "Lời nhắc $f đổi mà chưa tăng config('ai.prompt_version.$f') rồi chạy php artisan ai:prompts --lock");
+        }
+    }
+}

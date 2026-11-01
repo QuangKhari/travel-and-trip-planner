@@ -6,32 +6,43 @@ use App\Services\Ai\AiGateway;
 use App\Services\Ai\Brief\BriefPrompt;
 use App\Services\Ai\Brief\BriefService;
 use App\Services\Ai\Brief\BriefValidator;
+use App\Services\Ai\Eval\CopilotExperiment;
+use App\Services\Ai\Eval\EvalKit;
+use App\Services\Ai\Eval\ExplainExperiment;
+use App\Services\Ai\Eval\PlanExperiment;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Đánh giá F1 trên bộ câu có đáp án (database/ai/eval_brief.json), tài liệu v2.2 mục 8.
+ * Bộ đánh giá La bàn (tài liệu v2.2 mục 8). Mọi bộ chạy trong giao dịch rồi hoàn tác: không để lại chuyến, log hay cache.
  *   php artisan ai:eval --suite=brief --engine=rules            (mốc: SearchIntent, miễn phí)
- *   php artisan ai:eval --suite=brief --engine=llm --out=storage/app/ai-brief.csv
+ *   php artisan ai:eval --suite=brief --engine=llm --out=storage/app/ai-brief.csv [--file=database/ai/eval_brief_peer.json]
+ *   php artisan ai:eval --suite=plan    --mode=engine|llm_data|llm   (thí nghiệm A: A2 / A1b / A1)
+ *   php artisan ai:eval --suite=copilot --mode=verified|unchecked    (thí nghiệm B: B2 / B1)
+ *   php artisan ai:eval --suite=explain                              (F2: tỷ lệ qua guard + lời kể để người chấm)
  * Chấm từng trường: đúng giá trị; trường "suy đoán" phải đúng giá trị VÀ được đánh dấu AI đoán;
  * trường thiếu phải để trống và được hỏi lại (không đoán bừa). Nhóm injection: không lộ chuỗi cấm.
  * Chỉ so sánh các lần chạy cùng promptVersion, cùng model, cùng bộ câu.
  */
 class AiEval extends Command
 {
-    protected $signature = 'ai:eval {--suite=brief} {--engine=llm : llm | rules} {--limit=0} {--out=} {--today=2026-11-01} {--model= : đổi model cho lần chạy này, vd gemini-3.8-flash} {--sleep=4 : giây nghỉ giữa hai câu (tránh vượt hạn mức phút của gói miễn phí)} {--retry=2 : số lần thử lại khi lỗi} {--timeout= : giây chờ mỗi lệnh gọi (mặc định theo config ai.timeout.brief)} {--effort= : reasoning_effort low|medium|high}';
+    protected $signature = 'ai:eval {--suite=brief : brief | plan | copilot | explain} {--mode= : plan: engine|llm_data|llm · copilot: verified|unchecked} {--file= : bộ mẫu khác (mặc định database/ai/eval_<suite>.json)} {--engine=llm : llm | rules} {--limit=0} {--out=} {--today=2026-11-01} {--model= : đổi model cho lần chạy này, vd gemini-3.8-flash} {--sleep=4 : giây nghỉ giữa hai câu (tránh vượt hạn mức phút của gói miễn phí)} {--retry=2 : số lần thử lại khi lỗi} {--timeout= : giây chờ mỗi lệnh gọi (mặc định theo config ai.timeout.brief)} {--effort= : reasoning_effort low|medium|high}';
     protected $description = 'Chạy bộ đánh giá La bàn (F1 brief) và in độ chính xác từng trường';
 
     private const FIELDS = ['destination', 'month', 'days', 'adults', 'children', 'pace', 'interests', 'dislikes', 'budget'];
 
     public function handle(BriefService $brief, BriefValidator $validator, AiGateway $gateway): int
     {
-        if ($this->option('suite') !== 'brief') {
-            $this->error('Hiện chỉ có --suite=brief (explain và copilot thêm ở gói sau).');
+        $suite = (string) $this->option('suite');
+        if (in_array($suite, ['plan', 'copilot', 'explain'], true)) {
+            return $this->suite($suite);
+        }
+        if ($suite !== 'brief') {
+            $this->error('--suite phải là brief, plan, copilot hoặc explain.');
 
             return self::FAILURE;
         }
-        $data = json_decode((string) file_get_contents(database_path('ai/eval_brief.json')), true);
+        $data = json_decode((string) file_get_contents($this->file('brief')), true);
         $cases = $data['cases'] ?? [];
         if ((int) $this->option('limit') > 0) {
             $cases = array_slice($cases, 0, (int) $this->option('limit'));
@@ -148,6 +159,18 @@ class AiEval extends Command
         foreach ($miss as $k => $ids) {
             $this->line('  sai ' . $k . ': ' . implode(', ', $ids));
         }
+        // tách theo nguồn câu (author / peer): báo cáo riêng để thấy thiên lệch "người viết đề hợp gu lời nhắc" (mục 8.1)
+        $bySrc = [];
+        foreach ($rows as $r) {
+            foreach (self::FIELDS as $f) {
+                if (($r[$f] ?? '') !== '') {
+                    $bySrc[$r['source']][] = (int) $r[$f];
+                }
+            }
+        }
+        if (count($bySrc) > 1) {
+            $this->table(['Nguồn câu', 'Số ô chấm', 'Đúng', 'Tỷ lệ'], array_map(fn($src, $v) => [$src, count($v), array_sum($v), round(100 * array_sum($v) / max(1, count($v)), 1) . '%'], array_keys($bySrc), $bySrc));
+        }
         if ($failed) {
             $this->warn(count($failed) . ' câu gọi LLM lỗi, KHÔNG tính vào bảng trên (chạy lại hoặc tăng --sleep):');
             foreach ($failed as $f) {
@@ -211,5 +234,121 @@ class AiEval extends Command
         }
 
         return $a == $b;
+    }
+
+    // ================================================================== plan / copilot / explain
+
+    private function file(string $suite): string
+    {
+        $f = (string) $this->option('file');
+
+        return $f !== '' ? base_path($f) : database_path('ai/eval_' . $suite . '.json');
+    }
+
+    private function suite(string $suite): int
+    {
+        // đánh giá đo CHẤT LƯỢNG: bật đúng tính năng đang đo, bỏ hạn mức (userId null) và ngắt mạch (EvalKit / từng mẫu)
+        config(['ai.enabled' => true, 'ai.features.' . ($suite === 'plan' ? 'copilot' : $suite) => true]);
+        if ($m = $this->option('model')) {
+            config(['ai.models.' . config('ai.driver') . '.' . ($suite === 'explain' ? 'explain' : 'copilot') => (string) $m]);
+        }
+        if ($e = $this->option('effort')) {
+            config(['ai.reasoning_effort' => (string) $e]);
+        }
+        $path = $this->file($suite);
+        if (!is_file($path)) {
+            $this->error('Không có bộ mẫu ' . $path);
+
+            return self::FAILURE;
+        }
+        $cases = json_decode((string) file_get_contents($path), true)['cases'] ?? [];
+        if ((int) $this->option('limit') > 0) {
+            $cases = array_slice($cases, 0, (int) $this->option('limit'));
+        }
+        $modes = ['plan' => PlanExperiment::MODES, 'copilot' => CopilotExperiment::MODES, 'explain' => ['llm']][$suite];
+        $mode = (string) ($this->option('mode') ?: $modes[0]);
+        if (!in_array($mode, $modes, true)) {
+            $this->error('--mode của ' . $suite . ' phải là ' . implode(' | ', $modes));
+
+            return self::FAILURE;
+        }
+        $runner = app(['plan' => PlanExperiment::class, 'copilot' => CopilotExperiment::class, 'explain' => ExplainExperiment::class][$suite]);
+        $usesLlm = !($suite === 'plan' && $mode === 'engine');
+        $rows = [];
+        foreach ($cases as $i => $c) {
+            $r = $suite === 'explain' ? $runner->run($c) : $runner->run($c, $mode);
+            $rows[] = $r;
+            $this->line(sprintf('  %-6s %s', $r['id'], isset($r['error']) ? '<fg=red>lỗi: ' . $r['error'] . '</>' : $this->brief($suite, $r)));
+            if ($usesLlm && $i < count($cases) - 1 && (int) $this->option('sleep') > 0 && !app()->runningUnitTests()) {
+                sleep((int) $this->option('sleep'));
+            }
+        }
+        $ok = array_values(array_filter($rows, fn($r) => !isset($r['error'])));
+        $this->info(sprintf('Bộ %s · mode=%s · %s · %d mẫu (%d lỗi, không tính)', $suite, $mode,
+            $usesLlm ? 'model=' . config('ai.models.' . config('ai.driver') . '.' . ($suite === 'explain' ? 'explain' : 'copilot')) : 'không dùng LLM',
+            count($rows), count($rows) - count($ok)));
+        $this->table(['Chỉ số', 'Giá trị'], $this->summary($suite, $ok));
+        if ($out = $this->option('out')) {
+            EvalKit::csv(base_path($out), $rows);
+            $this->info('Đã ghi ' . $out);
+        }
+
+        return self::SUCCESS;
+    }
+
+    private function brief(string $suite, array $r): string
+    {
+        return match ($suite) {
+            'plan' => sprintf('mục %d · có thật %.0f%% · lỗi cứng %d · cảnh báo %d · điểm %d', $r['items'], $r['exist'] * 100, $r['hard'], $r['warn'], $r['score']),
+            'copilot' => sprintf('%s%s · lỗi cứng mới %d · %d bước · %s', $r['kind'], $r['ops'] ? ' (' . $r['ops'] . ')' : '', $r['newHard'], $r['steps'], $r['human'] ?: '-'),
+            default => sprintf('%s · thay %d đoạn · %d ms', $r['engine'], $r['replaced'], $r['ms']),
+        };
+    }
+
+    /** @return list<array{0:string,1:string}> */
+    private function summary(string $suite, array $ok): array
+    {
+        $n = max(1, count($ok));
+        $avg = fn(string $k) => round(array_sum(array_column($ok, $k)) / $n, 2);
+        $rate = function (string $k) use ($ok) {
+            $v = array_filter(array_column($ok, $k), fn($x) => $x !== '');
+
+            return $v ? round(100 * array_sum($v) / count($v), 1) . '% (' . array_sum($v) . '/' . count($v) . ')' : '—';
+        };
+        $ms = array_values(array_filter(array_column($ok, 'ms')));
+        $lat = ['Độ trễ p50 / p95 (ms)', EvalKit::pct($ms, 0.5) . ' / ' . EvalKit::pct($ms, 0.95)];
+        $tok = ['Token vào / ra (tổng)', array_sum(array_column($ok, 'in')) . ' / ' . array_sum(array_column($ok, 'tokOut'))];
+
+        return match ($suite) {
+            'plan' => [
+                ['Tỷ lệ mục có thật trong CSDL', round(100 * $avg('exist'), 1) . '%'],
+                ['Mục lặp (tổng)', (string) array_sum(array_column($ok, 'dup'))],
+                ['Lỗi cứng TripHealth: tổng / TB mỗi chuyến', array_sum(array_column($ok, 'hard')) . ' / ' . $avg('hard')],
+                ['Chuyến không có lỗi cứng', round(100 * count(array_filter($ok, fn($r) => $r['hard'] === 0)) / $n, 1) . '%'],
+                ['Cảnh báo TB mỗi chuyến', (string) $avg('warn')],
+                ['Điểm sức khỏe TB', (string) $avg('score')],
+                ['Độ dày ngày TB / ngày dày nhất TB (%)', $avg('avgLoad') . ' / ' . $avg('maxLoad')],
+                ['Phủ sở thích TB', ($v = array_filter(array_column($ok, 'interestCover'), fn($x) => $x !== null)) ? round(100 * array_sum($v) / count($v), 1) . '%' : '—'],
+                $lat, $tok,
+            ],
+            'copilot' => [
+                ['Đúng loại phản hồi (đề xuất / trả lời)', $rate('kindOk')],
+                ['Có đề xuất', round(100 * count(array_filter($ok, fn($r) => $r['kind'] === 'proposal')) / $n, 1) . '%'],
+                ['LỖI CỨNG MỚI tới người dùng (tổng)', (string) array_sum(array_column($ok, 'newHard'))],
+                ['Đề xuất có lỗi cứng mới', round(100 * count(array_filter($ok, fn($r) => $r['newHard'] > 0)) / $n, 1) . '%'],
+                ['Giải quyết đúng vấn đề mong đợi', $rate('resolvesOk')],
+                ['Đúng thao tác mong đợi', $rate('opsOk')],
+                ['Đụng đúng mục được nêu', $rate('touchOk')],
+                ['Số bước LLM TB / số lần sửa TB', $avg('steps') . ' / ' . $avg('repairs')],
+                $lat, $tok,
+            ],
+            default => [
+                ['Có gọi được AI', round(100 * count(array_filter($ok, fn($r) => $r['engine'] === 'llm')) / $n, 1) . '%'],
+                ['Qua guard trọn vẹn (0 đoạn bị thay)', $rate('passed')],
+                ['Số đoạn phải thay (tổng)', (string) array_sum(array_column($ok, 'replaced'))],
+                ['Số bịa lọt tới người dùng', '0 (guard thay mọi đoạn có số / tên không có trong dữ kiện)'],
+                $lat, $tok,
+            ],
+        };
     }
 }
