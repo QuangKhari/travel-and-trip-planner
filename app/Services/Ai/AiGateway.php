@@ -85,12 +85,12 @@ final class AiGateway
         } catch (SchemaViolation $e) {
             $this->fail();
 
-            return ['ok' => false, 'reason' => 'invalid', 'error' => mb_substr($e->getMessage(), 0, 150), 'ms' => self::ms($t0), 'in' => null, 'out' => null, 'model' => $llm->model()];
+            return ['ok' => false, 'reason' => 'invalid', 'error' => mb_substr($e->getMessage(), 0, 200), 'ms' => self::ms($t0), 'in' => null, 'out' => null, 'model' => $llm->model()];
         } catch (Throwable $e) {
             $this->fail();
             $timeout = str_starts_with($e->getMessage(), 'timeout');
 
-            return ['ok' => false, 'reason' => $timeout ? 'timeout' : 'error', 'error' => mb_substr($e->getMessage(), 0, 150), 'ms' => self::ms($t0), 'in' => null, 'out' => null, 'model' => $llm->model()];
+            return ['ok' => false, 'reason' => $timeout ? 'timeout' : 'error', 'error' => mb_substr($e->getMessage(), 0, 200), 'ms' => self::ms($t0), 'in' => null, 'out' => null, 'model' => $llm->model()];
         }
     }
 

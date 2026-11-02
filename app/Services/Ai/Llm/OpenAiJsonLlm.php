@@ -98,7 +98,9 @@ final class OpenAiJsonLlm implements StructuredLlm
     public static function schemaRejected(string $msg): bool
     {
         // 400 do model / khóa / tham số khác thì thử lại cũng vô ích
-        return str_starts_with($msg, 'LLM HTTP 400') && !preg_match('/model|api[ _-]?key|token|reasoning|temperature|quota/i', $msg);
+        // (vd Groq: "json_schema is not supported with this model" -> vẫn thử lại; "model is not specified" -> không)
+        return str_starts_with($msg, 'LLM HTTP 400')
+            && !preg_match('/model (is )?not (specified|found)|invalid model|does not exist|api[ _-]?key|max_tokens|reasoning|temperature|quota/i', $msg);
     }
 
     /** Một số mô hình vẫn bọc JSON trong ```json ... ```. */
@@ -132,7 +134,10 @@ final class OpenAiJsonLlm implements StructuredLlm
             // lấy đúng câu báo lỗi của nhà cung cấp (OpenAI: {error:{message}}, Gemini: [{error:{message}}]) cho log dễ đọc
             $j = $res->json();
             $msg = is_array($j) ? ($j['error']['message'] ?? $j[0]['error']['message'] ?? null) : null;
-            throw new RuntimeException('LLM HTTP ' . $res->status() . ': ' . mb_substr(preg_replace('/\s+/u', ' ', (string) ($msg ?? $res->body())) ?? '', 0, 160));
+            $msg = preg_replace('/\s+/u', ' ', (string) ($msg ?? $res->body())) ?? '';
+            // Groq: bỏ "in organization `org_…` service tier `…`" để phần quan trọng (TPD / TPM, "try again in 7m12s") còn lọt trong 160 ký tự
+            $msg = preg_replace('/ in organization `[^`]*`( service tier `[^`]*`)?/u', '', $msg) ?? $msg;
+            throw new RuntimeException('LLM HTTP ' . $res->status() . ': ' . mb_substr($msg, 0, 160));
         }
 
         return (array) $res->json();

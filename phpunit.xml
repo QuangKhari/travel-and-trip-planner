@@ -1,48 +1,50 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
-         bootstrap="vendor/autoload.php"
-         colors="true"
->
-    <testsuites>
-        <testsuite name="Unit">
-            <directory>tests/Unit</directory>
-        </testsuite>
-        <testsuite name="Feature">
-            <directory>tests/Feature</directory>
-        </testsuite>
-    </testsuites>
-    <source>
-        <include>
-            <directory>app</directory>
-        </include>
-    </source>
-    <php>
-        <env name="APP_ENV" value="testing"/>
-        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
-        <env name="BCRYPT_ROUNDS" value="4"/>
-        <env name="BROADCAST_CONNECTION" value="null"/>
-        <env name="CACHE_STORE" value="array"/>
-                <env name="DB_CONNECTION" value="mysql"/>
-        <env name="DB_DATABASE" value="ai_trip_planner_test"/>
-        <env name="DB_URL" value=""/>
-        <env name="MAIL_MAILER" value="array"/>
-        <env name="QUEUE_CONNECTION" value="sync"/>
-        <env name="SESSION_DRIVER" value="array"/>
-        <env name="PULSE_ENABLED" value="false"/>
-        <env name="TELESCOPE_ENABLED" value="false"/>
-        <env name="NIGHTWATCH_ENABLED" value="false"/>
-        <env name="JWT_SECRET" value="test-secret-key-test-secret-key-1234567890"/>
-        <env name="JWT_BLACKLIST_ENABLED" value="true"/>
-        <env name="JWT_BLACKLIST_GRACE_PERIOD" value="0"/>
-        <!-- test không bao giờ gọi dịch vụ ngoài thật, kể cả khi .env máy dev đang bật -->
-        <env name="PLANNER_ROUTE_PROVIDER" value="haversine" force="true"/>
-        <env name="PLANNER_OSRM_URL" value="null" force="true"/>
-        <env name="PLANNER_TRAVEL_MODE" value="driving" force="true"/>
-        <env name="AI_PLANNER_ENABLED" value="false" force="true"/>
-        <!-- config/flasher.php: tắt đổi session('success'/'error') thành thông báo nổi, để assertSessionHas kiểm tra được -->
-        <env name="FLASHER_FLASH_BAG" value="false" force="true"/>
-        <env name="AI_DRIVER" value="none" force="true"/>
-        <env name="RAG_LLM_DRIVER" value="none" force="true"/>
-    </php>
+This XML file does not appear to have any style information associated with it. The document tree is shown below.
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd" bootstrap="vendor/autoload.php" colors="true">
+<testsuites>
+<testsuite name="Unit">
+<directory>tests/Unit</directory>
+</testsuite>
+<testsuite name="Feature">
+<directory>tests/Feature</directory>
+</testsuite>
+</testsuites>
+<source>
+<include>
+<directory>app</directory>
+</include>
+</source>
+<php>
+<env name="APP_ENV" value="testing"/>
+<env name="APP_MAINTENANCE_DRIVER" value="file"/>
+<env name="BCRYPT_ROUNDS" value="4"/>
+<env name="BROADCAST_CONNECTION" value="null"/>
+<env name="CACHE_STORE" value="array"/>
+<env name="DB_CONNECTION" value="mysql"/>
+<env name="DB_DATABASE" value="ai_trip_planner_test"/>
+<env name="DB_URL" value=""/>
+<env name="MAIL_MAILER" value="array"/>
+<env name="QUEUE_CONNECTION" value="sync"/>
+<env name="SESSION_DRIVER" value="array"/>
+<env name="PULSE_ENABLED" value="false"/>
+<env name="TELESCOPE_ENABLED" value="false"/>
+<env name="NIGHTWATCH_ENABLED" value="false"/>
+<env name="JWT_SECRET" value="test-secret-key-test-secret-key-1234567890"/>
+<env name="JWT_BLACKLIST_ENABLED" value="true"/>
+<env name="JWT_BLACKLIST_GRACE_PERIOD" value="0"/>
+<!--  test không bao giờ gọi dịch vụ ngoài thật, kể cả khi .env máy dev đang bật  -->
+<env name="PLANNER_ROUTE_PROVIDER" value="haversine" force="true"/>
+<env name="PLANNER_OSRM_URL" value="null" force="true"/>
+<env name="PLANNER_TRAVEL_MODE" value="driving" force="true"/>
+<env name="AI_PLANNER_ENABLED" value="false" force="true"/>
+<!--  ảnh khi chạy test KHÔNG được ghi vào thư mục ảnh thật (MEDIA_*_ROOT trong .env, vd D:/travel-data)  -->
+<env name="MEDIA_PUBLIC_ROOT" value="storage/framework/testing/media/public" force="true"/>
+<env name="MEDIA_PRIVATE_ROOT" value="storage/framework/testing/media/private" force="true"/>
+<!--  config/flasher.php: tắt đổi session('success'/'error') thành thông báo nổi, để assertSessionHas kiểm tra được  -->
+<env name="FLASHER_FLASH_BAG" value="false" force="true"/>
+<env name="AI_DRIVER" value="none" force="true"/>
+<env name="RAG_LLM_DRIVER" value="none" force="true"/>
+<!--  test không bao giờ gọi API thật qua chuỗi dự phòng đặt trong .env  -->
+<env name="AI_FALLBACK_MODEL" value="" force="true"/>
+<env name="AI_FALLBACK2_MODEL" value="" force="true"/>
+</php>
 </phpunit>

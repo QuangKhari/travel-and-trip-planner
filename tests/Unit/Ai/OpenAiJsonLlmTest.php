@@ -51,6 +51,18 @@ class OpenAiJsonLlmTest extends TestCase
         }
     }
 
+    public function test_groq_rate_limit_keeps_the_useful_part(): void
+    {
+        Http::fake(['llm.test/*' => Http::response(['error' => ['message' => 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01m6dnyn0de4a8xsem892c479y` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199500, Requested 2100. Please try again in 11m31.2s.']], 429)]);
+        try {
+            $this->llm()->generateJson('s', 'u', ['type' => 'object']);
+            $this->fail('phải ném lỗi');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('tokens per day (TPD)', $e->getMessage());
+            $this->assertStringContainsString('try again in 11m31.2s', $e->getMessage());
+        }
+    }
+
     public function test_other_400_is_not_retried(): void
     {
         Http::fake(['llm.test/*' => Http::response(['error' => ['message' => 'model is not specified']], 400)]);

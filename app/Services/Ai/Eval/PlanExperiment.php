@@ -117,7 +117,7 @@ final class PlanExperiment
             }
         }
 
-        return [$items, ['out' => $total, 'exist' => $total ? round($valid / $total, 3) : 0.0, 'dup' => $dup, 'ms' => $r['ms'], 'in' => $r['in'], 'tokOut' => $r['out']], null];
+        return [$items, ['out' => $total, 'exist' => $total ? round($valid / $total, 3) : 0.0, 'dup' => $dup, 'ms' => $r['ms'], 'in' => $r['in'], 'tokOut' => $r['out'], 'model' => (string) ($r['model'] ?? '')], null];
     }
 
     /** A1: không dữ liệu. Tên LLM viết được đối chiếu với nội dung đã duyệt của điểm đến (khớp tên sau khi bỏ dấu). */
@@ -168,7 +168,7 @@ final class PlanExperiment
             }
         }
 
-        return [$items, ['out' => $total, 'exist' => $total ? round($valid / $total, 3) : 0.0, 'dup' => $dup, 'ms' => $r['ms'], 'in' => $r['in'], 'tokOut' => $r['out']], null];
+        return [$items, ['out' => $total, 'exist' => $total ? round($valid / $total, 3) : 0.0, 'dup' => $dup, 'ms' => $r['ms'], 'in' => $r['in'], 'tokOut' => $r['out'], 'model' => (string) ($r['model'] ?? '')], null];
     }
 
     private function requestText(object $dest, array $req): string

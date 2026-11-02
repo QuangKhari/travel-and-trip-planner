@@ -85,6 +85,7 @@ final class CopilotExperiment
                 'ms' => $ms,
                 'in' => $run->inputTokens ?? 0, 'tokOut' => $run->outputTokens ?? 0,
                 'outcome' => $run->outcome ?? '',
+                'model' => (string) ($run->model ?? ''),
                 'human' => $human,
                 // lời La bàn (khi trả lời thay vì đề xuất): để biết vì sao không đề xuất (tìm không ra, từ chối, hỏi lại...)
                 'say' => trim(implode('', array_map(fn($x) => $x['t'] ?? ($x['name'] ?? ''), (array) ($r['say'] ?? [])))),

@@ -113,7 +113,7 @@ final class CopilotService
                 continue;
             }
             // reply (hoặc search quá số lần cho phép)
-            $result = ['kind' => 'reply', 'say' => $this->segments($this->groundedReply($say, $ctx), $ctx, $cands)];
+            $result = ['kind' => 'reply', 'say' => $this->segments($this->afterSearch($action, $say, $stat['searches'], $cands) ?? $this->groundedReply($say, $ctx), $ctx, $cands)];
             break;
         }
 
@@ -318,6 +318,26 @@ final class CopilotService
     }
 
     /** Câu trả lời thường (không đề xuất): bỏ những câu có số liệu không có trong bảng dữ kiện (NumberGuard). */
+    /**
+     * Đã dùng hết lượt tìm mà LLM vẫn muốn tìm tiếp, hoặc lời đáp HỨA sẽ tìm ("để em tìm thêm…") trong khi lượt đã kết thúc:
+     * không để người dùng chờ một việc sẽ không xảy ra -> nói thật kết quả tìm. null = giữ lời LLM.
+     */
+    private function afterSearch(string $action, string $say, int $searches, array $cands): ?string
+    {
+        if ($searches === 0) {
+            return null;
+        }
+        $promises = (bool) preg_match('/(đang|sẽ|để (em|tôi|mình)|thử) (tìm|kiếm)|tìm (thêm|lại|kiếm thêm)/iu', $say);
+        if ($action !== 'search' && !$promises) {
+            return null;
+        }
+
+        return $cands
+            ? 'La bàn đã tìm được vài nơi nhưng chưa chọn xong trong một lượt. Bạn hỏi lại cụ thể hơn (một ngày, một loại nơi) nhé.'
+            : 'La bàn đã tìm trong các địa điểm đã duyệt của Travela nhưng chưa thấy nơi phù hợp. '
+                . 'Bạn thử loại khác (vd quán ăn thay vì cà phê), bỏ yêu cầu "gần…", hoặc tự thêm từ trang Khám phá nhé.';
+    }
+
     private function groundedReply(string $say, array $ctx): string
     {
         $keep = [];

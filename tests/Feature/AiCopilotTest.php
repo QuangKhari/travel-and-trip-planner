@@ -109,6 +109,23 @@ class AiCopilotTest extends TestCase
         $this->assertSame('proposed', $run->outcome);
     }
 
+    public function test_search_with_no_result_never_promises_a_search_that_will_not_happen(): void
+    {
+        $a = $this->place('Văn Miếu', 21.0277, 105.8355, 'historic');
+        $id = $this->trip([['type' => 'place', 'refId' => $a, 'day' => 1]]);
+        // kho không có quán cà phê: LLM tìm, tìm lại, rồi vẫn muốn tìm tiếp / hứa "để em tìm thêm"
+        $this->script([
+            ['action' => 'search', 'say' => '', 'search' => ['group' => 'cafe', 'nearItem' => 'i1', 'day' => 1]],
+            ['action' => 'search', 'say' => '', 'search' => ['group' => 'cafe', 'day' => 1]],
+            ['action' => 'search', 'say' => 'Dạ để em tìm thêm quán cà phê khác nhé.', 'search' => ['group' => 'cafe']],
+        ]);
+        $r = $this->ask($id, 'Thêm một quán cà phê gần Văn Miếu')->assertOk()->json();
+        $this->assertSame('reply', $r['kind']);
+        $text = implode('', array_column($r['say'], 't'));
+        $this->assertStringContainsString('chưa thấy nơi phù hợp', $text);
+        $this->assertStringNotContainsString('để em tìm thêm', $text);
+    }
+
     public function test_invented_candidate_is_rejected_and_llm_repairs(): void
     {
         $a = $this->place('Văn Miếu', 21.0277, 105.8355, 'historic');
@@ -151,6 +168,7 @@ class AiCopilotTest extends TestCase
     {
         $a = $this->place('Văn Miếu', 21.0277, 105.8355, 'historic');
         $id = $this->trip([['type' => 'place', 'refId' => $a, 'day' => 1]]);
+        config(['ai.features.ask' => false]);   // câu hỏi đi thẳng vào Copilot (không qua F5) để kiểm guard của nhánh reply
         $this->script([['action' => 'reply', 'say' => '{{i1}} rất đáng đi. Vé chỉ 35.000đ.']]);
 
         $r = $this->ask($id, 'Văn Miếu thế nào?')->assertOk()->json();

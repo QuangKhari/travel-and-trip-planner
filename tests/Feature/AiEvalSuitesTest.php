@@ -155,7 +155,47 @@ class AiEvalSuitesTest extends TestCase
         $this->app->instance(StructuredLlm::class, new FakeLlm([], 'error'));
         $this->artisan('ai:eval', ['--suite' => 'copilot', '--mode' => 'verified', '--file' => $f])
             ->expectsOutputToContain('lỗi: LLM: fake down')
-            ->expectsOutputToContain('1 mẫu (1 lỗi, không tính)')->assertSuccessful();
+            ->expectsOutputToContain('Không có mẫu nào chạy được')->assertFailed();
+    }
+
+    public function test_existing_result_is_never_overwritten(): void
+    {
+        $f = $this->file('plan', [['id' => 'p1', 'slug' => 'ha-noi', 'days' => 2, 'startDate' => '2026-12-07', 'interests' => ['culture'], 'pace' => 'normal']]);
+        file_put_contents(base_path('storage/framework/testing/plan-engine.csv'), 'cũ');
+        $this->artisan('ai:eval', ['--suite' => 'plan', '--mode' => 'engine', '--file' => $f, '--out' => 'storage/framework/testing/plan-engine.csv'])
+            ->expectsOutputToContain('không ghi đè')->assertSuccessful();
+        $this->assertSame('cũ', file_get_contents(base_path('storage/framework/testing/plan-engine.csv')));
+        $this->assertFileExists(base_path('storage/framework/testing/plan-engine-2.csv'));
+        @unlink(base_path('storage/framework/testing/plan-engine-2.csv'));
+    }
+
+    public function test_brief_with_every_call_failing_writes_no_csv(): void
+    {
+        $f = $this->file('plan', [['id' => 'b1', 'group' => 'full', 'q' => 'Đi Hà Nội 2 ngày', 'expect' => ['destination' => 'ha-noi']]]);
+        config(['ai.enabled' => true, 'ai.features.brief' => true, 'ai.driver' => 'openai']);
+        $this->app->instance(StructuredLlm::class, new FakeLlm([], 'error'));
+        $this->artisan('ai:eval', ['--suite' => 'brief', '--engine' => 'llm', '--retry' => 0, '--file' => $f, '--out' => 'storage/framework/testing/ex.csv'])
+            ->expectsOutputToContain('không ghi CSV')->assertFailed();
+        $this->assertFileDoesNotExist(base_path('storage/framework/testing/ex.csv'));
+    }
+
+    public function test_brief_reports_which_model_answered(): void
+    {
+        $f = $this->file('plan', [['id' => 'b1', 'group' => 'full', 'q' => 'Đi Hà Nội 2 ngày', 'expect' => ['destination' => 'ha-noi']]]);
+        config(['ai.enabled' => true, 'ai.features.brief' => true, 'ai.driver' => 'openai', 'ai.models.openai.brief' => 'gemini-x']);
+        $this->app->instance(StructuredLlm::class, new FakeLlm(['brief' => ['destination' => 'ha-noi']]));
+        $this->artisan('ai:eval', ['--suite' => 'brief', '--engine' => 'llm', '--file' => $f, '--out' => 'storage/framework/testing/ex.csv'])
+            ->expectsOutputToContain('Model đã trả lời: fake × 1')->assertSuccessful();
+        $this->assertStringContainsString('model', file_get_contents(base_path('storage/framework/testing/ex.csv')));
+    }
+
+    public function test_use_fallback_runs_only_the_backup_model(): void
+    {
+        $f = $this->file('plan', [['id' => 'b1', 'group' => 'full', 'q' => 'Đi Hà Nội 2 ngày', 'expect' => ['destination' => 'ha-noi']]]);
+        config(['ai.enabled' => true, 'ai.features.brief' => true, 'ai.driver' => 'openai', 'ai.fallback.model' => 'openai/gpt-oss-120b']);
+        $this->app->instance(StructuredLlm::class, new FakeLlm(['brief' => ['destination' => 'ha-noi']]));
+        $this->artisan('ai:eval', ['--suite' => 'brief', '--engine' => 'llm', '--use-fallback' => true, '--file' => $f])
+            ->expectsOutputToContain('model=openai/gpt-oss-120b')->assertSuccessful();
     }
 
     public function test_empty_suite_fails_with_a_clear_message_and_no_csv(): void

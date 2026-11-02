@@ -30,6 +30,7 @@ class RagEval extends Command
 
     public function handle(EmbedderFactory $ef, LlmFactory $lf, EventDateService $dates): int
     {
+        config(['ai.fallback.disabled' => true]);   // số liệu đánh giá phải từ đúng một model: tắt chuỗi dự phòng
         $path = base_path($this->option('file'));
         if (!is_file($path)) {
             $this->error("Không thấy $path");

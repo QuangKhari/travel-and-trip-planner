@@ -48,6 +48,15 @@ return [
         'key' => env('AI_FALLBACK_KEY') ?: null,            // để trống = dùng chung khóa
         'base_url' => env('AI_FALLBACK_BASE_URL') ?: null,  // để trống = như model chính
         'cooldown' => (int) (env('AI_FALLBACK_COOLDOWN') ?: 600),   // giây đi thẳng sang dự phòng sau khi model chính báo 429
+        // Dự phòng lớp 2 (vd Cerebras): gọi khi cả model chính lẫn dự phòng 1 đều hết lượt / quá tải. Để trống = không dùng.
+        'second' => [
+            'model' => env('AI_FALLBACK2_MODEL') ?: null,
+            'driver' => env('AI_FALLBACK2_DRIVER') ?: null,
+            'key' => env('AI_FALLBACK2_KEY') ?: null,
+            'base_url' => env('AI_FALLBACK2_BASE_URL') ?: null,
+        ],
+        // Hỏi đáp và F5 (cấu hình RAG_LLM_*) dùng chung chuỗi dự phòng này. false = tắt riêng cho Hỏi đáp.
+        'rag' => (bool) env('AI_FALLBACK_RAG', true),
     ],
 
     'timeout' => [   // giây, MỖI lệnh gọi HTTP; quá hạn thì lùi về chế độ cơ bản

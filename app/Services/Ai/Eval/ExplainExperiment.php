@@ -44,6 +44,7 @@ final class ExplainExperiment
                 'items' => array_sum(array_map(fn($d) => count($d['items'] ?? []), $r['days'] ?? [])),
                 'engine' => $r['engine'] ?? 'none',
                 'outcome' => $run->outcome ?? '',
+                'model' => (string) ($run->model ?? ''),
                 'llmError' => (string) ($run->error ?? ''),   // vì sao lùi về câu mẫu (HTTP 400, JSON bị cắt...): hộp cát hoàn tác nên phải chép ra ở đây
                 'replaced' => (int) ($r['guards']['replaced'] ?? 0),
                 'passed' => ($r['engine'] ?? '') === 'llm' && (int) ($r['guards']['replaced'] ?? 0) === 0 ? 1 : 0,
