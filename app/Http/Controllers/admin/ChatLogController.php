@@ -75,7 +75,7 @@ class ChatLogController extends Controller
 
     // ================================================================== tab AI (tbl_ai_runs)
 
-    private const AI_FEATURES = ['brief' => 'F1 Vé hành trình', 'explain' => 'F2 Tóm tắt', 'copilot' => 'F3 Copilot'];
+    private const AI_FEATURES = ['brief' => 'F1 Vé hành trình', 'explain' => 'F2 Tóm tắt', 'copilot' => 'F3 Copilot', 'packing' => 'A-13 Đồ mang theo'];
     private const AI_OUTCOMES = ['ok', 'proposed', 'applied', 'skipped', 'reply', 'refused', 'guard_replaced', 'fallback', 'timeout', 'error', 'invalid'];
 
     private function aiFiltered(Request $r)

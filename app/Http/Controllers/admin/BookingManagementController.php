@@ -32,7 +32,7 @@ class BookingManagementController extends Controller
     public const STATUS = ['n' => ['warn', 'Chờ xác nhận'], 'y' => ['info', 'Đã xác nhận'], 'f' => ['ok', 'Hoàn tất'], 'c' => ['bad', 'Đã hủy']];
     public const PAY = ['n' => ['bad', 'Chưa thanh toán'], 'y' => ['ok', 'Đã thanh toán'], 'refund_pending' => ['violet', 'Chờ hoàn tiền'], 'refunded' => ['mute', 'Đã hoàn tiền']];
     public const CANCEL_REASON = ['customer' => 'khách hủy', 'admin' => 'admin hủy', 'expired' => 'hết hạn giữ chỗ'];
-    public const METHOD = ['office-payment' => 'Tại văn phòng', 'vnpay' => 'VNPay', 'momo-payment' => 'MoMo', 'paypal-payment' => 'PayPal', 'bank-transfer' => 'Chuyển khoản'];
+    public const METHOD = ['office-payment' => 'Tại văn phòng', 'momo' => 'Ví MoMo', 'zalopay' => 'ZaloPay', 'qr' => 'QR chuyển khoản', 'vnpay' => 'VNPay (cũ)', 'momo-payment' => 'MoMo', 'paypal-payment' => 'PayPal', 'bank-transfer' => 'Chuyển khoản'];
 
     public function __construct()
     {

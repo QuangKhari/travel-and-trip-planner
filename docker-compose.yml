@@ -1,0 +1,173 @@
+# Travela — chạy toàn bộ hệ thống bằng Docker Compose (B2, S-03, §14.1)
+#   cp .env.docker.example .env.docker   # điền APP_KEY, mật khẩu, khóa VNPay, DATA_ENCRYPTION_KEY
+#   docker compose up -d --build
+#   docker compose exec app php artisan db:seed     # (tùy chọn) dữ liệu mẫu
+# Web: http://localhost:8080   ·   Kiểm tra sức khỏe: http://localhost:8080/health
+#
+# Dịch vụ: nginx (cổng 8080) → app (php-fpm) ; mysql ; redis (cache, session, hàng đợi, khóa) ;
+#          worker (queue:work: email, hóa đơn) ; scheduler (schedule:work: hết hạn giữ chỗ, nhắc lịch, đối soát VNPay) ;
+#          osrm (tuyến đường thật cho Trip Planner, bật bằng profile "routing").
+
+x-app: &app
+  build: .
+  image: travela-app:latest
+  env_file: .env.docker
+  environment:
+    DB_HOST: mysql
+    DB_PORT: 3306
+    REDIS_HOST: redis
+    REDIS_CLIENT: predis
+    CACHE_STORE: redis
+    SESSION_DRIVER: redis
+    QUEUE_CONNECTION: redis
+    LOG_STACK: json
+    TRUSTED_PROXIES: "*"
+  volumes:
+    - uploads:/var/www/html/storage/app/public
+    - logs:/var/www/html/storage/logs
+  depends_on:
+    mysql: { condition: service_healthy }
+    redis: { condition: service_healthy }
+  restart: unless-stopped
+
+services:
+  nginx:
+    build: { context: ., dockerfile: docker/nginx/Dockerfile }
+    ports: ["${HTTP_PORT:-8080}:80"]
+    volumes:
+      - uploads:/var/www/html/public/storage:ro
+    depends_on:
+      app: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  app:
+    <<: *app
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      REDIS_HOST: redis
+      REDIS_CLIENT: predis
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      LOG_STACK: json
+      TRUSTED_PROXIES: "*"
+      ROLE: app
+    healthcheck:
+      # php-fpm còn nhận kết nối và Laravel trả lời được (DB + Redis) qua /health
+      test: ["CMD-SHELL", "SCRIPT_NAME=/index.php SCRIPT_FILENAME=/var/www/html/public/index.php REQUEST_URI=/health REQUEST_METHOD=GET cgi-fcgi -bind -connect 127.0.0.1:9000 | grep -q '\"status\":\"ok\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  worker:
+    <<: *app
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      REDIS_HOST: redis
+      REDIS_CLIENT: predis
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      LOG_STACK: json
+      ROLE: worker
+    depends_on:
+      app: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'queue:work' >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  scheduler:
+    <<: *app
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      REDIS_HOST: redis
+      REDIS_CLIENT: predis
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      LOG_STACK: json
+      ROLE: scheduler
+    depends_on:
+      app: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'schedule:work' >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-travela}
+      MYSQL_USER: ${DB_USERNAME:-travela}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-travela_secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_secret}
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      - mysql:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/travela.cnf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    # AOF mỗi giây: khởi động lại Redis không đăng xuất toàn bộ người dùng. MySQL vẫn là nguồn sự thật cho chỗ / đơn (N-12).
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory", "256mb", "--maxmemory-policy", "volatile-lru"]
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # Tuyến đường thật (PLANNER_ROUTE_PROVIDER=osrm, PLANNER_OSRM_URL=http://osrm:5000). Chuẩn bị dữ liệu một lần:
+  #   docker compose --profile routing run --rm osrm-prepare
+  osrm:
+    image: ghcr.io/project-osrm/osrm-backend:v5.27.1
+    profiles: ["routing"]
+    command: ["osrm-routed", "--algorithm", "mld", "--max-table-size", "500", "/data/vietnam-latest.osrm"]
+    volumes:
+      - osrm:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- 'http://127.0.0.1:5000/route/v1/driving/105.85,21.03;105.84,21.02' | grep -q Ok"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  osrm-prepare:
+    image: ghcr.io/project-osrm/osrm-backend:v5.27.1
+    profiles: ["routing"]
+    entrypoint: ["sh", "-c"]
+    command:
+      - >-
+        cd /data && [ -f vietnam-latest.osrm.mldgr ] && echo 'Đã có dữ liệu OSRM' && exit 0;
+        wget -nc https://download.geofabrik.de/asia/vietnam-latest.osm.pbf &&
+        osrm-extract -p /opt/car.lua vietnam-latest.osm.pbf && osrm-partition vietnam-latest.osrm && osrm-customize vietnam-latest.osrm
+    volumes:
+      - osrm:/data
+
+volumes:
+  mysql:
+  redis:
+  uploads:
+  logs:
+  osrm:

@@ -13,11 +13,18 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // PF-08: mã request gắn vào log và header phản hồi
+        $middleware->prepend(\App\Http\Middleware\RequestId::class);
+        // chạy sau nginx / load balancer trong Docker: tin IP và giao thức do proxy gửi (để url() ra https và throttle đúng IP khách)
+        $middleware->trustProxies(at: env('TRUSTED_PROXIES', '127.0.0.1'));
+        // cổng thanh toán gọi máy chủ (POST JSON, không có phiên / token CSRF); an toàn nhờ kiểm chữ ký từng thông báo
+        $middleware->validateCsrfTokens(except: ['thanh-toan/thong-bao/*']);
         $middleware->alias([
             'checkLoginClient' => \App\Http\Middleware\CheckLoggedInClients::class,
             'checkUserBlocked' => \App\Http\Middleware\CheckUserBlocked::class,
             'checkAdminRole'   => \App\Http\Middleware\CheckAdminRole::class,
             'api.active'       => \App\Http\Middleware\EnsureApiAccountActive::class,
+            'throttle'         => \App\Http\Middleware\ThrottleRequests::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

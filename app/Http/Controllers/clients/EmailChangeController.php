@@ -168,20 +168,13 @@ class EmailChangeController extends Controller
         ]);
 
         try {
-            Mail::send(
-                'clients.emails.verify-email-change',
-                [
+            // Gửi qua hàng đợi (B4): controller không chờ SMTP
+Mail::to($email)->queue(new \App\Mail\TemplateMail('clients.emails.verify-email-change', [
                     'user' => $created,
                     'url' => $url,
                     'minutes' => self::TOKEN_MINUTES,
                     'newEmail' => $email,
-                ],
-                function ($message) use ($email) {
-                    $message
-                        ->to($email)
-                        ->subject('Xác minh email mới - Travela');
-                }
-            );
+                ], 'Xác minh email mới - Travela'));
         } catch (\Throwable $e) {
             Log::error('Gửi email xác minh email mới thất bại: ' . $e->getMessage(), [
                 'userId' => $created->userId,

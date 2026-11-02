@@ -65,6 +65,11 @@ return [
     |
     */
 
+    // J1: tắt giới hạn lượt gọi khi đo tải từ một máy. Bị bỏ qua ở production (xem App\Http\Middleware\ThrottleRequests).
+    'loadtest_no_throttle' => (bool) env('LOADTEST_NO_THROTTLE', false),
+    // J1: trả header X-Db-Queries (số truy vấn SQL của request). Bị bỏ qua ở production.
+    'query_count_header' => (bool) env('QUERY_COUNT_HEADER', false),
+
     'timezone' => 'Asia/Ho_Chi_Minh',
 
     /*

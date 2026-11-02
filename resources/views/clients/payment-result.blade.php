@@ -3,6 +3,7 @@
     $ok = $r['valid'] && $r['success'];
     $paid = $r['paid'] ?? false;
     $mine = $b && (int) session('userId') === (int) $b->userId;
+    $gwName = \App\Services\Payments\OnlinePaymentService::label($r['method'] ?? '');
 @endphp
 <style>
     .pr { padding: 140px 16px 80px; background: #f6faf9; min-height: 70vh; }
@@ -31,8 +32,8 @@
             <p>Travela đã nhận thanh toán, đơn của bạn đã được xác nhận. Email xác nhận sẽ được gửi trong ít phút.</p>
         @elseif ($ok)
             <div class="pr-ic wait"><i class="fas fa-hourglass-half"></i></div>
-            <h1>Đang chờ VNPay xác nhận</h1>
-            <p>VNPay báo giao dịch thành công, hệ thống đang chờ xác nhận chính thức từ VNPay (thường vài giây). Bạn có thể tải lại trang đơn sau ít phút.</p>
+            <h1>Đang chờ {{ $gwName }} xác nhận</h1>
+            <p>{{ $gwName }} báo giao dịch thành công, hệ thống đang chờ xác nhận chính thức (thường vài giây đến 1 phút). Bạn có thể tải lại trang đơn sau ít phút.</p>
         @else
             <div class="pr-ic bad"><i class="fas fa-times"></i></div>
             <h1>Thanh toán chưa thành công</h1>
@@ -44,7 +45,7 @@
                 <dt>Mã đơn</dt><dd>{{ $b->bookingCode }}</dd>
                 <dt>Tour</dt><dd>{{ $b->title }}</dd>
                 @if ($r['amount'])<dt>Số tiền</dt><dd>{{ number_format($r['amount'], 0, ',', '.') }} đ</dd>@endif
-                @if ($r['bankCode'])<dt>Ngân hàng</dt><dd>{{ $r['bankCode'] }}</dd>@endif
+                <dt>Hình thức</dt><dd>{{ $gwName }}</dd>
             </dl>
         @endif
 
@@ -52,7 +53,7 @@
             @if ($b && $mine && $r['checkoutId'])
                 <a class="pr-btn" href="{{ route('tour-booked', ['bookingId' => $b->bookingId, 'checkoutId' => $r['checkoutId']]) }}">Xem đơn</a>
                 @if (!$paid && $r['valid'] && !$ok && $b->bookingStatus === 'n')
-                    <a class="pr-btn pr-btn--ghost" href="{{ route('payment.vnpay.pay', ['bookingId' => $b->bookingId]) }}">Thanh toán lại</a>
+                    <a class="pr-btn pr-btn--ghost" href="{{ route('payment.pay', ['method' => $r['method'], 'bookingId' => $b->bookingId]) }}">Thanh toán lại</a>
                 @endif
             @else
                 <a class="pr-btn" href="{{ route('my-tours') }}">Tour đã đặt</a>

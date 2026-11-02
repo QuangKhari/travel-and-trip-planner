@@ -53,6 +53,7 @@
                     <a href="{{ route('seasons.now') }}">Đang vào mùa</a>
                     <a href="{{ route('seasons.matrix') }}">Nên đi tháng nào</a>
                     <a href="{{ route('planner') }}">Lên kế hoạch chuyến đi</a>
+                    <a href="{{ route('community.index') }}">Hành trình cộng đồng</a>
                 </div>
             </div>
             @php $guideMenu = app(\App\Services\Content\GuideCatalog::class)->menu(); @endphp

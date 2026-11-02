@@ -139,27 +139,35 @@
                 </section>
             @endif
 
-            @if ($b->paymentMethod === 'vnpay' || count($payLogs))
+            @php $onlinePay = \App\Services\Payments\OnlinePaymentService::isOnline($b->paymentMethod ?? null); @endphp
+            @if ($onlinePay || count($payLogs))
+                @php $gw = $onlinePay ? app(\App\Services\Payments\OnlinePaymentService::class)->gateway($b->paymentMethod) : null; @endphp
                 <section class="ad-card">
-                    <div class="ad-card__head"><h2>VNPay</h2>
-                        @if ($canManage && \App\Services\VnpayService::enabled() && !empty($b->providerTxnRef) && $b->paymentStatus === 'n')
-                            <form method="POST" action="{{ route('admin.payments.reconcile', $b->bookingId) }}">@csrf<button class="ad-btn ad-btn--sm" title="Hỏi VNPay trạng thái giao dịch (querydr)"><i class="fa fa-refresh"></i> Đối soát</button></form>
+                    <div class="ad-card__head"><h2>{{ \App\Services\Payments\OnlinePaymentService::label($b->paymentMethod) }}</h2>
+                        @if ($canManage && $gw && $gw->code() !== 'qr' && $gw->enabled() && !empty($b->providerTxnRef) && $b->paymentStatus === 'n')
+                            <form method="POST" action="{{ route('admin.payments.reconcile', $b->bookingId) }}">@csrf<button class="ad-btn ad-btn--sm" title="Hỏi cổng thanh toán trạng thái giao dịch"><i class="fa fa-refresh"></i> Đối soát</button></form>
                         @endif
                     </div>
                     <div class="ad-card__body">
                         <dl class="ad-kv ad-kv--tight">
-                            <dt>vnp_TxnRef</dt><dd><code class="ad-code">{{ $b->providerTxnRef ?? '—' }}</code></dd>
-                            <dt>Mã GD VNPay</dt><dd>{{ $b->providerTxnNo ?? '—' }}</dd>
-                            <dt>Ngân hàng</dt><dd>{{ $b->bankCode ?? '—' }}</dd>
-                            <dt>Mã phản hồi</dt><dd>{{ $b->responseCode ? $b->responseCode . ' · ' . (\App\Services\VnpayService::RESPONSE[$b->responseCode] ?? '') : '—' }}</dd>
-                            <dt>Số lần tạo link</dt><dd>{{ (int) ($b->attempts ?? 0) }}</dd>
+                            <dt>Mã giao dịch gửi cổng</dt><dd><code class="ad-code">{{ $b->providerTxnRef ?? '—' }}</code></dd>
+                            <dt>Mã GD của cổng</dt><dd>{{ $b->providerTxnNo ?? '—' }}</dd>
+                            <dt>Nguồn tiền</dt><dd>{{ $b->bankCode ?? '—' }}</dd>
+                            <dt>Kết quả gần nhất</dt><dd>{{ $b->responseCode ? ($b->responseCode === '00' ? 'Đã thanh toán' : ($gw ? $gw->describe($b->responseCode) : $b->responseCode)) : '—' }}</dd>
+                            <dt>Số lần tạo giao dịch</dt><dd>{{ (int) ($b->attempts ?? 0) }}</dd>
                         </dl>
+                        @if ($canManage && ($b->paymentMethod ?? '') === 'qr' && $b->paymentStatus === 'n' && in_array($b->bookingStatus, ['n', 'y'], true))
+                            <form method="POST" action="{{ route('admin.payments.confirm', $b->bookingId) }}" style="display:flex;gap:6px;margin-top:12px">@csrf
+                                <input type="text" name="reference" required maxlength="40" placeholder="Mã GD trên sao kê" style="flex:1;height:34px;border:1px solid var(--ad-line);border-radius:8px;padding:0 8px">
+                                <button class="ad-btn ad-btn--primary ad-btn--sm" data-confirm="Xác nhận đã nhận tiền chuyển khoản cho đơn {{ $b->bookingCode }}?">Đã nhận tiền</button>
+                            </form>
+                        @endif
                         @if (count($payLogs))
                             <ul class="ad-timeline" style="margin-top:14px">
                                 @foreach ($payLogs as $l)
-                                    <li style="--c:{{ in_array($l->result, ['paid', '00/00'], true) ? 'var(--ad-ok)' : ($l->validSignature === 0 || in_array($l->result, ['97', '04'], true) ? 'var(--ad-bad)' : '#94a3b8') }}">
-                                        <div class="ad-timeline__t">{{ ['create' => 'Tạo link', 'return' => 'Khách quay về', 'ipn' => 'IPN', 'querydr' => 'Đối soát'][$l->kind] ?? $l->kind }} · {{ $l->result }}</div>
-                                        <div class="ad-timeline__m">{{ date('H:i:s d/m', strtotime($l->createdAt)) }} · {{ $l->txnRef }}{{ $l->validSignature === 0 ? ' · sai chữ ký' : '' }}</div>
+                                    <li style="--c:{{ in_array($l->result, ['paid', 'url'], true) ? 'var(--ad-ok)' : ($l->validSignature === 0 || in_array($l->result, ['bad_signature', 'bad_amount', 'error'], true) ? 'var(--ad-bad)' : '#94a3b8') }}">
+                                        <div class="ad-timeline__t">{{ ['create' => 'Tạo giao dịch', 'return' => 'Khách quay về', 'notify' => 'Cổng báo về', 'query' => 'Đối soát', 'manual' => 'Admin xác nhận', 'ipn' => 'IPN', 'querydr' => 'Đối soát'][$l->kind] ?? $l->kind }} · {{ $l->result }}</div>
+                                        <div class="ad-timeline__m">{{ date('H:i:s d/m', strtotime($l->createdAt)) }} · {{ $l->provider }} · {{ $l->txnRef }}{{ $l->validSignature === 0 ? ' · sai chữ ký' : '' }}</div>
                                     </li>
                                 @endforeach
                             </ul>

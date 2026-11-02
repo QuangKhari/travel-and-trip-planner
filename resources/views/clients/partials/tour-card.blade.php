@@ -29,6 +29,8 @@
         @endif
         <button type="button" class="trc-heart" data-fav="{{ $tour->tourId }}" aria-pressed="false"
             aria-label="Lưu tour vào danh sách yêu thích"><i class="fas fa-heart" aria-hidden="true"></i></button>
+        <button type="button" class="trc-cmp" data-cmp="{{ $tour->tourId }}" data-cmp-title="{{ $tour->title }}" aria-pressed="false"
+            title="Thêm vào so sánh (tối đa 3 tour)"><i class="fal fa-exchange-alt" aria-hidden="true"></i> So sánh</button>
         <img loading="lazy" decoding="async" width="800" height="500"
             src="{{ \App\Support\TourImage::url($cover, 800) }}" alt="{{ $tour->title }}">
         @if ($badge)

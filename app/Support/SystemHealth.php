@@ -33,15 +33,31 @@ final class SystemHealth
         $run('cache', true, function () {
             $k = 'health:' . bin2hex(random_bytes(4));
             Cache::put($k, 1, 10);
-            if (Cache::get($k) !== 1) {
+            if ((int) Cache::get($k) !== 1) {   // Redis trả số dạng chuỗi
                 throw new \RuntimeException('cache');
             }
             Cache::forget($k);
 
             return (string) config('cache.default');
         });
+        if (config('cache.default') === 'redis' || config('queue.default') === 'redis' || config('session.driver') === 'redis') {
+            $run('redis', true, function () {
+                $pong = \Illuminate\Support\Facades\Redis::connection()->ping();
+
+                return is_object($pong) ? (string) $pong : 'PONG';
+            });
+        }
         $run('queue', false, function () {
             $conn = (string) config('queue.default');
+            if ($conn === 'redis') {
+                $q = (string) config('queue.connections.redis.queue', 'default');
+                $n = (int) \Illuminate\Support\Facades\Redis::connection(config('queue.connections.redis.connection', 'default'))->llen('queues:' . $q);
+                if ($n > 500) {
+                    throw new \RuntimeException("{$n} việc chờ");
+                }
+
+                return "redis: {$n} việc chờ";
+            }
             if ($conn === 'database' && Schema::hasTable('jobs')) {
                 $pending = DB::table('jobs')->count();
                 $old = DB::table('jobs')->where('created_at', '<', now()->subMinutes(10)->getTimestamp())->count();

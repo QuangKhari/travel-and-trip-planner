@@ -25,6 +25,7 @@ use App\Services\Planner\TripPlanner;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\clients\TravelController;
 
 /**
  * Trip Planner (web). Các route có đăng nhập nằm trong nhóm checkLoginClient; chỉ trang chia sẻ chỉ đọc là công khai.
@@ -407,6 +408,7 @@ class PlannerController extends Controller
             'role' => $role,
             'rev' => (int) ($trip->rev ?? 0),
             'revUrl' => route('planner.revision', ['id' => $id]),
+            'lockUrl' => route('planner.lock', ['id' => $id]),
             'membersUrl' => route('planner.members', ['id' => $id]),
             'me' => $uid,
             'googleMapsKey' => config('services.google_maps.key') ?: null,
@@ -466,6 +468,8 @@ class PlannerController extends Controller
             'members' => app(TripSharing::class)->members($trip, $role === 'owner'),
             'payload' => $payload,
             'client' => $client,
+            'travel' => TravelController::defaults($trip),
+            'externals' => DB::table('tbl_trip_external')->where('tripId', $id)->orderBy('startAt')->get(),
         ]);
     }
 
@@ -589,6 +593,10 @@ class PlannerController extends Controller
         $data = $request->validate(TripPlanner::tripRules() + TripPlanner::itemRules() + ['rainPlan' => ['nullable', 'array', 'max:' . TripPlanner::MAX_DAYS], 'rev' => ['nullable', 'integer', 'min:0']]);
         if (!$request->has('rainPlan')) {
             unset($data['rainPlan']);   // không gửi = giữ nguyên phương án dự phòng đã lưu
+        }
+        // T-40: chuyến có bạn đồng hành -> chỉ người đang giữ khóa sửa mới lưu được
+        if (app(TripSharing::class)->editable($this->uid(), $id) && ($by = app(\App\Services\Planner\TripLock::class)->blockerFor($id, $this->uid()))) {
+            return response()->json(['message' => $by . ' đang sửa chuyến đi này. Bạn xem được thay đổi, và sửa được khi họ xong (hoặc sau 5 phút họ không thao tác).', 'locked' => true, 'by' => $by], 423);
         }
         try {
             $ok = $planner->save($this->uid(), $id, $data, $data['items'] ?? []);
@@ -783,6 +791,84 @@ class PlannerController extends Controller
             'metaDescription' => 'Chuyến đi được chia sẻ.',
             'noindex' => true,
             'payload' => $payload,
+        ]);
+    }
+
+    /**
+     * POST /len-ke-hoach/{id}/khoa  action=acquire|release
+     * Trình duyệt gọi khi mở trang, rồi mỗi 60 giây (gia hạn / hỏi xem đã tới lượt mình chưa), và khi rời trang (release).
+     */
+    public function lock(Request $request, int $id, \App\Services\Planner\TripLock $lock): JsonResponse
+    {
+        app(TripSharing::class)->editable($this->uid(), $id) ?? abort(404);
+        if ($request->input('action') === 'release') {
+            $lock->release($id, $this->uid());
+
+            return response()->json(['released' => true]);
+        }
+
+        return response()->json($lock->acquire($id, $this->uid()) + ['ttl' => \App\Services\Planner\TripLock::TTL_SECONDS, 'renew' => \App\Services\Planner\TripLock::RENEW_SECONDS]);
+    }
+
+    /** GET /len-ke-hoach/{id}/do-mang-theo  (A-13) -> {source: ai|rules, groups:[{name, items:[{name, why}]}], note} */
+    public function packing(Request $request, int $id, \App\Services\Planner\PackingList $packing): JsonResponse
+    {
+        $acc = app(TripSharing::class)->access($this->uid(), $id) ?? abort(404);
+        $r = $packing->forTrip($acc['trip'], $this->uid(), $request->query('ai', '1') !== '0');
+
+        return response()->json(['source' => $r['source'], 'groups' => $r['groups'], 'note' => $r['note']]);
+    }
+
+    /**
+     * GET /len-ke-hoach/{id}/xuat-pdf (A-10d): dữ liệu để trình duyệt dựng PDF (pdfmake, font có dấu tiếng Việt).
+     * Gồm lịch trình từng ngày, các đơn đặt tour của người xem có trong chuyến (chưa hủy) và danh sách đồ mang theo (theo luật, không gọi AI).
+     */
+    public function exportPdf(int $id, TripPlanner $planner, \App\Services\Planner\PackingList $packing): JsonResponse
+    {
+        $acc = app(TripSharing::class)->access($this->uid(), $id) ?? abort(404);
+        $trip = $acc['trip'];
+        $p = $planner->payload($trip);
+        $hm = fn($m) => $m === null ? null : sprintf('%02d:%02d', intdiv((int) $m, 60), (int) $m % 60);
+        $slot = ['morning' => 'Sáng', 'noon' => 'Trưa', 'afternoon' => 'Chiều', 'evening' => 'Tối'];
+        $type = ['destination' => 'Điểm đến', 'place' => 'Địa điểm', 'food' => 'Món ăn', 'event' => 'Lễ hội', 'experience' => 'Trải nghiệm', 'tour' => 'Tour', 'note' => 'Ghi chú', 'transport' => 'Di chuyển'];
+        $days = array_map(fn($d) => [
+            'day' => $d['day'],
+            'date' => $d['date'] ? \Carbon\Carbon::parse($d['date'])->format('d/m/Y') : null,
+            'km' => $d['km'],
+            'items' => array_map(fn($it) => [
+                'time' => $hm($it['startMin'] ?? null) ?? ($slot[$it['slot'] ?? ''] ?? ''),
+                'name' => $it['name'], 'type' => $type[$it['type']] ?? '', 'sub' => $it['sub'] ?? '', 'note' => $it['note'] ?? '',
+                'cost' => $it['cost'] ?? null,
+            ], $d['items']),
+        ], array_values($p['days']));
+
+        // đơn đặt tour của chính người xem cho các tour có trong chuyến
+        $tourIds = DB::table('tbl_trip_items')->where('tripId', $id)->where('refType', 'tour')->pluck('refId')->filter()->all();
+        $bookings = $tourIds ? DB::table('tbl_booking as b')->join('tbl_tours as t', 't.tourId', '=', 'b.tourId')
+            ->leftJoin('tbl_checkout as c', 'c.bookingId', '=', 'b.bookingId')
+            ->where('b.userId', $this->uid())->whereIn('b.tourId', $tourIds)->where('b.bookingStatus', '!=', 'c')
+            ->orderBy('b.bookingId')->get(['b.bookingCode', 't.title', 'b.departureDate', 't.startDate', 'b.numAdults', 'b.numChildren', 'b.totalPrice', 'b.bookingStatus', 'c.paymentStatus'])
+            ->map(fn($b) => [
+                'code' => $b->bookingCode, 'title' => $b->title,
+                'date' => \Carbon\Carbon::parse($b->departureDate ?: $b->startDate)->format('d/m/Y'),
+                'people' => (int) $b->numAdults + (int) $b->numChildren, 'total' => (float) $b->totalPrice,
+                'status' => ['n' => 'Chờ xác nhận', 'y' => 'Đã xác nhận', 'f' => 'Hoàn tất'][$b->bookingStatus] ?? $b->bookingStatus,
+                'paid' => $b->paymentStatus === 'y',
+            ])->all() : [];
+        $pack = $packing->forTrip($trip, $this->uid(), false);
+
+        return response()->json([
+            'title' => $trip->title,
+            'meta' => trim(($trip->days ? $trip->days . ' ngày' : '') . ' · ' . $trip->groupSize . ' người'
+                . ($trip->startDate ? ' · từ ' . \Carbon\Carbon::parse($trip->startDate)->format('d/m/Y') : ''), ' ·'),
+            'budget' => $p['totals']['budget'], 'cost' => $p['totals']['cost'],
+            'days' => $days,
+            'unassigned' => array_map(fn($it) => $it['name'], $p['unassigned']),
+            'rain' => $p['rain']['plan'] ?? [],
+            'bookings' => $bookings,
+            'packing' => $pack['groups'],
+            'generatedAt' => now()->format('H:i d/m/Y'),
+            'site' => config('site.name', 'Travela'),
         ]);
     }
 }

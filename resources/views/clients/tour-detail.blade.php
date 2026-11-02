@@ -424,6 +424,27 @@
                                     .px-dep em.is-low{color:#c2410c}.px-dep input:checked+span{border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.15);background:#f0fdfa}
                                     .px-dep input:focus-visible+span{outline:3px solid rgba(13,148,136,.4)}
                                 </style>
+                                <script>
+                                    // C-12: số chỗ còn lại cập nhật mỗi 20 giây (chỉ khi tab đang mở), không cần tải lại trang
+                                    (function () {
+                                        var url = @json(route('tour.seats', ['id' => $tourDetail->tourId]));
+                                        function tick() {
+                                            if (document.hidden) return;
+                                            fetch(url, { headers: { Accept: 'application/json' } }).then(function (r) { return r.json(); }).then(function (d) {
+                                                var map = {}; d.departures.forEach(function (x) { map[x.id] = x; });
+                                                document.querySelectorAll('.px-dep input[name=availabilityId]').forEach(function (inp) {
+                                                    var x = map[inp.value], em = inp.parentNode.querySelector('em');
+                                                    if (!x || !x.bookable) { inp.disabled = true; if (em) { em.textContent = 'hết chỗ'; em.className = 'is-low'; } return; }
+                                                    inp.dataset.left = x.remaining;
+                                                    if (em) { em.textContent = 'còn ' + x.remaining; em.className = x.remaining <= 5 ? 'is-low' : ''; }
+                                                    if (inp.checked) inp.dispatchEvent(new Event('change', { bubbles: true }));
+                                                });
+                                            }).catch(function () {});
+                                        }
+                                        setInterval(tick, 20000);
+                                        document.addEventListener('visibilitychange', tick);
+                                    })();
+                                </script>
                             @elseif (count($departures) === 1)
                                 <input type="hidden" name="availabilityId" value="{{ $departures[0]->availabilityId }}">
                             @endif

@@ -303,7 +303,7 @@ class AdminOperationsTest extends TestCase
         $this->withSession(['adminId' => $manager])->get("/admin/users/$user")->assertOk()->assertSee($b->bookingCode)->assertSee('Hội An cuối tuần');
         $this->withSession(['adminId' => $staff])->get("/admin/trips/$trip")->assertOk()->assertSee('Ăn cao lầu');
         $this->withSession(['adminId' => $staff])->get("/admin/users/$user")->assertRedirect(route('admin.dashboard'));
-        $this->withSession(['adminId' => $manager])->get('/admin/payments')->assertOk()->assertSee('Giao dịch VNPay');
+        $this->withSession(['adminId' => $manager])->get('/admin/payments')->assertOk()->assertSee('Thanh toán trực tuyến');
         $this->withSession(['adminId' => $staff])->get('/admin/booking/create')->assertOk();
         // nhân viên không tự đánh dấu "đã thu tiền" khi đặt hộ
         $this->withSession(['adminId' => $staff])->post('/admin/booking/create', [

@@ -17,7 +17,7 @@ use Throwable;
  */
 final class AiGateway
 {
-    public const FEATURES = ['brief', 'explain', 'copilot'];
+    public const FEATURES = ['brief', 'explain', 'copilot', 'packing'];
 
     public function __construct(private AiLlmFactory $factory) {}
 

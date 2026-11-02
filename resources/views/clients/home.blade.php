@@ -238,7 +238,7 @@
                     <li><i class="fas fa-cloud-sun" aria-hidden="true"></i><span><b>Hợp mùa, hợp thời tiết</b>Tránh
                             mùa mưa, đúng mùa đẹp, đúng ngày lễ hội.</span></li>
                     <li><i class="fas fa-ticket-alt" aria-hidden="true"></i><span><b>Gắn tour đặt được ngay</b>Giá,
-                            ngày đi và số chỗ thật, thanh toán qua VNPay.</span></li>
+                            ngày đi và số chỗ thật, thanh toán qua MoMo, ZaloPay hoặc QR ngân hàng.</span></li>
                     <li><i class="fas fa-share-alt" aria-hidden="true"></i><span><b>Chỉnh sửa và chia sẻ</b>Thêm, bớt
                             điểm dừng, gửi link cho bạn đồng hành.</span></li>
                 </ul>
@@ -313,7 +313,7 @@
                 @endif
                 <ul class="hx-promise v3-rv" style="--d: 2">
                     <li><i class="fas fa-shield-check" aria-hidden="true"></i><span><b>Thanh toán an toàn</b>Qua
-                            VNPay, xác nhận đặt chỗ ngay</span></li>
+                            MoMo, ZaloPay, QR ngân hàng, xác nhận đặt chỗ ngay</span></li>
                     <li><i class="fas fa-sync" aria-hidden="true"></i><span><b>Giá và chỗ thật</b>Số chỗ còn lại
                             cập nhật trực tiếp</span></li>
                     <li><i class="fas fa-headset" aria-hidden="true"></i><span><b>Hỗ trợ suốt chuyến đi</b>Nhắn tư

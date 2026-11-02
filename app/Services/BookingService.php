@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Services\Payments\OnlinePaymentService;
+
 use Illuminate\Support\Facades\DB;
 use App\Support\BookingPii;
 
@@ -113,8 +115,9 @@ class BookingService
 
             // 5. Tạo đơn + thanh toán
             $bookingCode = $this->newBookingCode();
-            // VNPay: giữ chỗ ngắn (A2, C-06), hết hạn mà chưa có IPN thành công thì tự hủy và nhả chỗ
-            $online = ($in['payment'] ?? 'office-payment') === 'vnpay';
+            // Thanh toán trực tuyến (MoMo / ZaloPay / QR): giữ chỗ ngắn (A2, C-06), hết hạn mà chưa nhận được tiền thì tự hủy và nhả chỗ
+            $method = (string) ($in['payment'] ?? 'office-payment');
+            $online = OnlinePaymentService::isOnline($method);
 
             $bookingId = DB::table('tbl_booking')->insertGetId(BookingPii::encrypt([
                 'tourId'       => $tourId,
@@ -131,7 +134,7 @@ class BookingService
                 'bookingCode'  => $bookingCode,
                 'requestToken' => $token,
                 // giữ chỗ 48 giờ nhưng không quá 0h ngày khởi hành: đặt sát ngày đi thì đơn chưa xác nhận không được "treo" qua ngày đi
-                'holdExpiresAt' => min($online ? now()->addMinutes(VnpayService::holdMinutes()) : now()->addHours((int) config('travela.hold_hours', 48)), \Carbon\Carbon::parse($departureDate)->startOfDay()),
+                'holdExpiresAt' => min($online ? now()->addMinutes(OnlinePaymentService::holdMinutes($method)) : now()->addHours((int) config('travela.hold_hours', 48)), \Carbon\Carbon::parse($departureDate)->startOfDay()),
             ]));
 
             if ($promotionId !== null) {
@@ -144,7 +147,8 @@ class BookingService
 
             DB::table('tbl_checkout')->insert([
                 'bookingId'     => $bookingId,
-                'paymentMethod' => $online ? 'vnpay' : 'office-payment',
+                'paymentMethod' => $online ? $method : 'office-payment',
+                'provider'      => $online ? $method : null,
                 'paymentDate'   => null,
                 'amount'        => $total,
                 'paymentStatus' => 'n',

@@ -1696,3 +1696,37 @@ a.tpx-arc__n:hover { text-decoration: underline; }
 .tpx-waitmore { margin: 4px 0 2px 14px; }
 .tpx-hero + .tpx-notice, .tpx-notice { position: relative; z-index: 2; }
 main .tpx-notice:not([hidden]) { margin-top: 18px; }
+
+
+/* Đồ mang theo (A-13) */
+.tp-pack__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.tp-pack__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 18px; margin: 6px 0 12px; }
+.tp-pack__list:empty { display: none; }
+.tp-pack__grp h3 { font-size: 13.5px; margin: 8px 0 4px; color: #0f2f3a; }
+.tp-pack__grp ul { list-style: none; margin: 0; padding: 0; }
+.tp-pack__grp li { display: flex; gap: 8px; align-items: flex-start; padding: 3px 0; font-size: 13.5px; }
+.tp-pack__grp input { margin-top: 3px; accent-color: #0d9488; }
+.tp-pack__grp label { cursor: pointer; margin: 0; }
+.tp-pack__grp label small { display: block; color: #6b8592; font-size: 12px; }
+.tp-pack__grp input:checked + label { color: #94a3b8; text-decoration: line-through; }
+.tp-pack__note { grid-column: 1 / -1; margin: 6px 0 0; padding: 8px 12px; border-radius: 10px; background: #fffbeb; border: 1px solid #fde68a; font-size: 13px; color: #78350f; }
+
+/* Chuyến bay và khách sạn (T-36…T-38) */
+.tp-sim { display: inline-block; margin-left: 4px; padding: 1px 8px; border-radius: 99px; background: #fef3c7; color: #92400e; font-size: 11.5px; font-weight: 700; }
+.tp-travel h3 { font-size: 14px; margin: 14px 0 8px; color: #0f2f3a; }
+.tp-travel__row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 8px; }
+.tp-travel__row label { display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; font-weight: 600; color: #3b5662; margin: 0; }
+.tp-travel__row input, .tp-travel__row select { height: 38px; border: 1px solid #d6e3e7; border-radius: 9px; padding: 0 8px; font-size: 13.5px; background: #fff; }
+.tp-travel__res:empty { display: none; }
+.tp-travel__res { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.tp-offer { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; padding: 9px 12px; border: 1px solid #e3ecef; border-radius: 11px; background: #fbfdfd; font-size: 13.5px; }
+.tp-offer b { color: #0f2f3a; } .tp-offer small { color: #6b8592; display: block; }
+.tp-offer__p { font-weight: 700; color: #0d9488; text-align: right; }
+.tp-offer button { grid-column: 2; justify-self: end; }
+.tp-ext { list-style: none; margin: 0 0 8px; padding: 0; }
+.tp-ext li { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #eef3f5; font-size: 13.5px; }
+.tp-ext li > i { color: #0d9488; width: 18px; text-align: center; }
+.tp-ext li > span:nth-child(2) { flex: 1; min-width: 0; } .tp-ext small { display: block; color: #6b8592; }
+.tp-ext__st:empty { display: none; }
+.tp-ext__st { padding: 2px 9px; border-radius: 99px; font-size: 12px; font-weight: 700; background: #e6f4f2; color: #0f766e; white-space: nowrap; }
+.tp-ext__st.is-bad { background: #fee2e2; color: #991b1b; } .tp-ext__st.is-warn { background: #fef3c7; color: #92400e; }

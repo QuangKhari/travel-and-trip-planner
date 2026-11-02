@@ -159,6 +159,8 @@ class Week13SharingTest extends TestCase
         app(TripSharing::class)->invite($this->owner, $id, 'ban@example.com', 'edit');
         $this->actAs($this->friend)->postJson("/len-ke-hoach/$id/luu", $this->body(['title' => 'Bản của bạn', 'rev' => 0]))->assertOk();
 
+        // khóa mềm (T-40) của bạn đồng hành đã hết hạn (đóng tab) -> chủ chuyến được nhận khóa, nhưng bản trong tay vẫn cũ
+        $this->travel(6)->minutes();
         // chủ chuyến còn giữ rev=0 (đã tải trước đó) rồi lưu: bị chặn
         $r = $this->actAs($this->owner)->postJson("/len-ke-hoach/$id/luu", $this->body(['title' => 'Bản của chủ', 'rev' => 0]))->assertStatus(409);
         $this->assertTrue($r->json('conflict'));

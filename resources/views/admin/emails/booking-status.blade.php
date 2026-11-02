@@ -21,6 +21,16 @@
                 <p style="margin:0 0 14px;">Số tiền được hoàn: <b>{{ $money($refund->amount) }}</b> ({{ $refund->percent }}% số đã thanh toán). Travela sẽ chuyển lại và báo cho bạn khi hoàn tất.</p>
             @endif
             @break
+        @case('reminder')
+            <p style="margin:0 0 14px;">Chuyến <b>{{ $b->title }}</b> của bạn khởi hành <b>{{ ($days ?? 0) <= 1 ? 'ngày mai' : 'sau ' . $days . ' ngày' }}</b>, ngày {{ date('d/m/Y', strtotime($b->tripStart ?? $b->departureDate ?? $b->startDate)) }}.</p>
+            <ul style="margin:0 0 14px;padding-left:18px;">
+                <li>Số khách: {{ (int) $b->numAdults }} người lớn{{ (int) $b->numChildren ? ', ' . (int) $b->numChildren . ' trẻ em' : '' }}</li>
+                <li>Mang theo giấy tờ tùy thân của từng người và mã đơn <b>{{ $b->bookingCode }}</b>.</li>
+                @if (($b->paymentStatus ?? 'y') !== 'y')
+                    <li>Đơn <b>chưa thanh toán đủ</b> — vui lòng hoàn tất trước ngày khởi hành.</li>
+                @endif
+            </ul>
+            @break
         @case('refunded')
             <p style="margin:0 0 14px;">Travela đã hoàn <b>{{ $money($refund->amount) }}</b> cho đơn đã hủy <b>{{ $b->title }}</b>{{ $refund->method ? ' qua ' . mb_strtolower($refund->method) : '' }}{{ $refund->reference ? ' (mã giao dịch ' . $refund->reference . ')' : '' }}.</p>
             @break

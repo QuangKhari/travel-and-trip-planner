@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use Carbon\Carbon;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -135,22 +137,71 @@ class DepartureService
         return $a;
     }
 
+    /** Khóa cache tên avail:{id} (Redis khi CACHE_STORE=redis), giữ tối đa 5 giây. */
+    public const LOCK_SECONDS = 5;
+    /** Số chỗ còn lại theo tour được cache ngắn cho API polling (C-12); xóa chủ động khi chỗ đổi. */
+    public const SEATS_TTL = 15;
+
+    public static function seatsKey(int $tourId): string
+    {
+        return "avail:tour:{$tourId}";
+    }
+
+    /**
+     * B1: lớp giảm tranh chấp bằng Cache::lock("avail:{id}") quanh bước giữ chỗ. Lớp ĐÚNG ĐẮN vẫn là câu UPDATE có điều kiện
+     * và khóa dòng trong MySQL (nguồn sự thật, N-12): chờ khóa quá 3 giây hoặc Redis mất kết nối thì vẫn chạy câu SQL.
+     */
+    private function guarded(int $availabilityId, callable $fn): mixed
+    {
+        try {
+            return Cache::lock("avail:{$availabilityId}", self::LOCK_SECONDS)->block(3, $fn);
+        } catch (LockTimeoutException) {
+            return $fn();
+        } catch (\Throwable $e) {
+            if ($e instanceof BookingException) {
+                throw $e;
+            }
+            report($e);
+
+            return $fn();
+        }
+    }
+
+    /** Xóa cache số chỗ của tour chứa ngày khởi hành này. */
+    private function touched(int $availabilityId): void
+    {
+        $tourId = DB::table('tbl_tour_availability')->where('availabilityId', $availabilityId)->value('tourId');
+        if ($tourId) {
+            Cache::forget(self::seatsKey((int) $tourId));
+        }
+    }
+
     /** Giữ chỗ cho đơn mới (n). Trả false nếu không đủ chỗ. */
     public function hold(int $availabilityId, int $people): bool
     {
-        return DB::table('tbl_tour_availability')
+        $ok = $this->guarded($availabilityId, fn() => DB::table('tbl_tour_availability')
             ->where('availabilityId', $availabilityId)
             ->whereRaw('totalSlots - bookedSlots - heldSlots >= ?', [$people])
-            ->update(['heldSlots' => DB::raw('heldSlots + ' . (int) $people), 'updatedAt' => now()]) === 1;
+            ->update(['heldSlots' => DB::raw('heldSlots + ' . (int) $people), 'updatedAt' => now()]) === 1);
+        if ($ok) {
+            $this->touched($availabilityId);
+        }
+
+        return $ok;
     }
 
-    /** Bán thẳng chỗ (không qua giữ chỗ), vd tiền VNPay về sau khi đơn đã hết hạn. Trả false nếu không đủ chỗ. */
+    /** Bán thẳng chỗ (không qua giữ chỗ), vd tiền thanh toán trực tuyến về sau khi đơn đã hết hạn. Trả false nếu không đủ chỗ. */
     public function bookDirect(int $availabilityId, int $people): bool
     {
-        return DB::table('tbl_tour_availability')
+        $ok = $this->guarded($availabilityId, fn() => DB::table('tbl_tour_availability')
             ->where('availabilityId', $availabilityId)
             ->whereRaw('totalSlots - bookedSlots - heldSlots >= ?', [$people])
-            ->update(['bookedSlots' => DB::raw('bookedSlots + ' . (int) $people), 'updatedAt' => now()]) === 1;
+            ->update(['bookedSlots' => DB::raw('bookedSlots + ' . (int) $people), 'updatedAt' => now()]) === 1);
+        if ($ok) {
+            $this->touched($availabilityId);
+        }
+
+        return $ok;
     }
 
     /** Đơn n → y: chỗ đang giữ thành chỗ đã bán. */
@@ -197,6 +248,7 @@ class DepartureService
         if (!self::enabled()) {
             return;
         }
+        Cache::forget(self::seatsKey($tourId));
         $tour = DB::table('tbl_tours')->where('tourId', $tourId)->first();
         if (!$tour) {
             return;

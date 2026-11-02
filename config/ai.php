@@ -17,6 +17,7 @@ return [
         'explain' => (bool) env('AI_FEATURE_EXPLAIN', true),   // F2: tóm tắt và giải thích lịch
         'copilot' => (bool) env('AI_FEATURE_COPILOT', true),   // F3: La bàn Copilot (sửa lịch bằng lời, engine kiểm chứng)
         'ask' => (bool) env('AI_FEATURE_ASK', true),           // F5: hỏi về chuyến trong ngăn La bàn (dùng AskService + hạn mức của Hỏi đáp)
+        'packing' => (bool) env('AI_FEATURE_PACKING', true),   // A-13: danh sách đồ mang theo (lùi về danh sách theo luật)
     ],
 
     // anthropic | openai | none. Mặc định dùng chung driver với RAG để chỉ cần một khóa API.
@@ -28,6 +29,7 @@ return [
             'brief' => env('AI_MODEL_BRIEF') ?: 'claude-haiku-5-5',
             'explain' => env('AI_MODEL_EXPLAIN') ?: 'claude-haiku-5-5',
             'copilot' => env('AI_MODEL_COPILOT') ?: 'claude-sonnet-5-5',
+            'packing' => env('AI_MODEL_PACKING') ?: 'claude-haiku-5-5',
         ],
         // chuẩn OpenAI (OpenAI, Gemini qua cổng tương thích, Ollama...): không đặt AI_MODEL_* thì dùng chung RAG_LLM_MODEL
         'openai' => [
@@ -35,6 +37,7 @@ return [
             'brief' => env('AI_MODEL_BRIEF') ?: (env('RAG_LLM_MODEL') ?: 'gpt-4o-mini'),
             'explain' => env('AI_MODEL_EXPLAIN') ?: (env('RAG_LLM_MODEL') ?: 'gpt-4o-mini'),
             'copilot' => env('AI_MODEL_COPILOT') ?: (env('RAG_LLM_MODEL') ?: 'gpt-4o'),
+            'packing' => env('AI_MODEL_PACKING') ?: (env('RAG_LLM_MODEL') ?: 'gpt-4o-mini'),
         ],
     ],
 
@@ -63,12 +66,14 @@ return [
         'brief' => (int) env('AI_TIMEOUT_BRIEF', 20),
         'explain' => (int) env('AI_TIMEOUT_EXPLAIN', 25),
         'copilot' => (int) env('AI_TIMEOUT_COPILOT', 20),
+        'packing' => (int) env('AI_TIMEOUT_PACKING', 20),
     ],
     // Model có "suy nghĩ" (Gemini 3.x, 4) tính cả token suy luận vào đây: thấy JSON bị cắt (outcome = invalid) thì tăng lên.
     'max_tokens' => [
         'brief' => (int) env('AI_MAX_TOKENS_BRIEF', 900),
         'explain' => (int) env('AI_MAX_TOKENS_EXPLAIN', 1400),
         'copilot' => (int) env('AI_MAX_TOKENS_COPILOT', 900),
+        'packing' => (int) env('AI_MAX_TOKENS_PACKING', 1200),
     ],
     'temperature' => 0.1,
 
@@ -80,7 +85,7 @@ return [
 
     // Đổi prompt hay schema thì tăng số này: cache và log phân biệt được kết quả của từng phiên bản.
     // brief-3 = lời nhắc brief-2 + ghép luật (SearchIntent) cho 3 trường bắt buộc khi LLM bỏ trống
-    'prompt_version' => ['brief' => 'brief-3', 'explain' => 'explain-1', 'copilot' => 'copilot-1'],
+    'prompt_version' => ['brief' => 'brief-3', 'explain' => 'explain-1', 'copilot' => 'copilot-1', 'packing' => 'packing-1'],
 
     // La bàn Copilot: tối đa 4 bước LLM / lượt (tìm, đề xuất, sửa); quá ngân sách thời gian thì dừng và báo người dùng chia nhỏ yêu cầu.
     'copilot' => ['budget_ms' => (int) env('AI_COPILOT_BUDGET_MS', 30000)],

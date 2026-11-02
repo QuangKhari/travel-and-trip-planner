@@ -41,6 +41,10 @@ class TripAdminController extends Controller
         if ($status) {
             $q->where('t.status', $status);
         }
+        $public = $request->query('public') === '1' && Schema::hasColumn('tbl_trips', 'isPublic');
+        if ($public) {
+            $q->where('t.isPublic', 1);
+        }
         if ($s = trim((string) $request->query('q', ''))) {
             $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $s) . '%';
             $q->where(fn($w) => $w->where('t.title', 'like', $like)->orWhere('u.fullName', 'like', $like)->orWhere('u.email', 'like', $like));
@@ -52,6 +56,8 @@ class TripAdminController extends Controller
             'counts' => $counts, 'statuses' => self::STATUSES, 'status' => $status,
             'search' => (string) $request->query('q', ''), 'hasShare' => $hasShare, 'hasDest' => $hasDest,
             'itemTotal' => (int) DB::table('tbl_trip_items')->count(),
+            'public' => $public,
+            'publicCount' => Schema::hasColumn('tbl_trips', 'isPublic') ? (int) (clone $base)->where('t.isPublic', 1)->count() : 0,
         ]);
     }
 
@@ -75,6 +81,19 @@ class TripAdminController extends Controller
         $cost = (float) $items->sum('cost');
 
         return view('admin.trips.show', compact('title', 't', 'items', 'names', 'days', 'members', 'tickets', 'cost'));
+    }
+
+    /** T-34: gỡ chuyến khỏi trang Cộng đồng (nội dung không phù hợp). Chuyến vẫn là của khách, khách có thể công khai lại sau khi sửa. */
+    public function takeDown(Request $request, int $id)
+    {
+        $data = $request->validate(['reason' => ['nullable', 'string', 'max:200']]);
+        $title = DB::table('tbl_trips')->where('tripId', $id)->value('title');
+        $ok = app(\App\Services\Planner\TripCommunity::class)->takeDown($id);
+        if ($ok) {
+            AuditLog::record('trip.unpublish', 'trip', $id, 'Gỡ khỏi Cộng đồng: "' . $title . '"' . (!empty($data['reason']) ? ' — ' . $data['reason'] : ''), ['isPublic' => 1], ['isPublic' => 0]);
+        }
+
+        return back()->with($ok ? 'success' : 'error', $ok ? 'Đã gỡ chuyến khỏi trang Cộng đồng.' : 'Chuyến này không đang công khai.');
     }
 
     public function destroy(int $id)

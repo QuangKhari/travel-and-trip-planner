@@ -94,7 +94,7 @@ class BookingController extends Controller
             'address'     => 'required|string|max:255',
             'numAdults'   => 'required|integer|min:1|max:50',
             'numChildren' => 'required|integer|min:0|max:50',
-            'payment'     => 'required|in:' . (\App\Services\VnpayService::enabled() ? 'office-payment,vnpay' : 'office-payment'),
+            'payment'     => 'required|in:' . implode(',', array_merge(['office-payment'], \App\Services\Payments\OnlinePaymentService::methods())),
             'couponCode'  => 'nullable|string|max:50',
         ], [
             'fullName.required'    => 'Vui lòng nhập họ và tên.',
@@ -132,9 +132,10 @@ class BookingController extends Controller
             return $backToForm()->withInput();
         }
 
-        // VNPay: chuyển ngay sang cổng thanh toán (đơn giữ chỗ ngắn, có đồng hồ đếm ngược ở trang đơn)
-        if (($validator->validated()['payment'] ?? '') === 'vnpay' && !$result['duplicate']) {
-            return redirect()->route('payment.vnpay.pay', ['bookingId' => $result['bookingId']]);
+        // Thanh toán trực tuyến: chuyển ngay sang MoMo / ZaloPay, hoặc trang mã QR (đơn giữ chỗ ngắn, có đồng hồ đếm ngược)
+        $method = (string) ($validator->validated()['payment'] ?? '');
+        if (\App\Services\Payments\OnlinePaymentService::isOnline($method) && !$result['duplicate']) {
+            return redirect()->route('payment.pay', ['bookingId' => $result['bookingId'], 'method' => $method]);
         }
 
         $prefix = $result['duplicate']

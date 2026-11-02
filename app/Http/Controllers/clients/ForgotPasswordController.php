@@ -95,13 +95,8 @@ class ForgotPasswordController extends Controller
         $url = route('password.reset.form', ['token' => $token]);
 
         try {
-            Mail::send(
-                'clients.emails.reset-password',
-                ['user' => $user, 'url' => $url, 'minutes' => self::TOKEN_MINUTES],
-                function ($message) use ($user) {
-                    $message->to($user->email, $user->fullName)->subject('Đặt lại mật khẩu Travela');
-                }
-            );
+            // Gửi qua hàng đợi (B4): controller không chờ SMTP
+Mail::to($user->email)->queue(new \App\Mail\TemplateMail('clients.emails.reset-password', ['user' => $user, 'url' => $url, 'minutes' => self::TOKEN_MINUTES], 'Đặt lại mật khẩu Travela'));
         } catch (\Throwable $e) {
             Log::error('Gửi email đặt lại mật khẩu thất bại: ' . $e->getMessage());
         }

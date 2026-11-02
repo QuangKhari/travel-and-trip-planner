@@ -3425,6 +3425,7 @@
             .then(function (res) {
                 saving = false;
                 $("tpSave").disabled = false;
+                if (res.status === 423) { showLock(res.j.by, res.j.message); autoFail = true; saveState("error", "Đang có người sửa"); return; }
                 if (res.status === 409) { showSync(res.j.message || "Chuyến đi vừa được người khác cập nhật.", true); autoFail = true; saveState("error", "Xung đột phiên bản"); return; }
                 if (res.ok) {
                     if (res.j.rev != null) rev = res.j.rev;
@@ -3703,6 +3704,45 @@
         b.appendChild(el("span", null, text + " "));
         b.appendChild(btn("tp-mini", "Tải lại", "Tải lại chuyến đi", function () { dirty = false; location.reload(); }));
     }
+    /* ---------------- T-40 khóa mềm: chuyến có bạn đồng hành chỉ một người sửa tại một thời điểm ---------------- */
+    var lockHeld = true;
+    function showLock(by, text) {
+        lockHeld = false;
+        var b = $("tpSync");
+        if (!b) return;
+        b.textContent = "";
+        b.hidden = false;
+        b.classList.add("tp-banner--bad");
+        b.appendChild(el("span", null, text || ((by || "Người khác") + " đang sửa chuyến đi này. Bạn sẽ sửa được khi họ xong.")));
+    }
+    function lockTick(release) {
+        if (!cfg.lockUrl || RO) return;
+        var fd = new FormData();
+        fd.append("_token", cfg.csrf || (document.querySelector("meta[name=csrf-token]") || {}).content || "");
+        fd.append("action", release ? "release" : "acquire");
+        if (release) { if (navigator.sendBeacon) navigator.sendBeacon(cfg.lockUrl, fd); return; }
+        fetch(cfg.lockUrl, { method: "POST", body: fd, credentials: "same-origin", headers: { "Accept": "application/json", "X-Requested-With": "XMLHttpRequest" } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (j) {
+                if (!j || j.solo) return;
+                if (j.mine) {
+                    if (!lockHeld) {
+                        // vừa tới lượt mình: tải lại để có bản mới nhất của người trước
+                        lockHeld = true; autoFail = false;
+                        showSync("Bạn đã có thể sửa chuyến đi. Hãy tải lại để thấy thay đổi mới nhất.", false);
+                    }
+                } else {
+                    showLock(j.holder);
+                }
+            })
+            .catch(function () {});
+    }
+    if (cfg.lockUrl && !RO) {
+        lockTick(false);
+        setInterval(function () { if (!document.hidden) lockTick(false); }, 60000);
+        window.addEventListener("pagehide", function () { lockTick(true); });
+    }
+
     var pollMs = 20000;
     function pollRev() {
         if (!cfg.revUrl || document.hidden) return;

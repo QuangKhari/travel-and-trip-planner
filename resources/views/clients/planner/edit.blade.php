@@ -1,6 +1,6 @@
 @include('clients.blocks.header')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=21">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=23">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai.css') }}?v=3">
 
 {{-- /len-ke-hoach/{id}. Biến: $payload (TripPlanner::payload), $client (dữ liệu cho planner.js), $role, $members, $tourFit.
@@ -41,7 +41,8 @@
                     <button type="button" class="tpx-menu__i" role="menuitem" data-top="health"><i class="fas fa-heartbeat" aria-hidden="true"></i><span>Kiểm tra sức khỏe chuyến đi</span></button>
                     <button type="button" class="tpx-menu__i" role="menuitem" data-top="cost"><i class="fas fa-wallet" aria-hidden="true"></i><span>Ngân sách</span></button>
                     <a class="tpx-menu__i" role="menuitem" href="{{ route('support.index', ['trip' => $t['id']]) }}#tao-yeu-cau"><i class="fas fa-headset" aria-hidden="true"></i><span>Nhờ nhân viên tư vấn chuyến này</span></a>
-                    <button type="button" class="tpx-menu__i" role="menuitem" id="tpPrint"><i class="fas fa-print" aria-hidden="true"></i><span>In / lưu thành PDF</span></button>
+                    <button type="button" class="tpx-menu__i" role="menuitem" id="tpPdf" data-url="{{ route('planner.pdf', ['id' => $t['id']]) }}" data-lib="{{ asset('admin/vendors/pdfmake/build') }}"><i class="fas fa-file-pdf" aria-hidden="true"></i><span>Tải PDF lịch trình và đơn tour</span></button>
+                    <button type="button" class="tpx-menu__i" role="menuitem" id="tpPrint"><i class="fas fa-print" aria-hidden="true"></i><span>In trang</span></button>
                     <form method="POST" action="{{ route('planner.duplicate', ['id' => $t['id']]) }}" id="tpDupForm">
                         @csrf
                         <button type="submit" class="tpx-menu__i" role="menuitem"><i class="far fa-copy" aria-hidden="true"></i><span>Nhân bản thành chuyến mới</span></button>
@@ -227,6 +228,60 @@
                     <div id="tpSummary"></div>
                 </section>
 
+                <section class="tp-card tp-travel" id="tpTravel" data-flights="{{ route('travel.flights', $t['id']) }}" data-hotels="{{ route('travel.hotels', $t['id']) }}"
+                         data-status="{{ route('travel.status', $t['id']) }}" data-remove="{{ url('/len-ke-hoach/' . $t['id'] . '/ngoai') }}" data-csrf="{{ csrf_token() }}" data-edit="{{ $role !== 'view' ? 1 : 0 }}">
+                    <h2>Chuyến bay và khách sạn</h2>
+                    <p class="tp-muted tp-small">Tham khảo giá vé và chỗ ở để tính ngân sách; Travela không bán vé hay đặt phòng. Mục bạn thêm vào lịch trình có chi phí ước tính.
+                        @if ($travel['simulateOnly'])<span class="tp-sim">Dữ liệu thử nghiệm</span>@endif</p>
+
+                    @if (count($externals))
+                        <ul class="tp-ext" id="tpExtList">
+                            @foreach ($externals as $x)
+                                <li data-id="{{ $x->externalId }}">
+                                    <i class="fas {{ $x->kind === 'flight' ? 'fa-plane' : 'fa-hotel' }}" aria-hidden="true"></i>
+                                    <span><b>{{ $x->title }}</b><small>{{ \Carbon\Carbon::parse($x->startAt)->format('H:i d/m/Y') }}{{ $x->price ? ' · ' . number_format((float) $x->price, 0, ',', '.') . ' đ' : '' }}{{ $x->simulated ? ' · Dữ liệu thử nghiệm' : '' }}</small></span>
+                                    <span class="tp-ext__st" data-status-for="{{ $x->externalId }}"></span>
+                                    @if ($role !== 'view')<button type="button" class="tp-mini tp-ext__rm" aria-label="Bỏ {{ $x->title }} khỏi danh sách">Bỏ</button>@endif
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+
+                    <form class="tp-travel__f" id="tpFlightForm">
+                        <h3><i class="fas fa-plane-departure" aria-hidden="true"></i> Tìm chuyến bay</h3>
+                        <div class="tp-travel__row">
+                            <label>Từ<select name="from" class="no-nice">@foreach ($travel['airports'] as $code => $n)<option value="{{ $code }}" @selected($travel['from'] === $code)>{{ $code }} · {{ preg_replace('/\s*\(.*\)$/', '', $n) }}</option>@endforeach</select></label>
+                            <label>Đến<select name="to" class="no-nice">@foreach ($travel['airports'] as $code => $n)<option value="{{ $code }}" @selected($travel['to'] === $code)>{{ $code }} · {{ preg_replace('/\s*\(.*\)$/', '', $n) }}</option>@endforeach</select></label>
+                            <label>Ngày bay<input type="date" name="date" value="{{ $travel['date'] }}" min="{{ today()->toDateString() }}"></label>
+                            <label>Số khách<input type="number" name="adults" min="1" max="9" value="{{ min(9, $travel['adults']) }}"></label>
+                        </div>
+                        <button type="submit" class="tp-btn tp-btn--ghost">Tìm vé</button>
+                        <div class="tp-travel__res" aria-live="polite"></div>
+                    </form>
+
+                    <form class="tp-travel__f" id="tpHotelForm">
+                        <h3><i class="fas fa-bed" aria-hidden="true"></i> Khách sạn gần điểm đến</h3>
+                        <div class="tp-travel__row">
+                            <label>Nhận phòng<input type="date" name="checkIn" value="{{ $travel['date'] }}"></label>
+                            <label>Số đêm<input type="number" name="nights" min="1" max="14" value="{{ $travel['nights'] }}"></label>
+                            <label>Số khách<input type="number" name="adults" min="1" max="20" value="{{ $travel['adults'] }}"></label>
+                        </div>
+                        <button type="submit" class="tp-btn tp-btn--ghost">Tìm khách sạn</button>
+                        <div class="tp-travel__res" aria-live="polite"></div>
+                    </form>
+                    <p class="tp-muted tp-small" style="margin-top:10px">Nguồn khi có khóa API: giá vé Duffel, trạng thái chuyến bay AeroDataBox / AviationStack, khách sạn Geoapify (giá phòng là ước tính theo hạng sao).</p>
+                </section>
+
+                <section class="tp-card tp-pack" id="tpPack" data-trip="{{ $t['id'] }}" data-url="{{ route('planner.packing', ['id' => $t['id']]) }}">
+                    <div class="tp-pack__head">
+                        <h2>Đồ mang theo</h2>
+                        <span class="tp-pack__count tp-muted tp-small" aria-live="polite"></span>
+                    </div>
+                    <p class="tp-muted tp-small tp-pack__status">Danh sách theo điểm đến, khí hậu tháng đi, số ngày và các hoạt động trong chuyến. Đánh dấu món đã chuẩn bị (lưu trên máy này).</p>
+                    <div class="tp-pack__list"></div>
+                    <button type="button" class="tp-btn tp-btn--ghost tp-pack__go"><i class="fas fa-suitcase-rolling" aria-hidden="true"></i> Gợi ý đồ mang theo</button>
+                </section>
+
                 <section class="tp-card">
                     <h2>Chia sẻ</h2>
                     <p class="tp-muted tp-small">Mời bạn đồng hành bằng email tài khoản Travela, chọn quyền “Có thể chỉnh sửa” hoặc “Chỉ xem”.</p>
@@ -238,6 +293,26 @@
                             <input type="text" id="tpShareUrl" readonly aria-label="Liên kết chia sẻ" value="{{ $t['shared'] ? route('planner.shared', ['token' => $t['shareToken']]) : '' }}" @if (!$t['shared']) hidden @endif>
                             <button type="button" id="tpShareBtn" class="tp-btn tp-btn--ghost">{{ $t['shared'] ? 'Tắt liên kết' : 'Bật liên kết chỉ xem' }}</button>
                         </div>
+
+                        <h3 id="cong-dong">Chia sẻ lên Cộng đồng</h3>
+                        @if ($t['isPublic'])
+                            <p class="tp-muted tp-small">Đang hiển thị trên <a href="{{ route('community.show', $t['id']) }}">trang Cộng đồng</a> · {{ $t['likeCount'] }} lượt thích · {{ $t['cloneCount'] }} lượt dùng lại. Người khác chỉ xem được lịch trình và tên rút gọn của bạn; ghi chú chi phí thực tế, thành viên và đơn đặt tour không hiển thị.</p>
+                        @else
+                            <p class="tp-muted tp-small">Cho mọi người xem và dùng lại lịch trình này. Thôi chia sẻ lúc nào cũng được; bản người khác đã dùng lại vẫn giữ nguyên.</p>
+                        @endif
+                        <form method="POST" action="{{ route('community.publish', $t['id']) }}" class="tp-form">
+                            @csrf
+                            @if ($t['isPublic'])
+                                <input type="hidden" name="action" value="unpublish">
+                                <button type="submit" class="tp-btn tp-btn--ghost"><i class="fas fa-eye-slash" aria-hidden="true"></i> Thôi chia sẻ</button>
+                            @else
+                                <input type="hidden" name="action" value="publish">
+                                <label>Giới thiệu ngắn (không bắt buộc)
+                                    <textarea name="summary" maxlength="300" rows="2" placeholder="VD: 3 ngày Đà Lạt nhẹ nhàng cho gia đình có trẻ nhỏ, nhiều điểm trong nhà khi mưa.">{{ $t['summary'] }}</textarea>
+                                </label>
+                                <button type="submit" class="tp-btn"><i class="fas fa-globe-asia" aria-hidden="true"></i> Chia sẻ lên Cộng đồng</button>
+                            @endif
+                        </form>
                     @endif
                 </section>
             </div>
@@ -376,7 +451,9 @@
 <script src="{{ asset('clients/assets/js/planner-save.js') }}?v=1"></script>
 <script src="{{ asset('clients/assets/js/planner-resolve.js') }}?v=2"></script>
 <script src="{{ asset('clients/assets/js/planner-map.js') }}?v=5"></script>
-<script src="{{ asset('clients/assets/js/planner.js') }}?v=23" defer></script>
+<script src="{{ asset('clients/assets/js/planner.js') }}?v=24" defer></script>
+<script src="{{ asset('clients/assets/js/planner-extras.js') }}?v=1" defer></script>
+<script src="{{ asset('clients/assets/js/planner-travel.js') }}?v=1" defer></script>
 <script type="application/json" id="aiData">{!! json_encode(['explainUrl' => route('planner.ai.explain', ['id' => $t['id']]), 'csrf' => csrf_token(), 'on' => $aiExplainOn,
     'copilot' => $aiCopilotOn ? ['url' => route('planner.ai.copilot', ['id' => $t['id']]), 'recheckUrl' => route('planner.ai.recheck', ['id' => $t['id']]),
         'feedbackUrl' => route('planner.ai.feedback', ['id' => $t['id']])] : null], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>

@@ -106,19 +106,12 @@ class LoginController extends Controller
             $mailSent = true;
 
             try {
-                Mail::send(
-                    'clients.emails.verify-email',
-                    [
+                // Gửi qua hàng đợi (B4): controller không chờ SMTP
+Mail::to($user->email)->queue(new \App\Mail\TemplateMail('clients.emails.verify-email', [
                         'user' => $user,
                         'url' => $url,
                         'minutes' => 60,
-                    ],
-                    function ($message) use ($user) {
-                        $message
-                            ->to($user->email, $user->fullName)
-                            ->subject('Kích hoạt tài khoản Travela');
-                    }
-                );
+                    ], 'Kích hoạt tài khoản Travela'));
             } catch (\Throwable $e) {
                 $mailSent = false;
                 Log::error('Gửi email kích hoạt thất bại: ' . $e->getMessage(), [

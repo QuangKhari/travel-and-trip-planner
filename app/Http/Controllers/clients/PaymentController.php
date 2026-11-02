@@ -3,40 +3,60 @@
 namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
-use App\Services\VnpayService;
+use App\Services\Payments\OnlinePaymentService;
+use App\Services\Payments\QrTransferGateway;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * VNPay phía khách (§7.1): Create (chuyển sang cổng) → Return (chỉ hiển thị) ; IPN là nguồn xác nhận duy nhất.
+ * Thanh toán trực tuyến phía khách (§7.1): MoMo, ZaloPay, QR chuyển khoản.
+ *   pay     tạo giao dịch → chuyển sang cổng (MoMo / ZaloPay) hoặc hiện mã QR.
+ *   notify  cổng gọi máy chủ (IPN / callback / webhook): nguồn xác nhận chính. Không phiên, không CSRF.
+ *   return  khách quay về: chỉ hiển thị (đơn còn chờ thì hỏi lại cổng).
+ *   check   khách bấm "Tôi đã thanh toán – kiểm tra lại".
+ *   status  trang QR hỏi định kỳ xem tiền đã về chưa.
  */
 class PaymentController extends Controller
 {
-    /** Tạo link và chuyển khách sang VNPay. Chỉ chủ đơn. */
-    public function pay(Request $request, int $bookingId, VnpayService $vnpay)
+    private function own(int $bookingId): object
     {
-        $own = DB::table('tbl_booking')->where('bookingId', $bookingId)->where('userId', (int) $this->getUserId())->exists();
-        abort_if(!$own, 404);
-        $r = $vnpay->createPaymentUrl($bookingId, $request->ip());
+        $b = DB::table('tbl_booking as b')->join('tbl_checkout as c', 'c.bookingId', '=', 'b.bookingId')->join('tbl_tours as t', 't.tourId', '=', 'b.tourId')
+            ->where('b.bookingId', $bookingId)->where('b.userId', (int) $this->getUserId())
+            ->select('b.bookingId', 'b.bookingCode', 'b.bookingStatus', 'b.holdExpiresAt', 'c.checkoutId', 'c.amount', 'c.paymentStatus', 'c.paymentMethod', 't.title')->first();
+        abort_if(!$b, 404);
+
+        return $b;
+    }
+
+    public function pay(Request $request, string $method, int $bookingId, OnlinePaymentService $payments)
+    {
+        $b = $this->own($bookingId);
+        $r = $payments->start($bookingId, $method, $request->ip());
         if (!$r['ok']) {
             toastr()->error($r['message']);
 
             return $this->toBooking($bookingId);
         }
+        if (!empty($r['url'])) {
+            return redirect()->away($r['url']);
+        }
 
-        return redirect()->away($r['url']);
+        return view('clients.payment-qr', [
+            'title' => 'Thanh toán bằng mã QR',
+            'b' => $b,
+            'qr' => $r['qr'],
+            'holdAt' => $b->holdExpiresAt ? \Carbon\Carbon::parse($b->holdExpiresAt) : null,
+        ]);
     }
 
-    /** VNPay gọi máy chủ (server-to-server). Trả JSON {RspCode, Message} theo quy định VNPay. */
-    public function ipn(Request $request, VnpayService $vnpay)
+    public function notify(Request $request, string $method, OnlinePaymentService $payments)
     {
-        return response()->json($vnpay->handleIpn($request->query(), $request->ip()));
+        return $payments->handleNotify($method, $request);
     }
 
-    /** Khách quay về từ VNPay: chỉ hiển thị kết quả, không đổi trạng thái đơn. */
-    public function return(Request $request, VnpayService $vnpay)
+    public function return(Request $request, string $method, OnlinePaymentService $payments)
     {
-        $r = $vnpay->handleReturn($request->query(), $request->ip());
+        $r = $payments->handleReturn($method, $request->query(), $request->ip());
         $b = $r['bookingId'] ? DB::table('tbl_booking as b')->join('tbl_tours as t', 't.tourId', '=', 'b.tourId')
             ->where('b.bookingId', $r['bookingId'])->select('b.bookingId', 'b.bookingCode', 'b.bookingStatus', 'b.holdExpiresAt', 'b.userId', 't.title')->first() : null;
         $title = 'Kết quả thanh toán';
@@ -44,15 +64,27 @@ class PaymentController extends Controller
         return view('clients.payment-result', compact('title', 'r', 'b'));
     }
 
-    /** Khách bấm "Tôi đã thanh toán – kiểm tra lại": hỏi VNPay bằng querydr. */
-    public function check(Request $request, int $bookingId, VnpayService $vnpay)
+    public function check(Request $request, int $bookingId, OnlinePaymentService $payments)
     {
-        $own = DB::table('tbl_booking')->where('bookingId', $bookingId)->where('userId', (int) $this->getUserId())->exists();
-        abort_if(!$own, 404);
-        $r = $vnpay->queryAndSettle($bookingId, $request->ip());
-        $r['ok'] && $r['status'] === '00' ? toastr()->success($r['message']) : toastr()->info($r['message']);
+        $this->own($bookingId);
+        $r = $payments->queryAndSettle($bookingId, $request->ip());
+        $r['ok'] && $r['status'] === 'paid' ? toastr()->success($r['message']) : toastr()->info($r['message']);
 
         return $this->toBooking($bookingId);
+    }
+
+    /** GET JSON cho trang QR: {paid, status, expired} */
+    public function status(int $bookingId)
+    {
+        $b = $this->own($bookingId);
+        $paid = in_array($b->paymentStatus, OnlinePaymentService::PAID, true);
+
+        return response()->json([
+            'paid' => $paid,
+            'bookingStatus' => $b->bookingStatus,
+            'expired' => !$paid && $b->bookingStatus === 'c',
+            'redirect' => route('tour-booked', ['bookingId' => $b->bookingId, 'checkoutId' => $b->checkoutId]),
+        ], 200, ['Cache-Control' => 'no-store']);
     }
 
     private function toBooking(int $bookingId)

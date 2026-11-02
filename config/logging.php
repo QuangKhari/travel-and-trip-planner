@@ -52,6 +52,15 @@ return [
 
     'channels' => [
 
+        // PF-08: log JSON một dòng mỗi sự kiện (kèm requestId từ Context) cho Docker / công cụ gom log. LOG_STACK=json
+        'json' => [
+            'driver' => 'monolog',
+            'handler' => Monolog\Handler\StreamHandler::class,
+            'handler_with' => ['stream' => env('LOG_JSON_STREAM', 'php://stderr')],
+            'formatter' => Monolog\Formatter\JsonFormatter::class,
+            'level' => env('LOG_LEVEL', 'info'),
+        ],
+
         'stack' => [
             'driver' => 'stack',
             'channels' => explode(',', (string) env('LOG_STACK', 'single')),

@@ -12,9 +12,16 @@
             <a class="ad-back" href="{{ route('admin.trips') }}"><i class="fa fa-arrow-left"></i> Chuyến đi (Planner)</a>
             <h1>{{ $t->title }}</h1>
             <p><span class="ad-badge ad-badge--{{ $statuses[$t->status][0] ?? 'mute' }}">{{ $statuses[$t->status][1] ?? $t->status }}</span>
-                <span class="ad-muted">· {{ $t->destName ?? 'Nhiều điểm đến' }}{{ $t->startDate ? ' · khởi hành ' . date('d/m/Y', strtotime($t->startDate)) : '' }}{{ $t->days ? ' · ' . $t->days . ' ngày' : '' }} · {{ $t->groupSize }} người · tạo {{ date('d/m/Y', strtotime($t->createdAt)) }}</span></p>
+                <span class="ad-muted">· {{ $t->destName ?? 'Nhiều điểm đến' }}{{ $t->startDate ? ' · khởi hành ' . date('d/m/Y', strtotime($t->startDate)) : '' }}{{ $t->days ? ' · ' . $t->days . ' ngày' : '' }} · {{ $t->groupSize }} người · tạo {{ date('d/m/Y', strtotime($t->createdAt)) }}</span>
+                @if (!empty($t->isPublic))<br><span class="ad-badge ad-badge--info">Công khai trên Cộng đồng</span> <span class="ad-muted">{{ (int) $t->likeCount }} thích · {{ (int) $t->cloneCount }} dùng lại · {{ (int) $t->viewCount }} lượt xem</span>@endif
+                @if (!empty($t->sourceTripId))<br><span class="ad-muted">Dùng lại từ <a href="{{ route('admin.trips.show', $t->sourceTripId) }}">chuyến #{{ $t->sourceTripId }}</a> trên Cộng đồng</span>@endif</p>
         </div>
         <div class="ad-actions">
+            @if (!empty($t->isPublic))
+                <a class="ad-btn" href="{{ route('community.show', $t->tripId) }}" target="_blank" rel="noopener"><i class="fa fa-globe"></i> Trên Cộng đồng</a>
+                <form method="POST" action="{{ route('admin.trips.unpublish', $t->tripId) }}">@csrf<input type="hidden" name="reason" value="">
+                    <button class="ad-btn" data-confirm="Gỡ “{{ $t->title }}” khỏi trang Cộng đồng? Chuyến vẫn còn trong tài khoản của khách."><i class="fa fa-eye-slash"></i> Gỡ khỏi Cộng đồng</button></form>
+            @endif
             @if (!empty($t->shareToken))<a class="ad-btn" href="{{ route('planner.shared', ['token' => $t->shareToken]) }}" target="_blank" rel="noopener"><i class="fa fa-external-link"></i> Bản khách chia sẻ</a>@endif
             <form method="POST" action="{{ route('admin.trips.destroy', $t->tripId) }}">@csrf<button class="ad-btn ad-btn--danger" data-confirm="Xóa chuyến “{{ $t->title }}” của {{ $t->fullName }}? Không khôi phục được."><i class="fa fa-trash-o"></i> Xóa (vi phạm)</button></form>
         </div>

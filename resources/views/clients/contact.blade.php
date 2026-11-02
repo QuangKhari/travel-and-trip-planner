@@ -283,8 +283,8 @@
                         </details>
                         <details>
                             <summary>Thanh toán như thế nào?</summary>
-                            <p>Hiện hỗ trợ thanh toán tại văn phòng. Thanh toán trực tuyến (VNPay) sẽ sớm được hỗ
-                                trợ.</p>
+                            <p>Bạn có thể thanh toán trực tuyến bằng ví MoMo, ZaloPay hoặc quét mã QR chuyển khoản ngân hàng ngay khi đặt tour,
+                                hoặc giữ chỗ và thanh toán tại văn phòng.</p>
                         </details>
                         <details>
                             <summary>Tôi đặt giúp người khác được không?</summary>

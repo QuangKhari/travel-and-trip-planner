@@ -42,6 +42,8 @@
 <script src="{{ asset('clients/assets/js/ux-pass.js') }}?v=4"></script>
 <script src="{{ asset('clients/assets/js/tv3.js') }}?v=1" defer></script>
 <script src="{{ asset('clients/assets/js/gx-discover.js') }}?v=1" defer></script>
+<script>window.TV_COMPARE_URL = @json(route('tours.compare'));</script>
+<script src="{{ asset('clients/assets/js/tour-compare.js') }}?v=1" defer></script>
 @include('clients.blocks.mobile_tabbar')
 @include('clients.blocks.trip_boot')
 

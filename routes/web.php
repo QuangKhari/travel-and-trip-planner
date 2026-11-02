@@ -63,6 +63,10 @@ use App\Http\Controllers\admin\PaymentAdminController;
 use App\Http\Controllers\clients\SupportTicketController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\clients\PaymentController;
+use App\Http\Controllers\clients\QuoteController;
+use App\Http\Controllers\clients\CompareController;
+use App\Http\Controllers\clients\CommunityController;
+use App\Http\Controllers\clients\TravelController;
 
 
 
@@ -71,9 +75,9 @@ use App\Http\Controllers\clients\PaymentController;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 // Kiểm tra sức khỏe hệ thống cho giám sát / Docker healthcheck (PF-08): DB, cache, hàng đợi, đĩa
 Route::get('/health', HealthController::class)->middleware('throttle:60,1,health')->name('health');
-// VNPay: IPN (VNPay gọi máy chủ, không phiên, không CSRF) và trang khách quay về (chỉ hiển thị)
-Route::get('/thanh-toan/vnpay/ipn', [PaymentController::class, 'ipn'])->middleware('throttle:120,1,vnpay-ipn')->name('payment.vnpay.ipn');
-Route::get('/thanh-toan/vnpay/ket-qua', [PaymentController::class, 'return'])->middleware('throttle:30,1,vnpay-return')->name('payment.vnpay.return');
+// Thanh toán trực tuyến: cổng gọi máy chủ (MoMo IPN, ZaloPay callback, webhook SePay — không phiên, không CSRF) và trang khách quay về
+Route::match(['get', 'post'], '/thanh-toan/thong-bao/{method}', [PaymentController::class, 'notify'])->whereIn('method', ['momo', 'zalopay', 'qr'])->middleware('throttle:240,1,pay-notify')->name('payment.notify');
+Route::get('/thanh-toan/ket-qua/{method}', [PaymentController::class, 'return'])->whereIn('method', ['momo', 'zalopay'])->middleware('throttle:30,1,pay-return')->name('payment.return');
 Route::get('/about', [AboutController::class, 'index'])->name('about');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:5,1,contact')->name('contact.send');
@@ -125,8 +129,20 @@ Route::post('/hoi-dap/hoi', [AskPageController::class, 'ask'])->middleware(['che
 // Bản chỉ đọc của chuyến đi được chia sẻ (công khai, không đưa vào chỉ mục)
 Route::get('/chuyen-di/{token}', [PlannerController::class, 'shared'])->where('token', '[A-Za-z0-9]{32}')->middleware('throttle:60,1,trip-share')->name('planner.shared');
 
+// Cộng đồng hành trình (T-24…T-35): xem công khai; thích, dùng lại, công khai chuyến của mình cần đăng nhập
+Route::get('/cong-dong', [CommunityController::class, 'index'])->middleware('throttle:60,1,community')->name('community.index');
+Route::get('/cong-dong/{id}', [CommunityController::class, 'show'])->whereNumber('id')->middleware('throttle:60,1,community')->name('community.show');
+Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
+    Route::post('/cong-dong/{id}/thich', [CommunityController::class, 'like'])->whereNumber('id')->middleware('throttle:30,1,community-like')->name('community.like');
+    Route::post('/cong-dong/{id}/dung-lai', [CommunityController::class, 'useTrip'])->whereNumber('id')->middleware('throttle:10,1,community-use')->name('community.use');
+    Route::post('/len-ke-hoach/{id}/cong-dong', [CommunityController::class, 'publish'])->whereNumber('id')->middleware('throttle:20,1,community-pub')->name('community.publish');
+});
+
 Route::get('/explore', [ExploreController::class, 'index'])->middleware('throttle:60,1,explore')->name('explore');
 Route::get('/travel-guides', [TravelGuidesController::class, 'index'])->name('team');
+Route::get('/dat-tour/bao-gia', [QuoteController::class, 'quote'])->middleware('throttle:60,1,quote')->name('booking.quote');
+Route::get('/tour/{id}/cho-trong', [QuoteController::class, 'seats'])->whereNumber('id')->middleware('throttle:30,1,seats')->name('tour.seats');
+Route::get('/so-sanh-tour', [CompareController::class, 'index'])->middleware('throttle:30,1,compare')->name('tours.compare');
 Route::get('/tour-detail/{id}', [TourDetailController::class, 'index'])->whereNumber('id')->name('tour-detail');
 Route::get('/tour-detail/{id}/danh-gia', [TourDetailController::class, 'moreReviews'])->whereNumber('id')->middleware('throttle:60,1,tour-reviews')->name('tour-reviews');
 Route::get('/blogs', [BlogController::class, 'index'])->name('blogs');
@@ -185,8 +201,9 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     // đặt tour
     // GET để F5 hoặc mở link trực tiếp không bị 405 
     Route::match(['get', 'post'], '/booking/{id?}', [BookingController::class, 'index'])->whereNumber('id')->name('booking');
-    Route::get('/thanh-toan/vnpay/{bookingId}', [PaymentController::class, 'pay'])->whereNumber('bookingId')->middleware('throttle:10,1,vnpay-pay')->name('payment.vnpay.pay');
-    Route::post('/thanh-toan/vnpay/{bookingId}/kiem-tra', [PaymentController::class, 'check'])->whereNumber('bookingId')->middleware('throttle:6,1,vnpay-check')->name('payment.vnpay.check');
+    Route::get('/thanh-toan/{method}/{bookingId}', [PaymentController::class, 'pay'])->whereIn('method', ['momo', 'zalopay', 'qr'])->whereNumber('bookingId')->middleware('throttle:10,1,pay-start')->name('payment.pay');
+    Route::post('/thanh-toan/{bookingId}/kiem-tra', [PaymentController::class, 'check'])->whereNumber('bookingId')->middleware('throttle:6,1,pay-check')->name('payment.check');
+    Route::get('/thanh-toan/{bookingId}/trang-thai', [PaymentController::class, 'status'])->whereNumber('bookingId')->middleware('throttle:40,1,pay-status')->name('payment.status');
     Route::post('/create-booking', [BookingController::class, 'createBooking'])->middleware('throttle:10,1,create-booking')->name('create-booking');
     Route::post('/apply-coupon', [BookingController::class, 'applyCoupon'])->middleware('throttle:20,1,apply-coupon')->name('apply-coupon');
     Route::post('/checkBooking', [BookingController::class, 'checkBooking'])->name('checkBooking');
@@ -218,6 +235,16 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::get('/len-ke-hoach/{id}/kham-pha', [PlannerController::class, 'browse'])->whereNumber('id')->middleware('throttle:60,1,planner-browse')->name('planner.browse');
     Route::get('/len-ke-hoach/{id}/tim', [PlannerController::class, 'search'])->whereNumber('id')->middleware('throttle:90,1,planner-search')->name('planner.search');
     Route::post('/len-ke-hoach/{id}/luu', [PlannerController::class, 'save'])->whereNumber('id')->middleware('throttle:60,1,planner-save')->name('planner.save');
+    Route::get('/len-ke-hoach/{id}/do-mang-theo', [PlannerController::class, 'packing'])->whereNumber('id')->middleware('throttle:20,1,planner-packing')->name('planner.packing');
+    Route::get('/len-ke-hoach/{id}/xuat-pdf', [PlannerController::class, 'exportPdf'])->whereNumber('id')->middleware('throttle:20,1,planner-pdf')->name('planner.pdf');
+    // T-36…T-38: chuyến bay, trạng thái chuyến bay, khách sạn (tham khảo, có nhãn khi là dữ liệu thử nghiệm)
+    Route::get('/len-ke-hoach/{id}/chuyen-bay', [TravelController::class, 'flights'])->whereNumber('id')->middleware('throttle:20,1,travel-flight')->name('travel.flights');
+    Route::post('/len-ke-hoach/{id}/chuyen-bay', [TravelController::class, 'addFlight'])->whereNumber('id')->middleware('throttle:20,1,travel-add')->name('travel.flights.add');
+    Route::get('/len-ke-hoach/{id}/chuyen-bay/trang-thai', [TravelController::class, 'status'])->whereNumber('id')->middleware('throttle:20,1,travel-status')->name('travel.status');
+    Route::get('/len-ke-hoach/{id}/khach-san', [TravelController::class, 'hotels'])->whereNumber('id')->middleware('throttle:20,1,travel-hotel')->name('travel.hotels');
+    Route::post('/len-ke-hoach/{id}/khach-san', [TravelController::class, 'addHotel'])->whereNumber('id')->middleware('throttle:20,1,travel-add')->name('travel.hotels.add');
+    Route::post('/len-ke-hoach/{id}/ngoai/{externalId}/xoa', [TravelController::class, 'remove'])->whereNumber(['id', 'externalId'])->middleware('throttle:30,1,travel-rm')->name('travel.remove');
+    Route::post('/len-ke-hoach/{id}/khoa', [PlannerController::class, 'lock'])->whereNumber('id')->middleware('throttle:30,1,planner-lock')->name('planner.lock');
     Route::get('/len-ke-hoach/{id}/phien-ban', [PlannerController::class, 'revision'])->whereNumber('id')->middleware('throttle:120,1,planner-rev')->name('planner.revision');
     Route::get('/len-ke-hoach/{id}/thanh-vien', [PlannerController::class, 'members'])->whereNumber('id')->middleware('throttle:60,1,planner-members')->name('planner.members');
     Route::post('/len-ke-hoach/{id}/thanh-vien', [PlannerController::class, 'invite'])->whereNumber('id')->middleware('throttle:20,1,planner-invite')->name('planner.invite');
@@ -312,9 +339,10 @@ Route::prefix('admin')->group(function () {
         Route::post('/send-pdf', [BookingManagementController::class, 'sendPdf'])->middleware('throttle:10,1,send-pdf')->name('admin.send.pdf');
         Route::get('/cancel-preview', [BookingManagementController::class, 'cancelPreview'])->name('admin.cancel-preview');
 
-        // Giao dịch VNPay
+        // Thanh toán trực tuyến: nhật ký, đối soát, xác nhận tay chuyển khoản QR
         Route::get('/payments', [PaymentAdminController::class, 'index'])->name('admin.payments');
-        Route::post('/payments/{bookingId}/reconcile', [PaymentAdminController::class, 'reconcile'])->whereNumber('bookingId')->middleware('throttle:20,1,vnpay-reconcile')->name('admin.payments.reconcile');
+        Route::post('/payments/{bookingId}/reconcile', [PaymentAdminController::class, 'reconcile'])->whereNumber('bookingId')->middleware('throttle:20,1,pay-reconcile')->name('admin.payments.reconcile');
+        Route::post('/payments/{bookingId}/confirm', [PaymentAdminController::class, 'confirm'])->whereNumber('bookingId')->middleware('throttle:20,1,pay-confirm')->name('admin.payments.confirm');
 
         // Hoàn tiền (A6)
         Route::get('/refunds', [RefundManagementController::class, 'index'])->name('admin.refunds');
@@ -404,6 +432,7 @@ Route::prefix('admin')->group(function () {
         Route::get('/booking-export', [BookingManagementController::class, 'export'])->name('admin.booking.export');
         Route::get('/trips', [TripAdminController::class, 'index'])->name('admin.trips');
         Route::post('/trips/{id}/delete', [TripAdminController::class, 'destroy'])->whereNumber('id')->name('admin.trips.destroy');
+        Route::post('/trips/{id}/unpublish', [TripAdminController::class, 'takeDown'])->whereNumber('id')->name('admin.trips.unpublish');
         Route::get('/content-requests', [ContentRequestAdminController::class, 'index'])->name('admin.content-requests');
         Route::post('/content-requests/{id}/resolve', [ContentRequestAdminController::class, 'resolve'])->whereNumber('id')->name('admin.content-requests.resolve');
         Route::get('/system', [SystemController::class, 'index'])->name('admin.system');

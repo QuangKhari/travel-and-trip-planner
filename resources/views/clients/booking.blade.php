@@ -182,22 +182,33 @@
                                 @endif
                             </span>
                         </label>
-                        @if (\App\Services\VnpayService::enabled())
+                        @php
+                            $payGw = app(\App\Services\Payments\OnlinePaymentService::class)->enabledGateways();
+                            $payInfo = [
+                                'momo' => ['fa-wallet', 'Thanh toán bằng ví MoMo', 'Quét mã QR bằng app MoMo hoặc dùng thẻ ATM liên kết.'],
+                                'zalopay' => ['fa-mobile', 'Thanh toán bằng ZaloPay', 'Ví ZaloPay, thẻ ATM nội địa hoặc thẻ quốc tế trên cổng ZaloPay.'],
+                                'qr' => ['fa-qrcode', 'Chuyển khoản bằng mã QR', 'Quét mã VietQR bằng app ngân hàng bất kỳ, số tiền và nội dung đã điền sẵn.'],
+                            ];
+                        @endphp
+                        @foreach ($payGw as $code => $gw)
                             <label class="bk-pay" style="margin-top:10px">
-                                <input type="radio" name="payment" value="vnpay" @checked(old('payment') === 'vnpay')>
-                                <span class="bk-pay__ico" aria-hidden="true"><i class="fal fa-credit-card"></i></span>
+                                <input type="radio" name="payment" value="{{ $code }}" @checked(old('payment') === $code)>
+                                <span class="bk-pay__ico" aria-hidden="true"><i class="fal {{ $payInfo[$code][0] }}"></i></span>
                                 <span class="bk-pay__txt">
-                                    <b>Thanh toán trực tuyến qua VNPay</b>
-                                    <small>Thẻ ATM nội địa, thẻ quốc tế, QR ngân hàng. Chỗ được giữ {{ \App\Services\VnpayService::holdMinutes() }} phút để bạn thanh toán; đơn được xác nhận ngay khi VNPay báo thành công.</small>
+                                    <b>{{ $payInfo[$code][1] }}</b>
+                                    <small>{{ $payInfo[$code][2] }} Chỗ được giữ {{ $gw->holdMinutes() }} phút để bạn thanh toán; đơn được xác nhận ngay khi nhận được tiền.</small>
                                 </span>
                             </label>
+                        @endforeach
+                        @if (count($payGw))
                             <script>
                                 document.addEventListener('change', function (e) {
                                     if (e.target.name !== 'payment') return;
                                     document.querySelectorAll('.bk-pay').forEach(function (l) { l.classList.toggle('is-on', l.contains(e.target)); });
                                     var b = document.querySelector('#bkForm [type=submit]');
                                     if (b && !b.dataset.label) b.dataset.label = b.innerHTML;
-                                    if (b) b.innerHTML = e.target.value === 'vnpay' ? 'Đặt tour và thanh toán VNPay' : b.dataset.label;
+                                    var t = { momo: 'Đặt tour và thanh toán MoMo', zalopay: 'Đặt tour và thanh toán ZaloPay', qr: 'Đặt tour và lấy mã QR' }[e.target.value];
+                                    if (b) b.innerHTML = t || b.dataset.label;
                                 });
                             </script>
                             <style>.bk-pay:not(.is-on){border-color:#dbe5e8;background:#fff}</style>

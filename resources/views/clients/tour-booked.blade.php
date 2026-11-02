@@ -82,23 +82,34 @@
                 @if ($status === 'n')
                     <section class="bk-next" aria-labelledby="bkNextH">
                         <h2 id="bkNextH"><i class="fal fa-flag" aria-hidden="true"></i> Bước tiếp theo</h2>
-                        @php $isVnpay = ($b->paymentMethod ?? '') === 'vnpay'; $canPayOnline = \App\Services\VnpayService::enabled() && ($b->paymentStatus ?? 'n') === 'n' && !$holdPassed; @endphp
-                        @if ($canPayOnline)
+                        @php
+                            $paySvc = app(\App\Services\Payments\OnlinePaymentService::class);
+                            $payGw = ($b->paymentStatus ?? 'n') === 'n' && !$holdPassed ? $paySvc->enabledGateways() : [];
+                            $curGw = $paySvc->gateway((string) ($b->paymentMethod ?? ''));
+                            $isOnline = (bool) $curGw;
+                        @endphp
+                        @if ($payGw)
                             <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 12px">
-                                <a class="bk-btn bk-btn--inline" href="{{ route('payment.vnpay.pay', ['bookingId' => $b->bookingId]) }}"><i class="fal fa-credit-card" aria-hidden="true"></i> {{ $isVnpay ? 'Thanh toán VNPay' : 'Thanh toán online qua VNPay' }}</a>
-                                @if ($isVnpay && !empty($b->providerTxnRef))
-                                    <form method="POST" action="{{ route('payment.vnpay.check', ['bookingId' => $b->bookingId]) }}" style="margin:0">@csrf
+                                @if ($curGw && isset($payGw[$curGw->code()]))
+                                    <a class="bk-btn bk-btn--inline" href="{{ route('payment.pay', ['method' => $curGw->code(), 'bookingId' => $b->bookingId]) }}"><i class="fal {{ $curGw->code() === 'qr' ? 'fa-qrcode' : 'fa-credit-card' }}" aria-hidden="true"></i> {{ $curGw->code() === 'qr' ? 'Xem lại mã QR' : 'Thanh toán ' . $curGw->label() }}</a>
+                                @endif
+                                @foreach ($payGw as $code => $gw)
+                                    @continue($curGw && $curGw->code() === $code)
+                                    <a class="bk-btn bk-btn--ghost bk-btn--inline" href="{{ route('payment.pay', ['method' => $code, 'bookingId' => $b->bookingId]) }}">{{ $code === 'qr' ? 'Chuyển khoản QR' : $gw->label() }}</a>
+                                @endforeach
+                                @if ($curGw && $curGw->code() !== 'qr' && !empty($b->providerTxnRef))
+                                    <form method="POST" action="{{ route('payment.check', ['bookingId' => $b->bookingId]) }}" style="margin:0">@csrf
                                         <button class="bk-btn bk-btn--ghost bk-btn--inline" type="submit">Tôi đã thanh toán – kiểm tra lại</button></form>
                                 @endif
                             </div>
-                            @if (!empty($b->responseCode) && $b->responseCode !== '00')
-                                <p class="bk-hint" role="alert">Lần thanh toán trước chưa thành công: {{ \App\Services\VnpayService::RESPONSE[$b->responseCode] ?? 'mã ' . $b->responseCode }}. Bạn có thể thử lại.</p>
+                            @if ($curGw && !empty($b->responseCode) && $b->responseCode !== '00')
+                                <p class="bk-hint" role="alert">Lần thanh toán trước chưa thành công: {{ $curGw->describe($b->responseCode) }}. Bạn có thể thử lại hoặc chọn cách khác.</p>
                             @endif
                         @endif
-                        @if ($isVnpay && $holdAt && !$holdPassed)
-                            <p>Hoàn tất thanh toán VNPay trước <b>{{ $holdAt->format('H:i d/m/Y') }}</b>.
+                        @if ($isOnline && $holdAt && !$holdPassed)
+                            <p>Hoàn tất thanh toán trước <b>{{ $holdAt->format('H:i d/m/Y') }}</b>.
                                 Còn lại: <b class="bk-countdown" data-deadline="{{ $holdAt->toIso8601String() }}">…</b></p>
-                            <p class="bk-hint">Quá hạn mà VNPay chưa báo thanh toán thành công, đơn tự hủy và chỗ được trả lại.</p>
+                            <p class="bk-hint">Quá hạn mà chưa nhận được tiền, đơn tự hủy và chỗ được trả lại.</p>
                         @elseif ($holdAt && !$holdPassed)
                             <p>Đến văn phòng để thanh toán và xác nhận đơn trước
                                 <b>{{ $holdAt->format('H:i d/m/Y') }}</b>.
@@ -172,7 +183,7 @@
                     <dl class="bk-dl">
                         <div>
                             <dt>Phương thức</dt>
-                            <dd>{{ ($b->paymentMethod ?? '') === 'vnpay' ? 'VNPay' . (!empty($b->bankCode) ? ' · ' . $b->bankCode : '') : 'Thanh toán tại văn phòng' }}</dd>
+                            <dd>{{ \App\Services\Payments\OnlinePaymentService::label($b->paymentMethod ?? 'office-payment') }}{{ !empty($b->bankCode) && ($b->paymentStatus ?? 'n') !== 'n' ? ' · ' . $b->bankCode : '' }}</dd>
                         </div>
                         <div>
                             <dt>Ngày đặt</dt>

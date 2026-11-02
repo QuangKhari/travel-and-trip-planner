@@ -46,7 +46,7 @@
             {!! $item('admin.booking', 'Đơn đặt tour', 'fa-ticket', $on('admin.booking', 'admin.booking-detail', 'admin.transfer-proof', 'admin.booking.create'), $badge['booking']) !!}
             @if ($adMgr)
                 {!! $item('admin.refunds', 'Hoàn tiền', 'fa-undo', $on('admin.refunds*'), $badge['refund'] ?? 0) !!}
-                {!! $item('admin.payments', 'Giao dịch VNPay', 'fa-credit-card', $on('admin.payments*')) !!}
+                {!! $item('admin.payments', 'Thanh toán trực tuyến', 'fa-credit-card', $on('admin.payments*')) !!}
                 <details class="ad-nav__fold" {{ $inTours ? 'open' : '' }}>
                     <summary class="ad-nav__link{{ $inTours ? ' is-in' : '' }}" title="Tour"><i class="fa fa-suitcase" aria-hidden="true"></i><span class="ad-nav__txt">Tour</span><i class="fa fa-angle-down ad-nav__caret" aria-hidden="true"></i></summary>
                     <div class="ad-nav__subs">
