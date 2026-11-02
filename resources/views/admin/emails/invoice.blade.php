@@ -2,7 +2,7 @@
 @section('title', 'Hóa đơn đặt tour')
 @section('content')
     <p style="margin:0 0 4px;font-size:13px;color:#64748B;">Mã đơn</p>
-    <p style="margin:0 0 18px;font-size:20px;font-weight:700;">{{ $invoice_booking->bookingCode }}</p>
+    <p style="margin:0 0 18px;font-size:20px;font-weight:700;">{{ $invoice_booking->bookingCode }}@if (!empty($invoice_booking->invoiceNo)) <span style="font-size:13px;font-weight:400;color:#64748B;">· Hóa đơn {{ $invoice_booking->invoiceNo }}</span>@endif</p>
 
     <p style="margin:0 0 14px;">Xin chào <b>{{ $invoice_booking->fullName }}</b>, cảm ơn bạn đã đặt tour cùng
         {{ config('site.name', 'Travel') }}. Thông tin đơn của bạn:</p>
@@ -16,12 +16,12 @@
         <tr>
             <td style="padding:10px 0;border-bottom:1px solid #E2E8F0;color:#64748B;">Khởi hành</td>
             <td style="padding:10px 0;border-bottom:1px solid #E2E8F0;">
-                {{ date('d/m/Y', strtotime($invoice_booking->startDate)) }}</td>
+                {{ date('d/m/Y', strtotime($invoice_booking->tripStart ?? $invoice_booking->startDate)) }}</td>
         </tr>
         <tr>
             <td style="padding:10px 0;border-bottom:1px solid #E2E8F0;color:#64748B;">Kết thúc</td>
             <td style="padding:10px 0;border-bottom:1px solid #E2E8F0;">
-                {{ date('d/m/Y', strtotime($invoice_booking->endDate)) }}</td>
+                {{ date('d/m/Y', strtotime($invoice_booking->tripEnd ?? $invoice_booking->endDate)) }}</td>
         </tr>
         <tr>
             <td style="padding:10px 0;border-bottom:1px solid #E2E8F0;color:#64748B;">Người lớn</td>
@@ -45,7 +45,7 @@
         <tr>
             <td style="padding:10px 0;color:#64748B;">Trạng thái</td>
             <td style="padding:10px 0;font-weight:700;">
-                {{ $invoice_booking->paymentStatus === 'y' ? 'Đã thanh toán' : 'Chưa thanh toán' }}</td>
+                {{ ['y' => 'Đã thanh toán', 'refund_pending' => 'Chờ hoàn tiền', 'refunded' => 'Đã hoàn tiền'][$invoice_booking->paymentStatus] ?? 'Chưa thanh toán' }}</td>
         </tr>
     </table>
 @endsection

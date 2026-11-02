@@ -101,7 +101,16 @@ class CouponService
             throw new BookingException('Mã giảm giá đã hết lượt sử dụng.');
         }
 
-        $max = (int) config('travela.coupon_max_uses_per_user', 1);
+        // Giá trị đơn tối thiểu (D-04)
+        $minOrder = (int) ($promo->minOrder ?? 0);
+        if ($minOrder > 0 && $subtotal < $minOrder) {
+            throw new BookingException('Mã này áp dụng cho đơn từ ' . number_format($minOrder, 0, ',', '.') . ' đ trở lên.');
+        }
+
+        // Lượt / người: theo từng mã nếu admin đặt, không thì theo cấu hình chung
+        $max = isset($promo->perUserLimit) && $promo->perUserLimit !== null
+            ? (int) $promo->perUserLimit
+            : (int) config('travela.coupon_max_uses_per_user', 1);
         if ($max > 0) {
             $used = DB::table('tbl_promotion_usage')
                 ->where('promotionId', $promo->promotionId)
@@ -114,11 +123,19 @@ class CouponService
         }
 
         $percent = min(100, max(0, (float) $promo->discount));
+        $discount = (int) round($subtotal * $percent / 100);
+
+        // Giảm tối đa (D-04)
+        $cap = isset($promo->maxDiscount) && $promo->maxDiscount !== null ? (int) $promo->maxDiscount : 0;
+        if ($cap > 0) {
+            $discount = min($discount, $cap);
+        }
 
         return [
             'promotionId' => (int) $promo->promotionId,
             'percent'     => $percent,
-            'discount'    => (int) round($subtotal * $percent / 100),
+            'discount'    => min($subtotal, $discount),
+            'maxDiscount' => $cap ?: null,
         ];
     }
 }

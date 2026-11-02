@@ -131,6 +131,7 @@
                         <a href="{{ route('my-tours') }}"><i class="bx bx-map"></i><span>Tour đã đặt</span></a>
                         <a href="{{ route('journal') }}"><i class="bx bx-book-open"></i><span>Sổ tay du
                                 hành</span></a>
+                        <a href="{{ route('support.index') }}"><i class="bx bx-support"></i><span>Hỗ trợ tư vấn</span></a>
                         <form action="{{ route('logout') }}" method="POST">
                             @csrf
                             <button type="submit"><i class="bx bx-log-out"></i><span>Đăng xuất</span></button>

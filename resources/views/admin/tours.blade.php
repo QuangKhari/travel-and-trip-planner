@@ -1,67 +1,44 @@
 @include('admin.blocks.header')
+@php
+    $all = collect($tours);
+    $today = now()->toDateString();
+    $on = $all->where('availability', 1)->count();
+@endphp
 <div class="container body">
     <div class="main_container">
         @include('admin.blocks.sidebar')
 
-        <!-- page content -->
         <div class="right_col" role="main">
-            <div class="">
-                <div class="page-title">
-                    <div class="title_left">
-                        <h3>Quản lý <small>Tours</small></h3>
+            <div class="ad-wrap">
+                @include('admin.partials.flash')
+                <div class="ad-head">
+                    <div>
+                        <h1>Tour</h1>
+                        <p>Quản lý thông tin, ảnh, lộ trình và trạng thái hiển thị của tour. Mỗi tour có thể mở nhiều ngày khởi hành ở mục “Lịch”. Tour đã có đơn khi xóa sẽ chỉ bị ẩn (ngừng bán) để giữ lịch sử.</p>
+                    </div>
+                    <div class="ad-actions">
+                        <a class="ad-btn" href="{{ route('admin.departures') }}"><i class="fa fa-calendar"></i> Lịch khởi hành</a>
+                        <a class="ad-btn ad-btn--primary" href="{{ route('admin.page-add-tours') }}"><i class="fa fa-plus"></i> Thêm tour</a>
                     </div>
                 </div>
 
-                <div class="clearfix"></div>
-
-                <div class="row">
-                    <div class="col-md-12 col-sm-12 ">
-                        <div class="x_panel">
-                            <div class="x_title">
-                                <h2>Tours</h2>
-                                <ul class="nav navbar-right panel_toolbox">
-                                    <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
-                                    </li>
-                                    <li><a class="close-link"><i class="fa fa-close"></i></a>
-                                    </li>
-                                </ul>
-                                <div class="clearfix"></div>
-                            </div>
-                            <div class="x_content">
-                                <div class="row">
-                                    <div class="col-sm-12">
-                                        <div class="card-box table-responsive">
-                                            <p class="text-muted font-13 m-b-30">
-                                                Chào mừng bạn đến với trang quản lý tour. Tại đây, bạn có thể thêm mới,
-                                                chỉnh sửa, và quản lý tất cả các tour hiện có.
-                                            </p>
-                                            <table id="datatable-listTours" class="table table-striped table-bordered"
-                                                style="width:100%">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Tên</th>
-                                                        <th>Thời gian</th>
-                                                        <th>Mô tả</th>
-                                                        <th>Số lượng</th>
-                                                        <th>Giá người lớn</th>
-                                                        <th>Giá trẻ em</th>
-                                                        <th>Điểm đến</th>
-                                                        <th>Khả dụng</th>
-                                                        <th>Ngày bắt đầu</th>
-                                                        <th>Ngày kết thúc</th>
-                                                        <th>Sửa</th>
-                                                        <th>Xóa</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="tbody-listTours">
-                                                    @include('admin.partials.list-tours')
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                <div class="ad-card">
+                    <div class="ad-toolbar">
+                        <div class="ad-chips">
+                            <button type="button" class="ad-chip is-on" data-ad-status-chip="" data-target="datatable-listTours">Tất cả <b>{{ $all->count() }}</b></button>
+                            <button type="button" class="ad-chip" data-ad-status-chip="on" data-target="datatable-listTours">Đang hiện <b>{{ $on }}</b></button>
+                            <button type="button" class="ad-chip" data-ad-status-chip="off" data-target="datatable-listTours">Đang ẩn <b>{{ $all->count() - $on }}</b></button>
                         </div>
+                    </div>
+                    <div class="table-responsive ad-tablewrap">
+                        <table id="datatable-listTours" class="ad-table">
+                            <thead>
+                                <tr><th>Tour</th><th>Điểm đến</th><th class="num">Giá NL</th><th>Khởi hành gần nhất</th><th class="num">Đơn mở</th><th>Trạng thái</th><th class="num">Thao tác</th></tr>
+                            </thead>
+                            <tbody id="tbody-listTours">
+                                @include('admin.partials.list-tours')
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -86,7 +63,7 @@
                                         <span class="step_no">1</span>
                                         <span class="step_descr">
                                             Bước 1<br />
-                                            <small>Bước 1 Nhập thông tin </small>
+                                            <small>Thông tin cơ bản</small>
                                         </span>
                                     </a>
                                 </li>
@@ -95,7 +72,7 @@
                                         <span class="step_no">2</span>
                                         <span class="step_descr">
                                             Bước 2<br />
-                                            <small>Bước 2 Thêm hình ảnh</small>
+                                            <small>Hình ảnh</small>
                                         </span>
                                     </a>
                                 </li>
@@ -104,7 +81,7 @@
                                         <span class="step_no">3</span>
                                         <span class="step_descr">
                                             Bước 3<br />
-                                            <small>Bước 3 Lộ trình</small>
+                                            <small>Lộ trình</small>
                                         </span>
                                     </a>
                                 </li>
@@ -183,7 +160,7 @@
                                         </div>
                                     </div>
                                     <div class="field item form-group">
-                                        <label class="col-form-label col-md-3 col-sm-3  label-align">Số lượng
+                                        <label class="col-form-label col-md-3 col-sm-3  label-align">Số chỗ còn lại
                                             <span>*</span></label>
                                         <div class="col-md-6 col-sm-6">
                                             <input class="form-control" type="number" name="number" required>

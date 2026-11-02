@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\admin;
 
+use App\Support\AuditLog;
+
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\admin\Review;
@@ -30,7 +32,13 @@ class ReviewManagementController extends Controller
             $query->where('isHidden', $visibility === 'hidden' ? 1 : 0);
         }
 
-        $reviews = $query->paginate(10)->withQueryString();
+        $rating = (int) $request->get('rating', 0);
+        if ($rating >= 1 && $rating <= 5) {
+            $query->where('rating', $rating);
+        }
+
+        $reviews = $query->paginate(15)->withQueryString();
+        $dist = Review::selectRaw('rating, COUNT(*) n')->groupBy('rating')->pluck('n', 'rating');
 
         $stats = [
             'total'      => Review::count(),
@@ -46,7 +54,9 @@ class ReviewManagementController extends Controller
                 'reviews',
                 'stats',
                 'search',
-                'visibility'
+                'visibility',
+                'rating',
+                'dist'
             )
         );
     }
@@ -76,6 +86,7 @@ class ReviewManagementController extends Controller
         $review = Review::findOrFail($id);
         $hide = !$review->isHidden;
         \Illuminate\Support\Facades\DB::table('tbl_reviews')->where('reviewId', $review->reviewId)->update(['isHidden' => $hide]);
+        AuditLog::record($hide ? 'review.hide' : 'review.show', 'review', $review->reviewId, ($hide ? 'Ẩn' : 'Hiện') . ' đánh giá ' . $review->rating . '★ của tour #' . $review->tourId, ['isHidden' => !$hide], ['isHidden' => $hide]);
 
         return back()->with('success', $hide ? 'Đã ẩn đánh giá: khách không còn thấy, không tính vào điểm trung bình.' : 'Đã hiện lại đánh giá.');
     }
@@ -84,7 +95,9 @@ class ReviewManagementController extends Controller
     {
         $review = Review::findOrFail($id);
 
+        $snap = $review->only(['reviewId', 'tourId', 'userId', 'rating', 'comment']);
         $review->delete();
+        AuditLog::record('review.delete', 'review', $snap['reviewId'], 'Xóa đánh giá ' . $snap['rating'] . '★ của tour #' . $snap['tourId'], $snap, null);
 
         return redirect()
             ->route('admin.reviews')

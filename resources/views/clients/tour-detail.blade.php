@@ -19,7 +19,8 @@
     $reviewCount = (int) ($reviewStats->reviewCount ?? 0);
     $timelineCount = $tourDetail->timeline->count();
     $holdHours = (int) config('travela.hold_hours', 48);
-    $cancelDays = \App\Support\CancelPolicy::MIN_DAYS;
+    $cancelDays = (int) config('booking.paid_cancel_min_days', 7);
+    $departures = $departures ?? [];
 
     // Video giới thiệu (cột video_url; để trống thì ẩn mọi thứ liên quan)
     $video = \App\Support\TourVideo::parse($tourDetail->video_url ?? null);
@@ -399,6 +400,34 @@
                             data-max="{{ max(1, min(50, (int) $tourDetail->quantity)) }}">
                             @csrf
 
+                            @if (count($departures) > 1)
+                                {{-- Nhiều ngày khởi hành: chọn ngày, số chỗ còn lại theo từng ngày --}}
+                                <fieldset class="px-deps">
+                                    <legend>Chọn ngày khởi hành</legend>
+                                    <div class="px-deps__list">
+                                        @foreach ($departures as $i => $d)
+                                            <label class="px-dep">
+                                                <input type="radio" name="availabilityId" value="{{ $d->availabilityId }}" data-left="{{ $d->remaining }}" @checked($d->departureDate === $tourDetail->startDate || ($i === 0 && !collect($departures)->contains('departureDate', $tourDetail->startDate)))>
+                                                <span><b>{{ \Carbon\Carbon::parse($d->departureDate)->format('d/m') }}</b>
+                                                    <small>{{ $weekdays[\Carbon\Carbon::parse($d->departureDate)->dayOfWeek] }}</small>
+                                                    <em class="{{ $d->remaining <= 5 ? 'is-low' : '' }}">còn {{ $d->remaining }}</em></span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                </fieldset>
+                                <style>
+                                    .px-deps{border:0;margin:0 0 14px;padding:0}.px-deps legend{font-size:14px;font-weight:600;margin-bottom:8px}
+                                    .px-deps__list{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+                                    .px-dep{flex:none;cursor:pointer;margin:0}.px-dep input{position:absolute;opacity:0;pointer-events:none}
+                                    .px-dep span{display:flex;flex-direction:column;align-items:center;min-width:74px;padding:8px 10px;border:1px solid #d6e3e6;border-radius:12px;background:#fff;line-height:1.25}
+                                    .px-dep b{font-size:15px}.px-dep small{font-size:11px;color:#6b8592}.px-dep em{font-style:normal;font-size:11.5px;color:#0d9488;font-weight:600}
+                                    .px-dep em.is-low{color:#c2410c}.px-dep input:checked+span{border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.15);background:#f0fdfa}
+                                    .px-dep input:focus-visible+span{outline:3px solid rgba(13,148,136,.4)}
+                                </style>
+                            @elseif (count($departures) === 1)
+                                <input type="hidden" name="availabilityId" value="{{ $departures[0]->availabilityId }}">
+                            @endif
+
                             @unless ($soldOut)
                                 {{-- Chọn số khách ngay tại đây: tạm tính hiện tức thì, số khách mang sang trang đặt tour --}}
                                 <div class="px-guests">
@@ -472,9 +501,7 @@
                         <li><i class="fal fa-calendar-check" aria-hidden="true"></i>Giữ chỗ {{ $holdHours }} giờ
                             để bạn
                             hoàn tất thanh toán</li>
-                        <li><i class="fal fa-undo" aria-hidden="true"></i>Tự hủy được khi còn hơn {{ $cancelDays }}
-                            ngày
-                            trước ngày khởi hành</li>
+                        <li><i class="fal fa-undo" aria-hidden="true"></i>Hoàn 100% khi hủy trước 14 ngày, 50% khi còn 7–13 ngày</li>
                         <li><i class="fal fa-headset" aria-hidden="true"></i>Hỗ trợ ngay trên website, không cần chờ
                             email</li>
                     </ul>

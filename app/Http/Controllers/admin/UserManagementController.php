@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\admin;
 
+use App\Support\AuditLog;
+
 use App\Http\Controllers\Controller;
 use App\Models\admin\UserModel;
 use Illuminate\Http\Request;
@@ -73,6 +75,38 @@ class UserManagementController extends Controller
         ]);
     }
 
+    /** Hồ sơ đầy đủ một khách: mọi thứ khách làm được ở phía người dùng đều có chỗ xem ở đây. */
+    public function show(int $id)
+    {
+        $u = DB::table('tbl_users')->where('userId', $id)->first();
+        abort_if(!$u, 404);
+        $title = 'Khách: ' . $u->fullName;
+        $has = fn($t) => \Illuminate\Support\Facades\Schema::hasTable($t);
+
+        $bookings = \App\Support\BookingPii::decryptAll(DB::table('tbl_booking as b')->join('tbl_tours as t', 't.tourId', '=', 'b.tourId')
+            ->join('tbl_checkout as c', 'c.bookingId', '=', 'b.bookingId')->where('b.userId', $id)->orderByDesc('b.bookingId')
+            ->get(['b.bookingId', 'b.bookingCode', 'b.bookingStatus', 'b.cancelReason', 'b.bookingDate', 'b.departureDate', 'b.numAdults', 'b.numChildren', 'b.totalPrice',
+                't.title', 't.startDate', 'c.paymentStatus', 'c.paymentMethod']));
+        $memberOf = $has('tbl_trip_members') ? DB::table('tbl_trip_members')->where('userId', $id)->pluck('role', 'tripId') : collect();
+        $trips = DB::table('tbl_trips as t')->leftJoin('tbl_destinations as d', 'd.destinationId', '=', 't.destinationId')
+            ->where(fn($w) => $w->where('t.userId', $id)->orWhereIn('t.tripId', $memberOf->keys()))->where('t.kind', 'trip')
+            ->orderByDesc('t.tripId')->get(['t.tripId', 't.title', 't.status', 't.startDate', 't.days', 't.userId', 't.shareToken', 'd.name as destName']);
+        $reviews = DB::table('tbl_reviews as r')->join('tbl_tours as t', 't.tourId', '=', 'r.tourId')->where('r.userId', $id)->orderByDesc('r.reviewId')
+            ->get(['r.reviewId', 'r.rating', 'r.comment', 'r.timestamp', 'r.isHidden', 't.title']);
+        $tickets = $has('tbl_support_tickets') ? DB::table('tbl_support_tickets')->where('userId', $id)->orderByDesc('ticketId')->get() : collect();
+        $contacts = $has('tbl_contact_messages') ? DB::table('tbl_contact_messages')->where(fn($w) => $w->where('userId', $id)->orWhere('email', $u->email))->orderByDesc('messageId')->limit(10)->get() : collect();
+        $marks = $has('tbl_user_marks') ? DB::table('tbl_user_marks')->where('userId', $id)->selectRaw('type, COUNT(*) n')->groupBy('type')->pluck('n', 'type') : collect();
+        $asks = $has('tbl_chat_logs') ? DB::table('tbl_chat_logs')->where('userId', $id)->count() : 0;
+        $aiRuns = $has('tbl_ai_runs') ? DB::table('tbl_ai_runs')->where('userId', $id)->count() : 0;
+        $coupons = $has('tbl_promotion_usage') ? DB::table('tbl_promotion_usage as u')->join('tbl_promotion as p', 'p.promotionId', '=', 'u.promotionId')
+            ->where('u.userId', $id)->get(['p.code', 'u.discountAmount', 'u.bookingId']) : collect();
+        $audit = DB::table('tbl_audit_log')->where('entity', 'user')->where('entityId', (string) $id)->orderByDesc('auditId')->limit(10)->get();
+        $spent = $bookings->filter(fn($b) => in_array($b->paymentStatus, ['y', 'refund_pending', 'refunded'], true))->sum('totalPrice')
+            - (float) ($has('tbl_refunds') ? DB::table('tbl_refunds')->whereIn('bookingId', $bookings->pluck('bookingId'))->where('status', 'refunded')->sum('amount') : 0);
+
+        return view('admin.users.show', compact('title', 'u', 'bookings', 'trips', 'memberOf', 'reviews', 'tickets', 'contacts', 'marks', 'asks', 'aiRuns', 'coupons', 'audit', 'spent'));
+    }
+
     public function activeUser(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -85,6 +119,7 @@ class UserManagementController extends Controller
 
         // Không dựa vào số dòng bị đổi: kích hoạt lần hai (0 dòng đổi) không phải là lỗi
         $this->users->updateActive((int) $request->userId);
+        AuditLog::record('user.activate', 'user', (int) $request->userId, 'Kích hoạt tài khoản ' . \Illuminate\Support\Facades\DB::table('tbl_users')->where('userId', (int) $request->userId)->value('username'));
 
         return response()->json(['success' => true, 'message' => 'Người dùng đã được kích hoạt thành công!']);
     }
@@ -102,7 +137,12 @@ class UserManagementController extends Controller
         }
 
         $status = $request->status === 'active' ? null : $request->status;
+        $u = \Illuminate\Support\Facades\DB::table('tbl_users')->where('userId', (int) $request->userId)->first(['username', 'status']);
         $this->users->changeStatus((int) $request->userId, ['status' => $status]);
+        if (($u->status ?? null) !== $status) {
+            $label = ['b' => 'Khóa', 'd' => 'Xóa mềm', null => 'Mở khóa / khôi phục'][$status];
+            AuditLog::record($status === null ? 'user.unblock' : 'user.block', 'user', (int) $request->userId, $label . ' tài khoản ' . ($u->username ?? ''), ['status' => $u->status ?? null], ['status' => $status]);
+        }
 
         return response()->json([
             'success' => true,

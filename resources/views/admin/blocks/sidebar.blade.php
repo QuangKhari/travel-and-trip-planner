@@ -3,152 +3,139 @@
     $adMgr = in_array($adRole, ['admin', 'manager'], true);
     $on = fn(string ...$p) => request()->routeIs(...$p);
     $badge = \App\Support\AdminBadges::counts();
-    $roleLabel = ['admin' => 'Admin', 'manager' => 'Quản lý', 'staff' => 'Nhân viên'][$adRole] ?? 'Nhân viên';
+    $roleLabel = ['admin' => 'Quản trị viên', 'manager' => 'Quản lý', 'staff' => 'Nhân viên'][$adRole] ?? 'Nhân viên';
+    $has = fn(string $r) => \Illuminate\Support\Facades\Route::has($r);
 
-    $inTours = $on('admin.tours', 'admin.page-add-tours', 'admin.tour-edit');
-    $inContent = $on('admin.content*', 'admin.destinations*', 'admin.inspirations*', 'admin.guide-categories*', 'admin.blog*', 'admin.itinerary*');
-    // Menu Nội dung chia theo VIỆC admin làm: soạn/duyệt từng loại, xem báo cáo, thiết lập danh mục phụ.
+    // Nhóm "Soạn và duyệt": mỗi loại nội dung là một mục con
     $kindNow = request()->route('kind');
     $onKind = fn(string $k) => ($k === 'itineraries' && $on('admin.itinerary*'))
         || ($on('admin.content', 'admin.content.create', 'admin.content.edit', 'admin.content.preview') && ($kindNow ?? 'foods') === $k);
+    $inTours = $on('admin.tours', 'admin.page-add-tours', 'admin.tour-edit', 'admin.departures*');
     $inWrite = $on('admin.destinations*', 'admin.blog*', 'admin.itinerary*')
         || $on('admin.content', 'admin.content.create', 'admin.content.edit', 'admin.content.preview');
     $inReport = $on('admin.content.overview', 'admin.content.quality*');
     $inSetup = $on('admin.inspirations*', 'admin.guide-categories*');
+
+    /** Một mục menu: [route, nhãn, icon, đang chọn?, số đếm] */
+    $item = function (string $route, string $label, string $icon, bool $active, int $count = 0, array $params = []) use ($has) {
+        if (!$has($route)) return '';
+        $href = route($route, $params);
+        $pill = $count > 0 ? '<span class="ad-nav__pill">' . ($count > 99 ? '99+' : $count) . '</span>' : '';
+        return '<a class="ad-nav__link' . ($active ? ' is-on' : '') . '" href="' . e($href) . '"' . ($active ? ' aria-current="page"' : '') . ' title="' . e($label) . '">'
+            . '<i class="fa ' . $icon . '" aria-hidden="true"></i><span class="ad-nav__txt">' . e($label) . '</span>' . $pill . '</a>';
+    };
+    $sub = function (string $route, string $label, bool $active, array $params = []) use ($has) {
+        if (!$has($route)) return '';
+        return '<a class="ad-nav__sub' . ($active ? ' is-on' : '') . '" href="' . e(route($route, $params)) . '"' . ($active ? ' aria-current="page"' : '') . '>' . e($label) . '</a>';
+    };
 @endphp
 
-<div class="col-md-3 left_col">
-    <div class="left_col scroll-view">
-        <div class="navbar nav_title" style="border:0;">
-            <a href="{{ route('admin.dashboard') }}" class="site_title"><i class="fa fa-paw"></i> <span>{{ config('site.name', 'Travela') }}</span></a>
+<aside class="ad-side" id="ad-side" aria-label="Menu quản trị">
+    <a href="{{ route('admin.dashboard') }}" class="ad-brand">
+        <span class="ad-brand__logo"><i class="fa fa-compass" aria-hidden="true"></i></span>
+        <span class="ad-brand__txt">{{ config('site.name', 'Travela') }}<small>Quản trị</small></span>
+    </a>
+
+    <nav class="ad-nav">
+        <div class="ad-nav__group">
+            {!! $item('admin.dashboard', 'Tổng quan', 'fa-th-large', $on('admin.dashboard')) !!}
         </div>
-        <div class="clearfix"></div>
 
-        <div id="sidebar-menu" class="main_menu_side hidden-print main_menu">
-            <div class="menu_section">
-                <h3>Tổng quan</h3>
-                <ul class="nav side-menu">
-                    <li class="{{ $on('admin.dashboard') ? 'ad-on' : '' }}"><a href="{{ route('admin.dashboard') }}"><i class="fa fa-dashboard"></i> Dashboard</a></li>
-                </ul>
+        <div class="ad-nav__group">
+            <div class="ad-nav__h">Bán tour</div>
+            {!! $item('admin.booking', 'Đơn đặt tour', 'fa-ticket', $on('admin.booking', 'admin.booking-detail', 'admin.transfer-proof', 'admin.booking.create'), $badge['booking']) !!}
+            @if ($adMgr)
+                {!! $item('admin.refunds', 'Hoàn tiền', 'fa-undo', $on('admin.refunds*'), $badge['refund'] ?? 0) !!}
+                {!! $item('admin.payments', 'Giao dịch VNPay', 'fa-credit-card', $on('admin.payments*')) !!}
+                <details class="ad-nav__fold" {{ $inTours ? 'open' : '' }}>
+                    <summary class="ad-nav__link{{ $inTours ? ' is-in' : '' }}" title="Tour"><i class="fa fa-suitcase" aria-hidden="true"></i><span class="ad-nav__txt">Tour</span><i class="fa fa-angle-down ad-nav__caret" aria-hidden="true"></i></summary>
+                    <div class="ad-nav__subs">
+                        {!! $sub('admin.tours', 'Danh sách tour', $on('admin.tours', 'admin.tour-edit')) !!}
+                        {!! $sub('admin.departures', 'Lịch khởi hành', $on('admin.departures*')) !!}
+                        {!! $sub('admin.page-add-tours', 'Thêm tour mới', $on('admin.page-add-tours')) !!}
+                    </div>
+                </details>
+                {!! $item('admin.promotion', 'Khuyến mãi', 'fa-tags', $on('admin.promotion', 'admin.promotion-edit')) !!}
+            @endif
+            {!! $item('admin.reviews', 'Đánh giá', 'fa-star-o', $on('admin.reviews*')) !!}
+        </div>
 
-                <h3>Vận hành</h3>
-                <ul class="nav side-menu">
-                    <li class="{{ $on('admin.booking*', 'admin.transfer-proof') ? 'ad-on' : '' }}">
-                        <a href="{{ route('admin.booking') }}"><i class="fa fa-ticket"></i> Đơn đặt tour
-                            @if ($badge['booking'] > 0)<span class="ad-pill" title="Đơn chưa xác nhận">{{ $badge['booking'] }}</span>@endif
-                        </a>
-                    </li>
-                    <li class="{{ $on('admin.reviews*') ? 'ad-on' : '' }}"><a href="{{ route('admin.reviews') }}"><i class="fa fa-star"></i> Đánh giá</a></li>
-                    @if ($adMgr)
-                        <li class="{{ $inTours ? 'active' : '' }}">
-                            <a><i class="fa fa-suitcase"></i> Tours <span class="fa fa-chevron-down"></span></a>
-                            <ul class="nav child_menu" style="{{ $inTours ? 'display:block' : '' }}">
-                                <li class="{{ $on('admin.tours', 'admin.tour-edit') ? 'ad-on' : '' }}"><a href="{{ route('admin.tours') }}">Danh sách tour</a></li>
-                                <li class="{{ $on('admin.page-add-tours') ? 'ad-on' : '' }}"><a href="{{ route('admin.page-add-tours') }}">Thêm tour</a></li>
-                            </ul>
-                        </li>
-                        <li class="{{ $on('admin.promotion*', 'admin.promotion-edit') ? 'ad-on' : '' }}"><a href="{{ route('admin.promotion') }}"><i class="fa fa-tags"></i> Khuyến mãi</a></li>
-                        <li class="{{ $on('admin.users') ? 'ad-on' : '' }}"><a href="{{ route('admin.users') }}"><i class="fa fa-users"></i> Người dùng</a></li>
-                        <li class="{{ $on('admin.trips*') ? 'ad-on' : '' }}"><a href="{{ route('admin.trips') }}"><i class="fa fa-road"></i> Chuyến đi (Planner)</a></li>
-                        <li class="{{ $on('admin.content-requests*') ? 'ad-on' : '' }}"><a href="{{ route('admin.content-requests') }}"><i class="fa fa-lightbulb-o"></i> Nhu cầu thiếu dữ liệu</a></li>
-                    @endif
-                </ul>
+        <div class="ad-nav__group">
+            <div class="ad-nav__h">Khách hàng</div>
+            {!! $item('admin.support', 'Yêu cầu tư vấn', 'fa-life-ring', $on('admin.support*'), $badge['support'] ?? 0) !!}
+            @if ($adMgr)
+                {!! $item('admin.contact', 'Hộp thư liên hệ', 'fa-envelope-o', $on('admin.contact*'), $badge['contact']) !!}
+                {!! $item('admin.users', 'Người dùng', 'fa-users', $on('admin.users*')) !!}
+                {!! $item('admin.trips', 'Chuyến đi (Planner)', 'fa-map-o', $on('admin.trips*')) !!}
+                {!! $item('admin.content-requests', 'Nhu cầu thiếu dữ liệu', 'fa-lightbulb-o', $on('admin.content-requests*')) !!}
+            @endif
+        </div>
 
-                @if ($adMgr)
-                    <h3>Nội dung Khám phá</h3>
-                    <ul class="nav side-menu">
-                        <li class="{{ $inWrite ? 'active' : '' }}">
-                            <a title="Viết, sửa, xem trước và xuất bản từng loại nội dung"><i class="fa fa-pencil"></i> Soạn và duyệt
-                                @if ($badge['pending'] > 0)<span class="ad-pill" title="Bài còn ở trạng thái Nháp, chưa xuất bản">{{ $badge['pending'] }}</span>@endif
-                                <span class="fa fa-chevron-down"></span></a>
-                            <ul class="nav child_menu" style="{{ $inWrite ? 'display:block' : '' }}">
-                                <li class="{{ $on('admin.destinations*') ? 'ad-on' : '' }}"><a href="{{ route('admin.destinations') }}">Điểm đến</a></li>
-                                <li class="{{ $onKind('foods') ? 'ad-on' : '' }}"><a href="{{ route('admin.content', 'foods') }}">Món ăn</a></li>
-                                <li class="{{ $onKind('experiences') ? 'ad-on' : '' }}"><a href="{{ route('admin.content', 'experiences') }}">Trải nghiệm</a></li>
-                                <li class="{{ $onKind('events') ? 'ad-on' : '' }}"><a href="{{ route('admin.content', 'events') }}">Lễ hội</a></li>
-                                <li class="{{ $onKind('places') ? 'ad-on' : '' }}"><a href="{{ route('admin.content', 'places') }}">Địa điểm (OSM)</a></li>
-                                <li class="{{ $onKind('itineraries') ? 'ad-on' : '' }}"><a href="{{ route('admin.content', 'itineraries') }}">Lịch trình</a></li>
-                                <li class="{{ $onKind('guides') ? 'ad-on' : '' }}"><a href="{{ route('admin.content', 'guides') }}">Cẩm nang</a></li>
-                                <li class="{{ $on('admin.blog*') ? 'ad-on' : '' }}"><a href="{{ route('admin.blog') }}">Blog</a></li>
-                            </ul>
-                        </li>
-                        <li class="{{ $inReport ? 'active' : '' }}">
-                            <a title="Xem nội dung đã đủ chưa và còn thiếu gì"><i class="fa fa-bar-chart"></i> Báo cáo chất lượng <span class="fa fa-chevron-down"></span></a>
-                            <ul class="nav child_menu" style="{{ $inReport ? 'display:block' : '' }}">
-                                <li class="{{ $on('admin.content.overview') ? 'ad-on' : '' }}"><a href="{{ route('admin.content.overview') }}">Số bài và độ phủ</a></li>
-                                <li class="{{ $on('admin.content.quality*') ? 'ad-on' : '' }}"><a href="{{ route('admin.content.quality') }}">Điểm và lỗi dữ liệu</a></li>
-                            </ul>
-                        </li>
-                        <li class="{{ $inSetup ? 'active' : '' }}">
-                            <a title="Các danh mục dùng chung, ít khi phải sửa"><i class="fa fa-sliders"></i> Thiết lập <span class="fa fa-chevron-down"></span></a>
-                            <ul class="nav child_menu" style="{{ $inSetup ? 'display:block' : '' }}">
-                                <li class="{{ $on('admin.inspirations*') ? 'ad-on' : '' }}"><a href="{{ route('admin.inspirations') }}">Cảm hứng</a></li>
-                                <li class="{{ $on('admin.guide-categories*') ? 'ad-on' : '' }}"><a href="{{ route('admin.guide-categories') }}">Danh mục cẩm nang</a></li>
-                            </ul>
-                        </li>
-                    </ul>
-
-                    <h3>Hỗ trợ</h3>
-                    <ul class="nav side-menu">
-                        <li class="{{ $on('admin.contact*') ? 'ad-on' : '' }}">
-                            <a href="{{ route('admin.contact') }}"><i class="fa fa-envelope"></i> Hộp thư liên hệ
-                                @if ($badge['contact'] > 0)<span class="ad-pill">{{ $badge['contact'] }}</span>@endif
-                            </a>
-                        </li>
-                        <li class="{{ $on('admin.chat*') ? 'ad-on' : '' }}"><a href="{{ route('admin.chat') }}"><i class="fa fa-comments"></i> Nhật ký hỏi đáp &amp; AI</a></li>
-                    </ul>
-
-                    <h3>Hệ thống</h3>
-                    <ul class="nav side-menu">
-                        <li class="{{ $on('admin.admin') ? 'ad-on' : '' }}"><a href="{{ route('admin.admin') }}"><i class="fa fa-user"></i> Tài khoản quản trị</a></li>
-                        <li class="{{ $on('admin.system*') ? 'ad-on' : '' }}"><a href="{{ route('admin.system') }}"><i class="fa fa-heartbeat"></i> Bảo trì hệ thống</a></li>
-                    </ul>
-                @endif
+        @if ($adMgr)
+            <div class="ad-nav__group">
+                <div class="ad-nav__h">Nội dung Khám phá</div>
+                <details class="ad-nav__fold" {{ $inWrite ? 'open' : '' }}>
+                    <summary class="ad-nav__link{{ $inWrite ? ' is-in' : '' }}" title="Soạn và duyệt"><i class="fa fa-pencil-square-o" aria-hidden="true"></i><span class="ad-nav__txt">Soạn và duyệt</span>
+                        @if ($badge['pending'] > 0)<span class="ad-nav__pill" title="Bài chưa xuất bản">{{ $badge['pending'] }}</span>@endif
+                        <i class="fa fa-angle-down ad-nav__caret" aria-hidden="true"></i></summary>
+                    <div class="ad-nav__subs">
+                        {!! $sub('admin.destinations', 'Điểm đến', $on('admin.destinations*')) !!}
+                        {!! $sub('admin.content', 'Món ăn', $onKind('foods'), ['foods']) !!}
+                        {!! $sub('admin.content', 'Trải nghiệm', $onKind('experiences'), ['experiences']) !!}
+                        {!! $sub('admin.content', 'Lễ hội', $onKind('events'), ['events']) !!}
+                        {!! $sub('admin.content', 'Địa điểm (OSM)', $onKind('places'), ['places']) !!}
+                        {!! $sub('admin.content', 'Lịch trình mẫu', $onKind('itineraries'), ['itineraries']) !!}
+                        {!! $sub('admin.content', 'Cẩm nang', $onKind('guides'), ['guides']) !!}
+                        {!! $sub('admin.blog', 'Blog', $on('admin.blog*')) !!}
+                    </div>
+                </details>
+                <details class="ad-nav__fold" {{ $inReport ? 'open' : '' }}>
+                    <summary class="ad-nav__link{{ $inReport ? ' is-in' : '' }}" title="Báo cáo chất lượng"><i class="fa fa-bar-chart" aria-hidden="true"></i><span class="ad-nav__txt">Báo cáo chất lượng</span><i class="fa fa-angle-down ad-nav__caret" aria-hidden="true"></i></summary>
+                    <div class="ad-nav__subs">
+                        {!! $sub('admin.content.overview', 'Số bài và độ phủ', $on('admin.content.overview')) !!}
+                        {!! $sub('admin.content.quality', 'Điểm và lỗi dữ liệu', $on('admin.content.quality*')) !!}
+                    </div>
+                </details>
+                <details class="ad-nav__fold" {{ $inSetup ? 'open' : '' }}>
+                    <summary class="ad-nav__link{{ $inSetup ? ' is-in' : '' }}" title="Danh mục dùng chung"><i class="fa fa-sliders" aria-hidden="true"></i><span class="ad-nav__txt">Danh mục</span><i class="fa fa-angle-down ad-nav__caret" aria-hidden="true"></i></summary>
+                    <div class="ad-nav__subs">
+                        {!! $sub('admin.inspirations', 'Cảm hứng', $on('admin.inspirations*')) !!}
+                        {!! $sub('admin.guide-categories', 'Danh mục cẩm nang', $on('admin.guide-categories*')) !!}
+                    </div>
+                </details>
             </div>
-        </div>
 
-        <div class="sidebar-footer hidden-small" style="width:100%!important;position:static!important;float:none!important;padding:0 15px 20px;box-sizing:border-box;margin-top:auto!important;">
-            <a href="javascript:void(0)" id="btn-logout-admin" class="btn-logout-custom"
-                style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px 0;border-radius:10px;background:rgba(231,76,60,.1);color:#f87171;font-weight:600;border:1px solid rgba(231,76,60,.3);text-decoration:none">
-                <i class="fa fa-sign-out"></i><span>Đăng xuất</span>
-            </a>
-        </div>
-    </div>
-</div>
-
-{{-- Thanh trên: nút thu gọn menu (#menu_toggle do custom.js xử lý) + tên trang + người dùng --}}
-<div class="top_nav">
-    <div class="nav_menu">
-        <div class="nav toggle"><a id="menu_toggle" title="Thu gọn / mở menu"><i class="fa fa-bars"></i></a></div>
-        <div class="ad-crumb"><small>Quản trị /</small>{{ $title ?? 'Admin' }}</div>
-        <div class="ad-top-right">
-            <a class="ad-top-link" href="{{ url('/') }}" target="_blank" rel="noopener"><i class="fa fa-external-link"></i><span>Xem website</span></a>
-            <div class="ad-user-chip">
-                <img src="{{ \App\Support\Avatar::admin() }}" alt="">
-                <div><b>{{ session('admin') }}</b><span>{{ $roleLabel }}</span></div>
+            <div class="ad-nav__group">
+                <div class="ad-nav__h">Hệ thống</div>
+                {!! $item('admin.admin', session('adminRole') === 'admin' ? 'Tài khoản quản trị' : 'Tài khoản & nhân viên', 'fa-shield', $on('admin.admin')) !!}
+                {!! $item('admin.audit', 'Nhật ký thao tác', 'fa-history', $on('admin.audit*')) !!}
+                {!! $item('admin.chat', 'Nhật ký hỏi đáp & AI', 'fa-comments-o', $on('admin.chat*')) !!}
+                {!! $item('admin.system', 'Bảo trì hệ thống', 'fa-heartbeat', $on('admin.system*')) !!}
             </div>
-        </div>
+        @endif
+    </nav>
+
+    <div class="ad-side__foot">
+        <button type="button" class="ad-nav__link ad-logout" id="btn-logout-admin" title="Đăng xuất">
+            <i class="fa fa-sign-out" aria-hidden="true"></i><span class="ad-nav__txt">Đăng xuất</span>
+        </button>
     </div>
-</div>
+</aside>
+<div class="ad-scrim" id="ad-scrim" hidden></div>
 
-<form id="form-logout-admin" action="{{ route('admin.logout') }}" method="POST" style="display:none;">@csrf</form>
+<header class="ad-top">
+    <button type="button" class="ad-top__btn" id="ad-nav-toggle" aria-controls="ad-side" aria-label="Thu gọn / mở menu"><i class="fa fa-bars"></i></button>
+    <div class="ad-top__title">
+        <small>Quản trị</small>
+        <span>{{ $title ?? 'Admin' }}</span>
+    </div>
+    <div class="ad-top__right">
+        <a class="ad-top__link" href="{{ url('/') }}" target="_blank" rel="noopener"><i class="fa fa-external-link"></i><span>Xem website</span></a>
+        <a class="ad-user" href="{{ route('admin.admin') }}" title="Tài khoản của tôi">
+            <img src="{{ \App\Support\Avatar::admin() }}" alt="" width="32" height="32">
+            <span><b>{{ session('admin') }}</b><small>{{ $roleLabel }}</small></span>
+        </a>
+    </div>
+</header>
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-    document.getElementById('btn-logout-admin').addEventListener('click', function(e) {
-        e.preventDefault();
-        Swal.fire({
-            title: 'Đăng xuất?',
-            text: 'Bạn có chắc chắn muốn đăng xuất khỏi hệ thống quản trị?',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Đăng xuất',
-            cancelButtonText: 'Hủy',
-            confirmButtonColor: '#e74c3c',
-            cancelButtonColor: '#95a5a6',
-            reverseButtons: true
-        }).then(function(result) {
-            if (result.isConfirmed) document.getElementById('form-logout-admin').submit();
-        });
-    });
-</script>
+<form id="form-logout-admin" action="{{ route('admin.logout') }}" method="POST" hidden>@csrf</form>

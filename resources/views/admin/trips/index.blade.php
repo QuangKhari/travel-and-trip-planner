@@ -33,11 +33,11 @@
                             <thead><tr><th>Chuyến đi</th><th>Khách</th>@if ($hasDest)<th>Điểm đến</th>@endif<th>Khởi hành</th><th class="num">Ngày</th><th class="num">Mục</th><th>Trạng thái</th><th>Tạo lúc</th><th></th></tr></thead>
                             <tbody>
                             @foreach ($rows as $t)
-                                <tr>
-                                    <td style="min-width:200px"><b>{{ $t->title }}</b>
+                                <tr data-href="{{ route('admin.trips.show', $t->tripId) }}">
+                                    <td style="min-width:200px"><a href="{{ route('admin.trips.show', $t->tripId) }}"><b>{{ $t->title }}</b></a>
                                         @if ($hasShare && $t->shareToken)<br><a class="ad-note" href="{{ route('planner.shared', ['token' => $t->shareToken]) }}" target="_blank" rel="noopener"><i class="fa fa-external-link"></i> Bản chia sẻ</a>@endif
                                     </td>
-                                    <td>{{ $t->fullName }}<br><small class="ad-note">{{ $t->email }}</small></td>
+                                    <td><a href="{{ route('admin.users.show', $t->userId) }}">{{ $t->fullName }}</a><br><small class="ad-note">{{ $t->email }}</small></td>
                                     @if ($hasDest)<td>{{ $t->destName ?: '—' }}</td>@endif
                                     <td>{{ $t->startDate ? \Illuminate\Support\Carbon::parse($t->startDate)->format('d/m/Y') : '—' }}</td>
                                     <td class="num">{{ $t->days ?: '—' }}</td>

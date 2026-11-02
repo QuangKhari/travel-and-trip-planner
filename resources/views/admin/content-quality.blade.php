@@ -1,6 +1,6 @@
 @include('admin.blocks.header')
 @php
-    $tone = fn(int $p) => $p >= 80 ? 'progress-bar-success' : ($p >= 50 ? 'progress-bar-warning' : 'progress-bar-danger');
+    $tone = fn(int $p) => $p >= 80 ? '' : ($p >= 50 ? 'is-warn' : 'is-bad');
     $q = fn(array $extra = []) => route('admin.content.quality', array_filter(array_merge(['scope' => $scope === 'all' ? 'all' : null, 'destination' => $focus['slug'] ?? null, 'code' => $code ?: null], $extra), fn($v) => $v !== null && $v !== ''));
     $editUrl = function (array $i) {
         return match ($i['kind']) {
@@ -48,7 +48,7 @@
                 @php $n = $s['counts']; $c = $s['criteria']; @endphp
                 <tr>
                     <td><a href="{{ $q(['destination' => $s['slug']]) }}">{{ $s['name'] }}</a></td>
-                    <td><div class="progress" style="margin:0 0 2px"><div class="progress-bar {{ $tone($s['percent']) }}" style="width:{{ $s['percent'] }}%">{{ $s['percent'] }}%</div></div>
+                    <td><div style="display:flex;align-items:center;gap:8px;min-width:140px"><div class="ad-meter__bar" style="flex:1"><i class="{{ $tone($s['percent']) }}" style="width:{{ $s['percent'] }}%"></i></div><b style="font-size:12px">{{ $s['percent'] }}%</b></div>
                         <small class="text-muted">{{ rtrim(rtrim(number_format($s['earned'], 1), '0'), '.') }}/{{ $s['applicable'] }} điểm @if (!$c['tours']['applicable']) · miễn tiêu chí tour @endif</small></td>
                     <td>@if ($s['plannerReady'])<span class="label label-success">Sẵn sàng</span>@else<span class="label label-default" title="{{ implode('; ', $s['plannerMissing']) }}">Chưa ({{ count($s['plannerMissing']) }} thiếu)</span>@endif</td>
                     <td class="{{ $n['placesCoords'] < 20 ? 'text-danger' : '' }}">{{ $n['places'] }} <small class="text-muted">/ tọa độ {{ $n['placesCoords'] }}</small></td>

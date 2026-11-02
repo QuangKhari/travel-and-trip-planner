@@ -52,7 +52,12 @@ class SystemController extends Controller
         }
 
         $add('Cache', config('cache.default') === 'array' ? 'warn' : 'ok', (string) config('cache.default'));
-        $add('Hàng đợi (queue)', 'ok', (string) config('queue.default'), 'Hủy đơn quá hạn giữ chỗ cần chạy: php artisan schedule:work');
+        $h = \App\Support\SystemHealth::check()['checks'];
+        $add('Hàng đợi (queue)', $h['queue']['ok'] ? 'ok' : 'warn', $h['queue']['detail'] ?: (string) config('queue.default'),
+            $h['queue']['ok'] ? 'Email chạy qua hàng đợi: cần php artisan queue:work; hủy đơn quá hạn cần php artisan schedule:work.' : 'Có việc chờ quá 10 phút: worker hàng đợi có thể chưa chạy (php artisan queue:work).');
+        $add('Việc lỗi trong hàng đợi', $h['failed_jobs']['ok'] ? 'ok' : 'warn', $h['failed_jobs']['ok'] ? '0' : $h['failed_jobs']['detail'] . ' việc',
+            $h['failed_jobs']['ok'] ? '' : 'Xem: php artisan queue:failed, thử lại: php artisan queue:retry all');
+        $add('Điểm kiểm tra /health', 'ok', url('/health'), 'Dùng cho Docker healthcheck / giám sát (PF-08).');
         $add('Gửi mail', config('mail.default') === 'log' ? 'warn' : 'ok', (string) config('mail.default'),
             config('mail.default') === 'log' ? 'Mail chỉ ghi vào log, khách sẽ không nhận được email.' : '');
 

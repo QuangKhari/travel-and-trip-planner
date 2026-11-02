@@ -13,10 +13,17 @@ use App\Support\BookingPii;
 class BookingService
 {
 
-    public function __construct(private CouponService $coupons) {}
+    public function __construct(
+        private CouponService $coupons,
+        private ?DepartureService $departures = null,
+        private ?PricingService $pricing = null,
+    ) {
+        $this->departures ??= new DepartureService();
+        $this->pricing ??= new PricingService($coupons);
+    }
 
     /**
-     * @param array $in fullName, email, tel, address, numAdults, numChildren, tourId, couponCode (đã validate)
+     * @param array $in fullName, email, tel, address, numAdults, numChildren, tourId, couponCode, availabilityId? (đã validate)
      * @return array{bookingId:int, bookingCode:string, totalPrice:int, discount:int}
      * @throws BookingException
      */
@@ -56,26 +63,40 @@ class BookingService
             if (!$tour || (int) $tour->availability !== 1) {
                 throw new BookingException('Tour không tồn tại hoặc đã ngừng nhận đặt.');
             }
-            // Đổi '<=' thành '<' nếu muốn cho đặt đến hết ngày khởi hành
-            if ($tour->startDate <= $today) {
-                throw new BookingException('Tour đã khởi hành, không thể đặt.');
+
+            // 2. Chọn ngày khởi hành và giữ chỗ bằng MỘT câu UPDATE có điều kiện (chỉ trừ khi còn đủ chỗ)
+            $availabilityId = null;
+            $departureDate = $tour->startDate;
+            if (DepartureService::enabled()) {
+                $dep = $this->departures->lockForBooking($tour, !empty($in['availabilityId']) ? (int) $in['availabilityId'] : null);
+                if (!$this->departures->hold((int) $dep->availabilityId, $people)) {
+                    $left = DepartureService::remaining($dep);
+                    throw new BookingException($left > 0
+                        ? "Ngày khởi hành này chỉ còn {$left} chỗ, không đủ cho {$people} khách."
+                        : 'Ngày khởi hành này đã hết chỗ.');
+                }
+                $availabilityId = (int) $dep->availabilityId;
+                $departureDate = $dep->departureDate;
+            } else {
+                // Đổi '<=' thành '<' nếu muốn cho đặt đến hết ngày khởi hành
+                if ($tour->startDate <= $today) {
+                    throw new BookingException('Tour đã khởi hành, không thể đặt.');
+                }
+                $affected = DB::table('tbl_tours')
+                    ->where('tourId', $tourId)
+                    ->where('quantity', '>=', $people)
+                    ->decrement('quantity', $people);
+
+                if ($affected !== 1) {
+                    $left = max(0, (int) $tour->quantity);
+                    throw new BookingException($left > 0
+                        ? "Tour chỉ còn {$left} chỗ, không đủ cho {$people} khách."
+                        : 'Tour đã hết chỗ.');
+                }
             }
 
-            // 2. Trừ chỗ nguyên tử: chỉ trừ khi còn đủ chỗ
-            $affected = DB::table('tbl_tours')
-                ->where('tourId', $tourId)
-                ->where('quantity', '>=', $people)
-                ->decrement('quantity', $people);
-
-            if ($affected !== 1) {
-                $left = max(0, (int) $tour->quantity);
-                throw new BookingException($left > 0
-                    ? "Tour chỉ còn {$left} chỗ, không đủ cho {$people} khách."
-                    : 'Tour đã hết chỗ.');
-            }
-
-            // 3. Server tự tính giá
-            $subtotal = (int) round($tour->priceAdult * $adults + $tour->priceChild * $children);
+            // 3. Server tự tính giá (PricingService)
+            $subtotal = $this->pricing->subtotal($tour, $adults, $children);
 
             // 4. Mã giảm giá (nếu có): mọi luật nằm ở CouponService (L-B-03)
             $discount    = 0;
@@ -92,10 +113,14 @@ class BookingService
 
             // 5. Tạo đơn + thanh toán
             $bookingCode = $this->newBookingCode();
+            // VNPay: giữ chỗ ngắn (A2, C-06), hết hạn mà chưa có IPN thành công thì tự hủy và nhả chỗ
+            $online = ($in['payment'] ?? 'office-payment') === 'vnpay';
 
             $bookingId = DB::table('tbl_booking')->insertGetId(BookingPii::encrypt([
                 'tourId'       => $tourId,
                 'userId'       => $userId,
+                'availabilityId' => $availabilityId,
+                'departureDate'  => $availabilityId ? $departureDate : null,
                 'fullName'     => $in['fullName'],
                 'email'        => $in['email'],
                 'phoneNumber'  => $in['tel'],
@@ -106,16 +131,20 @@ class BookingService
                 'bookingCode'  => $bookingCode,
                 'requestToken' => $token,
                 // giữ chỗ 48 giờ nhưng không quá 0h ngày khởi hành: đặt sát ngày đi thì đơn chưa xác nhận không được "treo" qua ngày đi
-                'holdExpiresAt' => min(now()->addHours((int) config('travela.hold_hours', 48)), \Carbon\Carbon::parse($tour->startDate)->startOfDay()),
+                'holdExpiresAt' => min($online ? now()->addMinutes(VnpayService::holdMinutes()) : now()->addHours((int) config('travela.hold_hours', 48)), \Carbon\Carbon::parse($departureDate)->startOfDay()),
             ]));
 
             if ($promotionId !== null) {
                 $this->coupons->attach($promotionId, $userId, $bookingId, $discount);
             }
 
+            if ($availabilityId) {
+                $this->departures->syncTour($tourId);
+            }
+
             DB::table('tbl_checkout')->insert([
                 'bookingId'     => $bookingId,
-                'paymentMethod' => 'office-payment',
+                'paymentMethod' => $online ? 'vnpay' : 'office-payment',
                 'paymentDate'   => null,
                 'amount'        => $total,
                 'paymentStatus' => 'n',
@@ -127,6 +156,8 @@ class BookingService
                 'totalPrice'  => $total,
                 'discount'    => $discount,
                 'duplicate'   => false,
+                'availabilityId' => $availabilityId,
+                'departureDate'  => $departureDate,
             ];
         }, 3);
     }
@@ -142,11 +173,21 @@ class BookingService
             ->where('bookingId', $booking->bookingId)
             ->update(['bookingStatus' => 'c', 'holdExpiresAt' => null] + (self::hasReason() ? ['cancelReason' => $reason] : []));
 
-        DB::table('tbl_tours')
-            ->where('tourId', $booking->tourId)
-            ->increment('quantity', (int) $booking->numAdults + (int) $booking->numChildren);
+        // Trả chỗ về đúng ngày khởi hành (chỗ đang giữ nếu đơn chờ, chỗ đã bán nếu đơn đã xác nhận)
+        $this->departures->release($booking);
 
         $this->coupons->release((int) $booking->bookingId);
+    }
+
+    /**
+     * Xác nhận đơn (n -> y): chỗ đang giữ thành chỗ đã bán, bỏ hạn giữ chỗ.
+     * Gọi TRONG transaction, sau khi đã khóa dòng đơn và kiểm tra trạng thái là n.
+     */
+    public function confirmLocked(object $booking): void
+    {
+        DB::table('tbl_booking')->where('bookingId', $booking->bookingId)
+            ->update(['bookingStatus' => 'y', 'holdExpiresAt' => null]);
+        $this->departures->confirm($booking);
     }
 
     /**
@@ -192,17 +233,35 @@ class BookingService
     public function completeFinished(): int
     {
         $today = now()->toDateString();
-        $ids = DB::table('tbl_booking as b')
+        $rows = DB::table('tbl_booking as b')
             ->join('tbl_tours as t', 't.tourId', '=', 'b.tourId')
             ->join('tbl_checkout as c', 'c.bookingId', '=', 'b.bookingId')
-            ->where('b.bookingStatus', 'y')->where('c.paymentStatus', 'y')->where('t.endDate', '<', $today)
-            ->pluck('b.bookingId');
+            ->where('b.bookingStatus', 'y')->where('c.paymentStatus', 'y')
+            ->get(['b.bookingId', 'b.departureDate', 't.startDate', 't.endDate', 't.durationDays']);
         $done = 0;
-        foreach ($ids as $id) {
-            $done += DB::table('tbl_booking')->where('bookingId', $id)->where('bookingStatus', 'y')->update(['bookingStatus' => 'f']);
+        foreach ($rows as $r) {
+            if (self::tripEndDate($r) >= $today) {
+                continue;
+            }
+            $done += DB::table('tbl_booking')->where('bookingId', $r->bookingId)->where('bookingStatus', 'y')->update(['bookingStatus' => 'f']);
         }
 
         return $done;
+    }
+
+    /** Ngày về của chuyến mà đơn đã đặt: theo ngày khởi hành của đơn, đơn cũ chưa có thì theo tour. */
+    public static function tripEndDate(object $row): string
+    {
+        if (!empty($row->departureDate)) {
+            return DepartureService::endDate($row->departureDate, DepartureService::durationDays($row));
+        }
+
+        return (string) $row->endDate;
+    }
+
+    public static function tripStartDate(object $row): string
+    {
+        return (string) ($row->departureDate ?: $row->startDate);
     }
 
     private static ?bool $hasReason = null;

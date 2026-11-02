@@ -16,11 +16,19 @@ class ToursModel extends Model
 
     public function getAllTours()
     {
-        return DB::table($this->table . ' as t')
+        $today = now()->toDateString();
+        $q = DB::table($this->table . ' as t')
             ->leftJoin('tbl_destinations as d', 'd.destinationId', '=', 't.destinationId')
             ->select('t.*', 'd.name as destName')
-            ->orderBy('t.tourId', 'DESC')
-            ->get();
+            ->selectSub(fn($s) => $s->from('tbl_images')->whereColumn('tbl_images.tourId', 't.tourId')->orderByDesc('isCover')->orderBy('sortOrder')->limit(1)->select('imageURL'), 'cover')
+            ->selectSub(fn($s) => $s->from('tbl_booking')->whereColumn('tbl_booking.tourId', 't.tourId')->whereIn('bookingStatus', ['n', 'y'])->selectRaw('COUNT(*)'), 'activeBookings')
+            ->orderBy('t.tourId', 'DESC');
+        if (\Illuminate\Support\Facades\Schema::hasTable('tbl_tour_availability')) {
+            $q->selectSub(fn($s) => $s->from('tbl_tour_availability')->whereColumn('tbl_tour_availability.tourId', 't.tourId')
+                ->where('departureDate', '>', $today)->where('status', 'open')->selectRaw('COUNT(*)'), 'upcomingDeps');
+        }
+
+        return $q->get();
     }
 
     public function createTours($data)

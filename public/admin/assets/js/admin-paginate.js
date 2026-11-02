@@ -17,8 +17,8 @@
         var tools = document.createElement("div");
         tools.className = "tv-admin-tools";
         tools.innerHTML =
-            '<input type="search" class="form-control" placeholder="Tìm trong danh sách…" aria-label="Tìm trong danh sách">' +
-            '<label>Hiển thị <select class="form-control"><option>10</option><option>25</option><option>50</option></select> dòng</label>';
+            '<div class="ad-search"><i class="fa fa-search" aria-hidden="true"></i><input type="search" placeholder="Tìm theo mã, tên, email, tour…" aria-label="Tìm trong danh sách"></div>' +
+            '<label>Hiển thị <select class="ad-field"><option>10</option><option>25</option><option>50</option></select> dòng</label>';
         var foot = document.createElement("div");
         foot.className = "tv-admin-pager";
         foot.innerHTML = '<span class="tv-admin-pager__info"></span><div class="tv-admin-pager__btns"></div>';
@@ -39,6 +39,7 @@
         function statusOk(r) {
             if (!state.status) return true;
             if (state.status === "unpaid") return r.dataset.pay === "n" && r.dataset.status !== "c";
+            if (state.status === "refund_pending" || state.status === "refunded") return r.dataset.pay === state.status;
             return r.dataset.status === state.status;
         }
 

@@ -71,4 +71,62 @@
             });
         });
     });
+    // ---- 5) menu trái: thu gọn (máy tính) / trượt ra (điện thoại), nhớ lựa chọn ----
+    var root = document.documentElement, side = document.getElementById("ad-side"),
+        scrim = document.getElementById("ad-scrim"), tgl = document.getElementById("ad-nav-toggle");
+    var mobile = function () { return window.matchMedia("(max-width: 991px)").matches; };
+    if (root.classList.contains("ad-pre-sm")) { document.body.classList.add("ad-sm"); root.classList.remove("ad-pre-sm"); }
+    function closeMobile() { document.body.classList.remove("ad-open"); if (scrim) scrim.hidden = true; }
+    if (tgl) tgl.addEventListener("click", function () {
+        if (mobile()) {
+            var open = !document.body.classList.contains("ad-open");
+            document.body.classList.toggle("ad-open", open);
+            if (scrim) scrim.hidden = !open;
+            return;
+        }
+        var sm = document.body.classList.toggle("ad-sm");
+        try { localStorage.setItem("ad.nav", sm ? "sm" : "md"); } catch (e) {}
+    });
+    if (scrim) scrim.addEventListener("click", closeMobile);
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeMobile(); });
+    // menu thu gọn: mở một nhóm thì đóng các nhóm khác cho gọn
+    if (side) side.querySelectorAll("details.ad-nav__fold").forEach(function (d) {
+        d.addEventListener("toggle", function () {
+            if (!d.open || !document.body.classList.contains("ad-sm")) return;
+            side.querySelectorAll("details.ad-nav__fold[open]").forEach(function (o) { if (o !== d) o.open = false; });
+        });
+    });
+    // giữ vị trí cuộn của menu giữa các trang
+    if (side) {
+        var nav = side.querySelector(".ad-nav");
+        try { var y = +sessionStorage.getItem("ad.navY") || 0; if (nav && y) nav.scrollTop = y; } catch (e) {}
+        window.addEventListener("beforeunload", function () { try { sessionStorage.setItem("ad.navY", nav ? nav.scrollTop : 0); } catch (e) {} });
+    }
+
+    // ---- 6) đăng xuất có hỏi lại ----
+    var out = document.getElementById("btn-logout-admin");
+    if (out) out.addEventListener("click", function () {
+        var f = document.getElementById("form-logout-admin");
+        if (!window.Swal) { if (confirm("Đăng xuất khỏi trang quản trị?")) f.submit(); return; }
+        Swal.fire({ title: "Đăng xuất?", text: "Bạn sẽ cần đăng nhập lại để quản trị.", icon: "question", showCancelButton: true,
+            confirmButtonText: "Đăng xuất", cancelButtonText: "Ở lại", confirmButtonColor: "#dc2626", reverseButtons: true })
+            .then(function (r) { if (r.isConfirmed) f.submit(); });
+    });
+
+    // ---- 7) bảng có thuộc tính data-href: bấm cả dòng để mở ----
+    document.addEventListener("click", function (e) {
+        var tr = e.target.closest("tr[data-href]");
+        if (!tr || e.target.closest("a,button,input,select,label,form")) return;
+        window.location = tr.getAttribute("data-href");
+    });
+
+    // ---- 8) nút sao chép: data-copy="text" ----
+    document.addEventListener("click", function (e) {
+        var b = e.target.closest("[data-copy]");
+        if (!b) return;
+        var t = b.getAttribute("data-copy");
+        (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () {
+            if (window.toastr) toastr.success("Đã sao chép " + t);
+        }).catch(function () {});
+    });
 })();

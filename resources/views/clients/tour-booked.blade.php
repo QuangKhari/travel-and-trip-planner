@@ -16,7 +16,8 @@
     $guests = (int) $b->numAdults + (int) $b->numChildren;
     $holdAt = $status === 'n' && !empty($b->holdExpiresAt) ? \Carbon\Carbon::parse($b->holdExpiresAt) : null;
     $holdPassed = $holdAt && $holdAt->isPast();
-    $cancelDays = \App\Support\CancelPolicy::MIN_DAYS;
+    $cancelDays = (int) config('booking.paid_cancel_min_days', 7);
+    $payLabel = ['y' => 'Đã thanh toán', 'refund_pending' => 'Đã hủy – đang chờ hoàn tiền', 'refunded' => 'Đã hoàn tiền'][$b->paymentStatus ?? 'n'] ?? 'Chưa thanh toán';
     $sitePhone = config('site.phone');
     $siteAddress = config('site.address');
     $siteEmail = config('site.email');
@@ -81,7 +82,24 @@
                 @if ($status === 'n')
                     <section class="bk-next" aria-labelledby="bkNextH">
                         <h2 id="bkNextH"><i class="fal fa-flag" aria-hidden="true"></i> Bước tiếp theo</h2>
-                        @if ($holdAt && !$holdPassed)
+                        @php $isVnpay = ($b->paymentMethod ?? '') === 'vnpay'; $canPayOnline = \App\Services\VnpayService::enabled() && ($b->paymentStatus ?? 'n') === 'n' && !$holdPassed; @endphp
+                        @if ($canPayOnline)
+                            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 12px">
+                                <a class="bk-btn bk-btn--inline" href="{{ route('payment.vnpay.pay', ['bookingId' => $b->bookingId]) }}"><i class="fal fa-credit-card" aria-hidden="true"></i> {{ $isVnpay ? 'Thanh toán VNPay' : 'Thanh toán online qua VNPay' }}</a>
+                                @if ($isVnpay && !empty($b->providerTxnRef))
+                                    <form method="POST" action="{{ route('payment.vnpay.check', ['bookingId' => $b->bookingId]) }}" style="margin:0">@csrf
+                                        <button class="bk-btn bk-btn--ghost bk-btn--inline" type="submit">Tôi đã thanh toán – kiểm tra lại</button></form>
+                                @endif
+                            </div>
+                            @if (!empty($b->responseCode) && $b->responseCode !== '00')
+                                <p class="bk-hint" role="alert">Lần thanh toán trước chưa thành công: {{ \App\Services\VnpayService::RESPONSE[$b->responseCode] ?? 'mã ' . $b->responseCode }}. Bạn có thể thử lại.</p>
+                            @endif
+                        @endif
+                        @if ($isVnpay && $holdAt && !$holdPassed)
+                            <p>Hoàn tất thanh toán VNPay trước <b>{{ $holdAt->format('H:i d/m/Y') }}</b>.
+                                Còn lại: <b class="bk-countdown" data-deadline="{{ $holdAt->toIso8601String() }}">…</b></p>
+                            <p class="bk-hint">Quá hạn mà VNPay chưa báo thanh toán thành công, đơn tự hủy và chỗ được trả lại.</p>
+                        @elseif ($holdAt && !$holdPassed)
                             <p>Đến văn phòng để thanh toán và xác nhận đơn trước
                                 <b>{{ $holdAt->format('H:i d/m/Y') }}</b>.
                                 Còn lại: <b class="bk-countdown" data-deadline="{{ $holdAt->toIso8601String() }}">…</b>
@@ -154,7 +172,7 @@
                     <dl class="bk-dl">
                         <div>
                             <dt>Phương thức</dt>
-                            <dd>Thanh toán tại văn phòng</dd>
+                            <dd>{{ ($b->paymentMethod ?? '') === 'vnpay' ? 'VNPay' . (!empty($b->bankCode) ? ' · ' . $b->bankCode : '') : 'Thanh toán tại văn phòng' }}</dd>
                         </div>
                         <div>
                             <dt>Ngày đặt</dt>
@@ -163,7 +181,13 @@
                         </div>
                         <div>
                             <dt>Trạng thái thanh toán</dt>
-                            <dd>{{ ($b->paymentStatus ?? 'n') === 'y' ? 'Đã thanh toán' : 'Chưa thanh toán' }}</dd>
+                            <dd>{{ $payLabel }}</dd>
+                        </div>
+                        @if (!empty($refund))
+                        <div>
+                            <dt>Hoàn tiền</dt>
+                            <dd>{{ $money($refund->amount) }} ({{ $refund->percent }}%) · {{ $refund->status === 'refunded' ? 'đã hoàn' . ($refund->processedAt ? ' ngày ' . \Carbon\Carbon::parse($refund->processedAt)->format('d/m/Y') : '') : 'Travela đang xử lý' }}</dd>
+                        @endif
                         </div>
                     </dl>
                 </section>
@@ -172,16 +196,17 @@
                 @if ($canCancel)
                     <section class="bk-card bk-card--danger" aria-labelledby="bkCancelH">
                         <h2 id="bkCancelH">Cần hủy đơn?</h2>
-                        <p>Bạn có thể tự hủy khi còn hơn {{ $cancelDays }} ngày trước ngày khởi hành. Chỗ sẽ được trả
-                            lại và mã giảm giá (nếu có) được hoàn lại.</p>
+                        <p>{{ $policy['message'] }} Chỗ sẽ được trả lại và mã giảm giá (nếu có) được hoàn lại.</p>
+                        @if ($policy['paid'])
+                            <p class="bk-hint">Chính sách hoàn tiền: còn từ 14 ngày hoàn 100%, 7–13 ngày hoàn 50%, dưới {{ $cancelDays }} ngày liên hệ Travela.</p>
+                        @endif
                         <button type="button" class="bk-btn bk-btn--danger bk-btn--inline" data-open-cancel>Hủy đơn
                             này</button>
                     </section>
                 @elseif (in_array($status, ['n', 'y'], true))
                     <section class="bk-card" aria-labelledby="bkCancelH">
                         <h2 id="bkCancelH">Cần hủy đơn?</h2>
-                        <p>Đơn chỉ tự hủy được khi còn hơn {{ $cancelDays }} ngày trước ngày khởi hành. Với đơn này,
-                            vui lòng <a href="{{ route('contact') }}">liên hệ</a> để được hỗ trợ.</p>
+                        <p>{{ $policy['message'] ?? '' }} Vui lòng <a href="{{ route('contact') }}">liên hệ</a> để được hỗ trợ.</p>
                     </section>
                 @endif
             </div>
@@ -259,6 +284,9 @@
             <input type="hidden" name="bookingId" value="{{ $bookingId }}">
             <h2 id="bkCancelTitle">Hủy đơn {{ $code }}?</h2>
             <p>Chỗ của bạn sẽ được trả lại và <b>không thể khôi phục</b>. Muốn đi tiếp, bạn cần đặt lại tour.</p>
+            @if ($policy['paid'])
+                <p><b>Số tiền được hoàn: {{ $money(floor((float) ($b->amount ?? $b->totalPrice) * $policy['percent'] / 100)) }} ({{ $policy['percent'] }}%).</b></p>
+            @endif
             <div class="bk-dialog__actions">
                 <button type="button" class="bk-btn bk-btn--ghost" data-close-cancel>Giữ đơn</button>
                 <button type="submit" class="bk-btn bk-btn--danger">Xác nhận hủy</button>

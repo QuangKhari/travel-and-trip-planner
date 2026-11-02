@@ -114,6 +114,18 @@
         var money = function (n) {
             return n.toLocaleString("vi-VN") + "đ";
         };
+        // Nhiều ngày khởi hành: đổi ngày thì đổi số chỗ tối đa và kéo số khách về trong giới hạn
+        form.addEventListener("change", function (e) {
+            if (!e.target.matches('input[name="availabilityId"]')) return;
+            max = Math.max(1, Math.min(50, Number(e.target.dataset.left) || 1));
+            form.dataset.max = max;
+            while (val("adults") + val("children") > max) {
+                if (val("children") > 0) fields.children.input.value = val("children") - 1;
+                else fields.adults.input.value = Math.max(1, val("adults") - 1);
+                if (val("adults") <= 1 && val("children") === 0) break;
+            }
+            render();
+        });
         var render = function () {
             var a = val("adults"),
                 c = val("children"),

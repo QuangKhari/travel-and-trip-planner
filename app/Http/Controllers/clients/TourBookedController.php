@@ -35,8 +35,15 @@ class TourBookedController extends Controller
             abort(404);
         }
 
-        // Chính sách hủy (CancelPolicy::MIN_DAYS ngày)
-        $canCancel = CancelPolicy::allows($tour_booked->bookingStatus, $tour_booked->startDate);
+        // Ngày đi / về của ĐÚNG ngày khởi hành khách đã đặt (tour có thể có nhiều ngày khởi hành)
+        $tour_booked->startDate = BookingService::tripStartDate($tour_booked);
+        $tour_booked->endDate = BookingService::tripEndDate($tour_booked);
+
+        // Chính sách hủy và hoàn tiền theo bậc (config/booking.php)
+        $policy = CancelPolicy::forCustomer($tour_booked->bookingStatus, $tour_booked->startDate, ($tour_booked->paymentStatus ?? 'n') === 'y');
+        $canCancel = $policy['allowed'];
+        $refund = \Illuminate\Support\Facades\Schema::hasTable('tbl_refunds')
+            ? DB::table('tbl_refunds')->where('bookingId', $tour_booked->bookingId)->first() : null;
 
         // Ảnh bìa tour để trang chi tiết đơn nhìn giống thẻ tour ở các trang khác
         $cover = DB::table('tbl_images')
@@ -44,7 +51,7 @@ class TourBookedController extends Controller
             ->orderBy('sortOrder')
             ->value('imageURL');
 
-        return view("clients.tour-booked", compact('title', 'tour_booked', 'canCancel', 'bookingId', 'cover'));
+        return view("clients.tour-booked", compact('title', 'tour_booked', 'canCancel', 'bookingId', 'cover', 'policy', 'refund'));
     }
 
     public function cancelBooking(Request $req, BookingService $bookings)
@@ -62,9 +69,10 @@ class TourBookedController extends Controller
         $userId    = (int) $this->getUserId();
         $cancelled = false;
         $refusal   = 'Đơn này không thể hủy.';
+        $refundMsg = '';
 
         // Chỉ dùng bookingId từ trình duyệt. Tour, số lượng, trạng thái đều lấy từ database
-        DB::transaction(function () use ($bookingId, $userId, $bookings, &$cancelled, &$refusal) {
+        DB::transaction(function () use ($bookingId, $userId, $bookings, &$cancelled, &$refusal, &$refundMsg) {
             $booking = DB::table('tbl_booking')
                 ->where('bookingId', $bookingId)
                 ->where('userId', $userId)           // chỉ chủ đơn
@@ -81,26 +89,30 @@ class TourBookedController extends Controller
             }
 
             // Cùng chính sách với màn hình: gọi thẳng POST /cancel-booking cũng không qua mặt được
-            $startDate = DB::table('tbl_tours')->where('tourId', $booking->tourId)->value('startDate');
-            if (!CancelPolicy::allows($booking->bookingStatus, $startDate)) {
-                $refusal = 'Chỉ hủy được tour trước ngày khởi hành ít nhất ' . CancelPolicy::MIN_DAYS . ' ngày.';
+            $tour = DB::table('tbl_tours')->where('tourId', $booking->tourId)->first(['startDate', 'endDate', 'durationDays']);
+            $startDate = $booking->departureDate ?? $tour->startDate;
+            $paid = DB::table('tbl_checkout')->where('bookingId', $bookingId)->value('paymentStatus') === 'y';
+            $policy = CancelPolicy::forCustomer($booking->bookingStatus, $startDate, $paid);
+            if (!$policy['allowed']) {
+                $refusal = $policy['message'];
                 return;
             }
 
-            // Đơn đã thanh toán: hủy tại đây sẽ mất dấu khoản tiền khách đã trả (admin cũng không hủy trực tiếp đơn đã thanh toán)
-            if (DB::table('tbl_checkout')->where('bookingId', $bookingId)->value('paymentStatus') === 'y') {
-                $refusal = 'Đơn đã thanh toán. Vui lòng liên hệ Travela để được hủy và hoàn tiền.';
-                return;
-            }
-
-            // Đổi trạng thái, trả chỗ đúng một lần và nhả mã giảm giá
+            // Đổi trạng thái, trả chỗ đúng một lần và nhả mã giảm giá; đã thanh toán thì tạo yêu cầu hoàn tiền theo bậc
             $bookings->cancelLocked($booking, 'customer');
+            if ($paid) {
+                $refund = app(\App\Services\RefundService::class)->requestLocked($booking, 'customer', $userId, null, 'Khách tự hủy trên web');
+                $refundMsg = $refund->amount > 0
+                    ? ' Travela sẽ hoàn ' . number_format((float) $refund->amount, 0, ',', '.') . 'đ (' . $refund->percent . '%) cho bạn.'
+                    : '';
+            }
 
             $cancelled = true;
         });
 
         if ($cancelled) {
-            toastr()->success('Đã hủy đơn. Chỗ đã được trả lại.', ['positionClass' => 'toast-top-right']);
+            \App\Support\AdminBadges::forget();
+            toastr()->success('Đã hủy đơn. Chỗ đã được trả lại.' . $refundMsg, ['positionClass' => 'toast-top-right']);
             // UX: về danh sách "Tour đã đặt" (trước đây về trang chủ nên người dùng mất ngữ cảnh)
             return redirect()->route('my-tours');
         }

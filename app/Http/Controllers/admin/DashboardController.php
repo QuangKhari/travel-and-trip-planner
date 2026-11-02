@@ -31,7 +31,12 @@ class DashboardController extends Controller
         }
 
         $summary = $this->dashboard->getSummary();
-        $revenue = $this->dashboard->getRevenuePerMonth($year);
+        $rev = $this->dashboard->getRevenue($year);
+        $revenue = $rev['net'];
+        $prev = $this->dashboard->getRevenue($year - 1)['net'];
+        $m = (int) now()->month - 1;
+        $monthNow = $year === $thisYear ? $revenue[$m] : null;
+        $monthPrev = $year === $thisYear ? ($m > 0 ? $revenue[$m - 1] : $prev[11]) : null;
         $valueTour = $this->dashboard->getValueDomain();
         $regions = [
             ['label' => 'Miền Bắc', 'n' => (int) ($valueTour['b'] ?? 0)],
@@ -60,6 +65,17 @@ class DashboardController extends Controller
             'users' => $users,
             'trips' => $trips,
             'revenue' => $revenue,
+            'revenueGross' => $rev['gross'],
+            'revenueRefund' => $rev['refund'],
+            'revenuePrevYear' => array_sum($prev),
+            'monthNow' => $monthNow,
+            'monthPrev' => $monthPrev,
+            'statusCounts' => $this->dashboard->statusCounts(),
+            'fill' => $this->dashboard->fillRate(),
+            'ratings' => $this->dashboard->ratings(),
+            'new24' => $this->dashboard->newIn24h(),
+            'upcoming' => $this->dashboard->upcomingDepartures(),
+            'isMgr' => in_array(session('adminRole'), ['admin', 'manager'], true),
             'year' => $year,
             'years' => range($thisYear, $thisYear - 2),
             'regions' => $regions,

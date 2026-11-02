@@ -12,13 +12,13 @@ use Illuminate\Support\Facades\Schema;
  */
 final class AdminBadges
 {
-    private const KEY = 'admin.badges.v1';
+    private const KEY = 'admin.badges.v2';
 
-    /** @return array{booking:int, unpaid:int, contact:int, reviewed:int, draft:int, pending:int} */
+    /** @return array{booking:int, unpaid:int, contact:int, reviewed:int, draft:int, pending:int, refund:int, support:int} */
     public static function counts(): array
     {
         return Cache::remember(self::KEY, 45, function () {
-            $c = ['booking' => 0, 'unpaid' => 0, 'contact' => 0, 'reviewed' => 0, 'draft' => 0, 'pending' => 0];
+            $c = ['booking' => 0, 'unpaid' => 0, 'contact' => 0, 'reviewed' => 0, 'draft' => 0, 'pending' => 0, 'refund' => 0, 'support' => 0];
             try {
                 $c['booking'] = (int) DB::table('tbl_booking')->where('bookingStatus', 'n')->count();
                 $c['unpaid'] = (int) DB::table('tbl_booking')
@@ -26,6 +26,12 @@ final class AdminBadges
                     ->where('tbl_booking.bookingStatus', 'y')
                     ->where('tbl_checkout.paymentStatus', 'n')
                     ->count();
+                if (Schema::hasTable('tbl_refunds')) {
+                    $c['refund'] = (int) DB::table('tbl_refunds')->where('status', 'pending')->count();
+                }
+                if (Schema::hasTable('tbl_support_tickets')) {
+                    $c['support'] = (int) DB::table('tbl_support_tickets')->whereIn('status', ['open', 'in_progress'])->count();
+                }
                 if (Schema::hasTable('tbl_contact_messages')) {
                     $c['contact'] = (int) DB::table('tbl_contact_messages')->where('status', 'new')->count();
                 }

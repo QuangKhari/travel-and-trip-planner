@@ -58,6 +58,9 @@
             @csrf
             <input type="hidden" name="requestToken" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
             <input type="hidden" name="tourId" value="{{ $tour->tourId }}">
+            @if (!empty($departure))
+                <input type="hidden" name="availabilityId" value="{{ $departure->availabilityId }}">
+            @endif
             <input type="hidden" name="numAdults" id="bkAdults" value="{{ $adultsNow }}">
             <input type="hidden" name="numChildren" id="bkChildren" value="{{ $childrenNow }}">
 
@@ -160,7 +163,7 @@
                         <h2 id="bkH3"><span class="bk-no">3</span> Phương thức thanh toán</h2>
 
                         <label class="bk-pay is-on">
-                            <input type="radio" name="payment" value="office-payment" checked>
+                            <input type="radio" name="payment" value="office-payment" @checked(old('payment', 'office-payment') === 'office-payment')>
                             <span class="bk-pay__ico" aria-hidden="true"><i class="fal fa-building"></i></span>
                             <span class="bk-pay__txt">
                                 <b>Thanh toán tại văn phòng</b>
@@ -179,8 +182,26 @@
                                 @endif
                             </span>
                         </label>
-                        <p class="bk-hint"><i class="fal fa-info-circle" aria-hidden="true"></i>
-                            Thanh toán trực tuyến (VNPay) sẽ sớm được hỗ trợ.</p>
+                        @if (\App\Services\VnpayService::enabled())
+                            <label class="bk-pay" style="margin-top:10px">
+                                <input type="radio" name="payment" value="vnpay" @checked(old('payment') === 'vnpay')>
+                                <span class="bk-pay__ico" aria-hidden="true"><i class="fal fa-credit-card"></i></span>
+                                <span class="bk-pay__txt">
+                                    <b>Thanh toán trực tuyến qua VNPay</b>
+                                    <small>Thẻ ATM nội địa, thẻ quốc tế, QR ngân hàng. Chỗ được giữ {{ \App\Services\VnpayService::holdMinutes() }} phút để bạn thanh toán; đơn được xác nhận ngay khi VNPay báo thành công.</small>
+                                </span>
+                            </label>
+                            <script>
+                                document.addEventListener('change', function (e) {
+                                    if (e.target.name !== 'payment') return;
+                                    document.querySelectorAll('.bk-pay').forEach(function (l) { l.classList.toggle('is-on', l.contains(e.target)); });
+                                    var b = document.querySelector('#bkForm [type=submit]');
+                                    if (b && !b.dataset.label) b.dataset.label = b.innerHTML;
+                                    if (b) b.innerHTML = e.target.value === 'vnpay' ? 'Đặt tour và thanh toán VNPay' : b.dataset.label;
+                                });
+                            </script>
+                            <style>.bk-pay:not(.is-on){border-color:#dbe5e8;background:#fff}</style>
+                        @endif
                         @error('payment')
                             <p class="bk-err is-on">{{ $message }}</p>
                         @enderror

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\admin;
 
+use App\Support\AuditLog;
+
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -53,10 +55,36 @@ class TripAdminController extends Controller
         ]);
     }
 
+    /** Xem chuyến đi của khách (chỉ đọc): từng ngày, từng mục, thành viên, yêu cầu tư vấn liên quan. */
+    public function show(int $id)
+    {
+        $t = DB::table('tbl_trips as t')->join('tbl_users as u', 'u.userId', '=', 't.userId')
+            ->leftJoin('tbl_destinations as d', 'd.destinationId', '=', 't.destinationId')
+            ->where('t.tripId', $id)->select('t.*', 'u.fullName', 'u.email', 'u.avatar', 'd.name as destName')->first();
+        abort_if(!$t, 404);
+        $title = 'Chuyến đi: ' . $t->title;
+        $items = DB::table('tbl_trip_items')->where('tripId', $id)->orderBy('dayNo')->orderBy('orderNo')->get();
+        // Tên hiển thị của mục: dùng đúng hàm giải tham chiếu của Trip Planner (nội dung đã tắt / xóa thì không có tên)
+        $refs = $items->filter(fn($r) => $r->refType && $r->refId && in_array($r->refType, \App\Services\Planner\TripPlanner::TYPES, true))
+            ->map(fn($r) => ['type' => $r->refType, 'refId' => (int) $r->refId])->values()->all();
+        $names = $refs ? app(\App\Services\Planner\TripPlanner::class)->resolve($refs) : [];
+        $days = $items->groupBy('dayNo');
+        $members = Schema::hasTable('tbl_trip_members') ? DB::table('tbl_trip_members as m')->join('tbl_users as u', 'u.userId', '=', 'm.userId')
+            ->where('m.tripId', $id)->get(['m.role', 'm.createdAt', 'u.userId', 'u.fullName', 'u.email']) : collect();
+        $tickets = Schema::hasTable('tbl_support_tickets') ? DB::table('tbl_support_tickets')->where('tripId', $id)->orderByDesc('ticketId')->get() : collect();
+        $cost = (float) $items->sum('cost');
+
+        return view('admin.trips.show', compact('title', 't', 'items', 'names', 'days', 'members', 'tickets', 'cost'));
+    }
+
     public function destroy(int $id)
     {
         // tbl_trip_items có khóa ngoại ON DELETE CASCADE nên xóa chuyến là xóa luôn các mục
+        $title = DB::table('tbl_trips')->where('tripId', $id)->value('title');
         $n = DB::table('tbl_trips')->where('tripId', $id)->delete();
+        if ($n) {
+            AuditLog::record('trip.delete', 'trip', $id, 'Xóa chuyến đi "' . $title . '"');
+        }
 
         return back()->with($n ? 'success' : 'error', $n ? 'Đã xóa chuyến đi.' : 'Không tìm thấy chuyến đi.');
     }

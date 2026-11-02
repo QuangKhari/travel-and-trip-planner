@@ -1,326 +1,96 @@
-@include('admin.blocks.header')
-<div class="container body">
-    <div class="main_container">
-        @include('admin.blocks.sidebar')
-
-        <!-- page content -->
-        <div class="right_col" role="main">
-            <div class="">
-                <div class="page-title">
-                    <div class="title_left">
-                        <h3>Quản lý tài khoản</h3>
-                    </div>
-                </div>
-
-                <div class="clearfix"></div>
-
-                @if (session('adminRole') == 'admin')
-                    {{-- Thông tin Admin --}}
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="x_panel">
-                                <div class="x_title">
-                                    <h2>Thông tin Admin</h2>
-                                    <div class="clearfix"></div>
-                                </div>
-                                <div class="x_content">
-                                    <div class="col-md-3 col-sm-3 profile_left">
-                                        <div class="profile_img">
-                                            <div id="crop-avatar">
-                                                <img id="avatarAdminPreview" class="img-responsive avatar-view"
-                                                    src="{{ \App\Support\Avatar::admin() }}" alt="Avatar"
-                                                    style="width:100%">
-                                                <input type="file" name="avatarAdmin" id="avatarAdmin"
-                                                    style="display: none" accept="image/*">
-                                            </div>
-                                        </div>
-                                        <br>
-                                        <label for="avatarAdmin" id="btn_avatar" class="btn btn-success"
-                                            style="align-items: center; text-align: center; width: 78%; margin: 10px 24px;"
-                                            action="{{ route('admin.update-avatar') }}">
-                                            <i class="fa fa-edit m-right-xs"></i>Tải ảnh lên
-                                        </label>
-                                        <h3 id="nameAdmin">{{ $admin->fullName }}</h3>
-                                        <ul class="list-unstyled user_data">
-                                            <li><i class="fa fa-map-marker user-profile-icon"></i>
-                                                <span id="addressAdmin">{{ $admin->address }}</span>
-                                            </li>
-                                            <li><i class="fa fa-envelope user-profile-icon"></i>
-                                                <span id="emailAdmin">{{ $admin->email }}</span>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                    <div class="col-md-9 col-sm-9">
-                                        <form action="{{ route('admin.update-admin') }}" id="formProfileAdmin"
-                                            class="form-horizontal form-label-left">
-                                            @csrf
-                                            <div class="item form-group">
-                                                <label class="col-form-label col-md-3 col-sm-3 label-align">Tên admin
-                                                    <span class="required">*</span></label>
-                                                <div class="col-md-6 col-sm-6">
-                                                    <input type="text" id="fullName" name="fullName" required
-                                                        class="form-control" placeholder="Nhập tên admin"
-                                                        value="{{ $admin->fullName }}">
-                                                </div>
-                                            </div>
-                                            <div class="item form-group">
-                                                <label class="col-form-label col-md-3 col-sm-3 label-align">Mật khẩu
-                                                    mới</label>
-                                                <div class="col-md-6 col-sm-6">
-                                                    <input type="password" id="password" name="password"
-                                                        class="form-control"
-                                                        placeholder="Để trống nếu không đổi mật khẩu"
-                                                        autocomplete="new-password">
-                                                </div>
-                                            </div>
-                                            <div class="item form-group">
-                                                <label
-                                                    class="col-form-label col-md-3 col-sm-3 label-align">Email</label>
-                                                <div class="col-md-6 col-sm-6">
-                                                    <input class="form-control" type="email" id="email"
-                                                        name="email" required placeholder="Nhập email"
-                                                        value="{{ $admin->email }}">
-                                                </div>
-                                            </div>
-                                            <div class="item form-group">
-                                                <label class="col-form-label col-md-3 col-sm-3 label-align">Địa
-                                                    chỉ</label>
-                                                <div class="col-md-6 col-sm-6">
-                                                    <input class="form-control" type="text" id="address"
-                                                        name="address" required placeholder="Nhập địa chỉ"
-                                                        value="{{ $admin->address }}">
-                                                </div>
-                                            </div>
-                                            <div class="ln_solid"></div>
-                                            <div class="item form-group">
-                                                <div class="col-md-6 col-sm-6 offset-md-3">
-                                                    <button type="submit" class="btn btn-success">Cập nhật</button>
-                                                </div>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Danh sách Quản lý --}}
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="x_panel">
-                                <div class="x_title">
-                                    <h2>Danh sách Quản lý</h2>
-                                    <div class="clearfix"></div>
-                                </div>
-                                <div class="x_content">
-                                    {{-- Form thêm manager --}}
-                                    <form action="{{ route('admin.add-manager') }}" method="POST"
-                                        class="form-horizontal mb-20">
-                                        @csrf
-                                        <h4>Thêm Quản lý mới</h4>
-                                        <div class="row" style="margin-top: 10px">
-                                            <div class="col-md-4">
-                                                <input type="text" name="userName" class="form-control mb-10"
-                                                    placeholder="Tên đăng nhập" required>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <input type="password" name="password" class="form-control mb-10"
-                                                    placeholder="Mật khẩu" required>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <input type="email" name="email" class="form-control mb-10"
-                                                    placeholder="Email" required>
-                                            </div>
-                                            <div class="col-md-4" style="margin-top: 10px">
-                                                <input type="text" name="fullName" class="form-control mb-10"
-                                                    placeholder="Họ và tên" required>
-                                            </div>
-                                            <div class="col-md-4" style="margin-top: 10px">
-                                                <input type="text" name="address" class="form-control mb-10"
-                                                    placeholder="Địa chỉ" required>
-                                            </div>
-                                            <div class="col-md-4" style="margin-top: 10px">
-                                                <button type="submit" class="btn btn-success">
-                                                    <i class="fa fa-plus"></i> Thêm Quản lý
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </form>
-
-                                    {{-- Bảng danh sách manager --}}
-                                    <table class="table table-striped table-bordered mt-20">
-                                        <thead>
-                                            <tr>
-                                                <th>#</th>
-                                                <th>Tên đăng nhập</th>
-                                                <th>Họ và tên</th>
-                                                <th>Email</th>
-                                                <th>Địa chỉ</th>
-                                                <th>Hành động</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @forelse ($managers as $index => $manager)
-                                                <tr id="manager-row-{{ $manager->adminId }}">
-                                                    <td>{{ $index + 1 }}</td>
-                                                    <td>{{ $manager->userName }}</td>
-                                                    <td>{{ $manager->fullName }}</td>
-                                                    <td>{{ $manager->email }}</td>
-                                                    <td>{{ $manager->address }}</td>
-                                                    <td>
-                                                        <button type="button" class="btn btn-danger"
-                                                            onclick="handleDeleteAdmin({{ $manager->adminId }}, '{{ route('admin.delete-manager') }}', this)">
-                                                            <i class="fa fa-trash"></i> Xóa
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            @empty
-                                                <tr>
-                                                    <td colspan="6" class="text-center">Chưa có quản lý nào</td>
-                                                </tr>
-                                            @endforelse
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                @endif
-
-                {{-- Danh sách Nhân viên --}}
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="x_panel">
-                            <div class="x_title">
-                                <h2>Danh sách Nhân viên</h2>
-                                <div class="clearfix"></div>
-                            </div>
-                            <div class="x_content">
-                                {{-- Form thêm staff --}}
-                                <form action="{{ route('admin.add-staff') }}" method="POST"
-                                    class="form-horizontal mb-20">
-                                    @csrf
-                                    <h4>Thêm Nhân viên mới</h4>
-                                    <div class="row" style="margin-top: 10px">
-                                        <div class="col-md-4">
-                                            <input type="text" name="userName" class="form-control mb-10"
-                                                placeholder="Tên đăng nhập" required>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <input type="password" name="password" class="form-control mb-10"
-                                                placeholder="Mật khẩu" required>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <input type="email" name="email" class="form-control mb-10"
-                                                placeholder="Email" required>
-                                        </div>
-                                        <div class="col-md-4" style="margin-top: 10px">
-                                            <input type="text" name="fullName" class="form-control mb-10"
-                                                placeholder="Họ và tên" required>
-                                        </div>
-                                        <div class="col-md-4" style="margin-top: 10px">
-                                            <input type="text" name="address" class="form-control mb-10"
-                                                placeholder="Địa chỉ" required>
-                                        </div>
-                                        <div class="col-md-4" style="margin-top: 10px">
-                                            <button type="submit" class="btn btn-success">
-                                                <i class="fa fa-plus"></i> Thêm Nhân viên
-                                            </button>
-                                        </div>
-                                    </div>
-                                </form>
-
-                                {{-- Bảng danh sách staff --}}
-                                <table class="table table-striped table-bordered mt-20">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Tên đăng nhập</th>
-                                            <th>Họ và tên</th>
-                                            <th>Email</th>
-                                            <th>Địa chỉ</th>
-                                            <th>Hành động</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse ($staffs as $index => $staff)
-                                            <tr id="staff-row-{{ $staff->adminId }}">
-                                                <td>{{ $index + 1 }}</td>
-                                                <td>{{ $staff->userName }}</td>
-                                                <td>{{ $staff->fullName }}</td>
-                                                <td>{{ $staff->email }}</td>
-                                                <td>{{ $staff->address }}</td>
-                                                <td>
-                                                    <button type="button" class="btn btn-danger"
-                                                        onclick="handleDeleteAdmin({{ $staff->adminId }}, '{{ route('admin.delete-staff') }}', this)">
-                                                        <i class="fa fa-trash"></i> Xóa
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="6" class="text-center">Chưa có nhân viên nào</td>
-                                            </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
+@extends('admin.layout')
+@php
+    $role = session('adminRole');
+    $roleLabel = ['admin' => 'Quản trị viên', 'manager' => 'Quản lý', 'staff' => 'Nhân viên'][$role] ?? $role;
+    $perm = [
+        ['Xem dashboard, đơn, đánh giá; ẩn đánh giá; trả lời yêu cầu tư vấn', true, true, true],
+        ['Xác nhận thanh toán, hoàn tất, hủy đơn, hoàn tiền', false, true, true],
+        ['Tour, lịch khởi hành, khuyến mãi, nội dung Khám phá', false, true, true],
+        ['Khóa / mở người dùng, xóa đánh giá, xem nhật ký thao tác', false, true, true],
+        ['Thêm / xóa nhân viên', false, true, true],
+        ['Thêm / xóa quản lý', false, false, true],
+    ];
+@endphp
+@section('content')
+    <div class="ad-head">
+        <div>
+            <h1>{{ $role === 'staff' ? 'Tài khoản của tôi' : 'Tài khoản quản trị' }}</h1>
+            <p>Cập nhật hồ sơ, ảnh đại diện và mật khẩu của bạn{{ $role === 'admin' ? '; thêm hoặc xóa quản lý và nhân viên' : ($role === 'manager' ? '; thêm hoặc xóa nhân viên' : '') }}. Vai trò được kiểm tra lại ở mỗi lần thao tác.</p>
         </div>
-        <!-- /page content -->
     </div>
-</div>
 
-{{-- JS xóa manager và staff --}}
+    <div class="ad-grid ad-grid--12">
+        <section class="ad-card">
+            <div class="ad-card__body" style="text-align:center">
+                <div style="position:relative;width:132px;height:132px;margin:6px auto 14px">
+                    <img id="avatarAdminPreview" src="{{ \App\Support\Avatar::admin() }}" alt="Ảnh đại diện" style="width:132px;height:132px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 4px #fff,0 0 0 6px var(--ad-primary-l)">
+                    <label for="avatarAdmin" id="btn_avatar" action="{{ route('admin.update-avatar') }}" class="ad-btn ad-btn--sm ad-btn--primary ad-btn--icon" title="Đổi ảnh" style="position:absolute;right:4px;bottom:4px;border-radius:50%;width:34px;height:34px"><i class="fa fa-camera"></i></label>
+                    <input type="file" name="avatarAdmin" id="avatarAdmin" hidden accept="image/*">
+                </div>
+                <h2 id="nameAdmin" style="font-size:18px;margin:0">{{ $admin->fullName }}</h2>
+                <div class="ad-muted">{{ '@' . $admin->userName }}</div>
+                <span class="ad-badge ad-badge--teal" style="margin-top:8px">{{ $roleLabel }}</span>
+                <dl class="ad-kv ad-kv--tight" style="text-align:left;margin-top:18px">
+                    <dt>Email</dt><dd id="emailAdmin">{{ $admin->email }}</dd>
+                    <dt>Địa chỉ</dt><dd id="addressAdmin">{{ $admin->address ?: '—' }}</dd>
+                </dl>
+            </div>
+        </section>
+        <section class="ad-card">
+            <div class="ad-card__head"><h2>Hồ sơ</h2></div>
+            <form action="{{ route('admin.update-admin') }}" id="formProfileAdmin">
+                @csrf
+                <div class="ad-card__body ad-form ad-form--2">
+                    <div class="ad-fld"><label for="fullName">Họ tên <span class="req">*</span></label><input id="fullName" name="fullName" required maxlength="50" value="{{ $admin->fullName }}"></div>
+                    <div class="ad-fld"><label for="email">Email <span class="req">*</span></label><input id="email" type="email" name="email" required maxlength="50" value="{{ $admin->email }}"></div>
+                    <div class="ad-fld span-all"><label for="address">Địa chỉ <span class="req">*</span></label><input id="address" name="address" required maxlength="255" value="{{ $admin->address }}"></div>
+                    <div class="ad-fld"><label for="password">Mật khẩu mới</label><input id="password" type="password" name="password" minlength="8" maxlength="72" autocomplete="new-password" placeholder="Để trống nếu không đổi">
+                        <span class="ad-hint">Tối thiểu 8 ký tự.</span></div>
+                </div>
+                <div class="ad-card__foot"><button type="submit" class="ad-btn ad-btn--primary"><i class="fa fa-check"></i> Lưu hồ sơ</button></div>
+            </form>
+        </section>
+    </div>
+
+    @if ($role === 'admin')
+        @include('admin.partials.admin-member-card', ['rows' => $managers, 'role' => 'manager', 'label' => 'Quản lý', 'addRoute' => 'admin.add-manager', 'delRoute' => 'admin.delete-manager'])
+    @endif
+    @if (in_array($role, ['admin', 'manager'], true))
+        @include('admin.partials.admin-member-card', ['rows' => $staffs, 'role' => 'staff', 'label' => 'Nhân viên', 'addRoute' => 'admin.add-staff', 'delRoute' => 'admin.delete-staff'])
+    @endif
+
+    <section class="ad-card">
+        <div class="ad-card__head"><h2>Phân quyền theo vai trò</h2><small>Đặc tả §12.2</small></div>
+        <div class="ad-tablewrap">
+            <table class="ad-table">
+                <thead><tr><th>Chức năng</th><th style="text-align:center">Nhân viên</th><th style="text-align:center">Quản lý</th><th style="text-align:center">Admin</th></tr></thead>
+                <tbody>
+                @foreach ($perm as [$label, $s, $m, $a])
+                    <tr><td>{{ $label }}</td>
+                        @foreach ([$s, $m, $a] as $ok)<td style="text-align:center">{!! $ok ? '<i class="fa fa-check" style="color:var(--ad-ok)"></i>' : '<i class="fa fa-minus" style="color:#cbd5e1"></i>' !!}</td>@endforeach</tr>
+                @endforeach
+                </tbody>
+            </table>
+        </div>
+    </section>
+@endsection
+@push('scripts')
 <script>
-    function handleDeleteAdmin(adminId, url, btnEl) {
-        if (!confirm('Bạn có chắc muốn xóa tài khoản này?')) {
-            return;
-        }
-
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', url, true);
-        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
-        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-
-        xhr.onload = function() {
-            var res;
-            try {
-                res = JSON.parse(xhr.responseText);
-            } catch (e) {
-                alert('Có lỗi xảy ra, vui lòng thử lại (phản hồi không hợp lệ)');
-                return;
-            }
-
-            if (res.success) {
-                var row = btnEl.closest('tr');
-                if (row) {
-                    row.parentNode.removeChild(row);
-                }
-                if (window.toastr) {
-                    toastr.success(res.message);
-                } else {
-                    alert(res.message);
-                }
-            } else {
-                if (window.toastr) {
-                    toastr.error(res.message);
-                } else {
-                    alert(res.message);
-                }
-            }
+    document.addEventListener('click', function (e) {
+        var b = e.target.closest('.js-del-admin');
+        if (!b) return;
+        var go = function () {
+            var fd = new FormData();
+            fd.append('_token', document.querySelector('meta[name="csrf-token"]').content);
+            fd.append('adminId', b.dataset.id);
+            fetch(b.dataset.url, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' } })
+                .then(function (r) { return r.json(); })
+                .then(function (r) { toastr[r.success ? 'success' : 'error'](r.message); if (r.success) b.closest('tr').remove(); })
+                .catch(function () { toastr.error('Không kết nối được máy chủ.'); });
         };
-
-        xhr.onerror = function() {
-            alert('Không thể kết nối tới server, vui lòng thử lại');
-        };
-
-        xhr.send('_token={{ csrf_token() }}&adminId=' + encodeURIComponent(adminId));
-    }
+        Swal.fire({ title: 'Xóa tài khoản ' + b.dataset.name + '?', text: 'Người này sẽ bị đăng xuất ngay và không vào trang quản trị được nữa.', icon: 'warning',
+            showCancelButton: true, confirmButtonText: 'Xóa', cancelButtonText: 'Thôi', confirmButtonColor: '#dc2626', reverseButtons: true })
+            .then(function (r) { if (r.isConfirmed) go(); });
+    });
 </script>
-
-@include('admin.blocks.footer')
+@endpush

@@ -74,11 +74,11 @@ class UserMediaService
         return $path;
     }
 
-    /** Ảnh đại diện của admin (một ảnh chung của site), ghi đè avatars/admin.webp. */
-    public function storeAdminAvatar(UploadedFile $file): string
+    /** Ảnh đại diện của tài khoản quản trị: avatars/admin-{id}.webp (không có id thì ảnh chung avatars/admin.webp). */
+    public function storeAdminAvatar(UploadedFile $file, ?int $adminId = null): string
     {
         $bytes = $this->encodeSquare($this->readUpload($file, (int) config('media.avatar.max_file_kb', 5120)));
-        $path = trim(config('media.avatar.dir', 'avatars'), '/') . '/admin.webp';
+        $path = trim(config('media.avatar.dir', 'avatars'), '/') . '/admin' . ($adminId ? '-' . $adminId : '') . '.webp';
 
         if (!$this->publicDisk()->put($path, $bytes, 'public')) {
             throw new \RuntimeException('Không ghi được avatar admin.');
@@ -90,7 +90,7 @@ class UserMediaService
     /** Chỉ xóa file nếu là đường dẫn do hệ thống sinh ra; tên mặc định/legacy bị bỏ qua. */
     public function deleteAvatar(?string $value): void
     {
-        if ($this->isAvatarPath($value) && $value !== trim(config('media.avatar.dir', 'avatars'), '/') . '/admin.webp') {
+        if ($this->isAvatarPath($value) && !preg_match('#/admin(-\d+)?\.webp$#', (string) $value)) {
             $this->publicDisk()->delete($value);
         }
     }

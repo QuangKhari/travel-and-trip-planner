@@ -40,6 +40,7 @@
                     @endif
                     <button type="button" class="tpx-menu__i" role="menuitem" data-top="health"><i class="fas fa-heartbeat" aria-hidden="true"></i><span>Kiểm tra sức khỏe chuyến đi</span></button>
                     <button type="button" class="tpx-menu__i" role="menuitem" data-top="cost"><i class="fas fa-wallet" aria-hidden="true"></i><span>Ngân sách</span></button>
+                    <a class="tpx-menu__i" role="menuitem" href="{{ route('support.index', ['trip' => $t['id']]) }}#tao-yeu-cau"><i class="fas fa-headset" aria-hidden="true"></i><span>Nhờ nhân viên tư vấn chuyến này</span></a>
                     <button type="button" class="tpx-menu__i" role="menuitem" id="tpPrint"><i class="fas fa-print" aria-hidden="true"></i><span>In / lưu thành PDF</span></button>
                     <form method="POST" action="{{ route('planner.duplicate', ['id' => $t['id']]) }}" id="tpDupForm">
                         @csrf

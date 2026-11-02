@@ -38,7 +38,7 @@
                                     <td>
                                         <div class="ad-person">
                                             <img src="{{ \App\Support\Avatar::url($u->avatar) }}" alt="" loading="lazy">
-                                            <div><b>{{ $u->fullName ?: 'Chưa đặt tên' }}</b><small>{{ '@' . $u->username }}</small></div>
+                                            <div><a href="{{ route('admin.users.show', $u->userId) }}"><b>{{ $u->fullName ?: 'Chưa đặt tên' }}</b></a><small>{{ '@' . $u->username }}</small></div>
                                         </div>
                                     </td>
                                     <td>{{ $u->email }}<br><small class="ad-note">{{ $u->phoneNumber ?: '—' }}</small></td>

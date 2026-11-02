@@ -41,6 +41,11 @@ class TourDetailController extends Controller
         $checkDisplay = !$checkReviewExist && $completed ? '' : 'hide';
 
         $related = $this->relatedTours($tourDetail);
+        // Các ngày khởi hành còn mở bán (A3 / C-04): khách chọn ngày ngay ở hộp đặt tour
+        $departures = array_values(array_filter(
+            app(\App\Services\DepartureService::class)->forTour((int) $tourDetail->tourId, true),
+            fn($d) => $d->remaining > 0
+        ));
 
         return view('clients.tour-detail', compact(
             'title',
@@ -49,7 +54,8 @@ class TourDetailController extends Controller
             'reviewStats',
             'breakdown',
             'checkDisplay',
-            'related'
+            'related',
+            'departures'
         ));
     }
 

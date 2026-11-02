@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\admin;
 
+use App\Support\AuditLog;
+use App\Services\DepartureService;
+
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\admin\ToursModel;
@@ -166,6 +169,7 @@ class ToursManagementController extends Controller
         $createTour = $this->tours->createTours($fields + [
             'availability' => 0,    // chỉ được bật ở bước cuối, khi đã đủ ảnh (xem Bước 3)
         ]);
+        AuditLog::record('tour.create', 'tour', $createTour, 'Tạo nháp tour "' . ($fields['title'] ?? '') . '"', null, array_intersect_key($fields, array_flip(['title', 'startDate', 'endDate', 'quantity', 'priceAdult', 'priceChild', 'destination'])));
 
         return response()->json([
             'success' => true,
@@ -337,10 +341,16 @@ class ToursManagementController extends Controller
 
                 $this->tours->updateTour($tourId, ['availability' => 1]);
 
+                // Ngày khởi hành đầu tiên = ngày đã nhập ở Bước 1; các ngày khác thêm ở "Lịch khởi hành"
+                $departures = app(DepartureService::class);
+                $departures->ensureForTour($tourId);
+                $departures->syncTour($tourId);
+
                 return [
                     'success' => true,
                     'status'  => 200,
-                    'message' => 'Thêm tour thành công!',
+                    'message' => 'Thêm tour thành công! Bạn có thể thêm các ngày khởi hành khác cho tour này.',
+                    'title'   => $tour->title,
                 ];
             });
 
@@ -351,10 +361,12 @@ class ToursManagementController extends Controller
                 ], $result['status']);
             }
 
+            AuditLog::record('tour.publish', 'tour', $tourId, 'Đăng tour "' . $result['title'] . '" (' . count($timelines) . ' ngày lộ trình)', ['availability' => 0], ['availability' => 1]);
+
             return response()->json([
                 'success'  => true,
                 'message'  => $result['message'],
-                'redirect' => route('admin.page-add-tours'),
+                'redirect' => route('admin.departures', ['tour' => $tourId]),
             ]);
         } catch (\Throwable $e) {
             report($e);
@@ -838,6 +850,8 @@ class ToursManagementController extends Controller
             }
 
             $this->tours->updateTour($tourId, $dataTours);
+            // Ngày đi / số chỗ của form Sửa tour là của chuyến đang hiển thị: ghi sang đúng dòng lịch khởi hành
+            app(DepartureService::class)->applyLegacyEdit($tourId, (string) $tour->startDate, (string) $dataTours['startDate'], (int) $dataTours['quantity']);
 
             if ($replaceImages) {
                 $this->tours->deleteData($tourId, 'tbl_images');
@@ -869,6 +883,7 @@ class ToursManagementController extends Controller
                 'success' => true,
                 'status' => 200,
                 'oldStems' => $oldStems,
+                'before' => (array) $tour,
             ];
         });
 
@@ -878,6 +893,11 @@ class ToursManagementController extends Controller
                 'message' => $result['message'],
             ], $result['status']);
         }
+
+        $keys = array_flip(['title', 'time', 'quantity', 'priceAdult', 'priceChild', 'destination', 'destinationId', 'domain', 'startDate', 'endDate', 'video_url']);
+        [$b, $a] = AuditLog::diff(array_intersect_key($result['before'], $keys), array_intersect_key($dataTours, $keys));
+        AuditLog::record('tour.update', 'tour', $tourId, 'Sửa tour "' . ($dataTours['title'] ?? $result['before']['title']) . '"'
+            . ($replaceImages ? ' · thay ảnh' : '') . ($replaceTimeline ? ' · thay lộ trình' : ''), $b ?: null, $a ?: null);
 
         // Chỉ xóa file vật lý SAU KHI transaction thành công, và chỉ khi ảnh được thay
         if ($replaceImages) {
@@ -913,6 +933,7 @@ class ToursManagementController extends Controller
             // Đang hiện thì ẩn luôn
             if ((int) $tour->availability === 1) {
                 DB::table('tbl_tours')->where('tourId', $tourId)->update(['availability' => 0]);
+                AuditLog::record('tour.toggle', 'tour', $tourId, 'Ẩn tour "' . $tour->title . '"', ['availability' => 1], ['availability' => 0]);
                 return;
             }
 
@@ -924,9 +945,10 @@ class ToursManagementController extends Controller
             } elseif ($tour->startDate <= now()->toDateString()) {
                 $error = 'Ngày khởi hành đã qua, hãy sửa ngày trước khi hiện tour.';
             } elseif ((int) $tour->quantity <= 0) {
-                $error = 'Tour đã hết chỗ, hãy tăng số chỗ trước khi hiện tour.';
+                $error = 'Tour đã hết chỗ, hãy tăng số chỗ hoặc thêm ngày khởi hành trước khi hiện tour.';
             } else {
                 DB::table('tbl_tours')->where('tourId', $tourId)->update(['availability' => 1]);
+                AuditLog::record('tour.toggle', 'tour', $tourId, 'Hiện lại tour "' . $tour->title . '"', ['availability' => 0], ['availability' => 1]);
             }
         });
 
@@ -950,8 +972,12 @@ class ToursManagementController extends Controller
         ]);
 
         $tourId = (int) $request->input('tourId');
+        $title = DB::table('tbl_tours')->where('tourId', $tourId)->value('title');
 
         $result = $this->tours->deleteTour($tourId);
+        if ($result['success']) {
+            AuditLog::record('tour.delete', 'tour', $tourId, (empty($result['hidden']) ? 'Xóa tour "' : 'Ngừng bán (ẩn) tour đã có đơn "') . $title . '"');
+        }
         $tours = $this->tours->getAllTours();
         // Kiểm tra kết quả trả về từ Model
         if ($result['success']) {

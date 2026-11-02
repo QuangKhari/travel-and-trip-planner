@@ -32,15 +32,18 @@ class Avatar
     }
 
     /** Ảnh admin: ghi đè avatars/admin.webp; thêm ?v=thời-gian-sửa để trình duyệt không giữ ảnh cũ. */
-    public static function admin(): string
+    public static function admin(?int $adminId = null): string
     {
-        $path = trim((string) config('media.avatar.dir', 'avatars'), '/') . '/admin.webp';
+        $adminId ??= session('adminId') ? (int) session('adminId') : null;
+        $dir = trim((string) config('media.avatar.dir', 'avatars'), '/');
         $diskName = config('media.disk', 'public');
 
         try {
             $disk = Storage::disk($diskName);
-            if ($disk->exists($path)) {
-                return self::publicUrl($path) . '?v=' . $disk->lastModified($path);
+            foreach (array_filter([$adminId ? "{$dir}/admin-{$adminId}.webp" : null, "{$dir}/admin.webp"]) as $path) {
+                if ($disk->exists($path)) {
+                    return self::publicUrl($path) . '?v=' . $disk->lastModified($path);
+                }
             }
         } catch (\Throwable $e) {
             // rơi về ảnh mặc định

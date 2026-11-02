@@ -2,61 +2,31 @@
 <html lang="vi">
 
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <!-- Meta, title, CSS, favicons, etc. -->
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/ico" />
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/ico" />
 
+    <title>{{ $title ?? 'Quản trị' }} · {{ config('site.name', 'Travela') }} Admin</title>
 
-    <title>{{ $title }} - Admin</title>
-
-    <!-- Bootstrap -->
+    {{-- Chỉ nạp thư viện admin thật sự dùng (bỏ Flot, JQVMap, Skycons, DataTables... của Gentelella) --}}
     <link href="{{ asset('admin/vendors/bootstrap/dist/css/bootstrap.min.css') }}" rel="stylesheet">
-    <!-- Font Awesome -->
     <link href="{{ asset('admin/vendors/font-awesome/css/font-awesome.min.css') }}" rel="stylesheet">
-    <!-- NProgress -->
     <link href="{{ asset('admin/vendors/nprogress/nprogress.css') }}" rel="stylesheet">
-    <!-- iCheck -->
-    <link href="{{ asset('admin/vendors/iCheck/skins/flat/green.css') }}" rel="stylesheet">
-
-    <!-- bootstrap-progressbar -->
-    <link href="{{ asset('admin/vendors/bootstrap-progressbar/css/bootstrap-progressbar-3.3.4.min.css') }}"
-        rel="stylesheet">
-    <!-- JQVMap -->
-    <link href="{{ asset('admin/vendors/jqvmap/dist/jqvmap.min.css') }}" rel="stylesheet" />
-    <!-- bootstrap-daterangepicker -->
-    <link href="{{ asset('admin/vendors/bootstrap-daterangepicker/daterangepicker.css') }}" rel="stylesheet">
-
-    <!-- Datatables -->
-    <link href="{{ asset('admin/vendors/datatables.net-bs/css/dataTables.bootstrap.min.css') }}" rel="stylesheet" />
-    <link href="{{ asset('admin/vendors/datatables.net-buttons-bs/css/buttons.bootstrap.min.css') }}"
-        rel="stylesheet" />
-    <link href="{{ asset('admin/vendors/datatables.net-fixedheader-bs/css/fixedHeader.bootstrap.min.css') }}"
-        rel="stylesheet" />
-    <link href="{{ asset('admin/vendors/datatables.net-responsive-bs/css/responsive.bootstrap.min.css') }}"
-        rel="stylesheet" />
-    <link href="{{ asset('admin/vendors/datatables.net-scroller-bs/css/scroller.bootstrap.min.css') }}"
-        rel="stylesheet" />
-
-
-    <!-- Custom Theme Style -->
     <link href="{{ asset('admin/build/css/custom.min.css') }}" rel="stylesheet">
-    {{-- datetimepicker  --}}
     <link href="{{ asset('admin/assets/css/jquery.datetimepicker.min.css') }}" rel="stylesheet">
-    <!-- Import CSS for Toastr -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
-    <!-- Dropzone.js -->
+    <link href="{{ asset('vendor/flasher/toastr.min.css') }}" rel="stylesheet">
     <link href="{{ asset('admin/vendors/dropzone/dist/min/dropzone.min.css') }}" rel="stylesheet" />
-    {{-- Custom css by DevDien  --}}
     <link href="{{ asset('admin/assets/css/custom-css.css') }}" rel="stylesheet" />
 
-    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap"
-        rel="stylesheet">
-    <link href="{{ asset('admin/assets/css/admin-theme.css') }}?v=2" rel="stylesheet" />
-    <link href="{{ asset('admin/assets/css/admin-ui.css') }}?v=1" rel="stylesheet" />
+    <link href="{{ asset('admin/assets/css/admin-app.css') }}?v={{ @filemtime(public_path('admin/assets/css/admin-app.css')) }}" rel="stylesheet" />
+    @stack('styles')
+    <script>
+        // Nhớ trạng thái thu gọn menu trước khi vẽ trang (không bị nháy)
+        try { if (localStorage.getItem('ad.nav') === 'sm' && window.innerWidth > 991) document.documentElement.classList.add('ad-pre-sm'); } catch (e) {}
+    </script>
 </head>
 
 <body class="nav-md">

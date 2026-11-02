@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\admin;
 
+use App\Support\AuditLog;
+
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\admin\AdminModel;
@@ -76,6 +78,8 @@ class AdminManagementController extends Controller
         $newinfo = $this->admin->getAdminById($adminId);
 
         if ($update) {
+            AuditLog::record('admin.update', 'admin', $adminId, 'Cập nhật hồ sơ ' . $newinfo->userName . ($request->filled('password') ? ' (đổi mật khẩu)' : ''), null,
+                ['fullName' => $newinfo->fullName, 'email' => $newinfo->email, 'address' => $newinfo->address, 'passwordChanged' => $request->filled('password')]);
             // Chỉ trả các trường cần hiển thị, KHÔNG trả hash mật khẩu
             return response()->json([
                 'success' => true,
@@ -96,7 +100,7 @@ class AdminManagementController extends Controller
         ]);
 
         try {
-            $media->storeAdminAvatar($req->file('avatarAdmin'));
+            $media->storeAdminAvatar($req->file('avatarAdmin'), (int) session('adminId'));
         } catch (InvalidImageException $e) {
             return response()->json(['error' => true, 'message' => $e->getMessage()], 422);
         }
@@ -140,6 +144,9 @@ class AdminManagementController extends Controller
             return redirect()->back()->with('error', 'Không thể thêm quản lý.');
         }
 
+        if ($insert) {
+            AuditLog::record('admin.create', 'admin', $data['username'] ?? null, 'Thêm quản lý ' . ($data['username'] ?? ''), null, ['role' => 'manager', 'email' => $data['email'] ?? null]);
+        }
         return redirect()->back()->with(
             $insert ? 'success' : 'error',
             $insert ? 'Thêm quản lý thành công' : 'Thêm quản lý thất bại'
@@ -154,7 +161,11 @@ class AdminManagementController extends Controller
         ]);
 
         $adminId = (int) $request->input('adminId');
+        $who = \Illuminate\Support\Facades\DB::table('tbl_admin')->where('adminId', $adminId)->value('userName');
         $delete = $this->admin->deleteByIdAndRole($adminId, 'manager');
+        if ($delete) {
+            AuditLog::record('admin.delete', 'admin', $adminId, 'Xóa quản lý ' . $who, ['role' => 'manager', 'userName' => $who], null);
+        }
 
         if ($request->ajax()) {
             return response()->json([
@@ -204,6 +215,9 @@ class AdminManagementController extends Controller
             return redirect()->back()->with('error', 'Không thể thêm nhân viên.');
         }
 
+        if ($insert) {
+            AuditLog::record('admin.create', 'admin', $data['username'] ?? null, 'Thêm nhân viên ' . ($data['username'] ?? ''), null, ['role' => 'staff', 'email' => $data['email'] ?? null]);
+        }
         return redirect()->back()->with(
             $insert ? 'success' : 'error',
             $insert ? 'Thêm nhân viên thành công' : 'Thêm nhân viên thất bại'
@@ -219,7 +233,11 @@ class AdminManagementController extends Controller
 
         $adminId = (int) $request->input('adminId');
 
+        $who = \Illuminate\Support\Facades\DB::table('tbl_admin')->where('adminId', $adminId)->value('userName');
         $delete = $this->admin->deleteByIdAndRole($adminId, 'staff');
+        if ($delete) {
+            AuditLog::record('admin.delete', 'admin', $adminId, 'Xóa nhân viên ' . $who, ['role' => 'staff', 'userName' => $who], null);
+        }
 
         if ($request->ajax()) {
             return response()->json([

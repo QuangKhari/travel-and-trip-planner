@@ -40,13 +40,28 @@ class BookingController extends Controller
             abort(404);
         }
 
+        // Ngày khởi hành khách chọn ở trang chi tiết (tour có nhiều ngày); không chọn thì là chuyến đang hiển thị
+        $departures = app(\App\Services\DepartureService::class)->forTour((int) $tour->tourId, true);
+        $departure = null;
+        if ($departures) {
+            $wanted = (int) $request->input('availabilityId', old('availabilityId', 0));
+            $departure = collect($departures)->firstWhere('availabilityId', $wanted)
+                ?? collect($departures)->firstWhere('departureDate', $tour->startDate)
+                ?? collect($departures)->first(fn($d) => $d->remaining > 0);
+            if ($departure) {
+                $tour->startDate = $departure->departureDate;
+                $tour->endDate = $departure->endDate;
+                $tour->quantity = $departure->remaining;
+            }
+        }
+
         $today = now()->toDateString();
         if ($tour->startDate <= $today) {
             toastr()->error('Tour đã khởi hành, không thể đặt.');
             return redirect()->route('tour-detail', ['id' => $tour->tourId]);
         }
         if ((int) $tour->quantity <= 0) {
-            toastr()->error('Tour đã hết chỗ.');
+            toastr()->error($departure ? 'Ngày khởi hành này đã hết chỗ, vui lòng chọn ngày khác.' : 'Tour đã hết chỗ.');
             return redirect()->route('tour-detail', ['id' => $tour->tourId]);
         }
 
@@ -64,7 +79,7 @@ class BookingController extends Controller
         $adults   = max(1, min($limit, (int) $request->input('adults', 1)));
         $children = max(0, min($limit - $adults, (int) $request->input('children', 0)));
 
-        return view('clients.booking', compact('title', 'tour', 'prefill', 'limit', 'adults', 'children'));
+        return view('clients.booking', compact('title', 'tour', 'prefill', 'limit', 'adults', 'children', 'departure', 'departures'));
     }
 
     public function createBooking(Request $req, BookingService $bookings)
@@ -72,13 +87,14 @@ class BookingController extends Controller
         $validator = Validator::make($req->all(), [
             'requestToken' => 'nullable|uuid',
             'tourId'      => 'required|integer|min:1',
+            'availabilityId' => 'nullable|integer|min:1',
             'fullName'    => 'required|string|max:255',
             'email'       => ['required', 'email:filter', 'max:50', 'regex:/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/'],
             'tel'         => ['required', 'regex:/^[0-9]{10,11}$/'],
             'address'     => 'required|string|max:255',
             'numAdults'   => 'required|integer|min:1|max:50',
             'numChildren' => 'required|integer|min:0|max:50',
-            'payment'     => 'required|in:office-payment',
+            'payment'     => 'required|in:' . (\App\Services\VnpayService::enabled() ? 'office-payment,vnpay' : 'office-payment'),
             'couponCode'  => 'nullable|string|max:50',
         ], [
             'fullName.required'    => 'Vui lòng nhập họ và tên.',
@@ -93,7 +109,7 @@ class BookingController extends Controller
             'numAdults.max'        => 'Tối đa 50 người lớn mỗi đơn.',
             'numChildren.max'      => 'Tối đa 50 trẻ em mỗi đơn.',
             'payment.required'     => 'Vui lòng chọn phương thức thanh toán.',
-            'payment.in'           => 'Hiện chỉ hỗ trợ thanh toán tại văn phòng.',
+            'payment.in'           => 'Phương thức thanh toán không hợp lệ.',
         ]);
 
         $tourId = (int) $req->input('tourId');
@@ -101,7 +117,7 @@ class BookingController extends Controller
         // UX: lỗi thì quay lại ĐÚNG trang đặt tour và giữ nguyên dữ liệu đã nhập
         // (trước đây quay về trang chi tiết nên người dùng phải nhập lại từ đầu).
         $backToForm = fn() => $tourId > 0
-            ? redirect()->route('booking', ['id' => $tourId])
+            ? redirect()->route('booking', ['id' => $tourId, 'availabilityId' => (int) $req->input('availabilityId') ?: null])
             : redirect()->route('tours');
 
         if ($validator->fails()) {
@@ -114,6 +130,11 @@ class BookingController extends Controller
         } catch (BookingException $e) {
             toastr()->error($e->getMessage());
             return $backToForm()->withInput();
+        }
+
+        // VNPay: chuyển ngay sang cổng thanh toán (đơn giữ chỗ ngắn, có đồng hồ đếm ngược ở trang đơn)
+        if (($validator->validated()['payment'] ?? '') === 'vnpay' && !$result['duplicate']) {
+            return redirect()->route('payment.vnpay.pay', ['bookingId' => $result['bookingId']]);
         }
 
         $prefix = $result['duplicate']
@@ -161,6 +182,7 @@ class BookingController extends Controller
         $validator = Validator::make($request->all(), [
             'code'        => 'required|string|max:50',
             'tourId'      => 'required|integer|min:1',
+            'availabilityId' => 'nullable|integer|min:1',
             'numAdults'   => 'required|integer|min:1|max:50',
             'numChildren' => 'required|integer|min:0|max:50',
         ], [

@@ -1,233 +1,51 @@
-@include('admin.blocks.header')
-
-<div class="container body">
-    <div class="main_container">
-
-        @include('admin.blocks.sidebar')
-
-        <!-- page content -->
-        <div class="right_col" role="main">
-
-            <div class="">
-
-                <div class="page-title">
-                    <div class="title_left">
-                        <h3>
-                            Chi tiết <small>Đánh giá</small>
-                        </h3>
-                    </div>
-
-                    <div class="title_right">
-                        <a href="{{ route('admin.reviews') }}"
-                           class="btn btn-default pull-right">
-
-                            <i class="fa fa-arrow-left"></i>
-                            Quay lại
-
-                        </a>
-                    </div>
-                </div>
-
-                <div class="clearfix"></div>
-
-                <div class="row">
-
-                    {{-- Nội dung đánh giá --}}
-                    <div class="col-md-8 col-sm-8">
-
-                        <div class="x_panel">
-
-                            <div class="x_title">
-                                <h2>Thông tin đánh giá</h2>
-                                <div class="clearfix"></div>
-                            </div>
-
-                            <div class="x_content">
-
-                                <div class="form-group">
-
-                                    <label>Điểm đánh giá</label>
-
-                                    <div style="margin-top:10px">
-
-                                        @for($i = 1; $i <= 5; $i++)
-
-                                            @if($i <= $review->rating)
-
-                                                <i class="fa fa-star"
-                                                   style="font-size:24px;color:#f0ad4e"></i>
-
-                                            @else
-
-                                                <i class="fa fa-star-o"
-                                                   style="font-size:24px;color:#ccc"></i>
-
-                                            @endif
-
-                                        @endfor
-
-                                        <span style="margin-left:10px;font-size:16px">
-                                            {{ $review->rating }}/5
-                                        </span>
-
-                                    </div>
-
-                                </div>
-
-                                <hr>
-
-                                <div class="form-group">
-
-                                    <label>Nội dung đánh giá</label>
-
-                                    <div style="
-                                        background:#f7f7f7;
-                                        padding:15px;
-                                        border-left:4px solid #337ab7;
-                                        border-radius:4px;
-                                        margin-top:10px">
-
-                                        {{ $review->comment }}
-
-                                    </div>
-
-                                </div>
-
-                                <hr>
-
-                                <div class="form-group">
-
-                                    <label>Ngày đánh giá</label>
-
-                                    <p>
-
-                                        <i class="fa fa-calendar"></i>
-
-                                        {{ date('d/m/Y H:i', strtotime($review->timestamp)) }}
-
-                                    </p>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    {{-- Thông tin bên phải --}}
-                    <div class="col-md-4 col-sm-4">
-
-                        {{-- User --}}
-                        <div class="x_panel">
-
-                            <div class="x_title">
-                                <h2>Khách hàng</h2>
-                                <div class="clearfix"></div>
-                            </div>
-
-                            <div class="x_content">
-
-                                <p>
-                                    <strong>Họ tên:</strong><br>
-
-                                    {{ $review->user->fullName ?? 'N/A' }}
-                                </p>
-
-                                @if(isset($review->user->email))
-                                    <p>
-                                        <strong>Email:</strong><br>
-                                        {{ $review->user->email }}
-                                    </p>
-                                @endif
-
-                                @if(isset($review->user->phone))
-                                    <p>
-                                        <strong>Số điện thoại:</strong><br>
-                                        {{ $review->user->phone }}
-                                    </p>
-                                @endif
-
-                            </div>
-
-                        </div>
-
-                        {{-- Tour --}}
-                        <div class="x_panel">
-
-                            <div class="x_title">
-                                <h2>Tour được đánh giá</h2>
-                                <div class="clearfix"></div>
-                            </div>
-
-                            <div class="x_content">
-
-                                <p>
-                                    <strong>Tên tour:</strong><br>
-
-                                    {{ $review->tour->title ?? 'N/A' }}
-                                </p>
-
-                                @if(isset($review->tour->priceAdult))
-                                    <p>
-                                        <strong>Giá người lớn:</strong><br>
-
-                                        {{ number_format($review->tour->priceAdult, 0, ',', '.') }}
-                                        VNĐ
-                                    </p>
-                                @endif
-
-                            </div>
-
-                        </div>
-
-                        {{-- Thao tác --}}
-                        <div class="x_panel">
-
-                            <div class="x_title">
-                                <h2>Thao tác</h2>
-                                <div class="clearfix"></div>
-                            </div>
-
-                            <div class="x_content">
-
-                                <form action="{{ route('admin.reviews.toggle', $review->reviewId) }}" method="POST" style="margin-bottom:8px">
-                                    @csrf
-                                    <button type="submit" class="btn btn-block {{ !empty($review->isHidden) ? 'btn-success' : 'btn-warning' }}">
-                                        <i class="fa {{ !empty($review->isHidden) ? 'fa-eye' : 'fa-eye-slash' }}"></i>
-                                        {{ !empty($review->isHidden) ? 'Hiện lại đánh giá' : 'Ẩn khỏi trang khách' }}
-                                    </button>
-                                </form>
-
-                                <form action="{{ route('admin.reviews.destroy', $review->reviewId) }}"
-                                      method="POST"
-                                      onsubmit="return confirm('Xóa hẳn đánh giá này? Nên dùng nút Ẩn để giữ lịch sử.')">
-
-                                    @csrf
-                                    @method('DELETE')
-
-                                    <button type="submit"
-                                            class="btn btn-danger btn-block">
-
-                                        <i class="fa fa-trash"></i>
-                                        Xóa đánh giá
-
-                                    </button>
-
-                                </form>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
+@extends('admin.layout')
+@php
+    $canDelete = in_array(session('adminRole'), ['admin', 'manager'], true);
+    $stars = fn($n) => str_repeat('★', (int) $n) . '<span class="off">' . str_repeat('★', 5 - (int) $n) . '</span>';
+@endphp
+@section('content')
+    <div class="ad-head">
+        <div>
+            <a class="ad-back" href="{{ route('admin.reviews') }}"><i class="fa fa-arrow-left"></i> Đánh giá</a>
+            <h1>Đánh giá #{{ $review->reviewId }}</h1>
+            <p><span class="ad-stars" style="font-size:16px">{!! $stars($review->rating) !!}</span> {{ $review->rating }}/5 ·
+                {{ date('H:i d/m/Y', strtotime($review->timestamp)) }}
+                @if (!empty($review->isHidden))<span class="ad-badge ad-badge--mute">Đang ẩn</span>@else<span class="ad-badge ad-badge--ok">Đang hiện</span>@endif</p>
+        </div>
+        <div class="ad-actions">
+            <form action="{{ route('admin.reviews.toggle', $review->reviewId) }}" method="POST">@csrf
+                <button class="ad-btn {{ !empty($review->isHidden) ? 'ad-btn--primary' : '' }}" type="submit"><i class="fa {{ !empty($review->isHidden) ? 'fa-eye' : 'fa-eye-slash' }}"></i> {{ !empty($review->isHidden) ? 'Hiện lại' : 'Ẩn khỏi trang khách' }}</button></form>
+            @if ($canDelete)
+                <form action="{{ route('admin.reviews.destroy', $review->reviewId) }}" method="POST">@csrf @method('DELETE')
+                    <button class="ad-btn ad-btn--danger" data-confirm="Xóa hẳn đánh giá này?"><i class="fa fa-trash-o"></i> Xóa hẳn</button></form>
+            @endif
         </div>
     </div>
-</div>
-
-@include('admin.blocks.footer')
+    <div class="ad-grid ad-grid--21">
+        <section class="ad-card">
+            <div class="ad-card__head"><h2>Nội dung</h2></div>
+            <div class="ad-card__body">
+                <blockquote style="margin:0;padding:16px 20px;border-left:4px solid var(--ad-sand);background:#fffbeb;border-radius:0 12px 12px 0;font-size:15px;color:var(--ad-ink);white-space:pre-wrap">{{ $review->comment ?: '(Khách chỉ chấm sao, không viết nội dung)' }}</blockquote>
+                @if (!empty($review->isHidden))
+                    <p class="ad-note" style="margin:12px 0 0">Đánh giá đang ẩn: không hiện ở trang tour và không tính vào điểm trung bình.</p>
+                @endif
+            </div>
+        </section>
+        <aside>
+            <section class="ad-card">
+                <div class="ad-card__head"><h2>Khách hàng</h2></div>
+                <div class="ad-card__body">
+                    <div class="ad-person"><img src="{{ \App\Support\Avatar::url($review->user->avatar ?? null) }}" alt=""><span><b>{{ $review->user->fullName ?? 'Tài khoản đã xóa' }}</b><small>{{ $review->user->email ?? '' }}</small></span></div>
+                </div>
+            </section>
+            <section class="ad-card">
+                <div class="ad-card__head"><h2>Tour</h2></div>
+                <div class="ad-card__body">
+                    <b style="color:var(--ad-ink)">{{ $review->tour->title ?? '—' }}</b>
+                    @if (isset($review->tour->priceAdult))<div class="ad-note">Giá người lớn {{ number_format($review->tour->priceAdult, 0, ',', '.') }} đ</div>@endif
+                    @if ($review->tour)<a class="ad-btn ad-btn--sm" style="margin-top:10px" href="{{ route('tour-detail', ['id' => $review->tourId]) }}" target="_blank" rel="noopener"><i class="fa fa-external-link"></i> Trang tour</a>@endif
+                </div>
+            </section>
+        </aside>
+    </div>
+@endsection

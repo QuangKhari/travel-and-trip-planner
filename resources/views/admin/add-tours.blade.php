@@ -5,39 +5,18 @@
 
         <!-- page content -->
         <div class="right_col" role="main">
-            <div class="">
-                <div class="page-title">
-                    <div class="title_left">
-                        <h3>Thêm Tours</h3>
-                    </div>
-
-                    <div class="title_right">
-                        <div class="col-md-5 col-sm-5  form-group row pull-right top_search">
-                            <div class="input-group">
-                                <input type="text" class="form-control" placeholder="Search for...">
-                                <span class="input-group-btn">
-                                    <button class="btn btn-secondary" type="button">Go!</button>
-                                </span>
-                            </div>
-                        </div>
+            <div class="ad-wrap">
+                @include('admin.partials.flash')
+                <div class="ad-head">
+                    <div>
+                        <a class="ad-back" href="{{ route('admin.tours') }}"><i class="fa fa-arrow-left"></i> Danh sách tour</a>
+                        <h1>Thêm tour mới</h1>
+                        <p>Ba bước: thông tin cơ bản (tạo bản nháp ngay), ít nhất 5 ảnh, lộ trình từng ngày. Tour chỉ hiện cho khách khi đủ cả ba; sau đó bạn có thể mở thêm các ngày khởi hành khác.</p>
                     </div>
                 </div>
-                <div class="clearfix"></div>
-
-                <div class="row">
-
-                    <div class="col-md-12 col-sm-12 ">
+                <div>
+                    <div>
                         <div class="x_panel">
-                            <div class="x_title">
-                                <h2>Form</h2>
-                                <ul class="nav navbar-right panel_toolbox">
-                                    <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
-                                    </li>
-                                    <li><a class="close-link"><i class="fa fa-close"></i></a>
-                                    </li>
-                                </ul>
-                                <div class="clearfix"></div>
-                            </div>
                             <div class="x_content add-tours">
 
                                 <!-- Smart Wizard -->
@@ -49,7 +28,7 @@
                                                 <span class="step_no">1</span>
                                                 <span class="step_descr">
                                                     Bước 1<br />
-                                                    <small>Bước 1 Nhập thông tin </small>
+                                                    <small>Thông tin cơ bản</small>
                                                 </span>
                                             </a>
                                         </li>
@@ -58,7 +37,7 @@
                                                 <span class="step_no">2</span>
                                                 <span class="step_descr">
                                                     Bước 2<br />
-                                                    <small>Bước 2 Thêm hình ảnh</small>
+                                                    <small>Hình ảnh</small>
                                                 </span>
                                             </a>
                                         </li>
@@ -67,7 +46,7 @@
                                                 <span class="step_no">3</span>
                                                 <span class="step_descr">
                                                     Bước 3<br />
-                                                    <small>Bước 3 Lộ trình</small>
+                                                    <small>Lộ trình</small>
                                                 </span>
                                             </a>
                                         </li>
@@ -152,7 +131,7 @@
                                                 </div>
                                             </div>
                                             <div class="field item form-group">
-                                                <label class="col-form-label col-md-3 col-sm-3  label-align">Số lượng
+                                                <label class="col-form-label col-md-3 col-sm-3  label-align">Số chỗ (ngày đầu)
                                                     <span>*</span></label>
                                                 <div class="col-md-6 col-sm-6">
                                                     <input class="form-control" type="number" name="number"

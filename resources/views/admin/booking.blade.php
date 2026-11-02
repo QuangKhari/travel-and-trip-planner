@@ -1,64 +1,50 @@
-@include('admin.blocks.header')
-@php
-    $cnt = fn(string $s) => collect($list_booking)->where('bookingStatus', $s)->count();
-    $unpaid = collect($list_booking)->filter(fn($b) => $b->paymentStatus === 'n' && $b->bookingStatus !== 'c')->count();
-    $canExport = in_array(session('adminRole'), ['admin', 'manager'], true);
-@endphp
-<div class="container body">
-    <div class="main_container">
-        @include('admin.blocks.sidebar')
+@extends('admin.layout')
+@php $canManage = in_array(session('adminRole'), ['admin', 'manager'], true); @endphp
+@section('content')
+    <div class="ad-head">
+        <div>
+            <h1>Đơn đặt tour</h1>
+            <p>Xác nhận đơn, ghi nhận thanh toán, hoàn tất sau chuyến đi hoặc hủy (đơn đã thanh toán sẽ tự tạo yêu cầu hoàn tiền theo chính sách). Bấm vào một dòng để xem chi tiết.</p>
+        </div>
+        @if ($canManage)
+            <form class="ad-actions" method="GET" action="{{ route('admin.booking.export') }}">
+                <select name="status" class="ad-field" aria-label="Trạng thái xuất">
+                    <option value="">Mọi trạng thái</option>
+                    <option value="n">Chờ xác nhận</option><option value="y">Đã xác nhận</option>
+                    <option value="f">Hoàn tất</option><option value="c">Đã hủy</option>
+                </select>
+                <input type="date" name="from" class="ad-field" aria-label="Từ ngày đặt" title="Từ ngày đặt">
+                <input type="date" name="to" class="ad-field" aria-label="Đến ngày đặt" title="Đến ngày đặt">
+                <button class="ad-btn"><i class="fa fa-download"></i> Xuất CSV</button>
+            </form>
+        @endif
+        <div class="ad-actions"><a class="ad-btn ad-btn--primary" href="{{ route('admin.booking.create') }}"><i class="fa fa-plus"></i> Đặt hộ khách</a></div>
+    </div>
 
-        <div class="right_col" role="main">
-            @include('admin.partials.flash')
-            <div class="ad-head">
-                <div>
-                    <h1>Đơn đặt tour</h1>
-                    <p>Xác nhận đơn, xác nhận thanh toán, hoàn thành hoặc hủy. Bấm “Chi tiết” để xem hóa đơn và ảnh chuyển khoản.</p>
-                </div>
-                @if ($canExport)
-                    <form class="ad-actions" method="GET" action="{{ route('admin.booking.export') }}">
-                        <select name="status" class="ad-field" aria-label="Trạng thái xuất">
-                            <option value="">Mọi trạng thái</option>
-                            <option value="n">Chưa xác nhận</option><option value="y">Đã xác nhận</option>
-                            <option value="f">Đã hoàn thành</option><option value="c">Đã hủy</option>
-                        </select>
-                        <input type="date" name="from" class="ad-field" aria-label="Từ ngày" title="Từ ngày đặt">
-                        <input type="date" name="to" class="ad-field" aria-label="Đến ngày" title="Đến ngày đặt">
-                        <button class="ad-btn"><i class="fa fa-download"></i> Xuất CSV</button>
-                    </form>
-                @endif
-            </div>
-
-            <div class="ad-card">
-                <div class="ad-toolbar">
-                    <div class="ad-chips">
-                        <button type="button" class="ad-chip is-on" data-ad-status-chip="" data-target="datatable-booking">Tất cả <b>{{ count($list_booking) }}</b></button>
-                        <button type="button" class="ad-chip" data-ad-status-chip="n" data-target="datatable-booking">Chưa xác nhận <b>{{ $cnt('n') }}</b></button>
-                        <button type="button" class="ad-chip" data-ad-status-chip="y" data-target="datatable-booking">Đã xác nhận <b>{{ $cnt('y') }}</b></button>
-                        <button type="button" class="ad-chip" data-ad-status-chip="unpaid" data-target="datatable-booking">Chưa thanh toán <b>{{ $unpaid }}</b></button>
-                        <button type="button" class="ad-chip" data-ad-status-chip="f" data-target="datatable-booking">Hoàn thành <b>{{ $cnt('f') }}</b></button>
-                        <button type="button" class="ad-chip" data-ad-status-chip="c" data-target="datatable-booking">Đã hủy <b>{{ $cnt('c') }}</b></button>
-                    </div>
-                </div>
-                <div class="ad-card__body" style="padding-top:12px">
-                    {{-- .table-responsive: admin-paginate.js chèn ô tìm kiếm + phân trang quanh phần tử này --}}
-                    <div class="table-responsive">
-                        <table id="datatable-booking" class="ad-table" style="width:100%">
-                            <thead>
-                                <tr>
-                                    <th>Tour</th><th>Khách hàng</th><th>Liên hệ</th><th>Địa chỉ</th><th>Ngày đặt</th>
-                                    <th class="num">NL</th><th class="num">TE</th><th class="num">Tổng tiền</th>
-                                    <th>Đơn</th><th>Thanh toán</th><th>Tiền</th><th></th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbody-booking">
-                                @include('admin.partials.list-booking')
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+    <div class="ad-card" id="bk-card" data-url-preview="{{ $canManage ? route('admin.cancel-preview') : '' }}">
+        <div class="ad-toolbar">
+            <div class="ad-chips" id="bk-chips">
+                @foreach (['' => ['Tất cả', 'all'], 'n' => ['Chờ xác nhận', 'n'], 'y' => ['Đã xác nhận', 'y'], 'unpaid' => ['Chưa thu tiền', 'unpaid'], 'f' => ['Hoàn tất', 'f'], 'c' => ['Đã hủy', 'c'], 'refund_pending' => ['Chờ hoàn tiền', 'refund']] as $k => [$label, $ck])
+                    <button type="button" class="ad-chip {{ $k === '' ? 'is-on' : '' }}" data-ad-status-chip="{{ $k }}" data-target="datatable-booking">{{ $label }} <b data-count="{{ $ck }}">{{ $counts[$ck] ?? 0 }}</b></button>
+                @endforeach
             </div>
         </div>
+        {{-- .table-responsive: admin-paginate.js chèn ô tìm kiếm + phân trang quanh phần tử này --}}
+        <div class="table-responsive ad-tablewrap">
+            <table id="datatable-booking" class="ad-table">
+                <thead>
+                    <tr>
+                        <th>Mã đơn</th><th>Tour · ngày đi</th><th>Khách hàng</th>
+                        <th class="num">Tổng tiền</th><th>Đơn</th><th>Thanh toán</th><th class="num">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-booking">
+                    @include('admin.partials.list-booking')
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
-@include('admin.blocks.footer')
+@endsection
+@push('scripts')
+    <script src="{{ asset('admin/assets/js/admin-booking.js') }}?v={{ @filemtime(public_path('admin/assets/js/admin-booking.js')) }}"></script>
+@endpush

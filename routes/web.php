@@ -55,12 +55,25 @@ use App\Http\Controllers\admin\ContentReviewController;
 use App\Http\Controllers\admin\TripAdminController;
 use App\Http\Controllers\admin\ContentRequestAdminController;
 use App\Http\Controllers\admin\SystemController;
+use App\Http\Controllers\admin\RefundManagementController;
+use App\Http\Controllers\admin\DepartureManagementController;
+use App\Http\Controllers\admin\AuditLogController;
+use App\Http\Controllers\admin\SupportTicketAdminController;
+use App\Http\Controllers\admin\PaymentAdminController;
+use App\Http\Controllers\clients\SupportTicketController;
+use App\Http\Controllers\HealthController;
+use App\Http\Controllers\clients\PaymentController;
 
 
 
 
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+// Kiểm tra sức khỏe hệ thống cho giám sát / Docker healthcheck (PF-08): DB, cache, hàng đợi, đĩa
+Route::get('/health', HealthController::class)->middleware('throttle:60,1,health')->name('health');
+// VNPay: IPN (VNPay gọi máy chủ, không phiên, không CSRF) và trang khách quay về (chỉ hiển thị)
+Route::get('/thanh-toan/vnpay/ipn', [PaymentController::class, 'ipn'])->middleware('throttle:120,1,vnpay-ipn')->name('payment.vnpay.ipn');
+Route::get('/thanh-toan/vnpay/ket-qua', [PaymentController::class, 'return'])->middleware('throttle:30,1,vnpay-return')->name('payment.vnpay.return');
 Route::get('/about', [AboutController::class, 'index'])->name('about');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:5,1,contact')->name('contact.send');
@@ -172,6 +185,8 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     // đặt tour
     // GET để F5 hoặc mở link trực tiếp không bị 405 
     Route::match(['get', 'post'], '/booking/{id?}', [BookingController::class, 'index'])->whereNumber('id')->name('booking');
+    Route::get('/thanh-toan/vnpay/{bookingId}', [PaymentController::class, 'pay'])->whereNumber('bookingId')->middleware('throttle:10,1,vnpay-pay')->name('payment.vnpay.pay');
+    Route::post('/thanh-toan/vnpay/{bookingId}/kiem-tra', [PaymentController::class, 'check'])->whereNumber('bookingId')->middleware('throttle:6,1,vnpay-check')->name('payment.vnpay.check');
     Route::post('/create-booking', [BookingController::class, 'createBooking'])->middleware('throttle:10,1,create-booking')->name('create-booking');
     Route::post('/apply-coupon', [BookingController::class, 'applyCoupon'])->middleware('throttle:20,1,apply-coupon')->name('apply-coupon');
     Route::post('/checkBooking', [BookingController::class, 'checkBooking'])->name('checkBooking');
@@ -217,6 +232,11 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::get('/len-ke-hoach/{id}/suc-khoe', [PlannerController::class, 'health'])->whereNumber('id')->middleware('throttle:60,1,planner-health')->name('planner.health');
     Route::get('/len-ke-hoach/{id}/suc-khoe/xu-ly', [PlannerController::class, 'resolve'])->whereNumber('id')->middleware('throttle:60,1,planner-resolve')->name('planner.resolve');
     Route::post('/len-ke-hoach/{id}/nhan-ban', [PlannerController::class, 'duplicate'])->whereNumber('id')->middleware('throttle:10,1,planner-dup')->name('planner.duplicate');
+    // Yêu cầu tư vấn với nhân viên Travela (T-39)
+    Route::get('/ho-tro', [SupportTicketController::class, 'index'])->name('support.index');
+    Route::post('/ho-tro', [SupportTicketController::class, 'store'])->middleware('throttle:5,10,support-create')->name('support.store');
+    Route::get('/ho-tro/{code}', [SupportTicketController::class, 'show'])->where('code', 'TV[0-9A-Z]{10}')->name('support.show');
+    Route::post('/ho-tro/{code}', [SupportTicketController::class, 'reply'])->where('code', 'TV[0-9A-Z]{10}')->middleware('throttle:20,1,support-msg')->name('support.reply');
     Route::post('/len-ke-hoach/{id}/xoa', [PlannerController::class, 'destroy'])->whereNumber('id')->middleware('throttle:20,1,planner-del')->name('planner.destroy');
 });
 
@@ -240,6 +260,26 @@ Route::prefix('admin')->group(function () {
         //Reviews
         Route::get('/reviews', [ReviewManagementController::class, 'index'])->name('admin.reviews');
         Route::get('/reviews/{id}', [ReviewManagementController::class, 'show'])->name('admin.reviews.show');
+        // Ẩn / hiện đánh giá: nhân viên cũng làm được (§12.2), xóa hẳn chỉ admin / manager
+        Route::post('/reviews/{id}/toggle', [ReviewManagementController::class, 'toggle'])->whereNumber('id')->name('admin.reviews.toggle');
+
+        // Hồ sơ của chính mình: mọi vai trò (danh sách quản lý / nhân viên hiện theo quyền)
+        Route::get('/admin', [AdminManagementController::class, 'index'])->name('admin.admin');
+        Route::post('/update-admin', [AdminManagementController::class, 'updateAdmin'])->name('admin.update-admin');
+        Route::post('/update-avatar', [AdminManagementController::class, 'updateAvatar'])->name('admin.update-avatar');
+
+        // Xem chuyến đi của khách (chỉ đọc) để tư vấn
+        Route::get('/trips/{id}', [TripAdminController::class, 'show'])->whereNumber('id')->name('admin.trips.show');
+        // Đặt tour hộ khách tại văn phòng
+        Route::get('/booking/create', [BookingManagementController::class, 'create'])->name('admin.booking.create');
+        Route::post('/booking/create', [BookingManagementController::class, 'store'])->middleware('throttle:20,1,admin-booking-create')->name('admin.booking.store');
+        Route::get('/booking/departures', [BookingManagementController::class, 'departures'])->name('admin.booking.departures');
+
+        // Yêu cầu tư vấn (T-39)
+        Route::get('/support', [SupportTicketAdminController::class, 'index'])->name('admin.support');
+        Route::get('/support/{id}', [SupportTicketAdminController::class, 'show'])->whereNumber('id')->name('admin.support.show');
+        Route::post('/support/{id}/reply', [SupportTicketAdminController::class, 'reply'])->whereNumber('id')->middleware('throttle:30,1,support-reply')->name('admin.support.reply');
+        Route::post('/support/{id}/status', [SupportTicketAdminController::class, 'status'])->whereNumber('id')->name('admin.support.status');
     });
 
     // Chỉ admin và manager
@@ -260,6 +300,7 @@ Route::prefix('admin')->group(function () {
 
         //Management User
         Route::get('/users', [UserManagementController::class, 'index'])->name('admin.users');
+        Route::get('/users/{id}', [UserManagementController::class, 'show'])->whereNumber('id')->name('admin.users.show');
         Route::post('/active-user', [UserManagementController::class, 'activeUser'])->name('admin.active-user');
         Route::post('/status-user', [UserManagementController::class, 'changeStatus'])->name('admin.status-user');
 
@@ -269,6 +310,25 @@ Route::prefix('admin')->group(function () {
         Route::post('/received-money', [BookingManagementController::class, 'receiviedMoney'])->name('admin.received');
         Route::post('/confirm-payment', [BookingManagementController::class, 'confirmPayment'])->name('admin.confirm-payment');
         Route::post('/send-pdf', [BookingManagementController::class, 'sendPdf'])->middleware('throttle:10,1,send-pdf')->name('admin.send.pdf');
+        Route::get('/cancel-preview', [BookingManagementController::class, 'cancelPreview'])->name('admin.cancel-preview');
+
+        // Giao dịch VNPay
+        Route::get('/payments', [PaymentAdminController::class, 'index'])->name('admin.payments');
+        Route::post('/payments/{bookingId}/reconcile', [PaymentAdminController::class, 'reconcile'])->whereNumber('bookingId')->middleware('throttle:20,1,vnpay-reconcile')->name('admin.payments.reconcile');
+
+        // Hoàn tiền (A6)
+        Route::get('/refunds', [RefundManagementController::class, 'index'])->name('admin.refunds');
+        Route::post('/refunds/{id}/complete', [RefundManagementController::class, 'complete'])->whereNumber('id')->name('admin.refunds.complete');
+
+        // Lịch khởi hành (A3 / D-02)
+        Route::get('/departures', [DepartureManagementController::class, 'index'])->name('admin.departures');
+        Route::post('/departures', [DepartureManagementController::class, 'store'])->name('admin.departures.store');
+        Route::post('/departures/{id}', [DepartureManagementController::class, 'update'])->whereNumber('id')->name('admin.departures.update');
+        Route::post('/departures/{id}/toggle', [DepartureManagementController::class, 'toggle'])->whereNumber('id')->name('admin.departures.toggle');
+        Route::post('/departures/{id}/delete', [DepartureManagementController::class, 'destroy'])->whereNumber('id')->name('admin.departures.destroy');
+
+        // Nhật ký thao tác (D-08)
+        Route::get('/audit-log', [AuditLogController::class, 'index'])->name('admin.audit');
 
         //Promotion
         Route::get('/promotion', [PromotionManagementController::class, 'index'])->name('admin.promotion');
@@ -335,11 +395,8 @@ Route::prefix('admin')->group(function () {
 
         //Reviews - xóa
         Route::delete('/reviews/{id}', [ReviewManagementController::class, 'destroy'])->name('admin.reviews.destroy');
-        // Ẩn / hiện thay vì xóa cứng (L-F-10): giữ lịch sử, khách không thấy, không tính vào điểm trung bình
-        Route::post('/reviews/{id}/toggle', [ReviewManagementController::class, 'toggle'])->whereNumber('id')->name('admin.reviews.toggle');
 
         //Management Staff - manager thêm/xóa staff
-        Route::get('/admin', [AdminManagementController::class, 'index'])->name('admin.admin');
         Route::post('/add-staff', [AdminManagementController::class, 'addStaff'])->name('admin.add-staff');
         Route::post('/delete-staff', [AdminManagementController::class, 'deleteStaff'])->name('admin.delete-staff');
 
@@ -357,8 +414,6 @@ Route::prefix('admin')->group(function () {
     // Chỉ admin
     Route::middleware(['checkAdminRole:admin'])->group(function () {
         //Management Admin
-        Route::post('/update-admin', [AdminManagementController::class, 'updateAdmin'])->name('admin.update-admin');
-        Route::post('/update-avatar', [AdminManagementController::class, 'updateAvatar'])->name('admin.update-avatar');
 
         //Management Manager - admin thêm/xóa manager
         Route::post('/add-manager', [AdminManagementController::class, 'addManager'])->name('admin.add-manager');
