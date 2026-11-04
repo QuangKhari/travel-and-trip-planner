@@ -22,8 +22,6 @@
         'reviews' => 'Nhiều đánh giá',
     ];
     $sortCur = $state['sort'] ?? 'new';
-    // Gợi ý nhanh: điểm đến đang có nhiều tour nhất (dữ liệu thật)
-    $popular = collect($destOptions)->sortByDesc('total')->take(4);
     $insColor = [
         'bien' => ['#0b9488', '#dff4f1'],
         'thien-nhien' => ['#2f9e5b', '#e3f4e8'],
@@ -36,7 +34,7 @@
     ];
 @endphp
 
-<main class="v3 tr">
+<main class="v3 tr bl-tour" id="tourMain">
 
     {{-- ===== ĐẦU TRANG + TÌM KIẾM ===== --}}
     <section class="tr-hero" aria-labelledby="trTitle">
@@ -49,18 +47,14 @@
                 <div>
                     <p class="v3-eyebrow">Tour trong nước</p>
                     <h1 id="trTitle">Tìm tour <span>phù hợp</span> với bạn</h1>
-                    <p class="tr-hero__sub">Lọc theo điểm đến, ngày đi, ngân sách và số ngày. Giá và số chỗ còn lại cập
-                        nhật trực tiếp.</p>
-                </div>
-                @if ($popular->isNotEmpty())
-                    <div class="tr-quick" role="group" aria-label="Điểm đến đang có nhiều tour">
-                        <span>Nhiều tour nhất:</span>
-                        @foreach ($popular as $d)
-                            <button type="button" class="tr-quick__b" data-filter="dest"
-                                data-value="{{ $d->name }}">{{ $d->name }}<em>{{ $d->total }}</em></button>
-                        @endforeach
+                    <p class="tr-hero__sub">Tìm hành trình hợp sở thích, dễ so sánh giá, ngày khởi hành và chỗ còn lại. Mọi thông tin tour đều có thể xem trước khi đặt.</p>
+                    <div class="bl-tour-benefits" aria-label="Tác vụ nhanh trên trang tour">
+                        <button type="button" class="bl-benefit" data-quick-action="focus-cats"><i class="fal fa-sliders-h" aria-hidden="true"></i><span><strong>Lọc nhanh theo nhu cầu</strong><small>Chọn cảm hứng chỉ với một chạm</small></span></button>
+                        <button type="button" class="bl-benefit" data-quick-action="saved-tours"><i class="fal fa-heart" aria-hidden="true"></i><span><strong>Lưu tour để xem lại</strong><small>Mở ngay danh sách tour đã lưu</small></span></button>
+                        <button type="button" class="bl-benefit" data-quick-action="soon"><i class="fal fa-calendar-check" aria-hidden="true"></i><span><strong>Xem ngày khởi hành</strong><small>Ưu tiên tour sắp đi gần nhất</small></span></button>
                     </div>
-                @endif
+                    <p class="tr-quickmsg" id="tvQuickMsg" aria-live="polite"></p>
+                </div>
             </div>
 
             <form class="tr-search" id="tvSearchForm" role="search" autocomplete="off">
@@ -117,6 +111,9 @@
                 <button type="submit" class="tr-search__btn"><i class="far fa-search" aria-hidden="true"></i> Tìm
                     kiếm</button>
             </form>
+            <div class="tr-searchhelp" aria-label="Mẹo sử dụng bộ lọc">
+                <span><i class="fal fa-info-circle" aria-hidden="true"></i> Chọn cảm hứng để lọc nhanh, dùng tim để lưu tour, hoặc bấm “Khởi hành sớm” để xem các tour đi gần nhất.</span>
+            </div>
 
             {{-- Chip cảm hứng (tbl_inspirations) --}}
             <div class="tr-cats" role="group" aria-label="Lọc theo cảm hứng">
@@ -135,6 +132,7 @@
         </div>
     </section>
 
+    <div class="bl-tour-anchor" aria-hidden="true"></div>
     {{-- ===== BỘ LỌC + KẾT QUẢ ===== --}}
     <section class="tr-body">
         <div class="v3-wrap tr-layout">
@@ -225,8 +223,7 @@
 
             <div class="tr-main">
                 <div class="tr-toolbar" id="tvToolbar">
-                    <div class="tr-count" id="tvCount" aria-live="polite"><b>{{ $tours->total() }}</b> tour phù hợp
-                    </div>
+                    <div class="tr-count" id="tvCount" aria-live="polite"><b>{{ $tours->total() }}</b> tour phù hợp</div>
                     <span class="tr-sortnote" id="tvSortNote"></span>
                     <button type="button" class="tr-filter-open" data-action="open-filter"><i
                             class="fal fa-sliders-h" aria-hidden="true"></i> Bộ lọc</button>
@@ -258,7 +255,7 @@
 
                 <div class="tr-active" id="tvActive" aria-label="Bộ lọc đang áp dụng"></div>
 
-                <div id="tvResults" aria-live="polite">
+                <div id="tvResults" aria-live="polite" aria-label="Danh sách tour phù hợp">
                     @include('clients.partials.filter-tours')
                 </div>
             </div>
@@ -276,6 +273,7 @@
         state: @json($state)
     };
 </script>
-<script src="{{ asset('clients/assets/js/travel-tours.js') }}?v=5"></script>
+<script src="{{ asset('clients/assets/js/travel-tours.js') }}?v=6"></script>
+
 
 @include('clients.blocks.footer')

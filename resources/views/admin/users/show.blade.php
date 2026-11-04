@@ -121,7 +121,7 @@
         if (act === 'b') data.status = 'b';
         if (act === 'active-status') data.status = 'active';
         var text = { active: 'Kích hoạt tài khoản này (bỏ qua xác thực email)?', b: 'Chặn tài khoản? Khách bị đăng xuất ngay và không đặt tour được.', 'active-status': 'Mở khóa / khôi phục tài khoản này?' }[act];
-        Swal.fire({ title: 'Xác nhận', text: text, icon: 'warning', showCancelButton: true, confirmButtonText: 'Đồng ý', cancelButtonText: 'Thôi', confirmButtonColor: act === 'b' ? '#dc2626' : '#0d9488', reverseButtons: true })
+        Swal.fire({ title: 'Xác nhận', text: text, icon: 'warning', showCancelButton: true, confirmButtonText: 'Đồng ý', cancelButtonText: 'Thôi', confirmButtonColor: act === 'b' ? '#dc2626' : '#168F99', reverseButtons: true })
             .then(function (r) {
                 if (!r.isConfirmed) return;
                 var fd = new FormData(); Object.keys(data).forEach(function (k) { fd.append(k, data[k]); });

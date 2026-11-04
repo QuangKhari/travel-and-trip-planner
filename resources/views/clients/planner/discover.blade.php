@@ -1,6 +1,8 @@
 @include('clients.blocks.header')
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=21">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-flow.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/nature-luxury-planner.css') }}?v=bl20261104">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
 
 {{-- /len-ke-hoach/chon-diem-den. Biến: $inspirations, $picked, $month, $days, $group, $budget, $maxDays, $result (null nếu chưa chọn tháng), $now, $openMode --}}
 @php $cur = $month ?? $now; @endphp

@@ -1,0 +1,29 @@
+/* Nature Luxury / Admin • loaded after admin-app.css and page stacks */
+:root {
+ --ad-primary:#167A85;--ad-primary-d:#115D66;--ad-primary-l:#E5F8F5;--ad-primary-xl:#EAF9F7;
+ --ad-sand:#F4D7A1;--ad-sand-l:#FFF4E2;
+ --ad-navy:#174A53;--ad-navy-2:#182F26;
+ --ad-bg:#FFFDF8;--ad-card:#fff;--ad-line:#DAECEB;--ad-line-2:#EDF2EC;
+ --ad-text:#1E2F33;--ad-mute:#526A70;--ad-ink:#263F34;--ad-faint:#708478;
+ --ad-shadow:0 1px 2px rgba(20,77,86,.04),0 8px 26px rgba(20,77,86,.07);
+}
+body.nav-md, body.nav-sm {background:var(--ad-bg);color:var(--ad-text);}
+.ad-side {background:linear-gradient(180deg,#174A53,#182F26);}
+.ad-brand__logo {background:linear-gradient(135deg,#56B9B3,#167A85);box-shadow:0 5px 18px rgba(0,0,0,.14);}
+.ad-brand__txt small {color:#D1E2D3;}
+.ad-nav__link > .fa:first-child {color:#B9D5C2;}
+.ad-nav__link.is-on {background:#167A85;box-shadow:none;}
+.ad-nav__h {color:#ABC7B3;}
+.ad-nav__sub {color:#BDCEC4!important;}
+.ad-nav__link:hover,.ad-nav__sub:hover {background:rgba(255,255,255,.09);}
+.ad-nav__pill {color:#3C3529;}
+.ad-wrap :is(.ad-card,.x_panel,.panel,.card) {border-color:#DAECEB;box-shadow:var(--ad-shadow);}
+.ad-wrap :is(input,textarea,select):focus-visible {outline:3px solid #8A5A21;outline-offset:2px;border-color:#167A85;}
+.ad-wrap :is(button,a,[role=button],summary):focus-visible {outline:3px solid #8A5A21;outline-offset:3px;}
+.ad-wrap :is(.btn-primary,.ad-btn--primary) {background:#167A85;border-color:#167A85;color:#fff;}
+.ad-wrap :is(.btn-primary,.ad-btn--primary):hover {background:#115D66;border-color:#115D66;}
+.ad-wrap .btn-warning {background:#F4D7A1;border-color:#D7BD91;color:#3C3529;}
+.ad-wrap .btn-danger {background:#AA423D;border-color:#AA423D;color:#fff;}
+.ad-wrap .table thead,.ad-wrap thead {background:#F1F5EF;}
+.ad-wrap .table tbody tr:hover {background:#F7F9F5;}
+@media(prefers-reduced-motion:reduce){body.nav-md *,body.nav-sm * {animation-duration:.01ms!important;transition-duration:.01ms!important;}}

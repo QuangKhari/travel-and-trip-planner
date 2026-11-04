@@ -19,6 +19,11 @@
             <p class="gx-lead">Mọi phần chuẩn bị cho chuyến đi gom về một chỗ: giấy tờ, thời điểm nên đi, cách di chuyển, tiền bạc và những tình huống nên biết trước. Mỗi bài đều ghi rõ nguồn và ngày cập nhật.</p>
         </header>
 
+        <div class="nl-guide-tools"><label for="nlGuideSearch">Tìm nhanh cẩm nang</label>
+            <input id="nlGuideSearch" type="search" placeholder="Nhập tên bài viết hoặc chủ đề…" autocomplete="off" aria-controls="nlGuideContent">
+            <span id="nlGuideCount" role="status" aria-live="polite"></span>
+        </div>
+        <div id="nlGuideContent">
         @if ($category)
             <p class="hb-back"><a href="{{ route('guides.index') }}">← Tất cả cẩm nang</a></p>
             <div class="hb-grid">
@@ -45,6 +50,7 @@
                 <p class="gx-empty">Chưa có bài cẩm nang nào được duyệt. Bạn có thể bắt đầu bằng <a href="{{ route('destination') }}">khám phá điểm đến</a>.</p>
             @endforelse
         @endif
+        </div>
     </div>
 </main>
 

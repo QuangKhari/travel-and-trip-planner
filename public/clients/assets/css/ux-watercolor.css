@@ -240,7 +240,7 @@
     cursor: wait;
 }
 .tv-auth :focus-visible {
-    outline: 3px solid var(--tv-orange, #ddaf32);
+    outline: 3px solid var(--tv-orange, #F4D7A1);
     outline-offset: 2px;
 }
 
@@ -321,7 +321,7 @@
     border-radius: 14px;
     border: 1.5px solid #cfe3df;
     background: rgba(255, 255, 255, 0.94);
-    color: var(--tv-teal-dark, #086b66);
+    color: var(--tv-teal-dark, #126F78);
     font:
         700 14.5px "Be Vietnam Pro",
         sans-serif;
@@ -332,11 +332,11 @@
         background 0.2s;
 }
 .bk-tool:hover {
-    border-color: var(--tv-teal, #0b9488);
+    border-color: var(--tv-teal, #167A85);
     background: #f0fdfa;
 }
 .bk-tool:focus-visible {
-    outline: 3px solid var(--tv-orange, #ddaf32);
+    outline: 3px solid var(--tv-orange, #F4D7A1);
     outline-offset: 2px;
 }
 
@@ -366,8 +366,8 @@
     text-decoration: none;
 }
 .pf-tabs a.is-on {
-    background: var(--tv-teal, #0b9488);
-    border-color: var(--tv-teal, #0b9488);
+    background: var(--tv-teal, #167A85);
+    border-color: var(--tv-teal, #167A85);
     color: #fff;
 }
 @media (max-width: 991px) {
@@ -427,7 +427,7 @@
     font-size: 3.4em;
     line-height: 0.85;
     font-weight: 800;
-    color: var(--tv-teal, #0b9488);
+    color: var(--tv-teal, #167A85);
 }
 .px-toc summary {
     display: flex;
@@ -443,14 +443,14 @@
 }
 .px-toc summary::after {
     content: "▾";
-    color: var(--tv-teal, #0b9488);
+    color: var(--tv-teal, #167A85);
     transition: transform 0.2s;
 }
 .px-toc:not([open]) summary::after {
     transform: rotate(-90deg);
 }
 .px-toc summary:focus-visible {
-    outline: 3px solid var(--tv-orange, #ddaf32);
+    outline: 3px solid var(--tv-orange, #F4D7A1);
     outline-offset: 3px;
     border-radius: 6px;
 }
@@ -483,7 +483,7 @@
 }
 .ux-shelf__head h2 i {
     margin-right: 6px;
-    color: var(--tv-teal, #0b9488);
+    color: var(--tv-teal, #167A85);
 }
 .ux-shelf__head h2 em {
     font-style: normal;
@@ -518,7 +518,7 @@
         box-shadow 0.2s;
 }
 .ux-mini:hover {
-    border-color: var(--tv-teal, #0b9488);
+    border-color: var(--tv-teal, #167A85);
     box-shadow: 0 6px 16px rgba(8, 79, 76, 0.1);
 }
 .ux-mini img {
@@ -561,7 +561,7 @@
 }
 .ux-mini:focus-visible,
 .ux-mini__rm:focus-visible {
-    outline: 3px solid var(--tv-orange, #ddaf32);
+    outline: 3px solid var(--tv-orange, #F4D7A1);
     outline-offset: 2px;
 }
 

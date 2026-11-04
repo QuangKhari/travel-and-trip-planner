@@ -38,6 +38,7 @@
 <link rel="stylesheet" href="{{ asset('clients/assets/css/destination-detail.css') }}?v=1">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-weather.css') }}?v=1">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/nature-luxury-planner.css') }}?v=bl20261104">
 
 {{-- /destination/{slug} — biến: $destination, $data (DestinationService::payload), $tours --}}
 @php
@@ -160,8 +161,8 @@
             </ul>
             <p class="gx-note" style="margin:8px 0 0">Bấm vào tháng để xem lễ hội, món theo mùa, trải nghiệm và lịch trình phù hợp tháng đó.</p>
             <p class="gx-legend">
-                <span><i style="background:#0d6f6a"></i>Đẹp nhất</span><span><i
-                        style="background:#e6f4f1;border:1px solid #b9ddd7"></i>Đi được</span><span><i
+                <span><i style="background:#167A85"></i>Đẹp nhất</span><span><i
+                        style="background:#e6f4f1;border:1px solid #BAE8E3"></i>Đi được</span><span><i
                         style="background:#f3f4f6;border:1px solid #d1d5db"></i>Nên tránh</span>
                 <span>Nhiệt độ thấp–cao và lượng mưa trung bình: <a href="https://open-meteo.com/" target="_blank"
                         rel="noopener noreferrer">Open-Meteo.com</a> (CC BY 4.0). Mức tháng do luật khí hậu cộng chỉnh

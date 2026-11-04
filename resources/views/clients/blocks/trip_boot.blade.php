@@ -7,9 +7,10 @@
             'syncUrl' => route('trip-tray.sync'),
             'markUrl' => route('marks.toggle'),
             'loginUrl' => route('login'),
+            'savedUrl' => route('saved.collection'),
             'plannerUrl' => config('postcards.planner_url') ? url(config('postcards.planner_url')) : null,
         ],
         JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT,
     ) !!};
 </script>
-<script src="{{ asset('clients/assets/js/travela-trip.js') }}?v=3"></script>
+<script src="{{ asset('clients/assets/js/travela-trip.js') }}?v=4"></script>

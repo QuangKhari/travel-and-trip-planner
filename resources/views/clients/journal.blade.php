@@ -18,6 +18,7 @@
         <header class="jn-head">
             <h1>Sổ tay du hành</h1>
             <p>Những nơi bạn đã đặt chân, món đã nếm, lễ hội đã dự và các chuyến tour của bạn.</p>
+            <a class="nl-button" href="{{ route('saved.collection') }}"><i class="far fa-bookmark" aria-hidden="true"></i> Xem danh sách đã lưu</a>
         </header>
 
         {{-- ===== Bộ đếm ===== --}}

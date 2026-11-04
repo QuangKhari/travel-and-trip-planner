@@ -10,7 +10,7 @@
             <p style="margin:0 0 14px;">Travela đã tạo đơn đặt tour <b>{{ $b->title }}</b> cho bạn ({{ (int) $b->numAdults + (int) $b->numChildren }} khách, tổng {{ $money($b->totalPrice) }}). Vui lòng thanh toán tại văn phòng{{ !empty($b->holdExpiresAt) ? ' trước ' . date('H:i d/m/Y', strtotime($b->holdExpiresAt)) : '' }} để giữ chỗ.</p>
             @break
         @case('confirmed')
-            <p style="margin:0 0 14px;">Đơn đặt tour <b>{{ $b->title }}</b> của bạn đã được <b style="color:#0D9488">xác nhận</b>. Chúng tôi giữ chỗ cho chuyến khởi hành {{ !empty($b->tripStart ?? $b->departureDate) ? date('d/m/Y', strtotime($b->tripStart ?? $b->departureDate)) : '' }}.</p>
+            <p style="margin:0 0 14px;">Đơn đặt tour <b>{{ $b->title }}</b> của bạn đã được <b style="color:#168F99">xác nhận</b>. Chúng tôi giữ chỗ cho chuyến khởi hành {{ !empty($b->tripStart ?? $b->departureDate) ? date('d/m/Y', strtotime($b->tripStart ?? $b->departureDate)) : '' }}.</p>
             @break
         @case('paid')
             <p style="margin:0 0 14px;">Travela đã nhận đủ thanh toán <b>{{ $money($b->totalPrice) }}</b> cho đơn <b>{{ $b->title }}</b>. Cảm ơn bạn!</p>

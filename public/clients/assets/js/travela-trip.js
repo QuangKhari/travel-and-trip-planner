@@ -160,7 +160,10 @@
         fab.type = "button";
         fab.setAttribute("aria-label", "Mở khay chuyến đi");
         fab.setAttribute("aria-expanded", "false");
-        fab.appendChild(el("span", "gx-tray-ico", "🧳"));
+        var iconWrap = el("span", "gx-tray-ico");
+        // SVG thay emoji: emoji hành lý có thể thành ô vuông trên Windows/Android.
+        iconWrap.innerHTML = '<svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="7" width="16" height="14" rx="3"/><path d="M9 7V5a3 3 0 0 1 6 0v2M8 11v6m8-6v6"/></svg>';
+        fab.appendChild(iconWrap);
         var badge = el("b", "gx-tray-count", "0");
         fab.appendChild(badge);
 
@@ -213,7 +216,15 @@
             open(false);
         });
         document.addEventListener("keydown", function (e) {
-            if (e.key === "Escape" && !sheet.hidden) open(false);
+            if (sheet.hidden) return;
+            if (e.key === "Escape") { e.preventDefault(); open(false); return; }
+            if (e.key !== "Tab" || !window.matchMedia("(max-width: 599px)").matches) return;
+            var controls = Array.prototype.slice.call(sheet.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),[tabindex]:not([tabindex="-1"])'))
+                .filter(function (node) { return node.getClientRects().length && !node.closest('[hidden]'); });
+            if (!controls.length) return;
+            var first = controls[0], last = controls[controls.length - 1];
+            if (e.shiftKey && document.activeElement === first) {e.preventDefault();last.focus();}
+            else if (!e.shiftKey && document.activeElement === last) {e.preventDefault();first.focus();}
         });
         ui = { fab: fab, badge: badge, body: body, foot: foot, sheet: sheet, backdrop: backdrop, open: open };
     }
@@ -256,6 +267,11 @@
             });
         }
         ui.foot.textContent = "";
+        if (cfg.savedUrl) {
+            var savedLink = el("a", "gx-tray-saved", "Xem danh sách đã lưu");
+            savedLink.href = cfg.savedUrl;
+            ui.foot.appendChild(savedLink);
+        }
         if (cfg.plannerUrl && n) {
             var go = el("a", "gx-btn", "Lên kế hoạch với các điểm này");
             go.href = cfg.plannerUrl + "?diem=" + encodeURIComponent(list().map(function (x) { return x.type + ":" + x.slug; }).join(","));
@@ -282,6 +298,11 @@
     }
 
     /* ---- đánh dấu (cần đăng nhập) ---- */
+    function feedback(message) {
+        var live = document.getElementById('tl-mark-feedback');
+        if (!live) { live = document.createElement('div');live.id='tl-mark-feedback';live.setAttribute('role','status');live.setAttribute('aria-live','polite');live.className='tl-mark-feedback';document.body.appendChild(live); }
+        live.textContent = message;
+    }
     function toggleMark(btn) {
         if (!cfg.loggedIn) {
             location.href = cfg.loginUrl || "/login";
@@ -301,10 +322,17 @@
             .then(function (d) {
                 btn.setAttribute("aria-pressed", d.marked ? "true" : "false");
                 btn.classList.toggle("is-on", !!d.marked);
+                if (!d.marked && btn.closest("[data-saved-item]")) {
+                    var card = btn.closest("[data-saved-item]");
+                    card.remove();
+                    if (!document.querySelector("[data-saved-item]")) {
+                        location.reload();
+                    }
+                }
                 var lab = btn.querySelector("[data-label]") || btn;
                 lab.textContent = d.marked ? btn.dataset.labelOn : btn.dataset.labelOff;
             })
-            .catch(function () {})
+            .catch(function () { feedback('Chưa thể cập nhật danh sách đã lưu. Vui lòng kiểm tra kết nối và thử lại.'); })
             .then(function () {
                 btn.disabled = false;
             });

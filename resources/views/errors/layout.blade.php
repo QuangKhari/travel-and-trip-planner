@@ -54,8 +54,8 @@
         body {
             min-height: 100vh;
             font-family: 'Be Vietnam Pro', system-ui, sans-serif;
-            color: #102f3a;
-            background-color: #f8fbf9;
+            color: #1E2F33;
+            background-color: #FFFDF8;
             background-image: url("{{ $wc }}/wc-paper.svg");
             background-size: 420px;
             position: relative;
@@ -138,7 +138,7 @@
             font-weight: 800;
             line-height: 1;
             letter-spacing: -.04em;
-            color: #0b9488;
+            color: #167A85;
             padding: 0 6px
         }
 
@@ -199,7 +199,7 @@
 
         .primary {
             background: #f4c95d;
-            color: #102f3a;
+            color: #1E2F33;
             box-shadow: 0 8px 20px rgba(201, 154, 34, .28)
         }
 
@@ -210,13 +210,13 @@
 
         .ghost {
             background: #fff;
-            color: #102f3a;
+            color: #1E2F33;
             border-color: #cfe3df
         }
 
         .ghost:hover {
-            border-color: #0b9488;
-            color: #086b66
+            border-color: #167A85;
+            color: #126F78
         }
 
         .btn[disabled] {
@@ -244,7 +244,7 @@
             background: transparent;
             padding: 0 12px;
             font: 500 16px 'Be Vietnam Pro', system-ui, sans-serif;
-            color: #102f3a
+            color: #1E2F33
         }
 
         .search input:focus-visible {
@@ -257,7 +257,7 @@
             border-radius: 12px;
             padding: 0 18px;
             height: 44px;
-            background: #0b9488;
+            background: #167A85;
             color: #fff;
             font: 700 14px 'Be Vietnam Pro', system-ui, sans-serif;
             cursor: pointer
@@ -276,14 +276,14 @@
             border-radius: 999px;
             background: rgba(255, 255, 255, .8);
             border: 1px solid #dbe8e5;
-            color: #086b66;
+            color: #126F78;
             font-weight: 600;
             text-decoration: none
         }
 
         .links a:hover {
             background: #f0fdfa;
-            border-color: #0b9488
+            border-color: #167A85
         }
 
         .help {
@@ -293,7 +293,7 @@
         }
 
         .help a {
-            color: #086b66;
+            color: #126F78;
             font-weight: 600
         }
 

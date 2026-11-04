@@ -117,6 +117,10 @@ Route::middleware('throttle:60,1,guide-pages')->group(function () {
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->middleware('throttle:30,1,sitemap')->name('sitemap');
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('robots');
 // Lưu / đã đến / đã thử / đã dự và đồng bộ khay chuyến đi (cần đăng nhập; fetch nhận JSON 401 khi chưa đăng nhập)
+Route::get('/da-luu', [\App\Http\Controllers\clients\SavedCollectionController::class, 'index'])
+    ->middleware(['checkLoginClient', 'checkUserBlocked', 'throttle:60,1'])
+    ->name('saved.collection');
+
 Route::middleware(['checkLoginClient', 'checkUserBlocked', 'throttle:60,1,marks'])->group(function () {
     Route::post('/danh-dau', [MarkController::class, 'toggle'])->name('marks.toggle');
     Route::post('/khay-chuyen-di/dong-bo', [MarkController::class, 'syncTray'])->name('trip-tray.sync');
@@ -224,6 +228,9 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::post('/len-ke-hoach/tao-tu-dong', [PlannerController::class, 'generate'])->middleware('throttle:10,1,planner-generate')->name('planner.generate');
     // La bàn (AI): F1 đọc câu mô tả -> vé hành trình; F2 tóm tắt lịch. Không ghi vào chuyến đi.
     Route::post('/len-ke-hoach/hieu-yeu-cau', [PlannerAiController::class, 'brief'])->middleware('throttle:10,1,planner-ai-brief')->name('planner.ai.brief');
+    Route::get('/len-ke-hoach/tro-ly', [PlannerAiController::class, 'chatPage'])->name('planner.ai.chat');
+    Route::post('/len-ke-hoach/tro-ly/doc', [PlannerAiController::class, 'chatRead'])->middleware('throttle:30,1,planner-ai-chat')->name('planner.ai.chat.read');
+    Route::post('/len-ke-hoach/tro-ly/tao', [PlannerAiController::class, 'chatCreate'])->middleware('throttle:6,1,planner-ai-make')->name('planner.ai.chat.make');
     Route::post('/len-ke-hoach/{id}/tom-tat-ai', [PlannerAiController::class, 'explain'])->whereNumber('id')->middleware('throttle:10,1,planner-ai-explain')->name('planner.ai.explain');
     Route::post('/len-ke-hoach/{id}/la-ban', [PlannerAiController::class, 'copilot'])->whereNumber('id')->middleware('throttle:12,1,planner-ai-copilot')->name('planner.ai.copilot');
     Route::post('/len-ke-hoach/{id}/la-ban/kiem-tra-lai', [PlannerAiController::class, 'recheck'])->whereNumber('id')->middleware('throttle:30,1,planner-ai-recheck')->name('planner.ai.recheck');

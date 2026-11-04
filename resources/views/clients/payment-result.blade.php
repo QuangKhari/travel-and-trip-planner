@@ -15,7 +15,7 @@
     .pr dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; text-align: left; margin: 20px 0; padding: 16px 18px; background: #f6faf9; border-radius: 12px; }
     .pr dt { color: #6b8592; } .pr dd { margin: 0; color: #0f2f3a; font-weight: 600; }
     .pr-acts { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
-    .pr-btn { display: inline-flex; padding: 11px 20px; border-radius: 10px; background: #0d9488; color: #fff; font-weight: 700; text-decoration: none; }
+    .pr-btn { display: inline-flex; padding: 11px 20px; border-radius: 10px; background: #168F99; color: #fff; font-weight: 700; text-decoration: none; }
     .pr-btn:hover { background: #0f766e; color: #fff; }
     .pr-btn--ghost { background: #fff; color: #0f2f3a; border: 1px solid #cfdde2; }
     .pr-btn--ghost:hover { background: #f4fbfa; color: #0f2f3a; }

@@ -38,7 +38,7 @@
 .jn-counters b {
     font-size: 30px;
     line-height: 1.1;
-    color: var(--gx-tqd, #087f7b);
+    color: var(--gx-tqd, #167A85);
 }
 .jn-counters span:last-child {
     font-size: 13px;
@@ -123,7 +123,7 @@
     box-shadow: 0 0 0 2px currentColor;
 }
 .jn-pin--done {
-    color: #087f7b;
+    color: #167A85;
     background: radial-gradient(circle, rgba(13, 148, 136, 0.62) 0%, rgba(13, 148, 136, 0.38) 45%, rgba(13, 148, 136, 0) 72%);
 }
 .jn-pin--planned {
@@ -147,7 +147,7 @@
     vertical-align: -1px;
 }
 .jn-dot--done {
-    background: #0d9488;
+    background: #167A85;
 }
 .jn-dot--planned {
     background: #e9c46a;
@@ -168,7 +168,7 @@
     background: #f8fafc;
 }
 .jn-prov--done {
-    border-left-color: #0d9488 !important;
+    border-left-color: #167A85 !important;
 }
 .jn-prov--planned {
     border-left-color: #e9c46a !important;
@@ -232,7 +232,7 @@
     font-style: normal;
     font-size: 12.5px;
     font-weight: 700;
-    color: var(--gx-tqd, #087f7b);
+    color: var(--gx-tqd, #167A85);
 }
 .jn-bar {
     display: block;
@@ -245,7 +245,7 @@
 .jn-bar i {
     display: block;
     height: 100%;
-    background: var(--gx-tq, #0d9488);
+    background: var(--gx-tq, #167A85);
 }
 .jn-badge__n {
     font-variant-numeric: tabular-nums;
@@ -271,7 +271,7 @@
     color: var(--gx-mute, #64748b);
 }
 .jn-trips a:hover b {
-    color: var(--gx-tqd, #087f7b);
+    color: var(--gx-tqd, #167A85);
 }
 
 .jn-empty {
@@ -282,7 +282,7 @@
     display: inline-block;
     padding: 10px 18px;
     border-radius: 99px;
-    background: var(--gx-tqd, #087f7b);
+    background: var(--gx-tqd, #167A85);
     color: #fff;
     font-weight: 600;
     text-decoration: none;
@@ -292,7 +292,7 @@
     filter: brightness(1.08);
 }
 .jn a:focus-visible {
-    outline: 3px solid var(--gx-tqd, #087f7b);
+    outline: 3px solid var(--gx-tqd, #167A85);
     outline-offset: 2px;
 }
 

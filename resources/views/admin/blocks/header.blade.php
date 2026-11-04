@@ -23,10 +23,14 @@
 
     <link href="{{ asset('admin/assets/css/admin-app.css') }}?v={{ @filemtime(public_path('admin/assets/css/admin-app.css')) }}" rel="stylesheet" />
     @stack('styles')
+
     <script>
         // Nhớ trạng thái thu gọn menu trước khi vẽ trang (không bị nháy)
         try { if (localStorage.getItem('ad.nav') === 'sm' && window.innerWidth > 991) document.documentElement.classList.add('ad-pre-sm'); } catch (e) {}
     </script>
+    <link href="{{ asset('admin/assets/css/travela-nature-admin-unified.css') }}?v=bl20261104" rel="stylesheet">
+    {{-- Nature Luxury v4: final admin color system. --}}
+    <link rel="stylesheet" href="{{ asset('admin/assets/css/travela-nature-admin-all-pages.css') }}?v=bl20261104">
 </head>
 
 <body class="nav-md">

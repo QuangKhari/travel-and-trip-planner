@@ -31,7 +31,7 @@
 
     function ask(opts) {
         if (!window.Swal) return Promise.resolve(confirm(opts.text) ? { isConfirmed: true, value: {} } : { isConfirmed: false });
-        return Swal.fire(Object.assign({ icon: "question", showCancelButton: true, cancelButtonText: "Thôi", confirmButtonColor: "#0d9488", reverseButtons: true, focusCancel: false }, opts));
+        return Swal.fire(Object.assign({ icon: "question", showCancelButton: true, cancelButtonText: "Thôi", confirmButtonColor: "#168F99", reverseButtons: true, focusCancel: false }, opts));
     }
 
     var TEXT = {

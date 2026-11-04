@@ -590,7 +590,7 @@ class PlannerController extends Controller
     /** POST /len-ke-hoach/{id}/luu  {title,startDate,days,groupSize,budget,items[]} -> {ok:true} */
     public function save(Request $request, int $id, TripPlanner $planner): JsonResponse
     {
-        $data = $request->validate(TripPlanner::tripRules() + TripPlanner::itemRules() + ['rainPlan' => ['nullable', 'array', 'max:' . TripPlanner::MAX_DAYS], 'rev' => ['nullable', 'integer', 'min:0']]);
+        $data = $request->validate(TripPlanner::tripRules() + TripPlanner::itemRules() + ['rainPlan' => ['nullable', 'array', 'max:' . TripPlanner::MAX_DAYS], 'rev' => [config('planner.require_revision', false) ? 'required' : 'nullable', 'integer', 'min:0']]);
         if (!$request->has('rainPlan')) {
             unset($data['rainPlan']);   // không gửi = giữ nguyên phương án dự phòng đã lưu
         }

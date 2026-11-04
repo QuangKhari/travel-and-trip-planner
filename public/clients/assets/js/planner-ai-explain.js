@@ -11,7 +11,7 @@
     var cfg = {};
     try { cfg = JSON.parse(document.getElementById("aiData").textContent) || {}; } catch (e) { cfg = {}; }
     var state = { loaded: false, busy: false, rev: null };
-    var DAYC = ["#0d6f6a", "#c9583a", "#4c57c9", "#a86a12", "#7a4bb3", "#2f7d32", "#b23a6b"];
+    var DAYC = ["#167A85", "#c9583a", "#4c57c9", "#a86a12", "#7a4bb3", "#2f7d32", "#b23a6b"];
 
     function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 

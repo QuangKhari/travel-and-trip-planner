@@ -1,0 +1,107 @@
+/* TRAVELA BLUE LAGOON REFINED: primary #167A85, lagoon #1FB7C9, mint #9FE3D8, sand #F4D7A1, background #FFFDF8, ink #1E2F33. */
+/* Nature Luxury Refined B (2026-11-04): primary #167A85, sage #9FE3D8, gold #F4D7A1, ivory #FFFDF8, ink #1E2F33. */
+/* Travela Nature Luxury v4 — shared FINAL color layer, client website and planner.
+   Palette: forest #167A85, sage #9FE3D8, champagne #F4D7A1,
+   ivory #FFFDF8, ink #1E2F33. Does not replace status semantics or map tiles.
+   Loaded after the previous unified layer. Page-level overrides use scoped specificity. */
+:root {
+  --travela-lagoon: #1FB7C9;
+  --travela-mint: #9FE3D8;
+  --travela-sand: #F4D7A1;
+
+  --travela-primary:#167A85;--travela-primary-hover:#115D66;--travela-primary-active:#0C4A53;
+  --travela-primary-soft:#EAF9F7;--travela-sage:#9FE3D8;--travela-sage-strong:#56B9B3;
+  --travela-accent:#F4D7A1;--travela-accent-ink:#79501C;--travela-accent-soft:#FFF4E2;
+  --travela-bg:#FFFDF8;--travela-surface:#fff;--travela-text:#1E2F33;
+  --travela-muted:#526A70;--travela-border:#DAECEB;--travela-focus:#8A5A21;
+  --travela-error:#AA423D;--travela-warning:#825616;--travela-success:#246B4A;
+  --travela-radius:14px;--travela-radius-sm:9px;
+  --travela-shadow:0 8px 30px rgba(20,77,86,.08);
+  --primary-color:var(--travela-primary);--secondary-color:var(--travela-accent);
+  --heading-color:var(--travela-text);--base-color:var(--travela-muted);
+  --border-color:var(--travela-border);--lighter-color:var(--travela-primary-soft);
+  --primary-rgb:22,122,133;--secondary-rgb:244,215,161;
+  --tv-teal:var(--travela-primary);--tv-teal-dark:var(--travela-primary-hover);
+  --tv-orange:var(--travela-accent);--tv-sand:var(--travela-accent);
+  --tv-bg:var(--travela-bg);--tv-ink:var(--travela-text);
+  --gx-primary:var(--travela-primary);--gx-accent:var(--travela-accent);
+  --ai-brand:var(--travela-primary);--ai-brand-d:var(--travela-primary-hover);
+  --ai-brand-l:var(--travela-primary-soft);--ai-sand:var(--travela-accent);
+  --ai-sand-l:var(--travela-accent-soft);--ai-ink:var(--travela-text);
+  --ai-mut:var(--travela-muted);--ai-line:var(--travela-border);
+}
+html{accent-color:var(--travela-primary);}
+body.tv-home,body.tv-sea{background-color:var(--travela-bg);color:var(--travela-text);}
+body.tv-home :where(input,select,textarea),body.tv-sea :where(input,select,textarea){accent-color:var(--travela-primary);}
+/* Universal interactive colors, scoped to real client classes rather than global status badges. */
+body.tv-home :is(.theme-btn,.v3-btn--teal,.hh3-go,.nl-button,.btn-primary),
+body.tv-sea :is(.theme-btn,.v3-btn--teal,.hh3-go,.nl-button,.btn-primary,.tp-btn:not(.tp-btn--ghost)){
+  background-color:var(--travela-primary);border-color:var(--travela-primary);color:#fff;
+}
+body.tv-home :is(.theme-btn,.v3-btn--teal,.hh3-go,.nl-button,.btn-primary):hover,
+body.tv-sea :is(.theme-btn,.v3-btn--teal,.hh3-go,.nl-button,.btn-primary,.tp-btn:not(.tp-btn--ghost)):hover{
+  background-color:var(--travela-primary-hover);border-color:var(--travela-primary-hover);color:#fff;
+}
+body.tv-sea :is(.nl-button--secondary,.tp-btn--ghost),body.tv-home .nl-button--secondary{
+  background:var(--travela-primary-soft);border-color:#BAE5DD;color:var(--travela-primary-hover);
+}
+body.tv-sea :is(.nl-button--secondary,.tp-btn--ghost):hover,body.tv-home .nl-button--secondary:hover{
+  background:#E5F8F5;color:var(--travela-primary-active);
+}
+body.tv-home :is(.v3-btn--sand,.bgc-secondary),body.tv-sea :is(.v3-btn--sand,.bgc-secondary){
+  background-color:var(--travela-accent);border-color:var(--travela-accent);color:#3C3529;
+}
+body.tv-home :is(.v3-btn--sand,.bgc-secondary):hover,body.tv-sea :is(.v3-btn--sand,.bgc-secondary):hover{
+  background-color:#DDBB86;border-color:#DDBB86;color:#302718;
+}
+/* Nav, logo, footer and site-wide links: allow legacy layouts to retain geometry. */
+body.tv-home :is(.v3-nav a,.main-menu a,.navigation a,.menu-item a),
+body.tv-sea :is(.v3-nav a,.main-menu a,.navigation a,.menu-item a){text-decoration-thickness:1px;text-underline-offset:3px;}
+body.tv-home :is(.main-menu a,.navigation a):hover,body.tv-sea :is(.main-menu a,.navigation a):hover,
+body.tv-home :is(.main-menu a,.navigation a)[aria-current=page],body.tv-sea :is(.main-menu a,.navigation a)[aria-current=page]{color:var(--travela-primary-hover);}
+body.tv-home :is(.site-footer,.main-footer),body.tv-sea :is(.site-footer,.main-footer){--primary-color:var(--travela-primary);}
+/* Explore, guides, inspiration, search, saved list and journal. */
+body.tv-sea :is(.gx-page,.gx-wrap,.nl-library,.tvp-board,.wcx,.tv3-page),
+body.tv-home :is(.gx-page,.gx-wrap,.nl-library){--primary-color:var(--travela-primary);--secondary-color:var(--travela-accent);--gx-teal:var(--travela-primary);--gx-ink:var(--travela-text);--gx-line:var(--travela-border);}
+body.tv-sea :is(.gx-eyebrow,.hb-eyebrow,.gx-crumb a,.nl-library__actions a,.nl-library__item h2 a,.bk-crumb a){color:var(--travela-primary-hover);}
+body.tv-sea :is(.gx-eyebrow,.hb-eyebrow){letter-spacing:.07em;}
+body.tv-sea :is(.gx-card,.hb-card,.nl-library__item,.nl-library__empty,.nl-library__tour,.nl-library__tray,.bk-card,.bk-summary){border-color:var(--travela-border);}
+body.tv-sea :is(.nl-library__filters a.is-current,.nl-library__filters a[aria-current=page]){background:var(--travela-primary);border-color:var(--travela-primary);color:#fff;}
+body.tv-sea :is(.nl-library__filters a,.nl-library__actions button,.nl-remove){border-color:var(--travela-border);}
+body.tv-sea :is(.nl-library__filters a:hover,.nl-library__actions a:hover){color:var(--travela-primary-hover);}
+body.tv-sea :is(.nl-guide-tools input,.gx-page input[type=search]){background:#fff;border-color:var(--travela-border);color:var(--travela-text);}
+body.tv-sea :is(.nl-guide-tools input,.gx-page input[type=search]):focus{border-color:var(--travela-primary);box-shadow:0 0 0 3px rgba(22,122,133,.14);outline:0;}
+/* Forms and booking: preserve invalid, success, warning classes. */
+body.tv-sea :is(.bk,.wcx,.auth-wrap,.contact-form,.user-profile,.profile-page) :is(input,textarea,select):focus,
+body.tv-home :is(.booking-form,.tour-search) :is(input,textarea,select):focus{
+  border-color:var(--travela-primary);box-shadow:0 0 0 3px rgba(22,122,133,.14);
+}
+body.tv-sea :is(.bk-steps .is-now,.bk-steps [aria-current=step]){color:var(--travela-primary-hover);border-color:var(--travela-sage);}
+body.tv-sea :is(.bk,.wcx) :is(.bk-alert--bad,.is-invalid,.invalid-feedback,.text-danger){--primary-color:var(--travela-error);}
+/* Planner + AI: preserve route hues, conflict markers and contextual status. */
+body.tv-sea .tp{--tp-brand:var(--travela-primary);--tp-brand-d:var(--travela-primary-hover);--tp-brand-l:var(--travela-primary-soft);--tp-ink:var(--travela-text);--tp-mut:var(--travela-muted);--tp-line:var(--travela-border);--tp-bg:var(--travela-bg);}
+body.tv-sea .tp :is(.tpx-overview,.tpux-overview,.tpx-empty,.tpx-mapwrap){border-color:var(--travela-border);}
+body.tv-sea .tp :is(.tpx-side__b.is-on,.tpx-side__b[aria-current=page]){background:var(--travela-primary-soft);color:var(--travela-primary-hover);}
+body.tv-sea .tp :is(.ai-msg--me,.ai-co__icon--send){background-color:var(--travela-primary);color:white;}
+body.tv-sea .tp :is(.ai-co-open,.ai-prop__h,.ai-draft){background-color:var(--travela-accent-soft);color:var(--travela-accent-ink);}
+body.tv-sea .tp :is(.ai-co,.ai-say,.ai-prop,.tp-card,.tpx-stop__card){border-color:var(--travela-border);}
+body.tv-sea .tp .tpx-stop.is-conflict .tpx-stop__card{border-left-color:var(--travela-error);}
+/* Feedback, hierarchy, and keyboard usability. */
+body.tv-home :is(a,button,input,textarea,select,summary,[role=button]):focus-visible,
+body.tv-sea :is(a,button,input,textarea,select,summary,[role=button]):focus-visible{
+  outline:3px solid var(--travela-focus);outline-offset:3px;
+}
+body.tv-home :is(button,input,select,textarea):disabled,
+body.tv-sea :is(button,input,select,textarea):disabled{cursor:not-allowed;}
+body.tv-home :is(.alert-danger,.invalid-feedback,.text-danger,.is-error),
+body.tv-sea :is(.alert-danger,.invalid-feedback,.text-danger,.is-error){color:var(--travela-error);}
+body.tv-home :is(.alert-success,.text-success),body.tv-sea :is(.alert-success,.text-success){color:var(--travela-success);}
+body.tv-home :is(.alert-warning,.text-warning),body.tv-sea :is(.alert-warning,.text-warning){color:var(--travela-warning);}
+@media(max-width:767px){
+ body.tv-home :is(input,select,textarea),body.tv-sea :is(input,select,textarea){font-size:max(16px,1em);}
+ body.tv-home :is(.theme-btn,.nl-button),body.tv-sea :is(.theme-btn,.nl-button){min-height:42px;}
+}
+@media(prefers-reduced-motion:reduce){
+ body.tv-home *,body.tv-home *::before,body.tv-home *::after,
+ body.tv-sea *,body.tv-sea *::before,body.tv-sea *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important;}
+}

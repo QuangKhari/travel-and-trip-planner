@@ -533,11 +533,6 @@ class TripPlanner
         if (!$acc) {
             return false;
         }
-        // Khóa lạc quan: nếu client báo phiên bản đã tải mà trên máy chủ đã khác, có người khác vừa lưu: không ghi đè
-        if (array_key_exists('rev', $f) && $f['rev'] !== null && (int) $f['rev'] !== (int) ($acc['trip']->rev ?? 0)) {
-            $by = app(TripSharing::class)->revision($tripId)['by'];
-            throw new TripConflict((int) ($acc['trip']->rev ?? 0), $by);
-        }
         $days = (int) $f['days'];
         foreach ($items as $i => $it) {
             if (in_array($it['type'], self::CUSTOM_TYPES, true)) {
@@ -561,6 +556,15 @@ class TripPlanner
         $prevExternal = DB::table('tbl_trip_items')->where('tripId', $tripId)->where('source', 'search')->pluck('label')->map(fn($l) => mb_strtolower((string) $l))->all();
 
         DB::transaction(function () use ($tripId, $f, $items, $days, $valid, $userId) {
+            // BẮT BUỘC đọc revision sau khi khóa row: tránh hai request cùng vượt qua check cũ.
+            $current = DB::table('tbl_trips')->where('tripId', $tripId)->lockForUpdate()->first(['rev']);
+            if (!$current) {
+                throw new \Illuminate\Database\Eloquent\ModelNotFoundException('Chuyến đi không tồn tại.');
+            }
+            if (array_key_exists('rev', $f) && $f['rev'] !== null && (int) $f['rev'] !== (int) ($current->rev ?? 0)) {
+                $by = app(TripSharing::class)->revision($tripId)['by'];
+                throw new TripConflict((int) ($current->rev ?? 0), $by);
+            }
             $upd = [
                 'title' => $f['title'],
                 'startDate' => $f['startDate'] ?? null,

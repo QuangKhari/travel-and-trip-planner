@@ -2,7 +2,7 @@
 
 {{-- /explore?inspiration={slug}[&domain=b|t|n] — giao diện "Travel Journal".
      Biến: $inspiration, $destinations, $others, $domain, $domains --}}
-<section class="tvx-hero tvx-card--{{ $inspiration->slug }}">
+<main class="bl-explore-page"><section class="tvx-hero tvx-card--{{ $inspiration->slug }}">
     @if ($inspiration->image)
         <img class="tvx-hero__img" src="{{ $inspiration->image }}" alt="" fetchpriority="high">
     @endif
@@ -18,6 +18,10 @@
         <p class="tvx-hero__eyebrow"><i class="fas {{ $inspiration->icon }}"></i> {{ $inspiration->tagline }}</p>
         <h1 class="tvx-hero__title">{{ $inspiration->name }}</h1>
         <p class="tvx-hero__lead">{{ $inspiration->headline }}</p>
+        <div class="bl-explore-hero-actions">
+            <a href="#explorePlaces" class="bl-btn bl-btn--light">Xem điểm đến <i class="fal fa-arrow-down" aria-hidden="true"></i></a>
+            <a href="{{ route('destinations.list') }}" class="bl-hero-link">Khám phá tất cả điểm đến <i class="fal fa-arrow-right" aria-hidden="true"></i></a>
+        </div>
     </div>
     {{-- mép giấy xé --}}
     <svg class="tvx-hero__tear" viewBox="0 0 1200 30" preserveAspectRatio="none" aria-hidden="true">
@@ -26,7 +30,7 @@
     </svg>
 </section>
 
-<section class="tvx-explore">
+<section class="tvx-explore" id="explorePlaces">
     <div class="container">
         <div class="tvx-bar">
             <div class="tvx-filter" role="group" aria-label="Lọc theo miền">
@@ -37,7 +41,13 @@
                         class="tvx-pill {{ $domain === $code ? 'is-on' : '' }}">{{ $label }}</a>
                 @endforeach
             </div>
-            <p class="tvx-count">{{ $destinations->count() }} điểm đến</p>
+            <div class="bl-explore-tools">
+                <label class="bl-place-search"><i class="fal fa-search" aria-hidden="true"></i>
+                    <span class="sr-only">Tìm nhanh điểm đến trong kết quả</span>
+                    <input type="search" id="blExploreSearch" maxlength="100" autocomplete="off" placeholder="Tìm trong danh sách..." aria-controls="blExploreGrid">
+                </label>
+                <p class="tvx-count" id="blExploreCount" aria-live="polite">{{ $destinations->count() }} điểm đến</p>
+            </div>
         </div>
 
         @if ($destinations->isEmpty())
@@ -49,12 +59,12 @@
                     miền</a>
             </div>
         @else
-            <div class="tvx-journal">
+            <div class="tvx-journal" id="blExploreGrid">
                 @foreach ($destinations as $i => $d)
                     @php
                         $href = $d->tourCount > 0 ? route('tours', ['keyword' => $d->name]) : null;
                     @endphp
-                    <article class="tvx-jcard tvx-card--{{ $inspiration->slug }} {{ $href ? 'has-link' : '' }}"
+                    <article class="tvx-jcard tvx-card--{{ $inspiration->slug }} {{ $href ? 'has-link' : '' }}" data-bl-search="{{ mb_strtolower($d->name . ' ' . $d->province . ' ' . $d->domainName) }}"
                         data-aos="fade-up" data-aos-delay="{{ ($i % 3) * 70 }}" data-aos-duration="700"
                         data-aos-offset="20">
                         <span class="tvx-tape" aria-hidden="true"></span>
@@ -82,6 +92,9 @@
                         <p class="tvx-jplace">{{ $d->province }} · {{ $d->domainName }}</p>
                         <p class="tvx-jdesc">{{ $d->description }}</p>
 
+                        <div class="nl-explore-save">
+                            <button type="button" data-trip-add data-type="destination" data-slug="{{ $d->slug }}" data-name="{{ $d->name }}" data-url="{{ $d->url }}" data-label-off="+ Thêm vào chuyến đi" data-label-on="✓ Đã thêm" aria-pressed="false"><span data-label>+ Thêm vào chuyến đi</span></button>
+                        </div>
                         <div class="tvx-jfoot">
                             <span class="tvx-sticker" title="Mức độ phù hợp với “{{ $inspiration->name }}”"
                                 aria-label="Mức độ phù hợp {{ $d->score }} trên 100">
@@ -102,6 +115,12 @@
                         </div>
                     </article>
                 @endforeach
+            </div>
+            <div class="bl-no-matches" id="blExploreEmpty" hidden>
+                <i class="fal fa-search" aria-hidden="true"></i>
+                <h3>Không có điểm đến khớp từ khóa</h3>
+                <p>Hãy thử từ khóa ngắn hơn hoặc đổi vùng miền.</p>
+                <button type="button" id="blExploreClear" class="bl-btn">Xóa tìm kiếm</button>
             </div>
         @endif
 
@@ -134,5 +153,8 @@
     </div>
 </section>
 
+</main>
+
+<script src="{{ asset('clients/assets/js/blue-lagoon-explore.js') }}?v=1" defer></script>
 @include('clients.blocks.new_letter')
 @include('clients.blocks.footer')

@@ -922,7 +922,7 @@ body.tv-sea .tv-auth {
             rgba(221, 175, 50, 0.2),
             transparent 36%
         ),
-        linear-gradient(160deg, #086b66 0%, #0b9488 58%, #115e59 100%);
+        linear-gradient(160deg, #126F78 0%, #167A85 58%, #115e59 100%);
 }
 body.tv-sea .tv-auth .tv-auth__card {
     display: grid;
@@ -1967,7 +1967,7 @@ body.tv-sea :is(.px-contact, .tc-widget) .tc-row--bot .tc-bubble {
     border-bottom-left-radius: 6px;
 }
 body.tv-sea :is(.px-contact, .tc-widget) .tc-row--user .tc-bubble {
-    background: linear-gradient(135deg, var(--tv-teal), #0b9488);
+    background: linear-gradient(135deg, var(--tv-teal), #167A85);
     color: #fff;
     border-bottom-right-radius: 6px;
 }
@@ -2082,7 +2082,7 @@ body.tv-sea :is(.px-contact, .tc-widget) .tc-input {
 body.tv-sea :is(.px-contact, .tc-widget) .tc-send {
     width: 40px;
     height: 40px;
-    background: linear-gradient(135deg, var(--tv-teal), #0b9488);
+    background: linear-gradient(135deg, var(--tv-teal), #167A85);
     box-shadow: 0 6px 14px rgba(11, 148, 136, 0.35);
 }
 body.tv-sea :is(.px-contact, .tc-widget) .tc-send:hover {
@@ -3264,7 +3264,7 @@ body.tv-sea .tv-auth .sign-in {
     gap: 22px;
     padding: 46px 52px;
     border-radius: 34px;
-    background: linear-gradient(120deg, #086b66 0%, #0b9488 55%, #25c7b5 130%);
+    background: linear-gradient(120deg, #126F78 0%, #167A85 55%, #32C9C9 130%);
     color: #fff;
     overflow: hidden;
     box-shadow: 0 30px 70px rgba(11, 148, 136, 0.32);

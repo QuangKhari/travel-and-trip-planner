@@ -37,7 +37,7 @@
     var DAY_AVAIL = RULES.availableMin;   // sức chứa một ngày (độ dày = phút đã dùng / con số này), cùng DaySchedule
     var DURS = [15, 30, 45, 60, 90, 120, 150, 180, 240, 300, 360, 480];
     var SUGG_TITLE = { tray: "Từ khay chuyến đi", tour: "Tour sắp khởi hành", experience: "Trải nghiệm", food: "Món nên thử", event: "Lễ hội" };
-    var COLORS = ["#0d6f6a", "#c2410c", "#1d4ed8", "#a21caf", "#4d7c0f", "#be123c", "#0e7490", "#92400e", "#4338ca", "#15803d", "#b45309", "#6d28d9", "#0369a1", "#9f1239"];
+    var COLORS = ["#167A85", "#c2410c", "#1d4ed8", "#a21caf", "#4d7c0f", "#be123c", "#0e7490", "#92400e", "#4338ca", "#15803d", "#b45309", "#6d28d9", "#0369a1", "#9f1239"];
     var LIMITS = cfg.limits || { maxDays: 14, maxItems: 80 };
     var DAY_ITEMS_WARN = RULES.itemsWarn || 7, DAY_TRAVEL_WARN_MIN = RULES.travelWarnMin || 180, AUTOSAVE_MS = 2500;
     var SRC = { link: "từ link", map: "chọn trên bản đồ", search: "từ tìm kiếm" };
@@ -158,6 +158,53 @@
         ui.sel = {}; ui.open = {}; ui.opt = null; ui.bal = null;
         renderAll();
     }
+    /* Khôi phục bản nháp sau reload/mất mạng. Chỉ lưu ở trình duyệt hiện tại.
+       Dữ liệu lịch có thể nhạy cảm: không đồng bộ qua máy chủ và xóa sau 7 ngày. */
+    var DRAFT_KEY = "travela:planner:draft:v1:" + String(cfg.me || "guest") + ":" + String(cfg.trip.id);
+    var DRAFT_TTL = 7 * 24 * 60 * 60 * 1000;
+    function backupDraft() {
+        if (RO || !dirty) return;
+        try {
+            localStorage.setItem(DRAFT_KEY, JSON.stringify({
+                version: 1, savedAt: Date.now(), baseRev: rev, snapshot: snap()
+            }));
+        } catch (e) { /* storage đầy/chặn: cơ chế autosave chính vẫn hoạt động */ }
+    }
+    function clearDraft() {
+        try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+    }
+    function restoreDraftIfNeeded() {
+        if (RO) return;
+        var d = null;
+        try { d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); } catch (e) { clearDraft(); return; }
+        if (!d || d.version !== 1 || typeof d.snapshot !== "string" ||
+            !Number.isInteger(d.baseRev) || !Number.isFinite(d.savedAt) ||
+            Date.now() - d.savedAt > DRAFT_TTL || d.savedAt > Date.now() + 60000) {
+            if (d) clearDraft();
+            return;
+        }
+        if (d.snapshot === savedSnap) { clearDraft(); return; }
+        // Khi server đã thay đổi, không tự phục hồi: phải tránh ghi đè của người cộng tác.
+        if (d.baseRev !== rev) {
+            say("Có bản nháp trên máy nhưng chuyến trên máy chủ đã đổi. Chưa khôi phục để tránh ghi đè.", true,
+                [["Bỏ bản nháp", clearDraft]]);
+            return;
+        }
+        if (!window.confirm("Travela tìm thấy lịch chưa lưu từ phiên trước. Khôi phục bản nháp trên thiết bị này?")) return;
+        try {
+            var parsed = JSON.parse(d.snapshot);
+            if (!parsed || !parsed.m || !Array.isArray(parsed.i) || !parsed.r ||
+                parsed.i.length > (LIMITS.maxItems || 80)) throw new Error("invalid draft");
+            restore(d.snapshot);
+            last = snap();
+            markDirty();
+            say("Đã khôi phục bản nháp. Travela sẽ thử lưu lại.");
+        } catch (e) {
+            clearDraft();
+            say("Bản nháp không hợp lệ, đã giữ nguyên dữ liệu từ máy chủ.", true);
+        }
+    }
+
     function clampDays() {
         var n = daysCount();
         items.forEach(function (it) { if (it.day != null && it.day > n) it.day = n; });
@@ -220,6 +267,7 @@
         if (RO) return;
         dirty = true;
         autoFail = false;
+        backupDraft();
         saveState("dirty", "Chưa lưu");
         emit("tp:dirty");
         clearTimeout(timer);
@@ -3443,7 +3491,7 @@
                     }
                     renderWarn();
                     renderSummary();
-                    if (snap() !== sent) { markDirty(); } else { dirty = false; autoFail = false; saveState("saved", "Đã lưu " + (res.j.savedAt || "")); loadServerHealth(); emit("tp:saved", { rev: rev }); }
+                    if (snap() !== sent) { markDirty(); } else { dirty = false; autoFail = false; clearDraft(); saveState("saved", "Đã lưu " + (res.j.savedAt || "")); loadServerHealth(); emit("tp:saved", { rev: rev }); }
                     if ($("tpLastEdit") && res.j.savedAt) $("tpLastEdit").textContent = "Bạn cập nhật lúc " + res.j.savedAt;
                 } else {
                     var errs = res.j && res.j.errors ? Object.keys(res.j.errors).map(function (k) { return res.j.errors[k][0]; }) : [];
@@ -3691,7 +3739,7 @@
         else if (k === "s") { e.preventDefault(); save(true); }
     });
     window.addEventListener("beforeunload", function (e) {
-        if (dirty) { e.preventDefault(); e.returnValue = ""; }
+        if (dirty) { backupDraft(); e.preventDefault(); e.returnValue = ""; }
     });
 
     /* ---------------- cộng tác: thông báo có người vừa sửa, mời bạn đồng hành ---------------- */
@@ -3864,6 +3912,7 @@
     last = snap();
     savedSnap = last;
     renderAll();
+    restoreDraftIfNeeded();
     initMap();
     if (items.length) loadServerHealth();
     var startTab = (location.hash || "").replace("#", "");

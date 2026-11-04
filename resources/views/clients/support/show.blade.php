@@ -3,11 +3,11 @@
 @php $status = \App\Services\SupportTicketService::STATUS; @endphp
 <main class="sp">
     <div class="sp-wrap" style="max-width:820px">
-        <p style="margin:0 0 10px"><a href="{{ route('support.index') }}" style="color:#0d9488">← Tất cả yêu cầu</a></p>
+        <p style="margin:0 0 10px"><a href="{{ route('support.index') }}" style="color:#168F99">← Tất cả yêu cầu</a></p>
         <header class="sp-head">
             <h1>{{ $t->subject }}</h1>
             <p>{{ $t->code }} · <span class="sp-badge sp-badge--{{ $t->status }}" style="margin:0">{{ $status[$t->status][1] ?? $t->status }}</span>
-                @if ($trip) · Chuyến đi: <a href="{{ route('planner.edit', ['id' => $trip->tripId]) }}" style="color:#0d9488">{{ $trip->title }}</a>@endif</p>
+                @if ($trip) · Chuyến đi: <a href="{{ route('planner.edit', ['id' => $trip->tripId]) }}" style="color:#168F99">{{ $trip->title }}</a>@endif</p>
         </header>
         @if (session('error'))<div class="sp-alert" role="alert">{{ session('error') }}</div>@endif
 
@@ -29,7 +29,7 @@
                     <div><button class="sp-btn" type="submit">Gửi</button></div>
                 </form>
             @else
-                <div class="sp-card__b" style="border-top:1px solid #e3ecef;color:#6b8592">Yêu cầu đã đóng. <a href="{{ route('support.index') }}" style="color:#0d9488">Gửi yêu cầu mới</a> nếu bạn cần hỗ trợ thêm.</div>
+                <div class="sp-card__b" style="border-top:1px solid #e3ecef;color:#6b8592">Yêu cầu đã đóng. <a href="{{ route('support.index') }}" style="color:#168F99">Gửi yêu cầu mới</a> nếu bạn cần hỗ trợ thêm.</div>
             @endif
         </section>
     </div>

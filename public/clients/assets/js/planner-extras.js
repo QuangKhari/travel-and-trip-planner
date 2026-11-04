@@ -128,7 +128,7 @@
             pageMargins: [36, 40, 36, 44],
             content: c,
             defaultStyle: { fontSize: 9.5, lineHeight: 1.2 },
-            styles: { h1: { fontSize: 18, bold: true, color: "#0f2f3a" }, h2: { fontSize: 12.5, bold: true, color: "#0d9488", margin: [0, 10, 0, 5] }, th: { bold: true, color: "#557080", fontSize: 8.5 } },
+            styles: { h1: { fontSize: 18, bold: true, color: "#0f2f3a" }, h2: { fontSize: 12.5, bold: true, color: "#168F99", margin: [0, 10, 0, 5] }, th: { bold: true, color: "#557080", fontSize: 8.5 } },
             footer: function (p, n) { return { text: d.site + " · tạo lúc " + d.generatedAt + " · trang " + p + "/" + n, alignment: "center", fontSize: 7.5, color: "#94a3b8", margin: [0, 16, 0, 0] }; },
         };
     }

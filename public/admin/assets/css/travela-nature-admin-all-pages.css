@@ -1,0 +1,23 @@
+/* TRAVELA BLUE LAGOON REFINED: primary #167A85, lagoon #1FB7C9, mint #9FE3D8, sand #F4D7A1, background #FFFDF8, ink #1E2F33. */
+/* Nature Luxury Refined B (2026-11-04): primary #167A85, sage #9FE3D8, gold #F4D7A1, ivory #FFFDF8, ink #1E2F33. */
+/* Travela Nature Luxury v4 — final shared admin color layer.
+   All signed-in admin routes use admin.blocks.header. Semantic danger/warning/success retained. */
+:root{--travela-lagoon:#1FB7C9;--travela-mint:#9FE3D8;--travela-sand:#F4D7A1;--ad-primary:#167A85;--ad-primary-d:#115D66;--ad-primary-l:#E5F8F5;--ad-primary-xl:#EAF9F7;--ad-sand:#F4D7A1;--ad-sand-l:#FFF4E2;--ad-navy:#174A53;--ad-bg:#FFFDF8;--ad-card:#fff;--ad-line:#DAECEB;--ad-text:#1E2F33;--ad-mute:#526A70;--ad-ink:#263F34;--ad-shadow:0 8px 30px rgba(20,77,86,.08);}
+body.nav-md,body.nav-sm{background:#FFFDF8;color:#1E2F33;}
+body.nav-md .right_col,body.nav-sm .right_col{background:#FFFDF8;}
+body.nav-md .ad-wrap,body.nav-sm .ad-wrap{color:#1E2F33;}
+body.nav-md :is(.ad-card,.x_panel,.panel,.card),body.nav-sm :is(.ad-card,.x_panel,.panel,.card){border-color:#DAECEB;box-shadow:var(--ad-shadow);}
+body.nav-md :is(.btn-primary,.ad-btn--primary,.ad-btn-primary),body.nav-sm :is(.btn-primary,.ad-btn--primary,.ad-btn-primary){background:#167A85;border-color:#167A85;color:#fff;}
+body.nav-md :is(.btn-primary,.ad-btn--primary,.ad-btn-primary):hover,body.nav-sm :is(.btn-primary,.ad-btn--primary,.ad-btn-primary):hover{background:#115D66;border-color:#115D66;color:#fff;}
+body.nav-md :is(.btn-warning,.badge-warning),body.nav-sm :is(.btn-warning,.badge-warning){background:#F4D7A1;border-color:#D7BD91;color:#3C3529;}
+body.nav-md :is(.btn-danger,.badge-danger),body.nav-sm :is(.btn-danger,.badge-danger){background:#AA423D;border-color:#AA423D;color:#fff;}
+body.nav-md :is(.table thead,.ad-table thead),body.nav-sm :is(.table thead,.ad-table thead){background:#EAF9F7;color:#1E2F33;}
+body.nav-md :is(.table tbody tr:hover,.ad-table tbody tr:hover),body.nav-sm :is(.table tbody tr:hover,.ad-table tbody tr:hover){background:#F4F8F3;}
+body.nav-md :is(a,button,input,select,textarea,summary,[role=button]):focus-visible,
+body.nav-sm :is(a,button,input,select,textarea,summary,[role=button]):focus-visible{outline:3px solid #8A5A21;outline-offset:3px;}
+body.nav-md :is(.form-control,select,textarea):focus,body.nav-sm :is(.form-control,select,textarea):focus{border-color:#167A85;box-shadow:0 0 0 3px rgba(22,122,133,.14);}
+body.nav-md :is(.invalid-feedback,.text-danger,.alert-danger),body.nav-sm :is(.invalid-feedback,.text-danger,.alert-danger){color:#AA423D;}
+body.nav-md .ad-nav__link.is-on,body.nav-sm .ad-nav__link.is-on{background:#167A85;}
+body.nav-md .ad-side,body.nav-sm .ad-side{background:linear-gradient(180deg,#174A53,#182F26);}
+@media(max-width:767px){body.nav-md :is(.form-control,textarea,select),body.nav-sm :is(.form-control,textarea,select){font-size:16px;}}
+@media(prefers-reduced-motion:reduce){body.nav-md *,body.nav-sm *{transition-duration:.01ms!important;animation-duration:.01ms!important;}}

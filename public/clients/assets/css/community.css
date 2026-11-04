@@ -7,8 +7,8 @@
 
 .cm-filter { display: grid; grid-template-columns: 2fr repeat(4, 1fr) auto; gap: 10px; background: #fff; border: 1px solid #e3ecef; border-radius: 16px; padding: 14px; margin-bottom: 16px; }
 .cm-filter input, .cm-filter select { width: 100%; height: 42px; border: 1px solid #d6e3e7; border-radius: 10px; padding: 0 12px; background: #fff; font-size: 14px; color: #1f3a44; }
-.cm-filter button { height: 42px; padding: 0 18px; border: 0; border-radius: 10px; background: #0d9488; color: #fff; font-weight: 700; }
-.cm-filter button:hover { background: #0f766e; }
+.cm-filter button { height: 42px; padding: 0 18px; border: 0; border-radius: 10px; background: #167A85; color: #fff; font-weight: 700; }
+.cm-filter button:hover { background: #115D66; }
 
 .cm-tabs { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 0 0 18px; }
 .cm-tabs a { padding: 8px 16px; border-radius: 99px; color: #1f3a44; text-decoration: none; font-weight: 600; font-size: 14px; border: 1px solid transparent; }
@@ -20,7 +20,7 @@
 .cm-card { display: flex; flex-direction: column; background: #fff; border: 1px solid #e3ecef; border-radius: 16px; overflow: hidden; color: inherit; text-decoration: none; transition: box-shadow .15s, transform .15s; }
 .cm-card:hover { box-shadow: 0 12px 30px rgba(15, 47, 58, .1); transform: translateY(-2px); color: inherit; }
 .cm-card__ph { aspect-ratio: 16/9; background: #d9ece9 center/cover no-repeat; position: relative; }
-.cm-card__ini { position: absolute; inset: 0; display: grid; place-items: center; font-size: 42px; font-weight: 700; color: #0d9488; }
+.cm-card__ini { position: absolute; inset: 0; display: grid; place-items: center; font-size: 42px; font-weight: 700; color: #167A85; }
 .cm-card__days { position: absolute; left: 10px; top: 10px; padding: 3px 10px; border-radius: 99px; background: rgba(15, 47, 58, .82); color: #fff; font-size: 12.5px; font-weight: 700; }
 .cm-card__b { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
 .cm-card__b h2 { font-size: 16.5px; line-height: 1.35; margin: 0; color: #0f2f3a; }
@@ -51,7 +51,7 @@
 .cm-items { list-style: none; margin: 0; padding: 0; counter-reset: it; }
 .cm-items li { position: relative; padding: 8px 0 8px 36px; border-top: 1px solid #f0f4f6; counter-increment: it; }
 .cm-items li:first-child { border-top: 0; }
-.cm-items li::before { content: counter(it); position: absolute; left: 0; top: 8px; width: 24px; height: 24px; border-radius: 50%; background: #e6f4f2; color: #0d9488; font-size: 12.5px; font-weight: 700; display: grid; place-items: center; }
+.cm-items li::before { content: counter(it); position: absolute; left: 0; top: 8px; width: 24px; height: 24px; border-radius: 50%; background: #e6f4f2; color: #167A85; font-size: 12.5px; font-weight: 700; display: grid; place-items: center; }
 .cm-items .cm-type { font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: #6b8592; display: block; }
 .cm-items a, .cm-items .cm-name { font-weight: 600; color: #0f2f3a; }
 .cm-items small { display: block; color: #6b8592; font-size: 13px; }
@@ -62,8 +62,8 @@
 .cm-box h2 { font-size: 16px; margin: 0 0 10px; }
 .cm-stats { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; gap: 6px; margin-bottom: 12px; }
 .cm-stats b { display: block; font-size: 19px; color: #0f2f3a; } .cm-stats small { color: #6b8592; font-size: 12.5px; }
-.cm-btn { display: inline-flex; justify-content: center; align-items: center; gap: 8px; width: 100%; padding: 11px 16px; border-radius: 11px; border: 0; background: #0d9488; color: #fff; font-weight: 700; text-decoration: none; cursor: pointer; }
-.cm-btn:hover { background: #0f766e; color: #fff; }
+.cm-btn { display: inline-flex; justify-content: center; align-items: center; gap: 8px; width: 100%; padding: 11px 16px; border-radius: 11px; border: 0; background: #167A85; color: #fff; font-weight: 700; text-decoration: none; cursor: pointer; }
+.cm-btn:hover { background: #115D66; color: #fff; }
 .cm-btn--ghost { background: #fff; color: #0f2f3a; border: 1px solid #cfdde2; }
 .cm-btn--ghost:hover { background: #f6faf9; color: #0f2f3a; }
 .cm-btn--ghost.is-on { color: #be123c; border-color: #fecdd3; background: #fff1f2; }

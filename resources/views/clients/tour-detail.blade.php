@@ -420,8 +420,8 @@
                                     .px-deps__list{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
                                     .px-dep{flex:none;cursor:pointer;margin:0}.px-dep input{position:absolute;opacity:0;pointer-events:none}
                                     .px-dep span{display:flex;flex-direction:column;align-items:center;min-width:74px;padding:8px 10px;border:1px solid #d6e3e6;border-radius:12px;background:#fff;line-height:1.25}
-                                    .px-dep b{font-size:15px}.px-dep small{font-size:11px;color:#6b8592}.px-dep em{font-style:normal;font-size:11.5px;color:#0d9488;font-weight:600}
-                                    .px-dep em.is-low{color:#c2410c}.px-dep input:checked+span{border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.15);background:#f0fdfa}
+                                    .px-dep b{font-size:15px}.px-dep small{font-size:11px;color:#6b8592}.px-dep em{font-style:normal;font-size:11.5px;color:#168F99;font-weight:600}
+                                    .px-dep em.is-low{color:#c2410c}.px-dep input:checked+span{border-color:#168F99;box-shadow:0 0 0 3px rgba(13,148,136,.15);background:#f0fdfa}
                                     .px-dep input:focus-visible+span{outline:3px solid rgba(13,148,136,.4)}
                                 </style>
                                 <script>

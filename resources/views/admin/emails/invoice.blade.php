@@ -35,7 +35,7 @@
         </tr>
         <tr>
             <td style="padding:12px 0;border-bottom:1px solid #E2E8F0;font-weight:700;">Tổng thanh toán</td>
-            <td style="padding:12px 0;border-bottom:1px solid #E2E8F0;font-weight:700;font-size:17px;color:#0D9488;">
+            <td style="padding:12px 0;border-bottom:1px solid #E2E8F0;font-weight:700;font-size:17px;color:#168F99;">
                 {{ number_format($invoice_booking->totalPrice, 0, ',', '.') }} VNĐ</td>
         </tr>
         <tr>

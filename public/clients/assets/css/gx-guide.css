@@ -28,11 +28,11 @@
 }
 .hb-card:hover,
 .hb-card:focus-visible {
-    border-color: var(--gx-tq, #0d9488);
+    border-color: var(--gx-tq, #167A85);
     box-shadow: 0 12px 28px rgba(15, 23, 42, 0.1);
     transform: translateY(-2px);
 }
-.hb-card:focus-visible { outline: 3px solid var(--gx-tqd, #087f7b); outline-offset: 2px; }
+.hb-card:focus-visible { outline: 3px solid var(--gx-tqd, #167A85); outline-offset: 2px; }
 .hb-ic {
     flex: 0 0 46px;
     width: 46px;
@@ -57,7 +57,7 @@
     overflow: hidden;
 }
 .hb-more { margin: 14px 0 0; font-weight: 700; }
-.hb-more a, .hb-back a { color: var(--gx-tqd, #087f7b); text-decoration: none; }
+.hb-more a, .hb-back a { color: var(--gx-tqd, #167A85); text-decoration: none; }
 .hb-back { margin: 0 0 14px; font-weight: 600; }
 
 /* ---------- đầu bài: cập nhật lần cuối + nguồn chính thức ---------- */
@@ -164,7 +164,7 @@
     margin: 8px 10px 6px;
     padding: 0;
     background: transparent;
-    color: #087f7b !important;
+    color: #167A85 !important;
     font-weight: 700;
     text-decoration: none;
 }

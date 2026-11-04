@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zxx">
+<html lang="vi">
 
 <head>
     <!-- Required meta tags -->
@@ -19,7 +19,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
     <!-- Title -->
-    <title>TRAVEL - Travel & {{ $title ?? '' }}</title>
+    <title>{{ config('site.name', 'Travela') }} - {{ $title ?? 'Du lịch Việt Nam theo cách riêng' }}</title>
     <!-- Favicon Icon -->
     <link rel="shortcut icon" href="{{ asset('clients/assets/images/logos/favicon.png') }}" type="image/x-icon">
     <!-- Google Fonts -->
@@ -76,9 +76,15 @@
     {{-- Giao diện mới: phải nằm CUỐI <head> --}}
     <link rel="stylesheet" href="{{ asset('clients/assets/css/tv3.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/tv3-home.css') }}?v=5">
+    {{-- Nature Luxury: final shared design layer. Keep after legacy styles. --}}
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-unified.css') }}?v=bl20261104">
+    {{-- Nature Luxury v4: final token/component stylesheet for every client page. --}}
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
 </head>
 
 <body class="tv-home">
     <div class="page-wrapper">
+        <a class="tl-skip" href="#tl-main-start">Bỏ qua menu, đến nội dung chính</a>
 
         @include('clients.blocks.site_header')
+        <span id="tl-main-start" tabindex="-1" class="tl-main-anchor"></span>

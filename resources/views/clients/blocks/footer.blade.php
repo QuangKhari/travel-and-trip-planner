@@ -47,6 +47,7 @@
 @include('clients.blocks.mobile_tabbar')
 @include('clients.blocks.trip_boot')
 
+<script src="{{ asset('clients/assets/js/nature-finish.js') }}?v=1" defer></script>
 </body>
 
 </html>

@@ -1,0 +1,13 @@
+/* Nature Luxury admin functional polish — leave semantic status colors intact. */
+:root{--nl-ad-primary:#167A85;--nl-ad-ink:#1E2F33;--nl-ad-paper:#FFFFFF;--nl-ad-line:#DAECEB;}
+body.nav-md .right_col{background:#FFFDF8;}
+body.nav-md .ad-wrap{color:#1E2F33;}
+body.nav-md :is(.x_panel,.ad-panel,.panel){border-radius:12px;border-color:#DAECEB;box-shadow:0 3px 14px rgba(20,77,86,.04);}
+body.nav-md .table-responsive{overflow-x:auto;}
+body.nav-md :is(button,a,input,select,textarea,summary):focus-visible{outline:3px solid #8A5A21;outline-offset:2px;}
+body.nav-md .ad-nav__link.is-on,body.nav-md .ad-nav__sub.is-on {border-left-color:#F4D7A1;}
+.nl-admin-jump{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:15px 0 20px;padding:14px;background:#EFF4EF;border:1px solid #DCE8DD;border-radius:12px;}
+.nl-admin-jump strong{margin-right:8px;color:#1E2F33;}
+.nl-admin-jump a{display:inline-flex;align-items:center;background:#fff;color:#115D66;border:1px solid #BBD1C0;border-radius:9px;padding:8px 12px;text-decoration:none;font-weight:600;}
+.nl-admin-jump a:hover{background:#167A85;color:#fff;}
+@media(max-width:768px){.nl-admin-jump{align-items:stretch;}.nl-admin-jump strong{width:100%;}}

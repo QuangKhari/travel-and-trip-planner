@@ -5,7 +5,7 @@
     var el = document.getElementById("inv-data");
     if (!el || !window.pdfMake) return;
     var d = JSON.parse(el.textContent);
-    var teal = "#0d9488", ink = "#0f172a", mute = "#64748b", line = "#e2e8f0";
+    var teal = "#168F99", ink = "#0f172a", mute = "#64748b", line = "#e2e8f0";
 
     function doc() {
         var rows = [[{ text: "Hạng mục", style: "th" }, { text: "Số lượng", style: "th", alignment: "right" }, { text: "Đơn giá", style: "th", alignment: "right" }, { text: "Thành tiền", style: "th", alignment: "right" }]];
@@ -64,7 +64,7 @@
             });
         };
         if (!window.Swal) return go();
-        Swal.fire({ title: "Gửi hóa đơn PDF?", html: "Hóa đơn sẽ được gửi tới <b>" + send.dataset.email + "</b>.", icon: "question", showCancelButton: true, confirmButtonText: "Gửi", cancelButtonText: "Thôi", confirmButtonColor: "#0d9488", reverseButtons: true })
+        Swal.fire({ title: "Gửi hóa đơn PDF?", html: "Hóa đơn sẽ được gửi tới <b>" + send.dataset.email + "</b>.", icon: "question", showCancelButton: true, confirmButtonText: "Gửi", cancelButtonText: "Thôi", confirmButtonColor: "#168F99", reverseButtons: true })
             .then(function (r) { if (r.isConfirmed) go(); });
     });
 })();

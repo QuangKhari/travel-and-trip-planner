@@ -6,8 +6,8 @@
 :root {
     --v3-ink: #12333d;
     --v3-mute: #5b7079;
-    --v3-teal: #0b9488;
-    --v3-teal-d: #086b66;
+    --v3-teal: #167A85;
+    --v3-teal-d: #126F78;
     --v3-teal-50: #eaf6f4;
     --v3-teal-100: #d5efea;
     --v3-sand: #f3d878;
@@ -541,7 +541,7 @@ html body .tv-header .tv-burger.is-open span {
     border-radius: var(--v3-r);
     overflow: hidden;
     color: #fff;
-    background: linear-gradient(150deg, #5cc4b6 0%, #0b9488 55%, #12333d 100%);
+    background: linear-gradient(150deg, #5cc4b6 0%, #167A85 55%, #12333d 100%);
     box-shadow: var(--v3-shadow);
 }
 .dc img {

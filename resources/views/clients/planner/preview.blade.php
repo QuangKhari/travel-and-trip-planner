@@ -1,6 +1,8 @@
 @include('clients.blocks.header')
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=21">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-flow.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/nature-luxury-planner.css') }}?v=bl20261104">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 {{-- /len-ke-hoach/de-xuat/xem-truoc. Biến: $r (PlannerService::generate), $query (yêu cầu đã kiểm tra), $empty.
@@ -22,7 +24,7 @@
     $CODE = ['dislike' => 'Bạn không thích', 'difficulty' => 'Vượt độ khó bạn chọn', 'season' => 'Không đúng mùa', 'event_outside_trip' => 'Lễ hội ngoài thời gian đi',
         'no_coords' => 'Chưa có vị trí', 'duplicate' => 'Trùng', 'capacity' => 'Hết chỗ trong ngày', 'budget' => 'Vượt ngân sách', 'hours' => 'Giờ mở cửa',
         'far' => 'Quá xa', 'planner_incomplete' => 'Dữ liệu chưa đủ'];
-    $COLORS = ['#0d6f6a', '#c2410c', '#1d4ed8', '#a21caf', '#4d7c0f', '#be123c', '#0e7490'];
+    $COLORS = ['#167A85', '#c2410c', '#1d4ed8', '#a21caf', '#4d7c0f', '#be123c', '#0e7490'];
     $logByCode = collect($plan['filterLog'])->groupBy('code');
     $start = $req['startDate'] ? \Carbon\Carbon::parse($req['startDate']) : null;
     $b = $plan['budget'];

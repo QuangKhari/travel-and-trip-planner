@@ -9,8 +9,8 @@
 .tvp#tvpDest {
     --wc-paper: #f7f5ef;
     --wc-paper-light: #fcfbf7;
-    --wc-teal: #087f7b;
-    --wc-teal-dark: #075e5b;
+    --wc-teal: #167A85;
+    --wc-teal-dark: #115D66;
     --wc-sage: #dceae1;
     --wc-mist: #e5f1ee;
     --wc-sky: #dcebf0;
@@ -584,9 +584,9 @@
 
 /* Nút đang chọn phải được nhận diện rõ */
 #tvpDest .tvp-chip[aria-pressed="true"] {
-    background: #087f7b;
+    background: #167A85;
     color: #fff;
-    border-color: #087f7b;
+    border-color: #167A85;
 }
 
 /* Tab bản đồ cũng phải dễ thao tác */

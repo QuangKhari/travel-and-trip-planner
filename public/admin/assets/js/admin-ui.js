@@ -37,7 +37,7 @@
                     showCancelButton: true,
                     confirmButtonText: "Đồng ý",
                     cancelButtonText: "Hủy",
-                    confirmButtonColor: "#0d9488",
+                    confirmButtonColor: "#168F99",
                     reverseButtons: true,
                 }).then(function (r) {
                     if (r.isConfirmed) go();

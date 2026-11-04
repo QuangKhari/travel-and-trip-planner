@@ -100,7 +100,7 @@
     <link rel="stylesheet" href="{{ asset('clients/assets/css/travel-theme.css') }}?v=2">
     {{-- SEA THEME: giao diện biển cho các trang con. Phải nằm SAU travel-theme.css --}}
     <link rel="stylesheet" href="{{ asset('clients/assets/css/sea-theme.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/client-ui-polish.css') }}?v=4">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/client-ui-polish.css') }}?v=5">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/travel-pages.css') }}?v=2">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/inspiration.css') }}?v=2">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-pages.css') }}?v=1">
@@ -126,10 +126,19 @@
         window.GX_SEARCH = {suggest: @json(url('/api/v1/search/suggest')), page: @json(route('site.search')), tours: @json(route('tours'))};
     </script>
     <script src="{{ asset('clients/assets/js/guide-search.js') }}?v=1" defer></script>
+    {{-- Nature Luxury: final shared design layer. Keep after legacy styles. --}}
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-unified.css') }}?v=bl20261104">
+    {{-- Nature Luxury v4: final token/component stylesheet for every client page. --}}
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
+    @if (request()->is('tours') || request()->is('diem-den') || request()->is('explore'))
+        <link rel="stylesheet" href="{{ asset('clients/assets/css/blue-lagoon-tour-explore.css') }}?v=4">
+        <link rel="stylesheet" href="{{ asset('clients/assets/css/blue-lagoon-layout-fix.css') }}?v=1">
+    @endif
 </head>
 
 <body class="tv-sea page-{{ str_replace('.', '-', request()->route()?->getName() ?? 'page') }}">
     <div class="page-wrapper">
+        <a class="tl-skip" href="#tl-main-start">Bỏ qua menu, đến nội dung chính</a>
 
         <!-- Preloader -->
         <div class="preloader">
@@ -138,3 +147,4 @@
 
         <!-- main header -->
         @include('clients.blocks.site_header', ['solid' => true])
+        <span id="tl-main-start" tabindex="-1" class="tl-main-anchor"></span>

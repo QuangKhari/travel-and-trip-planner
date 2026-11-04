@@ -23,7 +23,7 @@
     var $ = function (id) { return document.getElementById(id); };
     var feed = $("aiCoFeed"), form = $("aiCoForm"), q = $("aiCoQ"), chipsBox = $("aiCoChips"), sugBox = $("aiCoSug"),
         busyBox = $("aiCoBusy"), busyT = $("aiCoBusyT"), pickBtn = $("aiCoPick"), ctxBox = $("aiCoCtx"), draft = $("aiDraft");
-    var DAYC = ["#0d6f6a", "#c9583a", "#4c57c9", "#a86a12", "#7a4bb3", "#2f7d32", "#b23a6b"];
+    var DAYC = ["#167A85", "#c9583a", "#4c57c9", "#a86a12", "#7a4bb3", "#2f7d32", "#b23a6b"];
     var OPN = { move: "chuyển", time: "giờ", reorder: "xếp lại", replace: "thay", add: "thêm", rainplan: "dự phòng" };
     var st = { open: false, busy: false, ctl: null, t0: 0, tick: null, history: [], mentions: [], cur: null, picking: false, health: null, greeted: false, editedWhileBusy: false };
 
@@ -34,7 +34,7 @@
     function mark() {
         var s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         s.setAttribute("viewBox", "0 0 24 24");
-        s.innerHTML = '<circle cx="12" cy="12" r="9.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 4.5 14.2 12 12 19.5 9.8 12Z" fill="#e9a23b"/><path d="M12 12 14.2 12 12 19.5Z" fill="#0d6f6a"/>';
+        s.innerHTML = '<circle cx="12" cy="12" r="9.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 4.5 14.2 12 12 19.5 9.8 12Z" fill="#e9a23b"/><path d="M12 12 14.2 12 12 19.5Z" fill="#167A85"/>';
         var w = el("span", "ai-mark ai-mark--sm");
         w.setAttribute("aria-hidden", "true");
         w.appendChild(s);
@@ -49,9 +49,17 @@
     }
 
     /* ---------------- mở / đóng ---------------- */
+    var focusOrigin = null;
+    function focusableInDrawer() {
+        return Array.prototype.filter.call(drawer.querySelectorAll('button:not([disabled]), input:not([disabled]), a[href], textarea:not([disabled]), [tabindex="0"]'), function (node) {
+            return !node.hidden && node.getClientRects().length > 0;
+        });
+    }
     function setOpen(on) {
+        if (on && !st.open) focusOrigin = document.activeElement;
         st.open = on;
         drawer.hidden = !on;
+        drawer.setAttribute('aria-modal', on && small() ? 'true' : 'false');
         document.documentElement.classList.toggle("ai-co-on", on);
         ["aiCoOpen", "aiCoOpen2"].forEach(function (id) { if ($(id)) $(id).setAttribute("aria-expanded", String(on)); });
         if (on) {
@@ -61,7 +69,9 @@
             setTimeout(function () { q.focus(); }, 30);
         } else {
             setPicking(false);
+            if (focusOrigin && focusOrigin.isConnected && typeof focusOrigin.focus === 'function') focusOrigin.focus();
         }
+        document.dispatchEvent(new CustomEvent('travela:copilot', { detail: { open: on } }));
     }
     ["aiCoOpen", "aiCoOpen2"].forEach(function (id) { if ($(id)) $(id).addEventListener("click", function () { setOpen(!st.open); }); });
     /** Desktop: ngăn nằm ĐÚNG trên cột bản đồ (cột này dính khi cuộn), không che thanh công cụ / lịch. Điện thoại: CSS toàn màn hình. */
@@ -84,8 +94,18 @@
     window.addEventListener("resize", fitSoon);
     $("aiCoClose").addEventListener("click", function () { setOpen(false); });
     document.addEventListener("keydown", function (e) {
-        if (e.key !== "Escape" || !st.open) return;
-        if (st.picking) setPicking(false); else setOpen(false);
+        if (!st.open) return;
+        if (e.key === 'Tab' && small()) {
+            var list = focusableInDrawer();
+            if (!list.length) { e.preventDefault(); drawer.focus(); return; }
+            var first = list[0], last = list[list.length - 1];
+            if (e.shiftKey && (document.activeElement === first || document.activeElement === drawer)) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+            return;
+        }
+        if (e.key === 'Escape') {
+            if (st.picking) setPicking(false); else setOpen(false);
+        }
     });
 
     /* ---------------- bối cảnh + gợi ý bắt đầu (lấy từ Sức khỏe chuyến đi, không phải câu chung chung) ---------------- */

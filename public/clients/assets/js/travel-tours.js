@@ -16,7 +16,8 @@
 
     var results = $("#tvResults"),
         countEl = $("#tvCount"),
-        activeEl = $("#tvActive");
+        activeEl = $("#tvActive"),
+        quickMsg = $("#tvQuickMsg");
     var form = $("#tvSearchForm"),
         kwInput = $("#tvKeyword"),
         kwClear = $("#tvKeywordClear");
@@ -93,6 +94,23 @@
             }[c];
         });
     };
+    function flash(el) {
+        if (!el) return;
+        el.classList.remove('is-spotlight');
+        void el.offsetWidth;
+        el.classList.add('is-spotlight');
+        window.setTimeout(function(){ el.classList.remove('is-spotlight'); }, 1300);
+    }
+    function say(msg) {
+        if (!quickMsg) return;
+        quickMsg.textContent = msg || '';
+        if (msg) flash(quickMsg);
+    }
+    function smoothTo(el, gap) {
+        if (!el) return;
+        var top = el.getBoundingClientRect().top + window.pageYOffset - (gap || 110);
+        window.scrollTo({ top: top, behavior: 'smooth' });
+    }
 
     /* ---------- query string ---------- */
     function toQuery(withPage) {
@@ -355,6 +373,35 @@
                 apply();
             } else if (act === "open-filter") openFilter();
             else if (act === "close-filter") closeFilter();
+            return;
+        }
+
+        var qa = t.closest("[data-quick-action]");
+        if (qa) {
+            var action = qa.dataset.quickAction;
+            if (action === 'focus-cats') {
+                var cats = document.querySelector('.tr-cats');
+                smoothTo(cats, 120);
+                flash(cats);
+                say('Đã chuyển đến bộ lọc cảm hứng. Hãy chọn kiểu hành trình bạn muốn.');
+            } else if (action === 'saved-tours') {
+                var savedShelf = document.getElementById('uxSaved');
+                if (savedShelf && !savedShelf.hidden) {
+                    smoothTo(savedShelf, 100);
+                    flash(savedShelf);
+                    say('Đây là danh sách tour bạn đã lưu trên trình duyệt này.');
+                } else {
+                    var firstHeart = document.querySelector('.trc-heart');
+                    if (firstHeart) flash(firstHeart.closest('.trc'));
+                    smoothTo(results, 120);
+                    say('Bạn chưa lưu tour nào. Hãy bấm biểu tượng tim trên thẻ tour để xem lại sau.');
+                }
+            } else if (action === 'soon') {
+                if (state.sort !== 'soon') state.sort = 'soon';
+                state.page = 1;
+                load({ scroll: true });
+                say('Đang ưu tiên hiển thị các tour khởi hành sớm nhất.');
+            }
             return;
         }
 

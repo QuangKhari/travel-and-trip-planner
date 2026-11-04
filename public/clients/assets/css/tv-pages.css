@@ -8,8 +8,8 @@
     --p-card: #fff;
     --p-ink: #173b3a;
     --p-soft: #4e6b69;
-    --p-teal: #16a6a1;
-    --p-teal-d: #087f7b;
+    --p-teal: #1FB7C9;
+    --p-teal-d: #167A85;
     --p-sand: #d9a441;
     --p-line: #e3ddcc;
     --p-mist: #e6f3f1;
@@ -1248,7 +1248,7 @@
 .tvp-vnwrap .tvx-map__vn {
     fill: url(#tvpLand);
 
-    stroke: #087f7b;
+    stroke: #167A85;
     stroke-opacity: 0.42;
     stroke-width: 1.35;
     stroke-linejoin: round;
@@ -1256,7 +1256,7 @@
     filter: url(#tvpRoughMap) drop-shadow(0 8px 12px rgba(23, 59, 58, 0.05));
 }
 .tvp-vnwrap .tvx-map__dot {
-    fill: #16a6a1;
+    fill: #1FB7C9;
     opacity: 0.75;
 }
 .tvp-vnwrap .tvx-map__lbl {
@@ -1267,7 +1267,7 @@
     font: 700 30px var(--p-script);
     letter-spacing: 0.22em;
     text-anchor: middle;
-    fill: #16a6a1;
+    fill: #1FB7C9;
     opacity: 0.4;
 }
 .tvp-route {

@@ -11,7 +11,7 @@
     .pq dl { margin: 0 0 16px; display: grid; grid-template-columns: 130px 1fr auto; gap: 8px 12px; align-items: center; }
     .pq dt { color: #6b8592; font-size: 14px; }
     .pq dd { margin: 0; font-weight: 700; color: #0f2f3a; word-break: break-all; }
-    .pq dd.pq-amt { color: #0d9488; font-size: 20px; }
+    .pq dd.pq-amt { color: #168F99; font-size: 20px; }
     .pq-copy { border: 1px solid #cfdde2; background: #fff; border-radius: 8px; padding: 4px 10px; font-size: 12.5px; color: #0f2f3a; cursor: pointer; }
     .pq-copy:hover { background: #f4fbfa; }
     .pq-note { padding: 10px 14px; border-radius: 12px; background: #fffbeb; border: 1px solid #fde68a; color: #78350f; font-size: 13.5px; margin: 0 0 14px; }
@@ -22,7 +22,7 @@
     @keyframes pq-pulse { 50% { opacity: .25; } }
     @media (prefers-reduced-motion: reduce) { .pq-dot { animation: none; } }
     .pq-acts { display: flex; gap: 10px; flex-wrap: wrap; }
-    .pq-btn { display: inline-flex; padding: 10px 18px; border-radius: 10px; background: #0d9488; color: #fff; font-weight: 700; text-decoration: none; }
+    .pq-btn { display: inline-flex; padding: 10px 18px; border-radius: 10px; background: #168F99; color: #fff; font-weight: 700; text-decoration: none; }
     .pq-btn:hover { background: #0f766e; color: #fff; }
     .pq-btn--ghost { background: #fff; color: #0f2f3a; border: 1px solid #cfdde2; }
     .pq-btn--ghost:hover { background: #f4fbfa; color: #0f2f3a; }

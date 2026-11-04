@@ -68,7 +68,7 @@
             <div class="tvf3-brand">
                 <a href="{{ route('home') }}" class="tvf3-logo" aria-label="Trang chủ {{ config('site.name') }}">
                     <svg viewBox="0 0 40 40" aria-hidden="true">
-                        <rect width="40" height="40" rx="13" fill="#25C7B5" />
+                        <rect width="40" height="40" rx="13" fill="#32C9C9" />
                         <circle cx="26" cy="14" r="5" fill="#DDAF32" />
                         <path d="M6 25c4-4 7-4 11 0s7 4 11 0 5-3 6-2v5c-1-1-2-1-6 2s-7 3-11 0-7-4-11 0z"
                             fill="#fff" />

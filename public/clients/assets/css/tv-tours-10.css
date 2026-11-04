@@ -7,8 +7,8 @@
 
 /* ---------- 0. Biến ---------- */
 :root {
-    --wt-teal: #16a6a1; /* hành động nhẹ, đường nét, trang trí (KHÔNG dùng làm chữ trên nền sáng) */
-    --wt-teal-d: #087f7b; /* nút chính, link, chữ nhấn (đủ tương phản 4.5:1 với trắng) */
+    --wt-teal: #1FB7C9; /* hành động nhẹ, đường nét, trang trí (KHÔNG dùng làm chữ trên nền sáng) */
+    --wt-teal-d: #167A85; /* nút chính, link, chữ nhấn (đủ tương phản 4.5:1 với trắng) */
     --wt-ink: #173b3a; /* chữ chính */
     --wt-mute: #4f6f6d; /* chữ phụ (đạt 4.5:1 trên kem) */
     --wt-sand: #e9c46a; /* vàng cát: điểm nhấn, KHÔNG làm chữ */

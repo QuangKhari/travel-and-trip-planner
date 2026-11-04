@@ -180,6 +180,17 @@ class Week13SharingTest extends TestCase
         $this->assertSame(2, (int) DB::table('tbl_trips')->where('tripId', $id)->value('rev'));
     }
 
+    public function test_strict_revision_mode_rejects_missing_rev_and_keeps_saved_data(): void
+    {
+        config()->set('planner.require_revision', true);
+        $id = $this->trip();
+        $this->actAs($this->owner)->postJson("/len-ke-hoach/$id/luu", $this->body(['title' => 'Không phiên bản']))
+            ->assertStatus(422)->assertJsonValidationErrors('rev');
+        $this->assertSame('Chuyến chung', DB::table('tbl_trips')->where('tripId', $id)->value('title'));
+        $this->actAs($this->owner)->postJson("/len-ke-hoach/$id/luu", $this->body(['title' => 'Bản đã lưu', 'rev' => 0]))
+            ->assertOk()->assertJsonPath('rev', 1);
+    }
+
     public function test_members_list_hides_emails_from_non_owners(): void
     {
         $id = $this->trip();

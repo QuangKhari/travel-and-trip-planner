@@ -2,6 +2,8 @@
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=21">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-flow.css') }}?v=3">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/nature-luxury-planner.css') }}?v=bl20261104">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
 
 {{-- /len-ke-hoach/de-xuat. Biến: $dests (điểm đến lõi + mức sẵn sàng), $allDests (mọi điểm đến cho ô "Đi đâu?"), $pre (điền sẵn),
      $notReady (điểm đến đang chọn chưa đủ dữ liệu), $unknown (nơi người dùng gõ mà Travela chưa có), $openMode (bật đề xuất mở rộng).
@@ -32,7 +34,7 @@
                  Không có JS thì form vẫn gửi ?q= như cũ (SearchIntent điền sẵn). --}}
             <form method="GET" action="{{ route('planner.suggest') }}" class="ai-say" id="aiSay" aria-labelledby="aiSayH">
                 <div class="ai-say__head">
-                    <span class="ai-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.6"/><path d="M12 4.5 14.2 12 12 19.5 9.8 12Z" fill="#e9a23b"/><path d="M12 12 14.2 12 12 19.5Z" fill="#0d6f6a"/></svg></span>
+                    <span class="ai-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.6"/><path d="M12 4.5 14.2 12 12 19.5 9.8 12Z" fill="#e9a23b"/><path d="M12 12 14.2 12 12 19.5Z" fill="#167A85"/></svg></span>
                     <label id="aiSayH" for="aiText">Kể chuyến đi bằng một câu</label>
                     <span class="ai-say__mode" id="aiMode">{{ $aiOn ? 'La bàn đọc giúp bạn' : 'Chế độ cơ bản' }}</span>
                 </div>

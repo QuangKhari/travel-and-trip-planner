@@ -8,18 +8,18 @@
             <svg class="px-brand__mark" viewBox="0 0 40 40" aria-hidden="true">
                 <defs>
                     <linearGradient id="pxBrandG" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0" stop-color="#25C7B5" />
-                        <stop offset="1" stop-color="#0B9488" />
+                        <stop offset="0" stop-color="#9FE3D8" />
+                        <stop offset="1" stop-color="#167A85" />
                     </linearGradient>
                 </defs>
                 <rect width="40" height="40" rx="13" fill="url(#pxBrandG)" />
-                <circle cx="26" cy="14" r="5" fill="#DDAF32" />
+                <circle cx="26" cy="14" r="5" fill="#F4D7A1" />
                 <path d="M6 25c4-4 7-4 11 0s7 4 11 0 5-3 6-2v5c-1-1-2-1-6 2s-7 3-11 0-7-4-11 0z" fill="#fff"
                     opacity=".95" />
                 <path d="M6 32c4-4 7-4 11 0s7 4 11 0 5-3 6-2v3c-1-1-2-1-6 2s-7 3-11 0-7-4-11 0z" fill="#fff"
                     opacity=".55" />
             </svg>
-            <span class="px-brand__name">{{ config('site.name', 'Travel') }}</span>
+            <span class="px-brand__name">{{ config('site.name', 'Travela') }}</span>
         </a>
 
         <nav class="tv-nav" id="tvNav" aria-label="Menu chính">
@@ -130,9 +130,12 @@
                         <a href="{{ route('user-profile') }}"><i class="bx bx-user"></i><span>Thông tin cá
                                 nhân</span></a>
                         <a href="{{ route('my-tours') }}"><i class="bx bx-map"></i><span>Tour đã đặt</span></a>
+                        <a href="{{ route('saved.collection') }}"><i class="bx bx-bookmark-heart"></i><span>Danh sách
+                                đã lưu</span></a>
                         <a href="{{ route('journal') }}"><i class="bx bx-book-open"></i><span>Sổ tay du
                                 hành</span></a>
-                        <a href="{{ route('support.index') }}"><i class="bx bx-support"></i><span>Hỗ trợ tư vấn</span></a>
+                        <a href="{{ route('support.index') }}"><i class="bx bx-support"></i><span>Hỗ trợ tư
+                                vấn</span></a>
                         <form action="{{ route('logout') }}" method="POST">
                             @csrf
                             <button type="submit"><i class="bx bx-log-out"></i><span>Đăng xuất</span></button>

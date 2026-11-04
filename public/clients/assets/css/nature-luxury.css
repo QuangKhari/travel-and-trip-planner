@@ -1,0 +1,221 @@
+/* Travela Nature Luxury • v1 • global client design system
+ * Loaded last from both client headers. The original styles remain untouched.
+ * Accessibility: primary on white ≈ 5.9:1; body text on ivory ≈ 10:1.
+ */
+:root {
+  --nl-primary: #167A85;
+  --nl-primary-hover: #115D66;
+  --nl-primary-active: #0C4A53;
+  --nl-sage: #9FE3D8;
+  --nl-sage-soft: #EAF9F7;
+  --nl-champagne: #F4D7A1;
+  --nl-champagne-soft: #FFF4E2;
+  --nl-gold-ink: #79501C;
+  --nl-ivory: #FFFDF8;
+  --nl-paper: #FFFFFF;
+  --nl-ink: #1E2F33;
+  --nl-muted: #526A70;
+  --nl-line: #DAECEB;
+  --nl-danger: #AA423D;
+  --nl-success: #246B4A;
+  --nl-warning: #825616;
+  --nl-focus: #8A5A21;
+  --nl-shadow: 0 8px 30px rgba(20,77,86, .08);
+  --nl-shadow-raised: 0 16px 40px rgba(20,77,86, .14);
+  --nl-radius: 16px;
+
+  /* Legacy design system aliases: override at the leaf so all pages inherit them. */
+  --tv-teal: var(--nl-primary);
+  --tv-teal-2: #56B9B3;
+  --tv-teal-dark: var(--nl-primary-hover);
+  --tv-orange: var(--nl-champagne);
+  --tv-orange-2: var(--nl-champagne-soft);
+  --tv-navy: #183D45;
+  --tv-bg: var(--nl-ivory);
+  --tv-card: var(--nl-paper);
+  --tv-ink: var(--nl-ink);
+  --tv-mute: var(--nl-muted);
+  --tv-line: var(--nl-line);
+  --tv-sand: var(--nl-champagne);
+  --tv-sand-dark: var(--nl-gold-ink);
+  --tv-sand-light: var(--nl-champagne-soft);
+  --tv-on-sand: #3E301B;
+  --tv-nature: var(--nl-primary);
+  --tv-forest: var(--nl-primary-hover);
+  --tv-grad-teal: linear-gradient(135deg, #2497A2, var(--nl-primary));
+  --tv-grad-orange: linear-gradient(135deg, #F6E1BA, var(--nl-champagne));
+  --tv-shadow: var(--nl-shadow);
+  --tv-shadow-lg: var(--nl-shadow-raised);
+  --v3-ink: var(--nl-ink);
+  --v3-mute: var(--nl-muted);
+  --v3-teal: var(--nl-primary);
+  --v3-teal-d: var(--nl-primary-hover);
+  --v3-teal-50: var(--nl-sage-soft);
+  --v3-teal-100: #E5F8F4;
+  --v3-sand: var(--nl-champagne);
+  --v3-gold: #9B753D;
+  --v3-bg: var(--nl-ivory);
+  --v3-line: var(--nl-line);
+  --v3-shadow: var(--nl-shadow);
+  --v3-shadow-lg: var(--nl-shadow-raised);
+}
+body.tv-sea, body.tv-home {
+  --primary-color: var(--nl-primary);
+  --secondary-color: var(--nl-champagne);
+  --heading-color: var(--nl-ink);
+  --base-color: var(--nl-muted);
+  --lighter-color: var(--nl-sage-soft);
+  --border-color: var(--nl-line);
+  --primary-rgb: 22,122,133;
+  --secondary-rgb: 244,215,161;
+  background: var(--nl-ivory);
+  color: var(--nl-ink);
+  font-family: "Be Vietnam Pro", system-ui, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+body.tv-sea :is(h1,h2,h3,h4,h5,h6), body.tv-home :is(h1,h2,h3,h4,h5,h6) {
+  color: var(--nl-ink);
+  text-wrap: balance;
+}
+body.tv-sea :is(p,li), body.tv-home :is(p,li) { overflow-wrap: break-word; }
+body.tv-sea :is(a,button,input,select,textarea,summary):focus-visible,
+body.tv-home :is(a,button,input,select,textarea,summary):focus-visible {
+  outline: 3px solid var(--nl-focus);
+  outline-offset: 3px;
+}
+body.tv-sea :is(input,select,textarea):not([type=checkbox]):not([type=radio]),
+body.tv-home :is(input,select,textarea):not([type=checkbox]):not([type=radio]) {
+  accent-color: var(--nl-primary);
+}
+body.tv-sea :is(input,select,textarea)::placeholder,
+body.tv-home :is(input,select,textarea)::placeholder { color: #66766E; opacity: 1; }
+body.tv-sea :is(button,a), body.tv-home :is(button,a) { -webkit-tap-highlight-color: rgba(22,122,133,.14); }
+::selection { background: #E8F8F5; color: var(--nl-primary-hover); }
+
+/* Public site: primary/secondary CTAs and cards. */
+body.tv-sea :is(.theme-btn,.v3-btn--teal,.trc-btn,.hh3-go),
+body.tv-home :is(.theme-btn,.v3-btn--teal,.hh3-go) {
+  background: var(--nl-primary);
+  border-color: var(--nl-primary);
+  color: #fff;
+  box-shadow: 0 5px 15px rgba(20,77,86,.14);
+  transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+body.tv-sea :is(.theme-btn,.v3-btn--teal,.trc-btn):hover,
+body.tv-home :is(.theme-btn,.v3-btn--teal,.hh3-go):hover {
+  background: var(--nl-primary-hover);
+  border-color: var(--nl-primary-hover);
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(20,77,86,.2);
+}
+body.tv-sea :is(.v3-btn--sand,.theme-btn.bgc-secondary),
+body.tv-home :is(.v3-btn--sand,.theme-btn.bgc-secondary) {
+  background: var(--nl-champagne);
+  color: #3C3529;
+  border-color: var(--nl-champagne);
+  box-shadow: none;
+}
+body.tv-sea :is(.v3-btn--sand,.theme-btn.bgc-secondary):hover,
+body.tv-home :is(.v3-btn--sand,.theme-btn.bgc-secondary):hover {
+  background: #F6DCAB;
+  border-color: #F6DCAB;
+  color: #3C3529;
+}
+body.tv-sea :is(.v3-btn--line,.v3-btn--ghost),body.tv-home :is(.v3-btn--line,.v3-btn--ghost) {
+  border-color: #BFE7DF;
+  color: var(--nl-primary-hover);
+}
+body.tv-sea :is(.v3-btn--line,.v3-btn--ghost):hover,
+body.tv-home :is(.v3-btn--line,.v3-btn--ghost):hover { background: var(--nl-sage-soft); }
+body.tv-sea :is(.trc-card,.dc-card,.v3-card,.tv-card),
+body.tv-home :is(.trc-card,.dc-card,.v3-card,.tv-card) {
+  border-color: var(--nl-line);
+  box-shadow: var(--nl-shadow);
+}
+body.tv-sea :is(.trc-card,.dc-card,.v3-card):hover,
+body.tv-home :is(.trc-card,.dc-card,.v3-card):hover { box-shadow: var(--nl-shadow-raised); }
+
+/* Home: preserve travel photography, use restrained overlay and fewer harsh transitions. */
+.tv-home .hh3 { background: #DFE7DD; }
+.tv-home .hh3-veil { background: linear-gradient(90deg, rgba(27,51,43,.74), rgba(20,77,86,.28) 67%, rgba(20,77,86,.06)); }
+.tv-home :is(.hh3-text h1,.hh3-text h2) { color: #fff; text-shadow: 0 2px 18px rgba(10,25,18,.25); }
+.tv-home .hh3-sub { color: #F4F6F1; }
+.tv-home .hh3-go { border-radius: 12px; }
+
+/* Shared header / footer. Champagne is decorative, never used for small text on white. */
+body.tv-sea .tvf,body.tv-home .tvf {
+  --f-navy: #183F46;
+  --f-navy2: #1B322A;
+  --f-tq: #B9D0C1;
+  --f-sand: #E4CBA1;
+  background: radial-gradient(900px 400px at 85% -10%,rgba(145,178,161,.13),transparent 63%),linear-gradient(180deg,#183F46,#1B322A);
+}
+body.tv-sea .tvf-cta,body.tv-home .tvf-cta {
+  background: linear-gradient(120deg,#167A85,#115D66);
+  box-shadow: 0 15px 34px rgba(30,57,43,.19);
+}
+body.tv-sea .tvf-col h3,body.tv-home .tvf-col h3 { color: #F0DBB5; }
+body.tv-sea .tvf-brand p,body.tv-home .tvf-brand p { color: #D1E1D6; }
+body.tv-sea .tvf .tvf-btn--sand,body.tv-home .tvf .tvf-btn--sand { background: var(--nl-champagne); color: #3C3529; }
+
+/* Accessibility, loading, form and touch affordance. Avoid overriding icon-only dimensions. */
+body.tv-sea :is(button,[role=button],.theme-btn), body.tv-home :is(button,[role=button],.theme-btn) { touch-action: manipulation; }
+body.tv-sea :is(button,a)[disabled],body.tv-home :is(button,a)[disabled] { cursor: not-allowed; }
+body.tv-sea :is(input,textarea,select):focus-visible,body.tv-home :is(input,textarea,select):focus-visible {
+  border-color: var(--nl-primary);
+}
+@media (max-width:767px) {
+  body.tv-sea :is(input,textarea,select),body.tv-home :is(input,textarea,select) { font-size: max(16px, 1em); }
+  body.tv-sea :is(.v3-wrap,.container),body.tv-home :is(.v3-wrap,.container) { max-width:100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.tv-sea *,body.tv-sea *::before,body.tv-sea *::after,
+  body.tv-home *,body.tv-home *::before,body.tv-home *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* Main conversion flows: tour discovery, detail, booking, account and editorial. */
+body.tv-sea .bk, body.tv-sea .px-detail, body.tv-sea .px-blog,
+body.tv-sea .tv-auth, body.tv-sea .tr, body.tv-sea .tvp {
+  color:var(--nl-ink);background-color:var(--nl-ivory);
+}
+body.tv-sea :is(.bk-card,.bk-sum,.bk-guest,.bk-pay,.px-auth__card,.tv-auth__card,.px-feature,.px-blog__main,.tr-search) {
+  border-color:var(--nl-line);
+}
+body.tv-sea :is(.bk-card,.bk-sum,.tv-auth__card,.px-auth__card,.px-feature) {
+  box-shadow:var(--nl-shadow);
+}
+body.tv-sea .bk-steps li.is-now {color:var(--nl-primary-hover);border-color:var(--nl-primary);}
+body.tv-sea .bk-steps li.is-now span,
+body.tv-sea .bk-steps li.is-done span,
+body.tv-sea .bk-no {background:var(--nl-primary);color:#fff;border-color:var(--nl-primary);}
+body.tv-sea .bk-field input:focus,
+body.tv-sea .bk-pay:focus-within,
+body.tv-sea .bk-check:focus-within {border-color:var(--nl-primary);box-shadow:0 0 0 3px #DEEADF;}
+body.tv-sea .bk-field.has-error input {border-color:var(--nl-danger);}
+body.tv-sea .bk-alert--bad,body.tv-sea .bk-err {color:#9A3632;}
+body.tv-sea .bk-pay.is-on {border-color:var(--nl-primary);background:#F3F8F3;}
+body.tv-sea .bk-step button:hover:not(:disabled) {background:#EAF9F7;color:var(--nl-primary-hover);}
+body.tv-sea .bk-sum .bk-total dd {color:var(--nl-primary-hover);}
+body.tv-sea :is(.tr-field input,.tr-field select,.px-search input,.tv-auth input,.px-auth input):focus {
+  border-color:var(--nl-primary);box-shadow:0 0 0 3px #DEEADF;
+}
+body.tv-sea .px-hero__shade {background:linear-gradient(180deg,rgba(22,43,32,.06),rgba(22,43,32,.72));}
+body.tv-sea .px-hero :is(h1,h2,.px-hero__title) {color:#fff;}
+body.tv-sea :is(.px-hero,.tvf-dhero,.tr-hero) {isolation:isolate;}
+body.tv-sea .px-hero__in, body.tv-sea .tr-hero__row {position:relative;z-index:1;}
+body.tv-sea :is(.px-tabsw .is-on,.px-chips .is-on,.tr-quick__b.is-on) {
+  color:var(--nl-primary-hover);border-color:var(--nl-primary);
+}
+/* Warm watercolor should stay decorative and never reduce text contrast. */
+body.tv-sea .tvf-dhero__wash {opacity:.65;pointer-events:none;}
+body.tv-sea :is(.tvp-eyebrow,.v3-eyebrow) {color:var(--nl-primary-hover);}
+/* Ensure errors and warnings retain meaning independent of the brand palette. */
+body.tv-sea :is([aria-invalid=true],.is-invalid) {border-color:var(--nl-danger);}
+body.tv-sea :is(.invalid-feedback,.text-danger,[role=alert]) {color:var(--nl-danger);}
+body.tv-sea [role=alert] a {text-decoration:underline;}

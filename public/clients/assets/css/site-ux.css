@@ -1,6 +1,6 @@
 /* Footer dùng chung (partials/site-footer.blade.php) cho trang chủ và mọi trang con. */
 .tvf {
-    --f-navy: #0b2b2f; --f-navy2: #0f172a; --f-tq: #16a6a1; --f-sand: #e9c46a;
+    --f-navy: #0b2b2f; --f-navy2: #0f172a; --f-tq: #1FB7C9; --f-sand: #e9c46a;
     position: relative; margin-top: 72px; padding: 0 0 22px; color: #cbd5e1;
     background: radial-gradient(900px 400px at 85% -10%, rgba(22,166,161,.22), transparent 60%), linear-gradient(180deg, var(--f-navy) 0%, var(--f-navy2) 100%);
     font-family: "Be Vietnam Pro", system-ui, sans-serif; font-size: 15px; line-height: 1.6;
@@ -12,7 +12,7 @@
     position: relative; top: -40px; margin-bottom: -4px; padding: 28px 34px;
     display: flex; align-items: center; justify-content: space-between; gap: 22px; flex-wrap: wrap;
     border-radius: 24px; color: #fff;
-    background: linear-gradient(120deg, #0b8f89 0%, #16a6a1 55%, #2bbfa8 100%);
+    background: linear-gradient(120deg, #0b8f89 0%, #1FB7C9 55%, #2bbfa8 100%);
     box-shadow: 0 24px 50px rgba(8, 127, 123, .35);
 }
 .tvf-cta__eyebrow { margin: 0 0 4px; font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.8); }

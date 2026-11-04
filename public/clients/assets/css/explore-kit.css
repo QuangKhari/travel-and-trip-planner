@@ -2,8 +2,8 @@
    phân trang, ô tháng, khay chuyến đi. Tiền tố gx-. Màu theo mục 5 tài liệu; nằm trước travel-theme.css nên mỗi
    giá trị đều có dự phòng. Tham chiếu: /ui-kit (chỉ môi trường local). */
 :root {
-    --gx-tq: #0d9488;
-    --gx-tqd: #087f7b;
+    --gx-tq: #167A85;
+    --gx-tqd: #167A85;
     --gx-sand: #e9c46a;
     --gx-cream: #f8f6f0;
     --gx-navy: #0f172a;
@@ -495,9 +495,9 @@
     font-size: 11px;
 }
 .gx-m--best {
-    background: #0d6f6a;
+    background: #167A85;
     color: #fff;
-    border-color: #0d6f6a;
+    border-color: #167A85;
 }
 .gx-m--ok {
     background: #e6f4f1;

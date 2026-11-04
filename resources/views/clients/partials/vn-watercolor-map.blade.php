@@ -69,13 +69,13 @@
     <g filter="url(#vnwc-wash-big)" opacity="0.9">
         <path
             d="M0 900 L70 840 L130 880 L210 810 L290 880 L380 830 L470 890 L560 826 L650 884 L730 836 L800 880 V952.8 H0Z"
-            fill="#25C7B5" class="tvh-wc-sea-f" opacity="0.13" />
-        <path d="M0 930 L100 880 L190 925 L300 868 L420 928 L540 872 L660 926 L800 888 V952.8 H0Z" fill="#25C7B5"
+            fill="#32C9C9" class="tvh-wc-sea-f" opacity="0.13" />
+        <path d="M0 930 L100 880 L190 925 L300 868 L420 928 L540 872 L660 926 L800 888 V952.8 H0Z" fill="#32C9C9"
             class="tvh-wc-sea-f" opacity="0.15" />
     </g>
 
     <!-- 1. quầng nước nông quanh bờ biển (3 lớp loang) -->
-    <g fill="none" stroke-linejoin="round" stroke="#25C7B5" class="tvh-wc-sea-s">
+    <g fill="none" stroke-linejoin="round" stroke="#32C9C9" class="tvh-wc-sea-s">
         <use href="#vnwc-vn" stroke-width="104" opacity="0.06" filter="url(#vnwc-b18)" />
         <use href="#vnwc-vn" stroke-width="58" opacity="0.09" filter="url(#vnwc-b10)" />
         <use href="#vnwc-vn" stroke-width="26" opacity="0.14" filter="url(#vnwc-b4)" />
@@ -114,9 +114,9 @@
             <ellipse cx="365.7" cy="462.0" rx="22" ry="150" transform="rotate(6 365.7 462.0)"
                 fill="#EBEEB4" class="tvh-wc-warm-f" opacity="0.45" />
         </g>
-        <use href="#vnwc-vn" fill="none" stroke="#0A5F60" class="tvh-wc-ink-s" stroke-width="18" opacity="0.13"
+        <use href="#vnwc-vn" fill="none" stroke="#115D66" class="tvh-wc-ink-s" stroke-width="18" opacity="0.13"
             stroke-linejoin="round" filter="url(#vnwc-b4)" />
-        <g fill="none" stroke="#0A5F60" class="tvh-wc-ink-s" stroke-width="1.5" stroke-linecap="round"
+        <g fill="none" stroke="#115D66" class="tvh-wc-ink-s" stroke-width="1.5" stroke-linecap="round"
             stroke-linejoin="round" opacity="0.38">
             <path transform="translate(108.6 74.5) scale(1.04)" d="M-12 7 L-4 -9 L1 -1 L5 -6 L13 7" />
             <path transform="translate(137.1 93.0) scale(1.23)" d="M-12 7 L-4 -9 L1 -1 L5 -6 L13 7" />
@@ -148,32 +148,32 @@
         </g>
     </g>
     <!-- viền đất: mực đậm + quầng nhạt -->
-    <use href="#vnwc-vn" fill="none" stroke="#0A5F60" class="tvh-wc-ink-s" stroke-width="7" opacity="0.1"
+    <use href="#vnwc-vn" fill="none" stroke="#115D66" class="tvh-wc-ink-s" stroke-width="7" opacity="0.1"
         stroke-linejoin="round" filter="url(#vnwc-b4)" />
-    <use href="#vnwc-vn" fill="none" stroke="#0A5F60" class="tvh-wc-ink-s" stroke-width="1.7" opacity="0.6"
+    <use href="#vnwc-vn" fill="none" stroke="#115D66" class="tvh-wc-ink-s" stroke-width="1.7" opacity="0.6"
         stroke-linejoin="round" filter="url(#vnwc-warp)" />
 
     <!-- 4. quần đảo + nhãn biển -->
     <g>
-        <circle cx="571.4" cy="429.3" r="3.4" fill="#0A5F60" class="tvh-wc-ink-f" opacity=".5" />
-        <circle cx="554.3" cy="435.2" r="3.4" fill="#0A5F60" class="tvh-wc-ink-f" opacity=".5" />
-        <circle cx="588.6" cy="420.3" r="3.4" fill="#0A5F60" class="tvh-wc-ink-f" opacity=".5" />
-        <circle cx="588.6" cy="462" r="3.4" fill="#0A5F60" class="tvh-wc-ink-f" opacity=".5" />
-        <circle cx="565.7" cy="447.1" r="3.4" fill="#0A5F60" class="tvh-wc-ink-f" opacity=".5" />
-        <circle cx="605.7" cy="408.4" r="3.4" fill="#0A5F60" class="tvh-wc-ink-f" opacity=".5" />
-        <circle cx="548.6" cy="473.9" r="3.4" fill="#0A5F60" class="tvh-wc-ink-f" opacity=".5" />
-        <circle cx="565.7" cy="892.2" r="3.4" fill="#0A5F60" class="tvh-wc-ink-f" opacity=".5" />
-        <circle cx="622.9" cy="848.8" r="3.4" fill="#0A5F60" class="tvh-wc-ink-f" opacity=".5" />
-        <circle cx="702.9" cy="831.5" r="3.4" fill="#0A5F60" class="tvh-wc-ink-f" opacity=".5" />
-        <circle cx="685.7" cy="790.8" r="3.4" fill="#0A5F60" class="tvh-wc-ink-f" opacity=".5" />
-        <circle cx="680" cy="802.4" r="3.4" fill="#0A5F60" class="tvh-wc-ink-f" opacity=".5" />
-        <circle cx="582.9" cy="880.7" r="3.4" fill="#0A5F60" class="tvh-wc-ink-f" opacity=".5" />
-        <circle cx="714.3" cy="819.9" r="3.4" fill="#0A5F60" class="tvh-wc-ink-f" opacity=".5" />
-        <circle cx="640" cy="900.9" r="3.4" fill="#0A5F60" class="tvh-wc-ink-f" opacity=".5" />
-        <circle cx="742.9" cy="773.4" r="3.4" fill="#0A5F60" class="tvh-wc-ink-f" opacity=".5" />
-        <circle cx="662.9" cy="860.4" r="3.4" fill="#0A5F60" class="tvh-wc-ink-f" opacity=".5" />
-        <circle cx="691.4" cy="877.8" r="3.4" fill="#0A5F60" class="tvh-wc-ink-f" opacity=".5" />
-        <circle cx="600" cy="814.1" r="3.4" fill="#0A5F60" class="tvh-wc-ink-f" opacity=".5" />
+        <circle cx="571.4" cy="429.3" r="3.4" fill="#115D66" class="tvh-wc-ink-f" opacity=".5" />
+        <circle cx="554.3" cy="435.2" r="3.4" fill="#115D66" class="tvh-wc-ink-f" opacity=".5" />
+        <circle cx="588.6" cy="420.3" r="3.4" fill="#115D66" class="tvh-wc-ink-f" opacity=".5" />
+        <circle cx="588.6" cy="462" r="3.4" fill="#115D66" class="tvh-wc-ink-f" opacity=".5" />
+        <circle cx="565.7" cy="447.1" r="3.4" fill="#115D66" class="tvh-wc-ink-f" opacity=".5" />
+        <circle cx="605.7" cy="408.4" r="3.4" fill="#115D66" class="tvh-wc-ink-f" opacity=".5" />
+        <circle cx="548.6" cy="473.9" r="3.4" fill="#115D66" class="tvh-wc-ink-f" opacity=".5" />
+        <circle cx="565.7" cy="892.2" r="3.4" fill="#115D66" class="tvh-wc-ink-f" opacity=".5" />
+        <circle cx="622.9" cy="848.8" r="3.4" fill="#115D66" class="tvh-wc-ink-f" opacity=".5" />
+        <circle cx="702.9" cy="831.5" r="3.4" fill="#115D66" class="tvh-wc-ink-f" opacity=".5" />
+        <circle cx="685.7" cy="790.8" r="3.4" fill="#115D66" class="tvh-wc-ink-f" opacity=".5" />
+        <circle cx="680" cy="802.4" r="3.4" fill="#115D66" class="tvh-wc-ink-f" opacity=".5" />
+        <circle cx="582.9" cy="880.7" r="3.4" fill="#115D66" class="tvh-wc-ink-f" opacity=".5" />
+        <circle cx="714.3" cy="819.9" r="3.4" fill="#115D66" class="tvh-wc-ink-f" opacity=".5" />
+        <circle cx="640" cy="900.9" r="3.4" fill="#115D66" class="tvh-wc-ink-f" opacity=".5" />
+        <circle cx="742.9" cy="773.4" r="3.4" fill="#115D66" class="tvh-wc-ink-f" opacity=".5" />
+        <circle cx="662.9" cy="860.4" r="3.4" fill="#115D66" class="tvh-wc-ink-f" opacity=".5" />
+        <circle cx="691.4" cy="877.8" r="3.4" fill="#115D66" class="tvh-wc-ink-f" opacity=".5" />
+        <circle cx="600" cy="814.1" r="3.4" fill="#115D66" class="tvh-wc-ink-f" opacity=".5" />
     </g>
     <g font-family="'Be Vietnam Pro', 'Segoe UI', system-ui, sans-serif" font-size="12.5" font-style="italic"
         fill="#4F6B6B">
@@ -182,11 +182,11 @@
         <text x="14" y="806" opacity="0.8">Vịnh Thái Lan</text>
     </g>
     <text x="640" y="533" text-anchor="middle" font-family="Caveat, 'Segoe Script', 'Bradley Hand', cursive"
-        font-weight="700" font-size="36" letter-spacing="9" fill="#0A5F60" class="tvh-wc-ink-f" opacity="0.5"
+        font-weight="700" font-size="36" letter-spacing="9" fill="#115D66" class="tvh-wc-ink-f" opacity="0.5"
         filter="url(#vnwc-warp-s)">Biển Đông</text>
 
     <!-- 5. sóng, thuyền, hải âu, la bàn -->
-    <g fill="none" stroke="#0A5F60" class="tvh-wc-ink-s" stroke-width="1.5" stroke-linecap="round"
+    <g fill="none" stroke="#115D66" class="tvh-wc-ink-s" stroke-width="1.5" stroke-linecap="round"
         opacity="0.26">
         <path transform="translate(699 125)" d="M0 0 q6 -6 12 0 t12 0 t12 0" />
         <path transform="translate(614 97)" d="M0 0 q6 -6 12 0 t12 0 t12 0" />
@@ -220,25 +220,25 @@
         <path transform="translate(661 924)" d="M0 0 q6 -6 12 0 t12 0 t12 0" />
     </g>
     <g transform="translate(676 662)" filter="url(#vnwc-warp)">
-        <path d="M-34 0 Q0 16 34 0 L26 -10 H-26Z" fill="#FFFFFF" stroke="#0A5F60" class="tvh-wc-ink-s"
+        <path d="M-34 0 Q0 16 34 0 L26 -10 H-26Z" fill="#FFFFFF" stroke="#115D66" class="tvh-wc-ink-s"
             stroke-width="1.8" stroke-linejoin="round" />
-        <path d="M-2 -10 V-62 L26 -14Z" fill="#FFFFFF" stroke="#0A5F60" class="tvh-wc-ink-s" stroke-width="1.8"
+        <path d="M-2 -10 V-62 L26 -14Z" fill="#FFFFFF" stroke="#115D66" class="tvh-wc-ink-s" stroke-width="1.8"
             stroke-linejoin="round" />
-        <path d="M-8 -10 V-44 L-28 -14Z" fill="#E3B955" stroke="#0A5F60" class="tvh-wc-ink-s" stroke-width="1.8"
+        <path d="M-8 -10 V-44 L-28 -14Z" fill="#EDC777" stroke="#115D66" class="tvh-wc-ink-s" stroke-width="1.8"
             stroke-linejoin="round" />
-        <path d="M-48 20 q12 -7 24 0 t24 0 t24 0 t24 0" fill="none" stroke="#25C7B5" class="tvh-wc-sea-s"
+        <path d="M-48 20 q12 -7 24 0 t24 0 t24 0 t24 0" fill="none" stroke="#32C9C9" class="tvh-wc-sea-s"
             stroke-width="2" opacity="0.8" />
     </g>
-    <g fill="none" stroke="#0A5F60" class="tvh-wc-ink-s" stroke-width="1.9" stroke-linecap="round"
+    <g fill="none" stroke="#115D66" class="tvh-wc-ink-s" stroke-width="1.9" stroke-linecap="round"
         opacity="0.55">
         <path d="M690 590 q10 -12 20 0 q10 -12 20 0" />
         <path d="M740 622 q7 -9 14 0 q7 -9 14 0" />
         <path d="M650 624 q6 -8 12 0 q6 -8 12 0" />
     </g>
-    <g transform="translate(66 884)" color="#0A5F60" class="tvh-wc-ink-c" opacity="0.85" filter="url(#vnwc-warp)">
+    <g transform="translate(66 884)" color="#115D66" class="tvh-wc-ink-c" opacity="0.85" filter="url(#vnwc-warp)">
         <circle r="40" fill="#FFFFFF" fill-opacity="0.55" stroke="currentColor" stroke-width="1.6" />
         <circle r="31" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="2 4" />
-        <path d="M0 -36 L8 -8 L36 0 L8 8 L0 36 L-8 8 L-36 0 L-8 -8Z" fill="#E3B955" stroke="currentColor"
+        <path d="M0 -36 L8 -8 L36 0 L8 8 L0 36 L-8 8 L-36 0 L-8 -8Z" fill="#EDC777" stroke="currentColor"
             stroke-width="1.4" stroke-linejoin="round" />
         <path d="M0 -36 L8 -8 L0 0Z M0 36 L-8 8 L0 0Z" fill="currentColor" opacity="0.7" />
         <text y="-47" text-anchor="middle" font-family="'Be Vietnam Pro', 'Segoe UI', system-ui, sans-serif"

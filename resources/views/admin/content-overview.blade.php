@@ -5,6 +5,14 @@
     <div class="page-title"><div class="title_left"><h3>Báo cáo nội dung <small>mỗi loại có bao nhiêu bài, mỗi điểm đến có những gì</small></h3></div></div>
     <div class="clearfix"></div>
     @include('admin.partials.report-tabs')
+    <nav class="nl-admin-jump" aria-label="Kiểm tra nội dung phía khách hàng">
+  <strong>Xem giao diện người dùng tương ứng:</strong>
+  <a href="{{ route('destinations.list') }}" target="_blank" rel="noopener">Điểm đến ↗</a>
+  <a href="{{ route('home') . '#kham-pha' }}" target="_blank" rel="noopener">Khám phá ↗</a>
+  <a href="{{ route('foods.index') }}" target="_blank" rel="noopener">Ẩm thực ↗</a>
+  <a href="{{ route('events.index') }}" target="_blank" rel="noopener">Lễ hội ↗</a>
+  <a href="{{ route('guides.index') }}" target="_blank" rel="noopener">Cẩm nang ↗</a>
+</nav>
     <p class="text-muted">Dùng trang này để biết còn bao nhiêu bài chờ xử lý và điểm đến nào còn thiếu nội dung. Số màu đỏ nghĩa là chưa có nội dung nào được xuất bản.</p>
     @if ($noDestTours)<div class="alert alert-warning">{{ $noDestTours }} tour chưa gắn điểm đến (không hiện ở lọc theo cảm hứng và bản đồ). <a href="{{ route('admin.tours') }}">Mở danh sách tour</a></div>@endif
     <div class="x_panel"><div class="x_title"><h2>Số bài theo trạng thái (bấm tên loại để mở danh sách)</h2><div class="clearfix"></div></div><div class="x_content">

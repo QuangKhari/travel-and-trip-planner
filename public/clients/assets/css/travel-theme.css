@@ -1,9 +1,9 @@
 :root {
     /* ===== Vietnamese Tropical Discovery ===== */
-    --tv-teal: #0b9488; /* Vietnam Turquoise: thương hiệu, nút chính, link */
-    --tv-teal-2: #25c7b5; /* Aqua Breeze: hover, highlight */
-    --tv-teal-dark: #086b66; /* Deep Teal: active, hover nút */
-    --tv-orange: #ddaf32; /* Rice Gold: vàng hương lúa — rating, badge, chữ nhấn */
+    --tv-teal: #167A85; /* Vietnam Turquoise: thương hiệu, nút chính, link */
+    --tv-teal-2: #32C9C9; /* Aqua Breeze: hover, highlight */
+    --tv-teal-dark: #126F78; /* Deep Teal: active, hover nút */
+    --tv-orange: #F4D7A1; /* Rice Gold: vàng hương lúa — rating, badge, chữ nhấn */
     --tv-orange-2: #f3d878; /* Rice Light: highlight nhẹ */
     --tv-navy: #102f3a; /* Travel Navy: chữ, footer, công nghệ */
     --tv-bg: #f8fbf9; /* Cloud White */
@@ -11,8 +11,8 @@
     --tv-ink: #102f3a;
     --tv-mute: #64748b;
     --tv-line: #e2e8f0;
-    --tv-grad-teal: linear-gradient(135deg, #25c7b5, #0b9488);
-    --tv-grad-orange: linear-gradient(135deg, #f3d878, #ddaf32);
+    --tv-grad-teal: linear-gradient(135deg, #32C9C9, #167A85);
+    --tv-grad-orange: linear-gradient(135deg, #f3d878, #F4D7A1);
     --tv-shadow: 0 10px 30px rgba(16, 47, 58, 0.1);
     --tv-shadow-lg: 0 24px 50px rgba(16, 47, 58, 0.2);
     --tv-hand: "Caveat", cursive;
@@ -28,8 +28,8 @@
 body {
     --base-font: "Be Vietnam Pro", "Outfit", sans-serif;
     --heading-font: "Be Vietnam Pro", "Outfit", sans-serif;
-    --primary-color: #0b9488;
-    --secondary-color: #ddaf32;
+    --primary-color: #167A85;
+    --secondary-color: #F4D7A1;
     --heading-color: #102f3a;
     --base-color: #334155;
     --lighter-color: #f0fdfa;
@@ -488,7 +488,7 @@ a.theme-btn:hover {
     padding: 14px 18px;
     background:
         linear-gradient(120deg, rgba(16, 47, 58, 0.1), rgba(16, 47, 58, 0.55)),
-        linear-gradient(135deg, #25c7b5, #0b9488 60%, #115e59);
+        linear-gradient(135deg, #32C9C9, #167A85 60%, #115e59);
 }
 .tv-promo::before {
     content: "";
@@ -687,7 +687,7 @@ a.theme-btn:hover {
     font-weight: 600;
 }
 .tv-rating i {
-    color: #ddaf32;
+    color: #F4D7A1;
     margin-right: 4px;
 }
 .tv-card__body {
@@ -818,7 +818,7 @@ select:focus,
         90deg,
         var(--tv-teal-2),
         var(--tv-orange),
-        #ddaf32
+        #F4D7A1
     );
     transition: width 0.1s linear;
 }
@@ -2219,7 +2219,7 @@ select:focus,
     color: var(--tv-teal);
 }
 .td-star {
-    color: #ddaf32 !important;
+    color: #F4D7A1 !important;
 }
 .td-share {
     flex: none;
@@ -2612,7 +2612,7 @@ select:focus,
     margin-top: 6px;
 }
 .td-stars-static {
-    color: #ddaf32;
+    color: #F4D7A1;
     font-size: 14px;
     margin: 8px 0 0;
     letter-spacing: 2px;
@@ -2641,7 +2641,7 @@ select:focus,
 }
 .td-bar__fill {
     height: 100%;
-    background: #ddaf32;
+    background: #F4D7A1;
     border-radius: 6px;
 }
 .td-bar em {
@@ -2743,7 +2743,7 @@ select:focus,
 }
 .td-stars i.fas,
 .td-stars i.active {
-    color: #ddaf32;
+    color: #F4D7A1;
 }
 .td-stars i:hover {
     transform: scale(1.12);
@@ -2867,7 +2867,7 @@ select:focus,
     color: var(--tv-on-sand);
 }
 .td-btn--cta:hover {
-    background: #ddaf32;
+    background: #F4D7A1;
     color: var(--tv-on-sand);
 }
 .td-btn--primary {
@@ -3129,7 +3129,7 @@ select:focus,
 }
 .tv-status-pill.is-go {
     background: #ccfbf1;
-    color: #086b66;
+    color: #126F78;
 }
 .tv-status-pill.is-done {
     background: #dcfce7;
@@ -3464,7 +3464,7 @@ select:focus,
     transition: background 0.2s;
 }
 .tv-auth__submit:hover {
-    background: #ddaf32;
+    background: #F4D7A1;
     color: var(--tv-on-sand);
 }
 .tv-auth__submit:disabled {
@@ -3885,7 +3885,7 @@ select:focus,
 }
 .tv-booking .booking-btn.btn-submit-booking:hover,
 .tv-booking a.booking-btn:hover {
-    background: #ddaf32;
+    background: #F4D7A1;
     color: var(--tv-on-sand);
 }
 .tv-booking .booking-btn.btn-cancel-booking {
@@ -4133,7 +4133,7 @@ select:focus,
     font-size: 12px;
 }
 .tv-mini--card small i {
-    color: #ddaf32;
+    color: #F4D7A1;
 }
 .tv-mini--card:hover {
     border-color: var(--tv-teal);

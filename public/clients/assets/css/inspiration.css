@@ -10,8 +10,8 @@
 .tvx-map[data-active="bien"],
 .tvx-tab[data-slug="bien"] {
     --rgb: 11, 148, 136;
-    --tvx-a: #25c7b5;
-    --tvx-b: #0a5f60;
+    --tvx-a: #32C9C9;
+    --tvx-b: #115D66;
 }
 .tvx-card--thien-nhien,
 .tvx-map[data-active="thien-nhien"],
@@ -84,7 +84,7 @@
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--tv-teal, #0b9488);
+    color: var(--tv-teal, #167A85);
 }
 .tvx-eyebrow::before,
 .tvx-eyebrow::after {
@@ -92,7 +92,7 @@
     width: 28px;
     height: 2px;
     border-radius: 2px;
-    background: var(--tv-orange, #ddaf32);
+    background: var(--tv-orange, #F4D7A1);
 }
 .tvx-inspire__head h2 {
     margin: 0 0 14px;
@@ -103,7 +103,7 @@
 }
 .tvx-inspire__head h2 em {
     font-style: normal;
-    color: var(--tv-teal, #0b9488);
+    color: var(--tv-teal, #167A85);
 }
 .tvx-lead {
     margin: 0;
@@ -167,7 +167,7 @@
     transform: translateX(4px);
 }
 .tvx-tab:focus-visible {
-    outline: 3px solid var(--tv-orange, #ddaf32);
+    outline: 3px solid var(--tv-orange, #F4D7A1);
     outline-offset: 2px;
 }
 .tvx-tab.is-on,
@@ -596,8 +596,8 @@
         color 0.2s;
 }
 .tvx-chip:hover {
-    border-color: var(--tv-teal, #0b9488);
-    color: var(--tv-teal, #0b9488);
+    border-color: var(--tv-teal, #167A85);
+    color: var(--tv-teal, #167A85);
 }
 .tvx-pop__cta {
     display: flex;
@@ -607,7 +607,7 @@
     border-top: 1px solid var(--tv-line, #e2e8f0);
     font-size: 14px;
     font-weight: 700;
-    color: var(--tv-teal-dark, #086b66);
+    color: var(--tv-teal-dark, #126F78);
 }
 .tvx-pop__soon {
     margin: 0;
@@ -628,8 +628,8 @@
     color: #fff;
     background: linear-gradient(
         160deg,
-        var(--tvx-a, #25c7b5),
-        var(--tvx-b, #0b9488)
+        var(--tvx-a, #32C9C9),
+        var(--tvx-b, #167A85)
     );
     box-shadow: 0 10px 28px rgba(16, 47, 58, 0.12);
     transition:
@@ -645,7 +645,7 @@
     color: #fff;
 }
 .tvx-card:focus-visible {
-    outline: 3px solid var(--tv-orange, #ddaf32);
+    outline: 3px solid var(--tv-orange, #F4D7A1);
     outline-offset: 3px;
 }
 .tvx-card__img {
@@ -736,8 +736,8 @@
     color: #fff;
     background: linear-gradient(
         160deg,
-        var(--tvx-a, #25c7b5),
-        var(--tvx-b, #0b9488)
+        var(--tvx-a, #32C9C9),
+        var(--tvx-b, #167A85)
     );
 }
 .tvx-hero__img {
@@ -852,12 +852,12 @@
         border-color 0.25s;
 }
 .tvx-pill:hover {
-    border-color: var(--tv-teal, #0b9488);
-    color: var(--tv-teal, #0b9488);
+    border-color: var(--tv-teal, #167A85);
+    color: var(--tv-teal, #167A85);
 }
 .tvx-pill.is-on {
-    background: var(--tv-teal, #0b9488);
-    border-color: var(--tv-teal, #0b9488);
+    background: var(--tv-teal, #167A85);
+    border-color: var(--tv-teal, #167A85);
     color: #fff;
 }
 .tvx-count {
@@ -945,8 +945,8 @@
     border-radius: 2px;
     background: linear-gradient(
         160deg,
-        var(--tvx-a, #25c7b5),
-        var(--tvx-b, #0b9488)
+        var(--tvx-a, #32C9C9),
+        var(--tvx-b, #167A85)
     );
 }
 .tvx-jphoto img {
@@ -1113,7 +1113,7 @@
 }
 .tvx-empty i {
     font-size: 44px;
-    color: var(--tv-teal, #0b9488);
+    color: var(--tv-teal, #167A85);
 }
 .tvx-empty h3 {
     margin: 16px 0 8px;

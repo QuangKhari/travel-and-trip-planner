@@ -46,12 +46,12 @@
         font-size: 20px;
     }
     .gx-tab.is-active {
-        color: var(--gx-tqd, #087f7b);
+        color: var(--gx-tqd, #167A85);
         font-weight: 700;
-        box-shadow: inset 0 3px 0 var(--gx-tqd, #087f7b);
+        box-shadow: inset 0 3px 0 var(--gx-tqd, #167A85);
     }
     .gx-tab:focus-visible {
-        outline: 3px solid var(--gx-tqd, #087f7b);
+        outline: 3px solid var(--gx-tqd, #167A85);
         outline-offset: -3px;
     }
 
@@ -69,7 +69,7 @@
         margin-top: -22px;
         border-radius: 50%;
         border: 3px solid #fff;
-        background: var(--gx-tqd, #087f7b);
+        background: var(--gx-tqd, #167A85);
         color: #fff;
         box-shadow: 0 8px 18px rgba(8, 127, 123, 0.4);
     }

@@ -539,11 +539,13 @@ $(document).ready(function () {
             if (isRecognizing) {
                 recognition.stop(); // Dừng nhận diện nếu đang nhận diện
                 $(this)
+                    .find("i")
                     .removeClass("fa-microphone-slash")
                     .addClass("fa-microphone"); // Đổi icon về micro
             } else {
                 recognition.start(); // Bắt đầu nhận diện giọng nói
                 $(this)
+                    .find("i")
                     .removeClass("fa-microphone")
                     .addClass("fa-microphone-slash"); // Đổi icon thành micro gạch
             }
@@ -552,7 +554,7 @@ $(document).ready(function () {
         recognition.onstart = function () {
             console.log("Speech recognition started");
             isRecognizing = true; // Đánh dấu trạng thái nhận diện
-            $("#voice-search")
+            $("#voice-search i")
                 .removeClass("fa-microphone")
                 .addClass("fa-microphone-slash"); // Đổi icon thành micro gạch
         };
@@ -573,7 +575,7 @@ $(document).ready(function () {
 
         recognition.onend = function () {
             console.log("Speech recognition ended");
-            $("#voice-search")
+            $("#voice-search i")
                 .removeClass("fa-microphone-slash")
                 .addClass("fa-microphone"); // Đổi icon về micro
             isRecognizing = false; // Đánh dấu trạng thái nhận diện kết thúc

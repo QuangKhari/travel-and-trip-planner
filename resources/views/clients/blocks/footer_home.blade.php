@@ -45,6 +45,7 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
 
-        </body>
+        <script src="{{ asset('clients/assets/js/nature-finish.js') }}?v=1" defer></script>
+</body>
 
         </html>

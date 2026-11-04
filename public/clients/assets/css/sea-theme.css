@@ -16,22 +16,22 @@
 
 body.tv-sea {
     /* --- bảng màu mới --- */
-    --sea-tq: #25c7b5;
-    --sea-tq-2: #25c7b5;
-    --sea-tq-deep: #0b9488;
-    --sea-tq-dark: #086b66;
+    --sea-tq: #32C9C9;
+    --sea-tq-2: #32C9C9;
+    --sea-tq-deep: #167A85;
+    --sea-tq-dark: #126F78;
     --sea-tq-soft: #e4f7f5;
     --sea-tq-mist: #f3fbfa;
     --sea-ink: #102f3a;
     --sea-ink-2: #154553;
-    --sea-sand: #ddaf32;
-    --sea-sand-deep: #ddaf32;
+    --sea-sand: #F4D7A1;
+    --sea-sand-deep: #F4D7A1;
     --sea-sand-soft: #fff4d8;
     --sea-paper: #fff4d8;
     --sea-line: #d9ebe9;
     --sea-mute: #56737a;
     --sea-coral: #e8795b;
-    --sea-tech: #086b66; /* điểm nhấn "công nghệ": cyan-xanh, dùng cho link nội dung + vòng focus */
+    --sea-tech: #126F78; /* điểm nhấn "công nghệ": cyan-xanh, dùng cho link nội dung + vòng focus */
 
     /* --- ghi đè biến cũ của travel-theme.css → mọi thành phần cũ tự đổi màu --- */
     --tv-teal: var(--sea-tq-deep);
@@ -607,8 +607,8 @@ body.tv-sea .tv-dest__label small {
     background: rgba(255, 255, 255, 0.24);
 }
 .tv-spot__tab.is-on {
-    background: var(--sea-sand, #ddaf32);
-    border-color: var(--sea-sand, #ddaf32);
+    background: var(--sea-sand, #F4D7A1);
+    border-color: var(--sea-sand, #F4D7A1);
     color: #102f3a;
 }
 .tv-spot__stage {
@@ -622,7 +622,7 @@ body.tv-sea .tv-dest__label small {
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--sea-sand, #ddaf32);
+    color: var(--sea-sand, #F4D7A1);
     margin: 0 0 8px;
 }
 .tv-spot__title {
@@ -636,7 +636,7 @@ body.tv-sea .tv-dest__label small {
 .tv-spot__meta {
     margin: 0 0 22px;
     padding-left: 14px;
-    border-left: 3px solid var(--sea-sand, #ddaf32);
+    border-left: 3px solid var(--sea-sand, #F4D7A1);
     color: rgba(255, 255, 255, 0.92);
     line-height: 1.7;
     max-width: 440px;
@@ -645,7 +645,7 @@ body.tv-sea .tv-dest__label small {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: var(--sea-sand, #ddaf32);
+    background: var(--sea-sand, #F4D7A1);
     color: #102f3a;
     font-weight: 700;
     font-size: 14px;
@@ -657,7 +657,7 @@ body.tv-sea .tv-dest__label small {
 }
 .tv-spot__cta:hover {
     color: #102f3a;
-    background: var(--sea-sand-deep, #ddaf32);
+    background: var(--sea-sand-deep, #F4D7A1);
     transform: translateY(-2px);
 }
 .tv-spot__media {

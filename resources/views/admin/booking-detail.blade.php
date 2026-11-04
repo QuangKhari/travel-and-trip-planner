@@ -203,7 +203,7 @@
                     @if (count($history))
                         <ul class="ad-timeline">
                             @foreach ($history as $h)
-                                <li style="--c:{{ str_contains($h->action, 'cancel') ? '#ef4444' : (str_contains($h->action, 'refund') ? '#7c3aed' : '#0d9488') }}">
+                                <li style="--c:{{ str_contains($h->action, 'cancel') ? '#ef4444' : (str_contains($h->action, 'refund') ? '#7c3aed' : '#168F99') }}">
                                     <div class="ad-timeline__t">{{ AL::label($h->action) }}</div>
                                     <div class="ad-timeline__m">{{ $h->actorName ?? 'Hệ thống' }} · {{ date('H:i d/m/Y', strtotime($h->createdAt)) }}</div>
                                     @if ($h->summary)<div class="ad-note">{{ $h->summary }}</div>@endif

@@ -1,5 +1,7 @@
 @include('clients.blocks.header')
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=7">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/nature-luxury-planner.css') }}?v=bl20261104">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
 
 {{-- /chuyen-di/{token}: bản chỉ đọc của một chuyến đi được chia sẻ. Không có thông tin chủ chuyến. --}}
 @php

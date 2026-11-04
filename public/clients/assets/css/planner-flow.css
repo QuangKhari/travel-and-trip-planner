@@ -1,7 +1,7 @@
 /* Trip Planner: các trang luồng (đề xuất, xem trước, chọn điểm đến, danh sách chuyến).
  * Cùng bộ màu với planner.css: teal là hành động chính; hổ phách là "đề xuất mở rộng / dữ liệu bản đồ"; xám là thông tin. */
 .tpf {
-    --f-brand: #0d6f6a; --f-brand-d: #0a5a56; --f-brand-l: #e7f5f2; --f-ink: #0f1f1c; --f-mut: #5d6b68; --f-line: #e3ebe8;
+    --f-brand: #167A85; --f-brand-d: #135D65; --f-brand-l: #e7f5f2; --f-ink: #0f1f1c; --f-mut: #5d6b68; --f-line: #e3ebe8;
     --f-bg: #f4f7f6; --f-card: #fff; --f-open: #b45309; --f-open-l: #fff7e8; --f-open-b: #f6d9a8; --f-r: 16px;
     --f-sh: 0 1px 2px rgba(16, 40, 34, .05), 0 8px 24px rgba(16, 40, 34, .06);
     background: var(--f-bg); color: var(--f-ink); padding: 112px 0 64px;
@@ -71,7 +71,7 @@
 /* thẻ điểm đến nổi bật */
 .tpf-popular { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
 .tpf-dest { position: relative; display: flex; flex-direction: column; text-align: left; border: 1.5px solid var(--f-line); border-radius: 14px; background: #fff; padding: 0; overflow: hidden; cursor: pointer; transition: transform .15s, border-color .15s, box-shadow .15s; }
-.tpf-dest__ph { position: relative; width: 100%; height: 78px; display: grid; place-items: center; color: rgba(255, 255, 255, .85); font-size: 1.4rem; background: linear-gradient(135deg, #0d6f6a, #3aa58f); overflow: hidden; }
+.tpf-dest__ph { position: relative; width: 100%; height: 78px; display: grid; place-items: center; color: rgba(255, 255, 255, .85); font-size: 1.4rem; background: linear-gradient(135deg, #167A85, #3aa58f); overflow: hidden; }
 .tpf-dest__ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .tpf-dest__t { padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 2px; }
 .tpf-dest__t small { font-size: .74rem; font-weight: 600; }
@@ -158,7 +158,7 @@
 /* ================= Chọn điểm đến (Chưa biết đi đâu) ================= */
 .tpf-find { display: grid; gap: 14px; }
 .tpf-fcard { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 0; background: #fff; border: 1px solid var(--f-line); border-radius: var(--f-r); overflow: hidden; box-shadow: var(--f-sh); }
-.tpf-fcard__img { position: relative; background: linear-gradient(135deg, #0d6f6a, #3aa58f); min-height: 150px; }
+.tpf-fcard__img { position: relative; background: linear-gradient(135deg, #167A85, #3aa58f); min-height: 150px; }
 .tpf-fcard__img img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
 .tpf-fcard__score { position: absolute; left: 10px; top: 10px; background: rgba(15, 31, 28, .78); color: #fff; font-weight: 700; font-size: .8rem; border-radius: 999px; padding: 4px 10px; }
 .tpf-fcard__b { padding: 14px 18px; display: flex; flex-direction: column; gap: 6px; }

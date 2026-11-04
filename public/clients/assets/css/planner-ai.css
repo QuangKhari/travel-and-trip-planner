@@ -2,7 +2,7 @@
  * Quy ước màu (bản mẫu "La bàn"): xanh ngọc = dữ kiện / đã kiểm chứng; vàng cát = AI đoán / đề xuất chưa áp dụng; đỏ đất = còn thiếu, chưa lọc được.
  * AI là một năng lực của Travela, không phải sản phẩm riêng: chỉ có biểu tượng la bàn và màu vàng cát, không hiệu ứng phát sáng. */
 :root {
-    --ai-brand: #0d6f6a; --ai-brand-d: #0a5a56; --ai-brand-l: #e7f5f2;
+    --ai-brand: #167A85; --ai-brand-d: #135D65; --ai-brand-l: #e7f5f2;
     --ai-sand: #e9a23b; --ai-sand-d: #a86a12; --ai-sand-l: #fff6e6; --ai-sand-b: #f1cf93;
     --ai-miss: #b4421b; --ai-miss-l: #fdeee7;
     --ai-ink: #0f1f1c; --ai-mut: #5d6b68; --ai-line: #e3ebe8; --ai-soft: #f4f7f6;
