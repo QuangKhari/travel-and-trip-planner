@@ -24,10 +24,13 @@
         return '<a class="ad-nav__link' . ($active ? ' is-on' : '') . '" href="' . e($href) . '"' . ($active ? ' aria-current="page"' : '') . ' title="' . e($label) . '">'
             . '<i class="fa ' . $icon . '" aria-hidden="true"></i><span class="ad-nav__txt">' . e($label) . '</span>' . $pill . '</a>';
     };
-    $sub = function (string $route, string $label, bool $active, array $params = []) use ($has) {
+    $sub = function (string $route, string $label, bool $active, array $params = [], int $count = 0) use ($has) {
         if (!$has($route)) return '';
-        return '<a class="ad-nav__sub' . ($active ? ' is-on' : '') . '" href="' . e(route($route, $params)) . '"' . ($active ? ' aria-current="page"' : '') . '>' . e($label) . '</a>';
+        $pill = $count > 0 ? '<span class="ad-nav__pill">' . ($count > 99 ? '99+' : $count) . '</span>' : '';
+        return '<a class="ad-nav__sub' . ($active ? ' is-on' : '') . '" href="' . e(route($route, $params)) . '"' . ($active ? ' aria-current="page"' : '') . '>' . e($label) . $pill . '</a>';
     };
+    // Việc về lịch khởi hành: lịch / đoàn sắp thiếu khách + phương án chờ áp dụng
+    $depWork = (int) ($badge['shortfall'] ?? 0) + (int) ($badge['rescue'] ?? 0);
 @endphp
 
 <aside class="ad-side" id="ad-side" aria-label="Menu quản trị">
@@ -45,13 +48,15 @@
             <div class="ad-nav__h">Bán tour</div>
             {!! $item('admin.booking', 'Đơn đặt tour', 'fa-ticket', $on('admin.booking', 'admin.booking-detail', 'admin.transfer-proof', 'admin.booking.create'), $badge['booking']) !!}
             @if ($adMgr)
-                {!! $item('admin.refunds', 'Hoàn tiền', 'fa-undo', $on('admin.refunds*'), $badge['refund'] ?? 0) !!}
+                {!! $item('admin.refunds', 'Hoàn tiền', 'fa-undo', $on('admin.refunds*'), ($badge['refund'] ?? 0)) !!}
                 {!! $item('admin.payments', 'Thanh toán trực tuyến', 'fa-credit-card', $on('admin.payments*')) !!}
                 <details class="ad-nav__fold" {{ $inTours ? 'open' : '' }}>
-                    <summary class="ad-nav__link{{ $inTours ? ' is-in' : '' }}" title="Tour"><i class="fa fa-suitcase" aria-hidden="true"></i><span class="ad-nav__txt">Tour</span><i class="fa fa-angle-down ad-nav__caret" aria-hidden="true"></i></summary>
+                    <summary class="ad-nav__link{{ $inTours ? ' is-in' : '' }}" title="Tour"><i class="fa fa-suitcase" aria-hidden="true"></i><span class="ad-nav__txt">Tour</span>@if ($depWork > 0)<span class="ad-nav__pill" title="Lịch sắp thiếu khách / phương án chờ xử lý">{{ $depWork }}</span>@endif<i class="fa fa-angle-down ad-nav__caret" aria-hidden="true"></i></summary>
                     <div class="ad-nav__subs">
                         {!! $sub('admin.tours', 'Danh sách tour', $on('admin.tours', 'admin.tour-edit')) !!}
-                        {!! $sub('admin.departures', 'Lịch khởi hành', $on('admin.departures*')) !!}
+                        {!! $sub('admin.departures', 'Lịch khởi hành', $on('admin.departures', 'admin.departures.store', 'admin.departures.update', 'admin.departures.toggle', 'admin.departures.destroy')) !!}
+                        {!! $sub('admin.departures.rescue', 'Xử lý thiếu khách', $on('admin.departures.rescue*'), [], $depWork) !!}
+                        {!! $sub('admin.departures.grouping', 'Ghép đoàn', $on('admin.departures.grouping*')) !!}
                         {!! $sub('admin.page-add-tours', 'Thêm tour mới', $on('admin.page-add-tours')) !!}
                     </div>
                 </details>

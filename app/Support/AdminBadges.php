@@ -12,13 +12,17 @@ use Illuminate\Support\Facades\Schema;
  */
 final class AdminBadges
 {
-    private const KEY = 'admin.badges.v2';
+    private const KEY = 'admin.badges.v3';
 
-    /** @return array{booking:int, unpaid:int, contact:int, reviewed:int, draft:int, pending:int, refund:int, support:int} */
+    /**
+     * shortfall: lịch + đoàn ghép sắp thiếu khách chưa có phương án; rescue: phương án đã đủ phản hồi chờ admin áp dụng / xử lý;
+     * refundFail: yêu cầu hoàn bị cổng thanh toán từ chối, cần thử lại hoặc hoàn tay.
+     * @return array{booking:int, unpaid:int, contact:int, reviewed:int, draft:int, pending:int, refund:int, support:int, shortfall:int, rescue:int, refundFail:int}
+     */
     public static function counts(): array
     {
         return Cache::remember(self::KEY, 45, function () {
-            $c = ['booking' => 0, 'unpaid' => 0, 'contact' => 0, 'reviewed' => 0, 'draft' => 0, 'pending' => 0, 'refund' => 0, 'support' => 0];
+            $c = ['booking' => 0, 'unpaid' => 0, 'contact' => 0, 'reviewed' => 0, 'draft' => 0, 'pending' => 0, 'refund' => 0, 'support' => 0, 'shortfall' => 0, 'rescue' => 0, 'refundFail' => 0];
             try {
                 $c['booking'] = (int) DB::table('tbl_booking')->where('bookingStatus', 'n')->count();
                 $c['unpaid'] = (int) DB::table('tbl_booking')
@@ -28,6 +32,23 @@ final class AdminBadges
                     ->count();
                 if (Schema::hasTable('tbl_refunds')) {
                     $c['refund'] = (int) DB::table('tbl_refunds')->where('status', 'pending')->count();
+                }
+                if (Schema::hasTable('tbl_refunds') && Schema::hasColumn('tbl_refunds', 'gatewayStatus')) {
+                    $c['refundFail'] = (int) DB::table('tbl_refunds')->where('status', 'pending')->where('gatewayStatus', 'failed')->count();
+                }
+                if (Schema::hasTable('tbl_departure_rescue_plans')) {
+                    $c['rescue'] = (int) DB::table('tbl_departure_rescue_plans')
+                        ->where(fn ($q) => $q->where('status', 'ready')->orWhere(fn ($w) => $w->where('type', 'cancel_review')->where('status', 'manual_review')))
+                        ->count();
+                    if (Schema::hasColumn('tbl_tour_availability', 'shortfallFlaggedAt')) {
+                        $busy = DB::table('tbl_departure_rescue_plans')->whereIn('status', ['pending', 'ready'])->select('availabilityId');
+                        $c['shortfall'] = (int) DB::table('tbl_tour_availability')->whereNotNull('shortfallFlaggedAt')->where('status', 'open')
+                            ->where('departureDate', '>', today()->toDateString())->whereNotIn('availabilityId', $busy)->count();
+                    }
+                    if (Schema::hasTable('tbl_departure_groups') && Schema::hasColumn('tbl_departure_groups', 'shortfallFlaggedAt')) {
+                        $c['shortfall'] += (int) DB::table('tbl_departure_groups')->whereNotNull('shortfallFlaggedAt')->where('status', 'active')
+                            ->where('departureDate', '>', today()->toDateString())->count();
+                    }
                 }
                 if (Schema::hasTable('tbl_support_tickets')) {
                     $c['support'] = (int) DB::table('tbl_support_tickets')->whereIn('status', ['open', 'in_progress'])->count();

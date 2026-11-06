@@ -156,4 +156,74 @@ class ZaloPayGateway implements PaymentGateway
     {
         return self::CODES[$code] ?? 'Mã ' . $code;
     }
+
+    /* ------------------------------------------------------------------ Hoàn tiền (POST /v2/refund) */
+
+    public function supportsRefund(): bool
+    {
+        return true;
+    }
+
+    /** m_refund_id theo định dạng của ZaloPay: yymmdd_appid_xxxxxx (ngày theo giờ VN, phần cuối duy nhất). */
+    public function newRefundRef(int $refundId, int $attempt): string
+    {
+        return now(config('payments.timezone', 'Asia/Ho_Chi_Minh'))->format('ymd') . '_' . $this->cfg('app_id') . '_'
+            . $refundId . str_pad((string) $attempt, 2, '0', STR_PAD_LEFT) . random_int(1000, 9999);
+    }
+
+    private static function refundResult(string $status, ?string $no, string $code, string $message, array $raw): array
+    {
+        return ['ok' => $status !== 'unknown', 'status' => $status, 'refundNo' => $no, 'code' => $code, 'message' => $message, 'raw' => $raw];
+    }
+
+    /** return_code của refund / query_refund: 1 thành công, 2 thất bại, 3 đang xử lý. */
+    private static function refundStatus(string $code): string
+    {
+        return $code === '1' ? 'refunded' : ($code === '3' ? 'pending' : 'failed');
+    }
+
+    /** ZaloPay hoàn bằng zp_trans_id của giao dịch gốc; mac = HMAC-SHA256(key1, app_id|zp_trans_id|amount|description|timestamp). */
+    public function refund(array $o): array
+    {
+        $zp = (string) ($o['providerTxnNo'] ?? '');
+        if ($zp === '') {
+            return self::refundResult('failed', null, 'no_txn', 'Đơn không có mã giao dịch ZaloPay (zp_trans_id) nên không hoàn tự động được.', []);
+        }
+        $p = ['app_id' => (int) $this->cfg('app_id'), 'm_refund_id' => $o['refundRef'], 'timestamp' => (int) round(microtime(true) * 1000),
+            'zp_trans_id' => $zp, 'amount' => (int) $o['amount'], 'description' => mb_substr((string) ($o['reason'] ?: 'Hoan tien don dat tour'), 0, 200)];
+        $p['mac'] = hash_hmac('sha256', implode('|', [$p['app_id'], $p['zp_trans_id'], $p['amount'], $p['description'], $p['timestamp']]), $this->cfg('key1'));
+        try {
+            $res = Http::timeout((int) config('payments.timeout', 15))->acceptJson()->asForm()->post(rtrim($this->cfg('endpoint'), '/') . '/v2/refund', $p);
+        } catch (\Throwable $e) {
+            return self::refundResult('unknown', null, 'http_error', 'Không nhận được phản hồi từ ZaloPay: ' . $e->getMessage(), ['request' => $p]);
+        }
+        $j = (array) $res->json();
+        if (!isset($j['return_code'])) {
+            return self::refundResult('unknown', null, 'http_' . $res->status(), 'ZaloPay trả về phản hồi không đọc được (HTTP ' . $res->status() . ').', ['request' => $p, 'response' => $j]);
+        }
+        $code = (string) $j['return_code'];
+
+        return self::refundResult(self::refundStatus($code), isset($j['refund_id']) ? (string) $j['refund_id'] : null, $code,
+            'ZaloPay: ' . ($j['sub_return_message'] ?? $j['return_message'] ?? $this->describe($code)), ['request' => $p, 'response' => $j]);
+    }
+
+    /** mac = HMAC-SHA256(key1, app_id|m_refund_id|timestamp). */
+    public function queryRefund(string $refundRef): array
+    {
+        $p = ['app_id' => $this->cfg('app_id'), 'm_refund_id' => $refundRef, 'timestamp' => (int) round(microtime(true) * 1000)];
+        $p['mac'] = hash_hmac('sha256', $p['app_id'] . '|' . $refundRef . '|' . $p['timestamp'], $this->cfg('key1'));
+        try {
+            $j = (array) Http::timeout((int) config('payments.timeout', 15))->acceptJson()->asForm()
+                ->post(rtrim($this->cfg('endpoint'), '/') . '/v2/query_refund', $p)->json();
+        } catch (\Throwable $e) {
+            return self::refundResult('unknown', null, 'http_error', 'Không gọi được ZaloPay: ' . $e->getMessage(), ['request' => $p]);
+        }
+        if (!isset($j['return_code'])) {
+            return self::refundResult('unknown', null, 'empty', 'ZaloPay không trả kết quả hỏi hoàn.', ['request' => $p, 'response' => $j]);
+        }
+        $code = (string) $j['return_code'];
+
+        return self::refundResult(self::refundStatus($code), isset($j['refund_id']) ? (string) $j['refund_id'] : null, $code,
+            'ZaloPay: ' . ($j['sub_return_message'] ?? $j['return_message'] ?? $this->describe($code)), ['request' => $p, 'response' => $j]);
+    }
 }

@@ -127,7 +127,15 @@
                     <span class="ad-todo__t">Đã xác nhận, chưa thu tiền<small>Theo dõi thanh toán</small></span><i class="fa fa-angle-right"></i></a></li>
                 @if ($isMgr)
                     <li><a href="{{ route('admin.refunds') }}"><span class="ad-todo__n {{ $todo['refund'] ? 'is-bad' : '' }}">{{ $todo['refund'] }}</span>
-                        <span class="ad-todo__t">Yêu cầu hoàn tiền<small>Chuyển tiền và đánh dấu đã hoàn</small></span><i class="fa fa-angle-right"></i></a></li>
+                        <span class="ad-todo__t">Yêu cầu hoàn tiền<small>Hoàn qua cổng hoặc chuyển tiền rồi đánh dấu đã hoàn</small></span><i class="fa fa-angle-right"></i></a></li>
+                    @if (($todo['refundFail'] ?? 0) > 0)
+                        <li><a href="{{ route('admin.refunds') }}"><span class="ad-todo__n is-bad">{{ $todo['refundFail'] }}</span>
+                            <span class="ad-todo__t">Hoàn qua cổng bị từ chối<small>Thử lại hoặc hoàn thủ công</small></span><i class="fa fa-angle-right"></i></a></li>
+                    @endif
+                    <li><a href="{{ route('admin.departures.rescue') }}"><span class="ad-todo__n {{ ($todo['shortfall'] ?? 0) ? 'is-bad' : '' }}">{{ $todo['shortfall'] ?? 0 }}</span>
+                        <span class="ad-todo__t">Lịch / đoàn sắp thiếu khách<small>Ghép đoàn, đổi ngày hoặc hủy và hoàn tiền</small></span><i class="fa fa-angle-right"></i></a></li>
+                    <li><a href="{{ route('admin.departures.rescue') }}"><span class="ad-todo__n {{ ($todo['rescue'] ?? 0) ? 'is-hot' : '' }}">{{ $todo['rescue'] ?? 0 }}</span>
+                        <span class="ad-todo__t">Phương án thiếu khách chờ xử lý<small>Khách đã trả lời: áp dụng hoặc hủy khởi hành</small></span><i class="fa fa-angle-right"></i></a></li>
                 @endif
                 <li><a href="{{ route('admin.support') }}"><span class="ad-todo__n {{ $todo['support'] ? 'is-hot' : '' }}">{{ $todo['support'] }}</span>
                     <span class="ad-todo__t">Yêu cầu tư vấn đang mở<small>Khách cần nhân viên hỗ trợ lịch trình</small></span><i class="fa fa-angle-right"></i></a></li>

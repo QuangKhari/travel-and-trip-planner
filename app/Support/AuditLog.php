@@ -28,6 +28,8 @@ final class AuditLog
         'booking.create' => 'Tạo đơn hộ khách',
         'refund.create' => 'Tạo yêu cầu hoàn tiền',
         'refund.done' => 'Đã hoàn tiền',
+        'refund.gateway' => 'Đã hoàn tiền qua API cổng thanh toán',
+        'refund.gateway.request' => 'Gửi lệnh hoàn qua cổng thanh toán',
         'tour.create' => 'Tạo tour',
         'tour.publish' => 'Đăng tour',
         'tour.update' => 'Sửa tour',

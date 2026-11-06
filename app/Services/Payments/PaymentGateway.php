@@ -53,4 +53,24 @@ interface PaymentGateway
 
     /** Diễn giải mã kết quả của cổng. */
     public function describe(string $code): string;
+
+    /** Cổng có API hoàn tiền không (MoMo, ZaloPay có; QR chuyển khoản không: hoàn thủ công). */
+    public function supportsRefund(): bool;
+
+    /** Mã giao dịch hoàn riêng cho mỗi lần thử (cổng không nhận trùng). Được lưu vào tbl_refunds TRƯỚC khi gọi cổng. */
+    public function newRefundRef(int $refundId, int $attempt): string;
+
+    /**
+     * Gửi lệnh hoàn tiền một phần hoặc toàn phần của giao dịch gốc.
+     * @param array{txnRef:string, providerTxnNo:?string, amount:int, refundRef:string, reason:string, bookingCode:string} $o
+     * @return array{ok:bool, status:string, refundNo:?string, code:string, message:string, raw:array}
+     *   status: refunded (tiền đã hoàn) | pending (cổng đang xử lý) | failed (cổng từ chối, được thử lại) | unknown (không biết lệnh có tới cổng không: KHÔNG gửi lại, phải hỏi trạng thái)
+     */
+    public function refund(array $o): array;
+
+    /**
+     * Hỏi trạng thái một lệnh hoàn đã gửi.
+     * @return array{ok:bool, status:string, refundNo:?string, code:string, message:string, raw:array}
+     */
+    public function queryRefund(string $refundRef): array;
 }

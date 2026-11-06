@@ -4,7 +4,7 @@
     <div class="ad-head">
         <div>
             <h1>Hoàn tiền</h1>
-            <p>Đơn đã thanh toán bị hủy tạo yêu cầu hoàn theo chính sách: còn từ 14 ngày hoàn 100%, 7–13 ngày hoàn 50%. Chuyển tiền cho khách rồi bấm “Đã hoàn” để ghi nhận (hệ thống không tự gọi cổng thanh toán).</p>
+            <p>Đơn đã thanh toán bị hủy tạo yêu cầu hoàn theo chính sách: còn từ 14 ngày hoàn 100%, 7–13 ngày hoàn 50%. Đơn trả bằng MoMo / ZaloPay có thể hoàn thẳng qua API của cổng (khi PAYMENT_REFUND_ENABLED=true); đơn QR chuyển khoản hoặc xác nhận tay thì chuyển tiền cho khách rồi bấm “Đã hoàn” để ghi nhận.</p>
         </div>
     </div>
 
@@ -14,6 +14,13 @@
         <div class="ad-kpi"><div class="ad-kpi__ic ad-kpi__ic--green"><i class="fa fa-check"></i></div>
             <div><div class="ad-kpi__l">Đã hoàn</div><div class="ad-kpi__v">{{ (int) ($sum['refunded']->n ?? 0) }}</div><div class="ad-kpi__h">{{ $money($sum['refunded']->total ?? 0) }} đã chuyển</div></div></div>
     </div>
+
+    @if (($failed ?? 0) > 0 || ($processing ?? 0) > 0)
+        <div class="ad-card" style="margin-bottom:16px;border-left:4px solid #E9C46A;padding:12px 16px">
+            @if ($failed > 0)<b>{{ $failed }} lệnh hoàn qua cổng bị từ chối</b> — mở dòng đỏ, thử lại hoặc hoàn thủ công.@endif
+            @if ($processing > 0)<span style="margin-left:12px"><b>{{ $processing }} lệnh đang xử lý tại cổng</b> — hệ thống tự hỏi lại mỗi 5 phút, hoặc bấm “Kiểm tra trạng thái”.</span>@endif
+        </div>
+    @endif
 
     <div class="ad-card">
         <div class="ad-toolbar">
@@ -40,7 +47,15 @@
                             <td class="num"><b>{{ $money($r->amount) }}</b><span class="ad-sub">{{ $r->percent }}%</span></td>
                             <td>
                                 @if ($r->status === 'pending')
-                                    <span class="ad-badge ad-badge--violet">Chờ hoàn</span>
+                                    @if (($r->gatewayStatus ?? null) === 'processing')
+                                        <span class="ad-badge ad-badge--warn">Đang xử lý tại cổng</span>
+                                    @elseif (($r->gatewayStatus ?? null) === 'failed')
+                                        <span class="ad-badge ad-badge--bad">Cổng từ chối</span>
+                                    @else
+                                        <span class="ad-badge ad-badge--violet">Chờ hoàn</span>
+                                    @endif
+                                    @if (!empty($r->gatewayMessage))<span class="ad-sub">{{ $r->gatewayMessage }}</span>@endif
+                                    @if (!empty($r->gatewayAttempts))<span class="ad-sub">Đã gửi {{ $r->gatewayAttempts }} lần</span>@endif
                                 @else
                                     <span class="ad-badge ad-badge--mute">Đã hoàn</span>
                                     <span class="ad-sub">{{ $r->method }}{{ $r->reference ? ' · ' . $r->reference : '' }}</span>
@@ -48,8 +63,17 @@
                                 @endif
                             </td>
                             <td class="num">
-                                @if ($r->status === 'pending')
-                                    <button type="button" class="ad-btn ad-btn--sm ad-btn--primary" data-toggle="modal" data-target="#rf-modal"
+                                @if ($r->status === 'pending' && ($r->gatewayStatus ?? null) === 'processing')
+                                    <form method="POST" action="{{ route('admin.refunds.sync', $r->refundId) }}">@csrf<button class="ad-btn ad-btn--sm ad-btn--primary" type="submit"><i class="fa fa-refresh"></i> Kiểm tra trạng thái</button></form>
+                                @elseif ($r->status === 'pending')
+                                    @if (!empty($r->gw['can']) || ($r->gatewayStatus ?? null) === 'failed')
+                                        @if (!empty($r->gw['can']) || \App\Services\Payments\GatewayRefundService::enabled())
+                                            <form method="POST" action="{{ route('admin.refunds.gateway', $r->refundId) }}" style="margin-bottom:6px">@csrf<button class="ad-btn ad-btn--sm ad-btn--primary" type="submit" data-confirm="Gửi lệnh hoàn {{ $money($r->amount) }} cho đơn {{ $r->bookingCode }} qua API cổng thanh toán? Đây là tiền thật và không thể thu hồi.">{{ ($r->gatewayStatus ?? null) === 'failed' ? 'Thử lại qua cổng' : 'Hoàn qua ' . ($r->gw['label'] ?? 'cổng') }}</button></form>
+                                        @endif
+                                    @elseif (!empty($r->gw['why']) && \App\Services\Payments\GatewayRefundService::enabled())
+                                        <span class="ad-sub" title="{{ $r->gw['why'] }}">Hoàn thủ công</span>
+                                    @endif
+                                    <button type="button" class="ad-btn ad-btn--sm" data-toggle="modal" data-target="#rf-modal"
                                         data-id="{{ $r->refundId }}" data-code="{{ $r->bookingCode }}" data-amount="{{ $money($r->amount) }}" data-name="{{ $r->fullName }}">Đã hoàn…</button>
                                 @endif
                             </td>

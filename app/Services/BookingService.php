@@ -169,9 +169,9 @@ class BookingService
     /**
      * Hủy một đơn: đổi trạng thái, trả chỗ, nhả mã giảm giá.
      * Phải gọi TRONG transaction, sau khi đã khóa dòng đơn (lockForUpdate) và kiểm tra trạng thái.
-     * $reason: customer (khách tự hủy) | admin | expired (hết hạn giữ chỗ). Thống kê phân biệt được các loại hủy (L-B-24).
+     * $reason: customer (khách tự hủy) | admin | expired (hết hạn giữ chỗ) | shortfall (Travela hủy vì thiếu khách). Thống kê phân biệt được các loại hủy (L-B-24).
      */
-    public function cancelLocked(object $booking, string $reason = 'customer'): void
+    public function cancelLocked(object $booking, string $reason = 'customer', bool $releaseCoupon = true): void
     {
         DB::table('tbl_booking')
             ->where('bookingId', $booking->bookingId)
@@ -180,7 +180,10 @@ class BookingService
         // Trả chỗ về đúng ngày khởi hành (chỗ đang giữ nếu đơn chờ, chỗ đã bán nếu đơn đã xác nhận)
         $this->departures->release($booking);
 
-        $this->coupons->release((int) $booking->bookingId);
+        // Đơn đã thanh toán: RefundService::requestLocked quyết định nhả mã theo % hoàn (config booking.coupon_release_min_percent).
+        if ($releaseCoupon) {
+            $this->coupons->release((int) $booking->bookingId);
+        }
     }
 
     /**

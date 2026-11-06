@@ -184,4 +184,97 @@ class MomoGateway implements PaymentGateway
     {
         return self::CODES[$code] ?? 'Mã ' . $code;
     }
+
+    /* ------------------------------------------------------------------ Hoàn tiền (POST /v2/gateway/api/refund) */
+
+    public function supportsRefund(): bool
+    {
+        return true;
+    }
+
+    public function newRefundRef(int $refundId, int $attempt): string
+    {
+        return 'RF' . $refundId . '-' . $attempt . '-' . substr(bin2hex(random_bytes(3)), 0, 6);
+    }
+
+    private static function refundResult(string $status, ?string $no, string $code, string $message, array $raw): array
+    {
+        return ['ok' => $status !== 'unknown', 'status' => $status, 'refundNo' => $no, 'code' => $code, 'message' => $message, 'raw' => $raw];
+    }
+
+    /** resultCode của lệnh hoàn / hỏi hoàn → refunded | pending | failed. */
+    private static function refundStatus(string $code): string
+    {
+        return $code === '0' ? 'refunded' : (in_array($code, ['7000', '7002', '9000'], true) ? 'pending' : 'failed');
+    }
+
+    /**
+     * MoMo hoàn bằng transId của giao dịch gốc (providerTxnNo, lấy từ IPN/query lúc thanh toán). Chữ ký HMAC-SHA256 trên
+     * accessKey, amount, description, orderId (mã hoàn của ta), partnerCode, requestId, transId.
+     */
+    public function refund(array $o): array
+    {
+        $transId = (string) ($o['providerTxnNo'] ?? '');
+        if ($transId === '' || !ctype_digit($transId)) {
+            return self::refundResult('failed', null, 'no_txn', 'Đơn không có mã giao dịch MoMo (transId) nên không hoàn tự động được.', []);
+        }
+        $p = [
+            'accessKey' => $this->cfg('access_key'), 'amount' => (int) $o['amount'],
+            'description' => mb_substr((string) ($o['reason'] ?: 'Hoan tien don dat tour'), 0, 200),
+            'orderId' => $o['refundRef'], 'partnerCode' => $this->cfg('partner_code'),
+            'requestId' => $o['refundRef'] . '-' . substr(bin2hex(random_bytes(3)), 0, 6), 'transId' => $transId,
+        ];
+        $body = ['partnerCode' => $p['partnerCode'], 'orderId' => $p['orderId'], 'requestId' => $p['requestId'], 'amount' => $p['amount'],
+            'transId' => (int) $transId, 'lang' => 'vi', 'description' => $p['description'],
+            'signature' => $this->sign(self::raw($p, ['accessKey', 'amount', 'description', 'orderId', 'partnerCode', 'requestId', 'transId']))];
+        try {
+            $res = Http::timeout((int) config('payments.timeout', 15))->acceptJson()->asJson()
+                ->post(rtrim($this->cfg('endpoint'), '/') . '/v2/gateway/api/refund', $body);
+        } catch (\Throwable $e) {
+            // Không biết lệnh đã tới MoMo chưa: không được coi là thất bại để gửi lại (có thể hoàn hai lần)
+            return self::refundResult('unknown', null, 'http_error', 'Không nhận được phản hồi từ MoMo: ' . $e->getMessage(), ['request' => $body]);
+        }
+        $j = (array) $res->json();
+        if (!isset($j['resultCode'])) {
+            return self::refundResult('unknown', null, 'http_' . $res->status(), 'MoMo trả về phản hồi không đọc được (HTTP ' . $res->status() . ').', ['request' => $body, 'response' => $j]);
+        }
+        $code = (string) $j['resultCode'];
+        $status = self::refundStatus($code);
+
+        return self::refundResult($status, isset($j['transId']) ? (string) $j['transId'] : null, $code,
+            'MoMo: ' . ($j['message'] ?? $this->describe($code)), ['request' => $body, 'response' => $j]);
+    }
+
+    public function queryRefund(string $refundRef): array
+    {
+        $p = ['accessKey' => $this->cfg('access_key'), 'orderId' => $refundRef, 'partnerCode' => $this->cfg('partner_code'),
+            'requestId' => $refundRef . '-q' . substr(bin2hex(random_bytes(3)), 0, 6)];
+        $body = ['partnerCode' => $p['partnerCode'], 'orderId' => $refundRef, 'requestId' => $p['requestId'], 'lang' => 'vi',
+            'signature' => $this->sign(self::raw($p, ['accessKey', 'orderId', 'partnerCode', 'requestId']))];
+        try {
+            $j = (array) Http::timeout((int) config('payments.timeout', 15))->acceptJson()->asJson()
+                ->post(rtrim($this->cfg('endpoint'), '/') . '/v2/gateway/api/refund/query', $body)->json();
+        } catch (\Throwable $e) {
+            return self::refundResult('unknown', null, 'http_error', 'Không gọi được MoMo: ' . $e->getMessage(), ['request' => $body]);
+        }
+        if (!isset($j['resultCode'])) {
+            return self::refundResult('unknown', null, 'empty', 'MoMo không trả kết quả hỏi hoàn.', ['request' => $body, 'response' => $j]);
+        }
+        $code = (string) $j['resultCode'];
+        if ($code === '0') {
+            // refundTrans: danh sách giao dịch hoàn của orderId này; có kết quả riêng từng dòng
+            $trans = (array) ($j['refundTrans'] ?? []);
+            $first = $trans[0] ?? null;
+            if (is_array($first)) {
+                $tc = (string) ($first['resultCode'] ?? '0');
+
+                return self::refundResult(self::refundStatus($tc), isset($first['transId']) ? (string) $first['transId'] : null, $tc,
+                    'MoMo: ' . $this->describe($tc), ['request' => $body, 'response' => $j]);
+            }
+
+            return self::refundResult('pending', null, $code, 'MoMo đã nhận yêu cầu hoàn, chưa có giao dịch hoàn.', ['request' => $body, 'response' => $j]);
+        }
+
+        return self::refundResult(self::refundStatus($code), null, $code, 'MoMo: ' . ($j['message'] ?? $this->describe($code)), ['request' => $body, 'response' => $j]);
+    }
 }

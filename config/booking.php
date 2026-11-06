@@ -19,4 +19,10 @@ return [
 
     // Đơn chưa thanh toán: khách hủy được đến trước ngày khởi hành bấy nhiêu ngày (0 = đến hết hôm trước ngày đi)
     'unpaid_cancel_min_days' => (int) env('BOOKING_UNPAID_CANCEL_MIN_DAYS', 1),
+
+    // Mã giảm giá chỉ được nhả lại cho đơn đã thanh toán khi % hoàn >= giá trị này (100 = chỉ khi hoàn đủ; 0 = luôn nhả như cũ)
+    'coupon_release_min_percent' => (int) env('BOOKING_COUPON_RELEASE_MIN_PERCENT', 100),
+
+    // Lịch khởi hành còn <= số ngày này mà chưa đủ khách tối thiểu (và đã có khách) thì gắn cờ "thiếu khách" cho admin
+    'shortfall_flag_days' => (int) env('BOOKING_SHORTFALL_FLAG_DAYS', 10),
 ];

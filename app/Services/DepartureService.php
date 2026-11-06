@@ -195,6 +195,7 @@ class DepartureService
     {
         $ok = $this->guarded($availabilityId, fn() => DB::table('tbl_tour_availability')
             ->where('availabilityId', $availabilityId)
+            ->where('status', 'open') // ngày đã đóng (vd Travela hủy vì thiếu khách): tiền về muộn phải hoàn, không "sống lại" đơn
             ->whereRaw('totalSlots - bookedSlots - heldSlots >= ?', [$people])
             ->update(['bookedSlots' => DB::raw('bookedSlots + ' . (int) $people), 'updatedAt' => now()]) === 1);
         if ($ok) {
@@ -311,6 +312,11 @@ class DepartureService
             if (!$a) {
                 return ['ok' => false, 'message' => 'Không tìm thấy ngày khởi hành.'];
             }
+            if (Schema::hasTable('tbl_departure_group_members')
+                && DB::table('tbl_departure_group_members')->where('availabilityId', $availabilityId)->exists()
+                && ($slots !== (int) $a->totalSlots || ($date && $date !== $a->departureDate))) {
+                return ['ok' => false, 'message' => 'Ngày đang thuộc đoàn chung: hãy tách đoàn trước khi sửa ngày hoặc sức chứa.'];
+            }
             $used = (int) $a->bookedSlots + (int) $a->heldSlots;
             if ($slots < max(1, $used)) {
                 return ['ok' => false, 'message' => "Đã có {$used} chỗ được giữ / bán, tổng chỗ không thể nhỏ hơn số này."];
@@ -349,6 +355,10 @@ class DepartureService
                 return ['ok' => false, 'message' => 'Không tìm thấy ngày khởi hành.'];
             }
             $to = $a->status === 'open' ? 'closed' : 'open';
+            if ($to === 'closed' && Schema::hasTable('tbl_departure_group_members')
+                && DB::table('tbl_departure_group_members')->where('availabilityId', $availabilityId)->exists()) {
+                return ['ok' => false, 'message' => 'Ngày đang thuộc đoàn chung: hãy tách đoàn trước khi ngừng bán.'];
+            }
             if ($to === 'open' && $a->departureDate <= now()->toDateString()) {
                 return ['ok' => false, 'message' => 'Ngày khởi hành đã qua, không mở bán lại được.'];
             }
@@ -366,6 +376,9 @@ class DepartureService
             $a = DB::table('tbl_tour_availability')->where('availabilityId', $availabilityId)->lockForUpdate()->first();
             if (!$a) {
                 return ['ok' => false, 'message' => 'Không tìm thấy ngày khởi hành.'];
+            }
+            if (Schema::hasTable('tbl_departure_group_members') && DB::table('tbl_departure_group_members')->where('availabilityId', $availabilityId)->exists()) {
+                return ['ok' => false, 'message' => 'Ngày đang thuộc đoàn chung: hãy tách đoàn trước khi xóa.'];
             }
             if (DB::table('tbl_booking')->where('availabilityId', $availabilityId)->exists()) {
                 return ['ok' => false, 'message' => 'Ngày này đã có đơn đặt nên không xóa được. Hãy chọn "Ngừng bán".'];
@@ -397,6 +410,11 @@ class DepartureService
         $data = ['totalSlots' => max((int) $a->bookedSlots + (int) $a->heldSlots, (int) $a->bookedSlots + (int) $a->heldSlots + $remaining), 'updatedAt' => now()];
         if ($newStart !== $oldStart && !DB::table('tbl_tour_availability')->where('tourId', $tourId)->where('departureDate', $newStart)->exists()) {
             $data['departureDate'] = $newStart;
+        }
+        if (Schema::hasTable('tbl_departure_group_members')
+            && DB::table('tbl_departure_group_members')->where('availabilityId', $a->availabilityId)->exists()
+            && ((int) $data['totalSlots'] !== (int) $a->totalSlots || isset($data['departureDate']))) {
+            throw new \DomainException('Lịch khởi hành đang thuộc đoàn chung. Hãy tách đoàn trước khi sửa ngày hoặc số chỗ.');
         }
         DB::table('tbl_tour_availability')->where('availabilityId', $a->availabilityId)->update($data);
         $this->syncTour($tourId);

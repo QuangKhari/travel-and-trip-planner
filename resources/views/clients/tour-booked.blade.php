@@ -18,6 +18,9 @@
     $holdPassed = $holdAt && $holdAt->isPast();
     $cancelDays = (int) config('booking.paid_cancel_min_days', 7);
     $payLabel = ['y' => 'Đã thanh toán', 'refund_pending' => 'Đã hủy – đang chờ hoàn tiền', 'refunded' => 'Đã hoàn tiền'][$b->paymentStatus ?? 'n'] ?? 'Chưa thanh toán';
+    if (($b->paymentStatus ?? '') === 'refunded' && !empty($refund) && (int) $refund->amount === 0) {
+        $payLabel = 'Đã hủy – không phát sinh hoàn tiền (0%)';
+    }
     $sitePhone = config('site.phone');
     $siteAddress = config('site.address');
     $siteEmail = config('site.email');
@@ -59,7 +62,7 @@
         {{-- Tiến trình đơn (đơn đã hủy thì hiện thông báo thay vì tiến trình) --}}
         @if ($status === 'c')
             <div class="bk-alert bk-alert--bad" role="status">
-                <b>Đơn này đã được hủy{{ ['expired' => ' vì quá hạn giữ chỗ (chưa đến văn phòng xác nhận)', 'admin' => ' bởi Travela', 'customer' => ' theo yêu cầu của bạn'][$tour_booked->cancelReason ?? ''] ?? '' }}.</b> Chỗ đã được trả lại cho tour. Bạn có thể
+                <b>Đơn này đã được hủy{{ ['expired' => ' vì quá hạn giữ chỗ (chưa đến văn phòng xác nhận)', 'admin' => ' bởi Travela', 'shortfall' => ' vì tour không đủ khách tối thiểu — Travela hủy khởi hành', 'customer' => ' theo yêu cầu của bạn'][$tour_booked->cancelReason ?? ''] ?? '' }}.</b> Chỗ đã được trả lại cho tour. Bạn có thể
                 <a href="{{ route('tours') }}">xem các tour khác</a> bất cứ lúc nào.
             </div>
         @else
@@ -197,7 +200,7 @@
                         @if (!empty($refund))
                         <div>
                             <dt>Hoàn tiền</dt>
-                            <dd>{{ $money($refund->amount) }} ({{ $refund->percent }}%) · {{ $refund->status === 'refunded' ? 'đã hoàn' . ($refund->processedAt ? ' ngày ' . \Carbon\Carbon::parse($refund->processedAt)->format('d/m/Y') : '') : 'Travela đang xử lý' }}</dd>
+                            <dd>@if ((int) $refund->amount === 0)Không phát sinh hoàn tiền theo chính sách hủy ({{ $refund->percent }}%)@else{{ $money($refund->amount) }} ({{ $refund->percent }}%) · {{ $refund->status === 'refunded' ? 'đã hoàn' . ($refund->processedAt ? ' ngày ' . \Carbon\Carbon::parse($refund->processedAt)->format('d/m/Y') : '') : 'Travela đang xử lý' }}@endif</dd>
                         @endif
                         </div>
                     </dl>

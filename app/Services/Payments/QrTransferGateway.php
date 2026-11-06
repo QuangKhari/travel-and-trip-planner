@@ -113,6 +113,28 @@ class QrTransferGateway implements PaymentGateway
             'message' => 'Chuyển khoản QR không có API hỏi trạng thái: hệ thống chờ thông báo từ ngân hàng (SePay) hoặc admin xác nhận.', 'raw' => []];
     }
 
+    /** Chuyển khoản ngân hàng không có API hoàn: kế toán chuyển tiền tay rồi bấm "Đã hoàn". */
+    public function supportsRefund(): bool
+    {
+        return false;
+    }
+
+    public function newRefundRef(int $refundId, int $attempt): string
+    {
+        return 'RF' . $refundId . '-' . $attempt;
+    }
+
+    public function refund(array $o): array
+    {
+        return ['ok' => false, 'status' => 'failed', 'refundNo' => null, 'code' => 'manual',
+            'message' => 'Chuyển khoản QR không có API hoàn tiền: chuyển tiền thủ công cho khách rồi ghi nhận.', 'raw' => []];
+    }
+
+    public function queryRefund(string $refundRef): array
+    {
+        return $this->refund(['refundRef' => $refundRef]);
+    }
+
     public function describe(string $code): string
     {
         return ['in' => 'Tiền vào tài khoản', 'out' => 'Tiền ra (bỏ qua)', 'manual' => 'Admin xác nhận đã nhận tiền'][$code] ?? 'Mã ' . $code;

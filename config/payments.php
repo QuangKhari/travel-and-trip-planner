@@ -40,6 +40,16 @@ return [
         'hold_minutes' => (int) env('ZALOPAY_HOLD_MINUTES', 15),
     ],
 
+    // Hoàn tiền qua API của cổng (chỉ MoMo, ZaloPay; QR chuyển khoản luôn hoàn tay).
+    // enabled: bật nút "Hoàn qua cổng" ở trang Hoàn tiền (admin bấm, có xác nhận). MẶC ĐỊNH TẮT vì đây là tiền thật.
+    // auto: hệ thống tự gửi lệnh hoàn lần đầu cho hồ sơ chờ hoàn sau auto_delay_minutes (cần enabled). Lỗi / bị từ chối thì chờ người xử lý.
+    'refund' => [
+        'enabled' => (bool) env('PAYMENT_REFUND_ENABLED', false),
+        'auto' => (bool) env('PAYMENT_REFUND_AUTO', false),
+        'auto_delay_minutes' => (int) env('PAYMENT_REFUND_AUTO_DELAY', 10),
+        'max_attempts' => (int) env('PAYMENT_REFUND_MAX_ATTEMPTS', 3),
+    ],
+
     'qr' => [
         'enabled' => (bool) env('QR_ENABLED', false),
         // Mã ngân hàng theo VietQR (vd VCB, TCB, MB, ACB, BIDV, TPB) hoặc mã BIN 6 số

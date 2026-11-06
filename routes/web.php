@@ -57,6 +57,9 @@ use App\Http\Controllers\admin\ContentRequestAdminController;
 use App\Http\Controllers\admin\SystemController;
 use App\Http\Controllers\admin\RefundManagementController;
 use App\Http\Controllers\admin\DepartureManagementController;
+use App\Http\Controllers\admin\DepartureGroupingController;
+use App\Http\Controllers\admin\DepartureRescueController;
+use App\Http\Controllers\clients\DepartureRescueResponseController;
 use App\Http\Controllers\admin\AuditLogController;
 use App\Http\Controllers\admin\SupportTicketAdminController;
 use App\Http\Controllers\admin\PaymentAdminController;
@@ -217,6 +220,8 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::post('/cancel-booking', [TourBookedController::class, 'cancelBooking'])->name('cancel-booking');
     Route::post('/reviews', [TourDetailController::class, 'reviews'])->middleware('throttle:10,1,reviews')->name('reviews');
     Route::get('/my-tours', [MyTourController::class, 'index'])->name('my-tours');
+    Route::get('/dieu-chinh-chuyen-di', [DepartureRescueResponseController::class, 'index'])->name('departure.rescue.responses');
+    Route::post('/dieu-chinh-chuyen-di/{planId}/{bookingId}', [DepartureRescueResponseController::class, 'respond'])->whereNumber(['planId','bookingId'])->middleware('throttle:10,1,rescue-response')->name('departure.rescue.respond');
     Route::get('/so-tay-du-hanh', [JournalController::class, 'index'])->name('journal');
 
     // Trip Planner (tuần 5-7)
@@ -354,6 +359,8 @@ Route::prefix('admin')->group(function () {
         // Hoàn tiền (A6)
         Route::get('/refunds', [RefundManagementController::class, 'index'])->name('admin.refunds');
         Route::post('/refunds/{id}/complete', [RefundManagementController::class, 'complete'])->whereNumber('id')->name('admin.refunds.complete');
+        Route::post('/refunds/{id}/gateway', [RefundManagementController::class, 'gateway'])->whereNumber('id')->middleware('throttle:10,1,refund-gateway')->name('admin.refunds.gateway');
+        Route::post('/refunds/{id}/sync', [RefundManagementController::class, 'sync'])->whereNumber('id')->middleware('throttle:30,1,refund-sync')->name('admin.refunds.sync');
 
         // Lịch khởi hành (A3 / D-02)
         Route::get('/departures', [DepartureManagementController::class, 'index'])->name('admin.departures');
@@ -361,6 +368,18 @@ Route::prefix('admin')->group(function () {
         Route::post('/departures/{id}', [DepartureManagementController::class, 'update'])->whereNumber('id')->name('admin.departures.update');
         Route::post('/departures/{id}/toggle', [DepartureManagementController::class, 'toggle'])->whereNumber('id')->name('admin.departures.toggle');
         Route::post('/departures/{id}/delete', [DepartureManagementController::class, 'destroy'])->whereNumber('id')->name('admin.departures.destroy');
+
+        // Ghép đoàn vận hành (không thay đổi booking hoặc tour đã bán)
+        Route::get('/departure-groups', [DepartureGroupingController::class, 'index'])->name('admin.departures.grouping');
+        Route::get('/departure-rescue', [DepartureRescueController::class, 'index'])->name('admin.departures.rescue');
+        Route::post('/departure-rescue', [DepartureRescueController::class, 'store'])->name('admin.departures.rescue.store');
+        Route::post('/departure-rescue/{id}/apply', [DepartureRescueController::class, 'apply'])->whereNumber('id')->name('admin.departures.rescue.apply');
+        Route::post('/departure-rescue/resources', [DepartureRescueController::class, 'addResource'])->name('admin.departures.rescue.resources');
+        Route::post('/departure-rescue/{id}/refund', [DepartureRescueController::class, 'refund'])->whereNumber('id')->name('admin.departures.rescue.refund');
+        Route::post('/departure-rescue/{id}/cancel', [DepartureRescueController::class, 'cancel'])->whereNumber('id')->name('admin.departures.rescue.cancel');
+        Route::post('/departure-groups/merge', [DepartureGroupingController::class, 'merge'])->name('admin.departures.grouping.merge');
+        Route::post('/departure-groups/{id}/disband', [DepartureGroupingController::class, 'disband'])->whereNumber('id')->name('admin.departures.grouping.disband');
+        Route::post('/departures/{id}/minimum', [DepartureGroupingController::class, 'minimum'])->whereNumber('id')->name('admin.departures.minimum');
 
         // Nhật ký thao tác (D-08)
         Route::get('/audit-log', [AuditLogController::class, 'index'])->name('admin.audit');

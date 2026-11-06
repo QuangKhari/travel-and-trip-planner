@@ -31,8 +31,28 @@ Artisan::command('payments:reconcile', function () {
 })->purpose('Hỏi MoMo / ZaloPay trạng thái các đơn sắp hết hạn giữ chỗ');
 Schedule::command('payments:reconcile')->everyMinute()->withoutOverlapping();
 
+// Hoàn tiền qua API MoMo / ZaloPay: hỏi lại các lệnh đang xử lý và (nếu PAYMENT_REFUND_AUTO=true) tự gửi lệnh hoàn lần đầu. Mặc định tắt cả hai.
+Artisan::command('payments:process-refunds', function () {
+    if (!\App\Services\Payments\GatewayRefundService::enabled()) {
+        $this->line('Hoàn qua cổng đang tắt (PAYMENT_REFUND_ENABLED=false).');
+
+        return;
+    }
+    $svc = app(\App\Services\Payments\GatewayRefundService::class);
+    $synced = $svc->syncAll();
+    $auto = $svc->autoProcess();
+    $this->line("Đã hoàn xong sau khi hỏi lại: {$synced}; tự gửi lệnh hoàn thành công: {$auto}");
+})->purpose('Đối soát và tự động hóa hoàn tiền qua cổng thanh toán');
+Schedule::command('payments:process-refunds')->everyFiveMinutes()->withoutOverlapping();
+
 // Hủy đơn quá hạn giữ chỗ, trả chỗ và nhả mã giảm giá - mỗi phút (A2: lệnh nhẹ, chỉ quét đơn n đã quá hạn)
 Schedule::command('bookings:expire-holds')->everyMinute()->withoutOverlapping();
+
+// Thông báo phương án thiếu khách và tự đóng phương án hết hạn (cần queue worker và mail config).
+Schedule::command('departures:rescue-notify')->everyFiveMinutes()->withoutOverlapping();
+
+// Gắn cờ lịch khởi hành sắp thiếu khách tối thiểu để admin xử lý sớm (ghép đoàn / đổi ngày / hủy hoàn tiền).
+Schedule::command('departures:check-shortfall')->dailyAt('07:00')->withoutOverlapping();
 
 // C-10: email nhắc khách 3 ngày và 1 ngày trước ngày khởi hành (không gửi trùng)
 Schedule::command('bookings:remind-departure')->dailyAt('08:00')->withoutOverlapping();

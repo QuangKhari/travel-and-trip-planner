@@ -99,7 +99,7 @@ class TourBookedController extends Controller
             }
 
             // Đổi trạng thái, trả chỗ đúng một lần và nhả mã giảm giá; đã thanh toán thì tạo yêu cầu hoàn tiền theo bậc
-            $bookings->cancelLocked($booking, 'customer');
+            $bookings->cancelLocked($booking, 'customer', !$paid);
             if ($paid) {
                 $refund = app(\App\Services\RefundService::class)->requestLocked($booking, 'customer', $userId, null, 'Khách tự hủy trên web');
                 $refundMsg = $refund->amount > 0

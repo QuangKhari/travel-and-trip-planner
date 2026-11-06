@@ -849,6 +849,16 @@ class ToursManagementController extends Controller
                 ];
             }
 
+            // Không để form sửa tour cũ làm sai lệch đoàn vận hành đã ghép.
+            if (\Illuminate\Support\Facades\Schema::hasTable('tbl_departure_group_members')
+                && DB::table('tbl_departure_group_members as gm')
+                    ->join('tbl_tour_availability as ga', 'ga.availabilityId', '=', 'gm.availabilityId')
+                    ->where('ga.tourId', $tourId)->exists()
+                && ($replaceTimeline || (string) $dataTours['startDate'] !== (string) $tour->startDate
+                    || (int) $dataTours['quantity'] !== (int) $tour->quantity)) {
+                return ['success' => false, 'status' => 409,
+                    'message' => 'Tour đang tham gia đoàn chung: hãy tách đoàn trước khi đổi lịch trình, ngày khởi hành hoặc số chỗ.'];
+            }
             $this->tours->updateTour($tourId, $dataTours);
             // Ngày đi / số chỗ của form Sửa tour là của chuyến đang hiển thị: ghi sang đúng dòng lịch khởi hành
             app(DepartureService::class)->applyLegacyEdit($tourId, (string) $tour->startDate, (string) $dataTours['startDate'], (int) $dataTours['quantity']);
