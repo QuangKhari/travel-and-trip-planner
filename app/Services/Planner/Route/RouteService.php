@@ -20,6 +20,7 @@ use App\Services\Planner\PlannerRules;
 class RouteService
 {
     public const MIN_LEG_KM = 0.5;   // mặc định; giá trị thật lấy từ config planner.route.min_leg_km
+    public const SAME_AREA = 'same_area';   // hai điểm cùng một khu (< minLegKm), không tính đoạn đi
 
     public function __construct(private RouteProvider $provider, private float $minLegKm = self::MIN_LEG_KM, private string $mode = 'driving', private float $factor = 1.3) {}
 
@@ -49,13 +50,17 @@ class RouteService
     }
 
     /**
-     * Một đoạn đi giữa hai điểm theo quy tắc chung: gần hơn minLegKm (chim bay) thì coi như cùng khu, không tính.
-     * @return array{km:float,min:int}
+     * Một đoạn đi giữa hai điểm theo quy tắc chung: gần hơn minLegKm (chim bay) thì coi như cùng khu, không tính
+     * (status same_area: quy tắc có chủ đích, giống trình duyệt). Tọa độ hỏng -> unknown, không phải "cùng khu".
+     * @return array{km:float,min:int,status:string}
      */
     public function leg(array $a, array $b): array
     {
+        if (!HaversineProvider::validPoint($a) || !HaversineProvider::validPoint($b)) {
+            return ['km' => 0.0, 'min' => 0, 'status' => RouteProvider::UNKNOWN];
+        }
         if (HaversineProvider::straightKm($a, $b) < $this->minLegKm) {
-            return ['km' => 0.0, 'min' => 0];
+            return ['km' => 0.0, 'min' => 0, 'status' => self::SAME_AREA];
         }
 
         return $this->estimate($a, $b);
@@ -89,20 +94,63 @@ class RouteService
             'reason' => $fb && method_exists($this->provider, 'lastError') ? $this->provider->lastError() : null, 'mode' => $this->mode];
     }
 
-    /** @return array{km:float,min:int} */
+    /** @return array{km:float,min:int,status:string} */
     public function estimate(array $a, array $b): array
     {
-        return $this->provider->matrix([$a, $b])[0][1];
+        return self::withStatus($this->provider->matrix([$a, $b]), RouteProvider::ESTIMATED)[0][1];
     }
 
     public function distanceMatrix(array $pts): array
     {
-        return $this->provider->matrix(array_values($pts));
+        return self::withStatus($this->provider->matrix(array_values($pts)), RouteProvider::ESTIMATED);
+    }
+
+    /** Ô thiếu status (nguồn cũ / bộ đệm cũ) nhận status mặc định $default. */
+    public static function withStatus(array $m, string $default): array
+    {
+        foreach ($m as $i => $row) {
+            foreach ($row as $k => $cell) {
+                if (!isset($cell['status'])) {
+                    $m[$i][$k]['status'] = $default;
+                }
+            }
+        }
+
+        return $m;
+    }
+
+    /**
+     * Mức tin cậy của một tập chặng:
+     *   verified   mọi chặng đều có tuyến thật
+     *   estimated  có chặng ước tính, không chặng nào bị chặn/không rõ
+     *   uncertain  có chặng unknown (không tính được)
+     *   blocked    có chặng unreachable (dịch vụ định tuyến khẳng định không có đường)
+     * @param array<string,int> $counts
+     */
+    public static function confidence(array $counts): string
+    {
+        if (($counts[RouteProvider::UNREACHABLE] ?? 0) > 0) {
+            return 'blocked';
+        }
+        if (($counts[RouteProvider::UNKNOWN] ?? 0) > 0) {
+            return 'uncertain';
+        }
+        if (($counts[RouteProvider::ESTIMATED] ?? 0) > 0) {
+            return 'estimated';
+        }
+
+        return 'verified';
+    }
+
+    /** @return array<string,int> */
+    public static function emptyCounts(): array
+    {
+        return [RouteProvider::VERIFIED => 0, RouteProvider::ESTIMATED => 0, RouteProvider::UNREACHABLE => 0, RouteProvider::UNKNOWN => 0];
     }
 
     /**
      * @param array<int,array{0:float,1:float}> $pts theo thứ tự đi
-     * @return array{legs:array<int,array{from:int,to:int,km:float,min:int}>,km:float,min:int}
+     * @return array{legs:array<int,array{from:int,to:int,km:float,min:int,status:string}>,km:float,min:int,quality:array<string,int>,confidence:string}
      */
     public function travelTime(array $pts): array
     {
@@ -110,21 +158,24 @@ class RouteService
         $legs = [];
         $km = 0.0;
         $min = 0;
+        $q = self::emptyCounts();
         if (count($pts) < 2) {
-            return ['legs' => [], 'km' => 0.0, 'min' => 0];
+            return ['legs' => [], 'km' => 0.0, 'min' => 0, 'quality' => $q, 'confidence' => 'verified'];
         }
-        $m = $this->provider->matrix($pts);
+        $m = self::withStatus($this->provider->matrix($pts), RouteProvider::ESTIMATED);
         for ($i = 1; $i < count($pts); $i++) {
-            if (HaversineProvider::straightKm($pts[$i - 1], $pts[$i]) < $this->minLegKm) {
+            $l = $m[$i - 1][$i];
+            $bad = in_array($l['status'], [RouteProvider::UNKNOWN, RouteProvider::UNREACHABLE], true);
+            if (!$bad && HaversineProvider::straightKm($pts[$i - 1], $pts[$i]) < $this->minLegKm) {
                 continue;   // cùng một khu: đi bộ vài phút, không tính
             }
-            $l = $m[$i - 1][$i];
-            $legs[] = ['from' => $i - 1, 'to' => $i, 'km' => $l['km'], 'min' => $l['min']];
+            $legs[] = ['from' => $i - 1, 'to' => $i, 'km' => $l['km'], 'min' => $l['min'], 'status' => $l['status']];
+            $q[$l['status']] = ($q[$l['status']] ?? 0) + 1;
             $km += $l['km'];
             $min += $l['min'];
         }
 
-        return ['legs' => $legs, 'km' => $km, 'min' => $min];
+        return ['legs' => $legs, 'km' => $km, 'min' => $min, 'quality' => $q, 'confidence' => self::confidence($q)];
     }
 
     /**

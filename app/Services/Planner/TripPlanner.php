@@ -600,7 +600,9 @@ class TripPlanner
                 $day = isset($it['day']) && $it['day'] !== null && $it['day'] !== '' ? min($days, max(1, (int) $it['day'])) : null;
                 $ck = $day === null ? 'x' : (string) $day;
                 $counter[$ck] = ($counter[$ck] ?? -1) + 1;
-                $pos = $custom && self::hasCoord($it['lat'] ?? null) && self::hasCoord($it['lng'] ?? null);
+                // (0,0) / ngoài phạm vi = vị trí hỏng: lưu như "chưa có vị trí", không lưu thành một điểm giữa biển
+                $pos = $custom && self::hasCoord($it['lat'] ?? null) && self::hasCoord($it['lng'] ?? null)
+                    && \App\Services\Planner\Route\HaversineProvider::validPoint([(float) $it['lat'], (float) $it['lng']]);
                 $rows[] = [
                     'tripId' => $tripId,
                     'refType' => $it['type'],
@@ -620,6 +622,8 @@ class TripPlanner
             if ($rows) {
                 DB::table('tbl_trip_items')->insert($rows);
             }
+            // Lịch sử phiên bản: chụp lại bản vừa lưu (cùng transaction với lần tăng rev)
+            app(TripRevisions::class)->record($tripId, isset($f['rev']) ? (int) $f['rev'] : null, $userId, 'save', $rows);
         });
 
         // Địa điểm người dùng thêm từ ngoài kho (tìm trên bản đồ) = nhu cầu mà kho Travela chưa có: ghi vào sổ cho biên tập viên.

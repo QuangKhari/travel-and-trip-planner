@@ -43,7 +43,7 @@ class TripHealth
     }
 
     /** Mã vấn đề là ràng buộc cứng (lịch không thực hiện được như đã đặt). */
-    public const HARD = ['time.overlap', 'time.travel', 'hours.closed', 'hours.early', 'hours.late'];
+    public const HARD = ['time.overlap', 'time.travel', 'hours.closed', 'hours.early', 'hours.late', 'route.unreachable'];
 
     public static function severity(string $code): string
     {
@@ -70,6 +70,16 @@ class TripHealth
         $info = count(array_filter($checks, fn($x) => $x['level'] === 'info'));
         $score = max(0, 100 - 15 * $bad - 5 * $warn);
 
+        // Kết luận khả thi: chỉ "verified" khi không có lỗi cứng VÀ mọi chặng đều có tuyến thật.
+        $q = \App\Services\Planner\Route\RouteService::emptyCounts();
+        foreach ($ctx->days as $d) {
+            foreach ($d->routeQuality as $k => $n) {
+                $q[$k] = ($q[$k] ?? 0) + $n;
+            }
+        }
+        $conf = \App\Services\Planner\Route\RouteService::confidence($q);
+        $feasibility = $bad ? 'needs_review' : ($conf === 'verified' ? 'feasible_verified' : 'feasible_with_uncertainty');
+
         return [
             'score' => $score,
             'level' => $bad ? 'bad' : ($warn ? 'warn' : 'ok'),
@@ -79,6 +89,8 @@ class TripHealth
                 'errors' => $bad, 'warnings' => $warn, 'infos' => $info,
             ],
             'recommended' => self::recommend($checks),
+            'feasibility' => $feasibility,
+            'routeQuality' => ['legs' => $q, 'confidence' => $conf],
             'provider' => $this->route->status()['actual'],
             'route' => $this->route->status(),
             'days' => array_values(array_map(fn(DaySchedule $d) => [
@@ -87,9 +99,10 @@ class TripHealth
                 'activityMin' => $d->activityMin, 'travelMin' => $d->travelMin, 'travelKm' => round($d->travelKm, 1), 'mealMin' => $d->mealMin,
                 'bufferMin' => $d->bufferMin, 'freeMin' => $d->freeMin, 'availableMin' => $d->availableMin, 'occupiedMin' => $d->occupiedMin(),
                 'start' => DaySchedule::hhmm($d->start), 'end' => DaySchedule::hhmm($d->end), 'cost' => round($d->cost),
+                'routeConfidence' => $d->routeConfidence,
                 'rows' => array_map(fn($r) => ['type' => $r['item']['type'], 'refId' => $r['item']['refId'] ?? null, 'name' => $r['item']['name'],
                     'start' => DaySchedule::hhmm($r['start']), 'end' => DaySchedule::hhmm($r['end']), 'durationMin' => $r['dur'], 'fixed' => $r['fixed'], 'hours' => $r['hours'],
-                    'travelMin' => $r['travelMin'], 'travelKm' => round($r['travelKm'], 1), 'waitMin' => $r['waitMin'], 'conflict' => $r['conflict'],
+                    'travelMin' => $r['travelMin'], 'travelKm' => round($r['travelKm'], 1), 'routeStatus' => $r['routeStatus'] ?? null, 'waitMin' => $r['waitMin'], 'conflict' => $r['conflict'],
                     'estimatedDuration' => empty($r['item']['durationMin'])], $d->rows),
             ], $ctx->days)),
             'checks' => $checks,

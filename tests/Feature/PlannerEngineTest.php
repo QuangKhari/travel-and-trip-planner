@@ -60,7 +60,11 @@ class PlannerEngineTest extends TestCase
         $straight = HaversineProvider::straightKm([21.001, 105.001], [21.0, 105.1]);
         $this->assertEqualsWithDelta($straight * 1.3, $t['km'], 0.05);
         $this->assertSame((int) round($t['km'] / 40 * 60), $t['min']);
-        $this->assertSame(['legs' => [], 'km' => 0.0, 'min' => 0], $r->travelTime([[21.0, 105.0]]));
+        $one = $r->travelTime([[21.0, 105.0]]);
+        $this->assertSame(['legs' => [], 'km' => 0.0, 'min' => 0], array_intersect_key($one, ['legs' => 1, 'km' => 1, 'min' => 1]));
+        $this->assertSame('verified', $one['confidence']);   // không có chặng nào để nghi ngờ
+        $this->assertSame('estimated', $t['legs'][0]['status']);
+        $this->assertSame('estimated', $t['confidence']);
     }
 
     public function test_detour_picks_cheapest_gap_and_tail(): void

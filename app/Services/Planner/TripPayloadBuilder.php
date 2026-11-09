@@ -62,8 +62,9 @@ class TripPayloadBuilder
             $pts = array_values(array_filter($day['items'], fn($x) => $x['lat'] !== null && $x['lng'] !== null));
             $tt = $this->route->travelTime(array_map(fn($x) => [(float) $x['lat'], (float) $x['lng']], $pts));
             foreach ($tt['legs'] as $l) {
-                $byDay[$d]['legs'][] = ['from' => $pts[$l['from']]['name'], 'to' => $pts[$l['to']]['name'], 'km' => (int) round($l['km']), 'min' => $l['min']];
+                $byDay[$d]['legs'][] = ['from' => $pts[$l['from']]['name'], 'to' => $pts[$l['to']]['name'], 'km' => (int) round($l['km']), 'min' => $l['min'], 'status' => $l['status'] ?? 'estimated'];
             }
+            $byDay[$d]['routeConfidence'] = $tt['confidence'] ?? 'estimated';
             $byDay[$d]['km'] = (int) round($tt['km']);
             $byDay[$d]['minutes'] = $tt['min'];
             $byDay[$d]['cost'] = array_sum(array_map(fn($x) => $x['cost'] ?? 0, $day['items']));

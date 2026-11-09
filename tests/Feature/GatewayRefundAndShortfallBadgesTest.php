@@ -104,6 +104,7 @@ class GatewayRefundAndShortfallBadgesTest extends TestCase
             $raw = MomoGateway::raw(['accessKey' => 'ACCESSTEST'] + $d, ['accessKey', 'amount', 'description', 'orderId', 'partnerCode', 'requestId', 'transId']);
 
             return str_ends_with($req->url(), '/v2/gateway/api/refund') && (int) $d['transId'] === 2820000001 && (int) $d['amount'] === 2000000
+                && $d['requestId'] === $d['orderId']   // idempotency: requestId cố định theo mã hoàn, không ngẫu nhiên
                 && hash_equals(hash_hmac('sha256', $raw, self::MOMO_SECRET), $d['signature']);
         });
     }

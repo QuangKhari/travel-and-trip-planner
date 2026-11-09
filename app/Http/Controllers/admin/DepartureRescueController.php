@@ -126,6 +126,10 @@ class DepartureRescueController extends Controller
             $p=DB::table('tbl_departure_rescue_plans')->where('planId',$id)->lockForUpdate()->first();
             abort_if(!$p || !in_array($p->status,['pending','ready'],true),422,'Không thể hủy phương án.');
             DB::table('tbl_departure_rescue_plans')->where('planId',$id)->update(['status'=>'cancelled','updatedAt'=>now()]);
+            // nhả xe / HDV đã giữ cho chặng ghép của phương án này
+            if (\App\Services\ResourceAllocationService::ready()) {
+                DB::table('tbl_resource_allocations')->where('ownerType','rescue_plan')->where('ownerId',$id)->whereIn('status',['held','confirmed'])->update(['status'=>'released','updatedAt'=>now()]);
+            }
         });
         AuditLog::record('departure.rescue.cancel','departure_rescue',$id,'Hủy phương án');
         AdminBadges::forget();

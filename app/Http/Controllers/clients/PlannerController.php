@@ -408,6 +408,7 @@ class PlannerController extends Controller
             'role' => $role,
             'rev' => (int) ($trip->rev ?? 0),
             'revUrl' => route('planner.revision', ['id' => $id]),
+            'historyUrl' => \App\Services\Planner\TripRevisions::ready() ? route('planner.history', ['id' => $id]) : null,
             'lockUrl' => route('planner.lock', ['id' => $id]),
             'membersUrl' => route('planner.members', ['id' => $id]),
             'me' => $uid,
@@ -590,7 +591,7 @@ class PlannerController extends Controller
     /** POST /len-ke-hoach/{id}/luu  {title,startDate,days,groupSize,budget,items[]} -> {ok:true} */
     public function save(Request $request, int $id, TripPlanner $planner): JsonResponse
     {
-        $data = $request->validate(TripPlanner::tripRules() + TripPlanner::itemRules() + ['rainPlan' => ['nullable', 'array', 'max:' . TripPlanner::MAX_DAYS], 'rev' => [config('planner.require_revision', false) ? 'required' : 'nullable', 'integer', 'min:0']]);
+        $data = $request->validate(TripPlanner::tripRules() + TripPlanner::itemRules() + ['rainPlan' => ['nullable', 'array', 'max:' . TripPlanner::MAX_DAYS], 'rev' => [config('planner.require_revision', true) ? 'required' : 'nullable', 'integer', 'min:0']]);
         if (!$request->has('rainPlan')) {
             unset($data['rainPlan']);   // không gửi = giữ nguyên phương án dự phòng đã lưu
         }
@@ -601,7 +602,7 @@ class PlannerController extends Controller
         try {
             $ok = $planner->save($this->uid(), $id, $data, $data['items'] ?? []);
         } catch (TripConflict $e) {
-            return response()->json(['message' => $e->getMessage(), 'conflict' => true, 'rev' => $e->currentRev, 'by' => $e->by], 409);
+            return response()->json(['code' => 'REVISION_CONFLICT', 'message' => $e->getMessage(), 'conflict' => true, 'rev' => $e->currentRev, 'by' => $e->by], 409);
         }
 
         if (!$ok) {
@@ -731,6 +732,47 @@ class PlannerController extends Controller
         $acc = $sh->access($this->uid(), $id) ?? abort(404);
 
         return response()->json($sh->revision($id) + ['role' => $acc['role']]);
+    }
+
+    /** GET /len-ke-hoach/{id}/lich-su -> {rev, revisions:[{rev,type,by,items,at}]}: ai xem được chuyến thì xem được lịch sử. */
+    public function history(int $id): JsonResponse
+    {
+        app(TripSharing::class)->access($this->uid(), $id) ?? abort(404);
+
+        return response()->json(['rev' => app(TripSharing::class)->revision($id)['rev'], 'revisions' => app(\App\Services\Planner\TripRevisions::class)->list($id)]);
+    }
+
+    /** GET /len-ke-hoach/{id}/lich-su/{revisionNo} -> nội dung bản đó theo ngày + khác biệt so với hiện tại (xem trước khôi phục). */
+    public function historyShow(int $id, int $revisionNo): JsonResponse
+    {
+        app(TripSharing::class)->access($this->uid(), $id) ?? abort(404);
+        $r = app(\App\Services\Planner\TripRevisions::class)->show($id, $revisionNo);
+
+        return $r ? response()->json($r) : response()->json(['message' => 'Không tìm thấy phiên bản này.'], 404);
+    }
+
+    /** POST /len-ke-hoach/{id}/lich-su/{revisionNo}/khoi-phuc {rev} -> {ok, rev}: khôi phục bản cũ thành phiên bản mới. */
+    public function restoreRevision(Request $request, int $id, int $revisionNo): JsonResponse
+    {
+        $data = $request->validate(['rev' => ['required', 'integer', 'min:0']]);
+        $sh = app(TripSharing::class);
+        if (!$sh->editable($this->uid(), $id)) {
+            return $sh->access($this->uid(), $id)
+                ? response()->json(['message' => 'Bạn chỉ có quyền xem chuyến đi này.'], 403)
+                : response()->json(['message' => 'Không tìm thấy chuyến đi.'], 404);
+        }
+        if ($by = app(\App\Services\Planner\TripLock::class)->blockerFor($id, $this->uid())) {
+            return response()->json(['message' => $by . ' đang sửa chuyến đi này.', 'locked' => true, 'by' => $by], 423);
+        }
+        try {
+            $rev = app(\App\Services\Planner\TripRevisions::class)->restore($this->uid(), $id, $revisionNo, (int) $data['rev']);
+        } catch (TripConflict $e) {
+            return response()->json(['code' => 'REVISION_CONFLICT', 'message' => $e->getMessage(), 'conflict' => true, 'rev' => $e->currentRev, 'by' => $e->by], 409);
+        }
+
+        return $rev === null
+            ? response()->json(['message' => 'Không tìm thấy phiên bản này.'], 404)
+            : response()->json(['ok' => true, 'rev' => $rev]);
     }
 
     /** GET /len-ke-hoach/{id}/thanh-vien -> {role, members[]} */

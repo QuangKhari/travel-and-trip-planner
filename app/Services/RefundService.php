@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Mail\TemplateMail;
+use App\Services\Payments\PaymentLedger;
 use App\Support\BookingPii;
 use App\Support\CancelPolicy;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +27,8 @@ class RefundService
      * Gọi TRONG transaction, sau khi đã khóa dòng đơn. Tạo (hoặc trả lại) yêu cầu hoàn tiền của đơn.
      * $percent = null: theo chính sách bậc thang. $rescuePlanId: hồ sơ phát sinh từ phương án thiếu khách.
      * Mã giảm giá chỉ được nhả khi % hoàn >= config booking.coupon_release_min_percent (đơn bị phạt thì không trả lại mã).
+     * Số tiền tính trên tiền khách CÒN ở Travela (PaymentLedger::held: đã thu − phần dư điều chỉnh đã/đang hoàn)
+     * và không bao giờ vượt PaymentLedger::refundable, nên tổng hoàn của hai sổ không vượt số đã thu.
      */
     public function requestLocked(object $booking, string $by, ?int $byId, ?int $percent = null, ?string $reason = null, ?int $rescuePlanId = null): object
     {
@@ -35,10 +38,14 @@ class RefundService
         }
         $checkout = DB::table('tbl_checkout')->where('bookingId', $booking->bookingId)->lockForUpdate()->first();
         $paid = (int) round((float) ($checkout->amount ?? $booking->totalPrice));
+        $ledger = app(PaymentLedger::class)->forBooking((int) $booking->bookingId);
+        // chưa ghi nhận thu (đơn tạo lỗi / dữ liệu cũ) thì giữ cách tính cũ theo tổng tiền đơn
+        $held = $ledger['captured'] > 0 ? $ledger['held'] : $paid;
+        $cap = $ledger['captured'] > 0 ? $ledger['refundable'] : $paid;
         $start = $booking->departureDate ?? DB::table('tbl_tours')->where('tourId', $booking->tourId)->value('startDate');
         $days = CancelPolicy::daysUntil($start);
         $percent = $percent === null ? CancelPolicy::refundPercent($days) : max(0, min(100, $percent));
-        $amount = (int) floor($paid * $percent / 100);
+        $amount = min((int) floor($held * $percent / 100), $cap);
 
         $row = [
             'bookingId' => $booking->bookingId,
@@ -51,7 +58,9 @@ class RefundService
             'reason' => $reason ? mb_substr($reason, 0, 255) : null,
             'status' => $amount > 0 ? 'pending' : 'refunded',
             'processedAt' => $amount > 0 ? null : now(),
-            'note' => $amount > 0 ? null : 'Không phát sinh tiền hoàn (0%).',
+            'note' => $amount > 0
+                ? ($ledger['adjustOut'] > 0 ? mb_substr('Tính trên ' . number_format($held, 0, ',', '.') . ' đ còn giữ (đã hoàn ' . number_format($ledger['adjustOut'], 0, ',', '.') . ' đ khi điều chỉnh số khách).', 0, 255) : null)
+                : 'Không phát sinh tiền hoàn (0%).',
             'createdAt' => now(),
         ];
         if ($rescuePlanId !== null && self::hasPlanColumn()) {

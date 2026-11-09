@@ -1579,6 +1579,23 @@ a.tpx-arc__n:hover { text-decoration: underline; }
 .tpx-leg__src { margin-left: 2px; padding: 0 6px; border-radius: 99px; background: #fff; color: #64748b; font-size: .68rem; border: 1px dashed #cbd5e1; }
 .tpx-leg__chip.is-real .tpx-leg__src { border-style: solid; border-color: #5eead4; color: #115D66; }
 @media (max-width: 991.98px) { .tpx-leg { padding-left: 74px; } }
+/* trạng thái số liệu từng chặng (máy chủ xác minh): không có đường = đỏ, chưa rõ = vàng đất, ước tính = viền đứt (mặc định) */
+.tpx-leg__chip.is-blocked { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+.tpx-leg__chip.is-blocked b, .tpx-leg__chip.is-blocked .fas { color: #b91c1c; }
+.tpx-leg__chip.is-blocked .tpx-leg__src { border: 1px solid #fca5a5; color: #b91c1c; font-weight: 600; }
+.tpx-leg__chip.is-unknown { background: #fffbeb; border-color: #fcd34d; color: #92400e; }
+.tpx-leg__chip.is-unknown b, .tpx-leg__chip.is-unknown .fas { color: #b45309; }
+.tpx-leg__chip.is-unknown .tpx-leg__src { border: 1px solid #fcd34d; color: #92400e; font-weight: 600; }
+/* dòng chất lượng tuyến trong Sức khỏe chuyến đi */
+.tpx-rq { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 10px 0 2px; padding: 10px 12px; border-radius: 12px; background: #f8fafc; border: 1px solid #e5e7eb; font-size: .84rem; color: #475569; }
+.tpx-rq__t b { color: #0f172a; font-variant-numeric: tabular-nums; }
+.tpx-rq__feas { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-weight: 600; font-size: .8rem; }
+.tpx-rq__feas.is-ok { background: #f0fdfa; color: #115D66; }
+.tpx-rq__feas.is-mid { background: #f1f5f9; color: #334155; }
+.tpx-rq__feas.is-err { background: #fef2f2; color: #b91c1c; }
+.tpx-rq__pill { padding: 1px 8px; border-radius: 999px; font-size: .74rem; border: 1px dashed #cbd5e1; background: #fff; }
+.tpx-rq__pill.is-blocked { border: 1px solid #fca5a5; color: #b91c1c; }
+.tpx-rq__pill.is-unknown { border: 1px solid #fcd34d; color: #92400e; }
 /* tóm tắt ngày dạng chip ngắn */
 .tpx-daysum { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .tpx-dchipx { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 99px; background: #f8fafc; border: 1px solid #eef2f2; color: #374151; font-size: .78rem; white-space: nowrap; }
@@ -1730,3 +1747,49 @@ main .tpx-notice:not([hidden]) { margin-top: 18px; }
 .tp-ext__st:empty { display: none; }
 .tp-ext__st { padding: 2px 9px; border-radius: 99px; font-size: 12px; font-weight: 700; background: #e6f4f2; color: #115D66; white-space: nowrap; }
 .tp-ext__st.is-bad { background: #fee2e2; color: #991b1b; } .tp-ext__st.is-warn { background: #fef3c7; color: #92400e; }
+
+/* ===== Lịch sử phiên bản (planner-history.js) ===== */
+.tph__box { width: min(880px, 100%); padding: 18px 20px 20px; }
+.tph .tp-modal__head { align-items: flex-start; gap: 12px; }
+.tph h2 .fas { color: #167A85; margin-right: 4px; }
+.tph__sub { margin: 4px 0 0; }
+.tph__body { display: grid; grid-template-columns: 250px 1fr; gap: 16px; margin-top: 14px; min-height: 360px; }
+.tph__list { list-style: none; margin: 0; padding: 0 4px 0 0; max-height: 62vh; overflow: auto; border-right: 1px solid #eef2f6; }
+.tph__item { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; padding: 9px 11px; margin: 0 0 6px; border: 1px solid transparent; border-radius: 12px; background: transparent; color: #334155; cursor: pointer; font: inherit; }
+.tph__item:hover { background: #f8fafc; }
+.tph__item:focus-visible { outline: 2px solid #167A85; outline-offset: 1px; }
+.tph__item.is-on { background: #f0fdfa; border-color: #99f6e4; }
+.tph__item-top { display: flex; align-items: center; gap: 8px; }
+.tph__item-top b { color: #0f172a; }
+.tph__item-meta { font-size: .78rem; color: #64748b; }
+.tph__tag { padding: 0 8px; border-radius: 99px; font-size: .7rem; background: #f1f5f9; color: #475569; }
+.tph__tag.is-cur { background: #167A85; color: #fff; }
+.tph__tag.is-restore { background: #fef3c7; color: #92400e; }
+.tph__view { min-width: 0; max-height: 62vh; overflow: auto; padding-right: 4px; }
+.tph__vhead h3 { margin: 0; font-size: 1.05rem; outline: none; }
+.tph__vhead p { margin: 2px 0 10px; }
+.tph__note { padding: 9px 12px; border-radius: 10px; background: #f8fafc; color: #475569; font-size: .88rem; }
+.tph__diffs { padding: 12px; border-radius: 12px; border: 1px solid #e5e7eb; background: #fcfcfd; margin-bottom: 12px; }
+.tph__diffs-h { margin: 0 0 8px; font-weight: 700; color: #0f172a; font-size: .9rem; }
+.tph__diff { margin: 0 0 8px; font-size: .86rem; }
+.tph__diff:last-child { margin-bottom: 0; }
+.tph__diff-h { display: flex; align-items: center; gap: 6px; margin: 0 0 2px; font-weight: 600; }
+.tph__diff ul { margin: 0; padding-left: 26px; color: #475569; }
+.tph__diff.is-add .fas { color: #15803d; }
+.tph__diff.is-rm .fas { color: #b91c1c; }
+.tph__diff.is-meta .fas { color: #b45309; }
+.tph__diff.is-move { color: #475569; }
+.tph__days { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.tph__day { padding: 10px 12px; border-radius: 12px; background: #f8fafc; font-size: .86rem; }
+.tph__day b { display: block; margin-bottom: 4px; color: #0f172a; }
+.tph__day ol { margin: 0; padding-left: 18px; color: #475569; }
+.tph__act { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; padding: 12px 0 2px; background: linear-gradient(rgba(255,255,255,0), #fff 30%); }
+.tph__msg { margin: 0; font-size: .86rem; color: #475569; }
+.tph__msg.is-bad { color: #b91c1c; }
+.tph__msg.is-warn { color: #92400e; }
+li.tph__msg { padding: 10px; }
+@media (max-width: 720px) {
+    .tph__body { grid-template-columns: 1fr; }
+    .tph__list { max-height: 180px; border-right: 0; border-bottom: 1px solid #eef2f6; padding: 0 0 8px; }
+    .tph__view { max-height: none; }
+}

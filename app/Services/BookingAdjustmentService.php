@@ -130,8 +130,7 @@ class BookingAdjustmentService
             $co = DB::table('tbl_checkout')->where('bookingId', $bookingId)->lockForUpdate()->first();
             $paid = $co && $co->paymentStatus === 'y';
             // tiền khách còn thực sự "đang ở Travela" = đã nhận − phần dư đã / đang hoàn ở các lần điều chỉnh trước
-            $paidOut = (int) DB::table('tbl_booking_adjustments')->where('bookingId', $bookingId)->whereIn('moneyStatus', ['refunded', 'pending_refund'])->sum('settleAmount');
-            $paidAmount = $paid ? max(0, (int) round((float) $co->amount) - $paidOut) : 0;
+            $paidAmount = $paid ? app(\App\Services\Payments\PaymentLedger::class)->forBooking($bookingId)['held'] : 0;   // cùng một sổ với RefundService
             $kind = $newTotal >= $oldTotal ? 'increase' : 'decrease';
 
             $money = 'none';

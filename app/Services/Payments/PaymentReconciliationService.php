@@ -18,6 +18,7 @@ class PaymentReconciliationService
         'paid_cancelled_no_refund' => ['Đơn đã hủy, đã thu tiền nhưng chưa có yêu cầu hoàn', 'high', 'Tạo yêu cầu hoàn tiền hoặc ghi nhận lý do giữ lại.'],
         'refund_status_mismatch' => ['Trạng thái hoàn tiền và trạng thái thanh toán không khớp', 'high', 'Mở đơn, đối chiếu rồi sửa trạng thái cho khớp.'],
         'refund_amount_exceeds_paid' => ['Số tiền hoàn lớn hơn số tiền đã thu', 'high', 'Không chuyển tiền; kiểm tra lại hồ sơ hoàn.'],
+        'total_refund_exceeds_captured' => ['Tổng hoàn (hủy đơn + điều chỉnh số khách) lớn hơn số đã thu', 'high', 'Dừng chi các khoản đang chờ; đối chiếu hai sổ hoàn của đơn.'],
         'duplicate_txn' => ['Một mã giao dịch của cổng gắn vào nhiều đơn', 'high', 'Kiểm tra từng đơn: chỉ một đơn được ghi nhận khoản thu đó.'],
         'duplicate_refund_reference' => ['Một mã giao dịch hoàn dùng cho nhiều khoản hoàn', 'high', 'Có nguy cơ ghi nhận / hoàn trùng; đối chiếu sao kê.'],
         'checkout_refund_without_row' => ['Thanh toán ở trạng thái hoàn tiền nhưng không có hồ sơ hoàn', 'medium', 'Tạo lại hồ sơ hoàn hoặc trả trạng thái thanh toán về đúng.'],
@@ -79,6 +80,12 @@ class PaymentReconciliationService
                 } else {
                     $add('refund_paid_mismatch', (int) $x->bookingId, (int) $x->refundId, "Đơn {$x->bookingCode}: hồ sơ hoàn ghi đã thu " . $money($x->rp) . ', đơn ghi ' . $money($x->ca) . '.');
                 }
+            }
+
+            // 4b. Tổng hoàn của cả hai sổ (tbl_refunds + tbl_booking_adjustments) vượt số đã thu
+            foreach (app(PaymentLedger::class)->violations() as $x) {
+                $add('total_refund_exceeds_captured', (int) $x->bookingId, null, "Đơn {$x->bookingCode}: hoàn khi hủy " . $money($x->refundOut)
+                    . ' + hoàn điều chỉnh ' . $money($x->adjustOut) . ' > đã thu ' . $money($x->captured) . '.');
             }
 
             // 5. Hoàn quá hạn

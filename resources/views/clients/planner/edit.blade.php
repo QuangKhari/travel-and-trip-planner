@@ -1,6 +1,6 @@
 @include('clients.blocks.header')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=23">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=24">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai.css') }}?v=3">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ux.css') }}?v=1">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/nature-luxury-planner.css') }}?v=bl20261104">
@@ -44,6 +44,9 @@
                     @endif
                     <button type="button" class="tpx-menu__i" role="menuitem" data-top="health"><i class="fas fa-heartbeat" aria-hidden="true"></i><span>Kiểm tra sức khỏe chuyến đi</span></button>
                     <button type="button" class="tpx-menu__i" role="menuitem" data-top="cost"><i class="fas fa-wallet" aria-hidden="true"></i><span>Ngân sách</span></button>
+                    @if (!empty($client['historyUrl']))
+                        <button type="button" class="tpx-menu__i" role="menuitem" data-top="history" id="tpHistOpen" aria-haspopup="dialog" aria-controls="tpHist"><i class="fas fa-history" aria-hidden="true"></i><span>Lịch sử phiên bản</span></button>
+                    @endif
                     <a class="tpx-menu__i" role="menuitem" href="{{ route('support.index', ['trip' => $t['id']]) }}#tao-yeu-cau"><i class="fas fa-headset" aria-hidden="true"></i><span>Nhờ nhân viên tư vấn chuyến này</span></a>
                     <button type="button" class="tpx-menu__i" role="menuitem" id="tpPdf" data-url="{{ route('planner.pdf', ['id' => $t['id']]) }}" data-lib="{{ asset('admin/vendors/pdfmake/build') }}"><i class="fas fa-file-pdf" aria-hidden="true"></i><span>Tải PDF lịch trình và đơn tour</span></button>
                     <button type="button" class="tpx-menu__i" role="menuitem" id="tpPrint"><i class="fas fa-print" aria-hidden="true"></i><span>In trang</span></button>
@@ -456,18 +459,36 @@
     </div>
 </div>
 
+@if (!empty($client['historyUrl']))
+{{-- Lịch sử phiên bản: planner-history.js vẽ danh sách + xem trước + khôi phục (tạo phiên bản mới, hoàn tác được) --}}
+<div id="tpHist" class="tp-modal tph" role="dialog" aria-modal="true" aria-labelledby="tpHistH" hidden>
+    <div class="tp-modal__box tph__box">
+        <div class="tp-modal__head">
+            <div><h2 id="tpHistH"><i class="fas fa-history" aria-hidden="true"></i> Lịch sử phiên bản</h2>
+                <p class="tp-muted tp-small tph__sub">Mỗi lần lưu là một phiên bản. Khôi phục tạo ra phiên bản mới, nên bạn luôn quay lại được.</p></div>
+            <button type="button" id="tpHistClose" class="tp-mini" aria-label="Đóng">✕</button>
+        </div>
+        <div class="tph__body">
+            <ol class="tph__list" id="tpHistList" aria-label="Các phiên bản, mới nhất trước"></ol>
+            <section class="tph__view" id="tpHistView" aria-live="polite"></section>
+        </div>
+    </div>
+</div>
+@endif
+
 <script type="application/json" id="tpData">{!! json_encode($client, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 {{-- planner-geo (tuyến) + planner-schedule (xếp giờ): lõi tính xem trước, tham số từ cfg.rules (PlannerRules); planner-api: gọi máy chủ; planner.js: giao diện --}}
-<script src="{{ asset('clients/assets/js/planner-geo.js') }}?v=3"></script>
+<script src="{{ asset('clients/assets/js/planner-geo.js') }}?v=4"></script>
 <script src="{{ asset('clients/assets/js/planner-schedule.js') }}?v=5"></script>
 <script src="{{ asset('clients/assets/js/planner-api.js') }}?v=2"></script>
-<script src="{{ asset('clients/assets/js/planner-save.js') }}?v=1"></script>
+<script src="{{ asset('clients/assets/js/planner-save.js') }}?v=2"></script>
 <script src="{{ asset('clients/assets/js/planner-resolve.js') }}?v=2"></script>
 <script src="{{ asset('clients/assets/js/planner-map.js') }}?v=5"></script>
-<script src="{{ asset('clients/assets/js/planner.js') }}?v=24" defer></script>
+<script src="{{ asset('clients/assets/js/planner.js') }}?v=25" defer></script>
 <script src="{{ asset('clients/assets/js/planner-extras.js') }}?v=1" defer></script>
 <script src="{{ asset('clients/assets/js/planner-travel.js') }}?v=1" defer></script>
+@if (!empty($client['historyUrl']))<script src="{{ asset('clients/assets/js/planner-history.js') }}?v=1" defer></script>@endif
 <script type="application/json" id="aiData">{!! json_encode(['explainUrl' => route('planner.ai.explain', ['id' => $t['id']]), 'csrf' => csrf_token(), 'on' => $aiExplainOn,
     'copilot' => $aiCopilotOn ? ['url' => route('planner.ai.copilot', ['id' => $t['id']]), 'recheckUrl' => route('planner.ai.recheck', ['id' => $t['id']]),
         'feedbackUrl' => route('planner.ai.feedback', ['id' => $t['id']])] : null], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>

@@ -44,15 +44,24 @@ class RescueOperationalService
         }
         $resource=DB::table('tbl_rescue_resources')->where('resourceId',$segment->resourceId)->lockForUpdate()->first();
         if (!$resource || !$resource->active || $resource->kind !== $segment->sharedService) $this->fail('Tài nguyên không còn hoạt động hoặc không đúng loại dịch vụ.');
-        $from=Carbon::parse($source->departureDate)->addDays($segment->fromDay-1)->toDateString();
-        $to=Carbon::parse($source->departureDate)->addDays($segment->toDay-1)->toDateString();
         $ids=[$source->availabilityId,$partner->availabilityId];
         $people=(int)DB::table('tbl_booking')->whereIn('availabilityId',$ids)->whereIn('bookingStatus',['y','f'])->sum(DB::raw('numAdults + numChildren'));
-        // Lock resource row is the serialization point. Other bookings cannot use resources without this same reservation API.
+        if ($people < 1) $this->fail('Tài nguyên quá sức chứa hoặc đoàn chưa có khách.');
+        // Đoạn ghép tính theo cả ngày: [ngày fromDay 00:00, ngày toDay + 1 00:00)
+        $startAt=Carbon::parse($source->departureDate)->startOfDay()->addDays($segment->fromDay-1);
+        $endAt=Carbon::parse($source->departureDate)->startOfDay()->addDays($segment->toDay);
+        if (ResourceAllocationService::ready()) {
+            // lỗi sức chứa trả nguyên thông báo chi tiết (khung giờ, đã dùng / sức chứa)
+            app(ResourceAllocationService::class)->allocate((int)$resource->resourceId,'rescue_plan',(int)$plan->planId,$startAt,$endAt,$people,'confirmed',null,'Ghép một phần, phương án #'.$plan->planId);
+            return;
+        }
+        // Chưa chạy migration lịch tài nguyên: giữ cách cũ theo ngày (vẫn khóa dòng tài nguyên ở trên)
+        $from=$startAt->toDateString();
+        $to=$endAt->copy()->subDay()->toDateString();
         $occupied=(int)DB::table('tbl_rescue_resource_allocations')
             ->where('resourceId',$resource->resourceId)->where('status','active')
             ->whereDate('startDate','<=',$to)->whereDate('endDate','>=',$from)->sum('seats');
-        if ($people < 1 || $people + $occupied > $resource->capacity) $this->fail('Tài nguyên quá sức chứa hoặc đoàn chưa có khách.');
+        if ($people + $occupied > $resource->capacity) $this->fail('Tài nguyên quá sức chứa hoặc đoàn chưa có khách.');
         DB::table('tbl_rescue_resource_allocations')->insert([
             'resourceId'=>$resource->resourceId,'planId'=>$plan->planId,'startDate'=>$from,'endDate'=>$to,
             'seats'=>$people,'status'=>'active','created_at'=>now(),'updated_at'=>now(),

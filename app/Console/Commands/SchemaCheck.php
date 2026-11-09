@@ -25,6 +25,7 @@ class SchemaCheck extends Command
         'tbl_departure_rescue_outbox' => ['outboxId', 'responseId', 'event', 'queuedAt', 'createdAt'],
         'tbl_rescue_resources' => ['resourceId', 'name', 'kind', 'capacity', 'active'],
         'tbl_rescue_resource_allocations' => ['allocationId', 'resourceId', 'planId', 'startDate', 'endDate', 'seats', 'status'],
+        'tbl_resource_allocations' => ['allocationId', 'resourceId', 'ownerType', 'ownerId', 'startAt', 'endAt', 'quantity', 'status'],
         'tbl_rescue_transfers' => ['transferId', 'planId', 'bookingId', 'oldTourId', 'newTourId', 'oldAvailabilityId', 'newAvailabilityId', 'oldTotal', 'newTotal', 'createdAt'],
         'tbl_refunds' => ['refundId', 'bookingId', 'paidAmount', 'percent', 'amount', 'status', 'method', 'reference', 'processedBy', 'processedAt', 'rescuePlanId',
             'gateway', 'gatewayRefundRef', 'gatewayRefundNo', 'gatewayStatus', 'gatewayCode', 'gatewayMessage', 'gatewayAttempts', 'gatewayAt'],

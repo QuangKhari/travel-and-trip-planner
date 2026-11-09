@@ -268,6 +268,9 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::post('/len-ke-hoach/{id}/khach-san', [TravelController::class, 'addHotel'])->whereNumber('id')->middleware('throttle:20,1,travel-add')->name('travel.hotels.add');
     Route::post('/len-ke-hoach/{id}/ngoai/{externalId}/xoa', [TravelController::class, 'remove'])->whereNumber(['id', 'externalId'])->middleware('throttle:30,1,travel-rm')->name('travel.remove');
     Route::post('/len-ke-hoach/{id}/khoa', [PlannerController::class, 'lock'])->whereNumber('id')->middleware('throttle:30,1,planner-lock')->name('planner.lock');
+    Route::get('/len-ke-hoach/{id}/lich-su', [PlannerController::class, 'history'])->whereNumber('id')->middleware('throttle:60,1,planner-history')->name('planner.history');
+    Route::get('/len-ke-hoach/{id}/lich-su/{revisionNo}', [PlannerController::class, 'historyShow'])->whereNumber(['id', 'revisionNo'])->middleware('throttle:60,1,planner-history')->name('planner.historyShow');
+    Route::post('/len-ke-hoach/{id}/lich-su/{revisionNo}/khoi-phuc', [PlannerController::class, 'restoreRevision'])->whereNumber(['id', 'revisionNo'])->middleware('throttle:20,1,planner-restore')->name('planner.restoreRevision');
     Route::get('/len-ke-hoach/{id}/phien-ban', [PlannerController::class, 'revision'])->whereNumber('id')->middleware('throttle:120,1,planner-rev')->name('planner.revision');
     Route::get('/len-ke-hoach/{id}/thanh-vien', [PlannerController::class, 'members'])->whereNumber('id')->middleware('throttle:60,1,planner-members')->name('planner.members');
     Route::post('/len-ke-hoach/{id}/thanh-vien', [PlannerController::class, 'invite'])->whereNumber('id')->middleware('throttle:20,1,planner-invite')->name('planner.invite');
@@ -390,6 +393,13 @@ Route::prefix('admin')->group(function () {
         Route::post('/departures/{id}', [DepartureManagementController::class, 'update'])->whereNumber('id')->name('admin.departures.update');
         Route::post('/departures/{id}/toggle', [DepartureManagementController::class, 'toggle'])->whereNumber('id')->name('admin.departures.toggle');
         Route::post('/departures/{id}/delete', [DepartureManagementController::class, 'destroy'])->whereNumber('id')->name('admin.departures.destroy');
+
+        // Xếp xe / hướng dẫn viên cho đoàn theo khung giờ (ResourceAllocationService)
+        Route::get('/resources', [\App\Http\Controllers\admin\ResourceScheduleController::class, 'index'])->name('admin.resources');
+        Route::post('/resources', [\App\Http\Controllers\admin\ResourceScheduleController::class, 'store'])->name('admin.resources.store');
+        Route::post('/resources/allocate', [\App\Http\Controllers\admin\ResourceScheduleController::class, 'allocate'])->middleware('throttle:60,1,resource-allocate')->name('admin.resources.allocate');
+        Route::post('/resources/allocations/{id}/release', [\App\Http\Controllers\admin\ResourceScheduleController::class, 'release'])->whereNumber('id')->name('admin.resources.release');
+        Route::post('/resources/{id}/toggle', [\App\Http\Controllers\admin\ResourceScheduleController::class, 'toggle'])->whereNumber('id')->name('admin.resources.toggle');
 
         // Ghép đoàn vận hành (không thay đổi booking hoặc tour đã bán)
         Route::get('/departure-groups', [DepartureGroupingController::class, 'index'])->name('admin.departures.grouping');

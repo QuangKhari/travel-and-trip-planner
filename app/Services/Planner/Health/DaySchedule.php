@@ -25,6 +25,9 @@ final class DaySchedule
     public int $activityMin = 0;
     public int $travelMin = 0;
     public float $travelKm = 0.0;
+    /** @var array<string,int> số chặng theo trạng thái số liệu tuyến (verified/estimated/unreachable/unknown) */
+    public array $routeQuality = [];
+    public string $routeConfidence = 'verified';
     public int $mealMin = 0;
     public int $bufferMin = 0;
     public int $freeMin = 0;
@@ -89,7 +92,7 @@ final class DaySchedule
             $dur = $this->durationOf($it);
             $leg = $legAfter[$i] ?? null;
             $this->rows[] = ['item' => $it, 'start' => $start, 'end' => $start + $dur, 'dur' => $dur, 'fixed' => $fixed,
-                'travelMin' => $leg['min'] ?? 0, 'travelKm' => $leg['km'] ?? 0.0, 'waitMin' => $wait, 'conflict' => $conflict,
+                'travelMin' => $leg['min'] ?? 0, 'travelKm' => $leg['km'] ?? 0.0, 'routeStatus' => $leg['status'] ?? null, 'waitMin' => $wait, 'conflict' => $conflict,
                 'hours' => OpeningHours::check($it['hours'] ?? null, $this->dow, $start, $start + $dur)];
             $this->activityMin += $dur;
             $this->cost += (float) ($it['cost'] ?? 0);
@@ -104,6 +107,8 @@ final class DaySchedule
         }
         $this->travelMin = $tt['min'];
         $this->travelKm = $tt['km'];
+        $this->routeQuality = $tt['quality'] ?? [];
+        $this->routeConfidence = $tt['confidence'] ?? 'verified';
         if ($this->rows) {
             $this->start = $this->rows[0]['start'];
         }

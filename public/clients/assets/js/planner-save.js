@@ -6,7 +6,12 @@
 (function (root) {
     "use strict";
     var CUSTOM = { note: true, transport: true };
-    function hasPos(p) { return p && p.lat != null && p.lng != null && isFinite(p.lat) && isFinite(p.lng); }
+    /** Tọa độ dùng được (cùng quy tắc HaversineProvider::validPoint): số, trong phạm vi, không phải (0,0) do geocode hỏng. */
+    function hasPos(p) {
+        if (!p || p.lat == null || p.lng == null || p.lat === "" || p.lng === "") return false;
+        var a = +p.lat, b = +p.lng;
+        return isFinite(a) && isFinite(b) && a >= -90 && a <= 90 && b >= -180 && b <= 180 && !(Math.abs(a) < 1e-6 && Math.abs(b) < 1e-6);
+    }
 
     function rainPlan(rain, days) {
         var o = {};

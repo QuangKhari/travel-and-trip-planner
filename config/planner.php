@@ -6,8 +6,11 @@
  * Tên cột khớp migration 2026_10_26_000001_link_content_and_planner: durationMinutes, difficulty (easy|medium|hard), indoor.
  */
 return [
-    // Sau khi các client cũ gửi rev, đặt PLANNER_REQUIRE_REVISION=true để chặn mọi lưu thiếu phiên bản.
-    'require_revision' => env('PLANNER_REQUIRE_REVISION', false),
+    // Mọi lần lưu chuyến phải gửi rev (bản đang sửa). Thiếu rev -> 422, rev cũ -> 409 REVISION_CONFLICT.
+    // Chỉ đặt PLANNER_REQUIRE_REVISION=false tạm thời khi còn client cũ chưa gửi rev.
+    'require_revision' => env('PLANNER_REQUIRE_REVISION', true),
+    // Số phiên bản lịch sử giữ lại cho mỗi chuyến (tbl_trip_revisions), để xem lại / khôi phục.
+    'revision_history_keep' => (int) env('PLANNER_REVISION_HISTORY_KEEP', 30),
     /*
      * ===== Một ngày của Planner (MỘT nguồn, đọc qua App\Services\Planner\PlannerRules; trình duyệt nhận bản sao qua cfg.rules) =====
      *   start_min    08:00  giờ bắt đầu tự xếp lịch

@@ -631,21 +631,49 @@
         var d = ui.srv && (ui.srv.days || []).filter(function (x) { return x.day === day; })[0];
         return d && d.rows ? d.rows[n - 1] : null;
     }
+    /* Trạng thái số liệu của một chặng do máy chủ xác minh (RouteService): mỗi chặng một huy hiệu, không chặng nào bị coi là "0 phút" vì thiếu dữ liệu. */
+    var LEG_ST = {
+        verified: { cls: " is-real", src: "đường thực tế", tip: "Quãng đường và thời gian theo bản đồ đường bộ (OSRM)" },
+        estimated: { cls: " is-est", src: "ước tính", tip: null },
+        unreachable: { cls: " is-blocked", src: "không có đường", icon: "fa-ban", tip: "Bản đồ đường bộ không tìm thấy đường đi giữa hai điểm này (qua sông, đảo, đường cấm...). Số phút chỉ là ước tính đường chim bay, hãy kiểm tra lại hoặc đổi phương tiện." },
+        unknown: { cls: " is-unknown", src: "chưa tính được", icon: "fa-question-circle", tip: "Tọa độ của một trong hai điểm không hợp lệ nên chưa tính được đường đi. Hãy sửa vị trí của mục." },
+    };
     /** Đoạn nối giữa hai hoạt động: hoạt động -> di chuyển -> hoạt động. */
     function legRow(leg, row) {
         var li = el("li", "tpx-leg");
-        var real = realRoute() && row ? srvRow(row.it.day, row.n) : null;
-        var min = real ? real.travelMin : leg.min, km = real && real.travelKm != null ? real.travelKm : leg.kmExact != null ? Math.round(leg.kmExact * 10) / 10 : leg.km;
-        var walk = km <= 1;
+        // số liệu máy chủ chỉ dùng khi bản đang xem trùng bản đã lưu (không còn thay đổi chưa lưu)
+        var sr = ui.srv && !dirty && row ? srvRow(row.it.day, row.n) : null;
+        var st = sr && LEG_ST[sr.routeStatus] ? sr.routeStatus : null;
+        var real = st ? st === "verified" : realRoute() && sr;
+        var useSrv = !!(sr && (st || real));
+        var min = useSrv ? sr.travelMin : leg.min, km = useSrv && sr.travelKm != null ? sr.travelKm : leg.kmExact != null ? Math.round(leg.kmExact * 10) / 10 : leg.km;
+        var meta = st ? LEG_ST[st] : real ? LEG_ST.verified : LEG_ST.estimated;
+        var bad = st === "unreachable" || st === "unknown";
+        var walk = km <= 1 && !bad;
         li.appendChild(el("span", "tpx-leg__line"));
-        var chip = el("span", "tpx-leg__chip" + (real ? " is-real" : ""));
-        chip.appendChild(icon(walk ? "fa-walking" : "fa-car-side"));
-        chip.appendChild(el("b", null, (real ? "" : "≈ ") + durText(Math.max(1, min))));
-        chip.appendChild(el("span", null, " · " + String(km).replace(".", ",") + " km"));
-        chip.appendChild(el("small", "tpx-leg__src", real ? "đường thực tế" : "ước tính"));
+        var chip = el("span", "tpx-leg__chip" + meta.cls);
+        chip.appendChild(icon(meta.icon || (walk ? "fa-walking" : "fa-car-side")));
+        if (st === "unknown") chip.appendChild(el("b", null, "Chưa rõ đường đi"));
+        else {
+            chip.appendChild(el("b", null, (real ? "" : "≈ ") + durText(Math.max(1, min))));
+            chip.appendChild(el("span", null, " · " + String(km).replace(".", ",") + " km"));
+        }
+        chip.appendChild(el("small", "tpx-leg__src", meta.src));
         li.appendChild(chip);
-        li.title = real ? "Quãng đường và thời gian theo bản đồ đường bộ (OSRM)" : "Ước tính: đường chim bay × " + RULES.route.factor + ", tốc độ " + RULES.route.speedKmh + " km/h";
+        if (bad) li.classList.add("is-bad");
+        li.title = meta.tip || ("Ước tính: đường chim bay × " + RULES.route.factor + ", tốc độ " + RULES.route.speedKmh + " km/h");
+        chip.setAttribute("aria-label", "Di chuyển: " + chip.textContent + ". " + li.title);
+        li._leg = leg;
+        li._row = row;
         return li;
+    }
+    /** Số liệu máy chủ về SAU khi timeline đã vẽ: chỉ thay các đoạn di chuyển tại chỗ (không vẽ lại cả lịch, không làm mất vị trí cuộn). */
+    function refreshLegs() {
+        var box = $("tpDaysBox");
+        if (!box) return;
+        Array.prototype.forEach.call(box.querySelectorAll("li.tpx-leg"), function (li) {
+            if (li._leg && li.parentNode) li.parentNode.replaceChild(legRow(li._leg, li._row), li);
+        });
     }
     /** Một điểm dừng trên timeline. row = kết quả schedule() (null với danh sách chờ). */
     function itemRow(it, row) {
@@ -1973,6 +2001,7 @@
             ui.srvLoading = false;
             ui.rsv = null;   // đề xuất cũ tính trên bản đã lưu trước đó
             renderWarn();
+            refreshLegs();   // huy hiệu từng chặng: đường thực tế / ước tính / không có đường / chưa rõ
         }).catch(function () { ui.srvLoading = false; ui.srvErr = true; renderWarn(); /* không chặn trình soạn: vẫn dùng kiểm tra ở trình duyệt */ });
     }
     /* ---------------- Resolution Engine: đề xuất -> xem trước -> áp dụng (máy chủ đề xuất, trình duyệt áp dụng rồi tự lưu) ---------------- */
@@ -2052,12 +2081,45 @@
         });
         box.appendChild(sec);
     }
+    var FEAS = {
+        feasible_verified: ["is-ok", "fa-check-circle", "Khả thi, đã xác minh tuyến"],
+        feasible_with_uncertainty: ["is-mid", "fa-info-circle", "Khả thi, còn số liệu ước tính"],
+        needs_review: ["is-err", "fa-exclamation-triangle", "Cần xem lại"],
+    };
+    /** Một dòng tóm tắt: x/y chặng đã xác minh, bao nhiêu ước tính / không có đường / chưa rõ, kèm kết luận khả thi. */
+    function routeQualityLine(q, feas) {
+        var L = q.legs || {}, total = 0;
+        Object.keys(L).forEach(function (k) { total += +L[k] || 0; });
+        var p = el("div", "tpx-rq");
+        var f = FEAS[feas];
+        if (f) {
+            var b = el("span", "tpx-rq__feas " + f[0]);
+            b.appendChild(icon(f[1]));
+            b.appendChild(el("span", null, f[2]));
+            p.appendChild(b);
+        }
+        if (!total) { p.appendChild(el("span", "tp-muted tp-small", "Chưa có chặng di chuyển nào cần tính.")); return p; }
+        var t = el("span", "tpx-rq__t");
+        t.appendChild(el("b", null, (L.verified || 0) + "/" + total));
+        t.appendChild(document.createTextNode(" chặng đã xác minh trên bản đồ đường bộ"));
+        p.appendChild(t);
+        [["estimated", "ước tính", "is-est"], ["unreachable", "không có đường", "is-blocked"], ["unknown", "chưa rõ", "is-unknown"]].forEach(function (k) {
+            if (L[k[0]]) p.appendChild(el("span", "tpx-rq__pill " + k[2], L[k[0]] + " " + k[1]));
+        });
+        return p;
+    }
     function renderWarn() {
         var hw = health(), box2 = $("tpWarn"), hh = $("tpWarnH"), sec = $("tpHealth");
         var RANK = { bad: 0, warn: 1, info: 2 };
         hw.bad.sort(function (a, b) { return (RANK[a.lvl] || 0) - (RANK[b.lvl] || 0); });   // lỗi (ràng buộc cứng) lên đầu, rồi cảnh báo, thông tin
         var nErr = hw.bad.filter(function (x) { return x.lvl === "bad"; }).length, nWarn = hw.bad.filter(function (x) { return x.lvl === "warn"; }).length;
-        var nBad = nErr + nWarn, srvOk = ui.srv && items.length && !dirty;
+        var srvOk = ui.srv && items.length && !dirty;
+        // lỗi tuyến chỉ máy chủ biết (không có đường / tọa độ hỏng) cũng tính vào màu và biểu tượng của khung
+        if (srvOk) (ui.srv.checks || []).forEach(function (c) {
+            if (c.code === "route.unreachable") nErr++;
+            else if (c.code === "route.unknown") nWarn++;
+        });
+        var nBad = nErr + nWarn;
         // CHẨN ĐOÁN bằng lời là chính (máy chủ quyết khi đã lưu; đang sửa thì dùng bản xem trước ở trình duyệt); điểm chỉ là thông tin phụ
         var label = !items.length ? "chưa có gì để kiểm tra" : srvOk && ui.srv.summary ? ui.srv.summary.label
             : nErr ? "Cần sửa " + nErr + " lỗi lịch" + (nWarn ? ", " + nWarn + " điểm nên xem lại" : "") : nWarn ? "Chuyến đi khá ổn, " + nWarn + " điểm nên xem lại" : "Chuyến đi hợp lý";
@@ -2103,7 +2165,7 @@
             ul.appendChild(li);
         });
         // kiểm tra bối cảnh chỉ máy chủ có (mùa, nội dung cần lưu ý…), chưa trùng với kiểm tra phía trình duyệt
-        var SRV_ONLY = { "hours.unknown": "fa-clock", "capacity.estimated_duration": "fa-hourglass-half" };   // INFO chỉ máy chủ biết
+        var SRV_ONLY = { "hours.unknown": "fa-clock", "capacity.estimated_duration": "fa-hourglass-half", "route.unreachable": "fa-ban", "route.unknown": "fa-question-circle" };   // chỉ máy chủ biết
         if (ui.srv && !dirty) (ui.srv.checks || []).filter(function (c) { return (c.group === "context" || SRV_ONLY[c.code]) && c.level !== "ok"; }).slice(0, 6).forEach(function (c) {
             var li = el("li", "tpx-check tpx-check--" + (c.level === "bad" ? "bad" : c.level === "info" ? "info" : "warn"));
             li.appendChild(icon(SRV_ONLY[c.code] || "fa-cloud-sun"));
@@ -2119,6 +2181,8 @@
         });
         box2.appendChild(ul);
         resolveSection(box2);
+        // chất lượng số liệu tuyến của bản đã lưu: bao nhiêu chặng đã xác minh trên bản đồ đường bộ
+        if (srvOk && ui.srv.routeQuality) box2.appendChild(routeQualityLine(ui.srv.routeQuality, ui.srv.feasibility));
         // nguồn số liệu tuyến minh bạch: OSRM lỗi thì nói rõ đang là ước tính
         var rt = ui.srv && ui.srv.route;
         if (rt && rt.fallback) {
@@ -3674,6 +3738,7 @@
             b.addEventListener("click", function () {
                 m.open = false;
                 var k = b.getAttribute("data-top"), d = curDay();
+                if (k === "history") return;   // planner-history.js mở hộp thoại lịch sử phiên bản
                 if (k === "health") { switchTab("plan"); ui.healthOpen = true; renderWarn(); var h = $("tpHealth"); if (h) h.scrollIntoView({ block: "start", behavior: "smooth" }); }
                 else if (k === "cost") switchTab("cost");
                 else if (!d) say("Chuyến đi chưa có ngày nào.", true);

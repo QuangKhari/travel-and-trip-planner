@@ -149,6 +149,7 @@ class TravelController extends Controller
             $label = mb_substr(($x->kind === 'flight' ? 'Bay ' : 'Nhận phòng ') . $x->title, 0, 120);
             DB::table('tbl_trip_items')->where('tripId', $id)->where('label', $label)->limit(1)->delete();
             DB::table('tbl_trips')->where('tripId', $id)->update(['rev' => DB::raw('rev + 1'), 'lastEditorId' => $this->uid(), 'updatedAt' => now()]);
+            app(\App\Services\Planner\TripRevisions::class)->recordCurrent($id, $this->uid(), 'external');
         });
 
         return response()->json(['ok' => true]);
@@ -177,6 +178,7 @@ class TravelController extends Controller
             ]);
             // báo cho người đang mở chuyến ở tab khác: có thay đổi (cơ chế rev sẵn có)
             DB::table('tbl_trips')->where('tripId', $trip->tripId)->update(['rev' => DB::raw('rev + 1'), 'lastEditorId' => $this->uid(), 'updatedAt' => now()]);
+            app(\App\Services\Planner\TripRevisions::class)->recordCurrent((int) $trip->tripId, $this->uid(), 'external');
         });
     }
 }

@@ -16,8 +16,8 @@ use Illuminate\Http\Request;
  *  GET    /api/v1/trips            danh sách
  *  POST   /api/v1/trips            tạo  {title, startDate?, days, groupSize, budget?, fromTray?}
  *  GET    /api/v1/trips/{id}       chi tiết đầy đủ (ngày, quãng đường, chi phí, cảnh báo)
- *  PUT    /api/v1/trips/{id}       lưu  {rev?, title, startDate?, days, groupSize, budget?, items:[{type,refId,day?,note?,cost?}]}
- *                                  rev (bản đang sửa) cũ hơn bản trên máy chủ -> 409 {conflict:true, rev} (cùng cơ chế với trang web /luu)
+ *  PUT    /api/v1/trips/{id}       lưu  {rev, title, startDate?, days, groupSize, budget?, items:[{type,refId,day?,note?,cost?}]}
+ *                                  rev (bản đang sửa, bắt buộc) cũ hơn bản trên máy chủ -> 409 {code:REVISION_CONFLICT, conflict:true, rev} (cùng cơ chế với trang web /luu)
  *  GET / PUT trả thêm "rev" để lần lưu sau gửi lại.
  *  DELETE /api/v1/trips/{id}
  */
@@ -60,11 +60,11 @@ class TripController extends Controller
 
     public function update(Request $request, int $id, TripPlanner $planner): JsonResponse
     {
-        $data = $request->validate(TripPlanner::tripRules() + TripPlanner::itemRules() + ['rev' => ['nullable', 'integer', 'min:0']]);
+        $data = $request->validate(TripPlanner::tripRules() + TripPlanner::itemRules() + ['rev' => [config('planner.require_revision', true) ? 'required' : 'nullable', 'integer', 'min:0']]);
         try {
             $ok = $planner->save($this->uid(), $id, $data, $data['items'] ?? []);
         } catch (TripConflict $e) {
-            return response()->json(['message' => $e->getMessage(), 'conflict' => true, 'rev' => $e->currentRev, 'by' => $e->by], 409);
+            return response()->json(['code' => 'REVISION_CONFLICT', 'message' => $e->getMessage(), 'conflict' => true, 'rev' => $e->currentRev, 'by' => $e->by], 409);
         }
         if (!$ok) {
             return response()->json(['message' => 'Không tìm thấy chuyến đi.'], 404);

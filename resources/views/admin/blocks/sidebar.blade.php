@@ -10,7 +10,7 @@
     $kindNow = request()->route('kind');
     $onKind = fn(string $k) => ($k === 'itineraries' && $on('admin.itinerary*'))
         || ($on('admin.content', 'admin.content.create', 'admin.content.edit', 'admin.content.preview') && ($kindNow ?? 'foods') === $k);
-    $inTours = $on('admin.tours', 'admin.page-add-tours', 'admin.tour-edit', 'admin.departures*', 'admin.incidents*', 'admin.waitlist*', 'admin.feasibility*', 'admin.profit*', 'admin.suppliers*');
+    $inTours = $on('admin.tours', 'admin.page-add-tours', 'admin.tour-edit', 'admin.departures*', 'admin.resources*', 'admin.incidents*', 'admin.waitlist*', 'admin.feasibility*', 'admin.profit*', 'admin.suppliers*');
     $inWrite = $on('admin.destinations*', 'admin.blog*', 'admin.itinerary*')
         || $on('admin.content', 'admin.content.create', 'admin.content.edit', 'admin.content.preview');
     $inReport = $on('admin.content.overview', 'admin.content.quality*');
@@ -59,6 +59,7 @@
                     <div class="ad-nav__subs">
                         {!! $sub('admin.tours', 'Danh sách tour', $on('admin.tours', 'admin.tour-edit')) !!}
                         {!! $sub('admin.departures', 'Lịch khởi hành', $on('admin.departures', 'admin.departures.store', 'admin.departures.update', 'admin.departures.toggle', 'admin.departures.destroy')) !!}
+                        {!! $sub('admin.resources', 'Xếp xe & HDV', $on('admin.resources*')) !!}
                         {!! $sub('admin.departures.rescue', 'Xử lý thiếu khách', $on('admin.departures.rescue*'), [], $depWork) !!}
                         {!! $sub('admin.departures.grouping', 'Ghép đoàn', $on('admin.departures.grouping*')) !!}
                         {!! $sub('admin.incidents', 'Sự cố tour', $on('admin.incidents*'), [], (int) ($badge['incident'] ?? 0)) !!}

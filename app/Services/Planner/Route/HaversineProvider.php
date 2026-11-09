@@ -29,19 +29,35 @@ class HaversineProvider implements RouteProvider
         for ($i = 0; $i < $n; $i++) {
             for ($j = 0; $j < $n; $j++) {
                 if ($i === $j) {
-                    $m[$i][$j] = ['km' => 0.0, 'min' => 0];
+                    $m[$i][$j] = ['km' => 0.0, 'min' => 0, 'status' => self::ESTIMATED];
                     continue;
                 }
                 if ($j < $i) {
                     $m[$i][$j] = $m[$j][$i];
                     continue;
                 }
+                if (!self::validPoint($pts[$i]) || !self::validPoint($pts[$j])) {
+                    $m[$i][$j] = ['km' => 0.0, 'min' => 0, 'status' => self::UNKNOWN];   // không tính được, KHÔNG phải "0 phút"
+                    continue;
+                }
                 $km = Geo::distanceKm($pts[$i][0], $pts[$i][1], $pts[$j][0], $pts[$j][1]) * $this->factor;
-                $m[$i][$j] = ['km' => $km, 'min' => (int) round($km / $this->speedKmh * 60)];
+                $m[$i][$j] = ['km' => $km, 'min' => (int) round($km / $this->speedKmh * 60), 'status' => self::ESTIMATED];
             }
         }
 
         return $m;
+    }
+
+    /** Tọa độ dùng được: số, trong phạm vi, không phải (0,0) (giá trị mặc định khi geocode hỏng). */
+    public static function validPoint(?array $p): bool
+    {
+        if (!$p || !isset($p[0], $p[1]) || !is_numeric($p[0]) || !is_numeric($p[1])) {
+            return false;
+        }
+        $lat = (float) $p[0];
+        $lng = (float) $p[1];
+
+        return $lat >= -90 && $lat <= 90 && $lng >= -180 && $lng <= 180 && !(abs($lat) < 1e-6 && abs($lng) < 1e-6);
     }
 
     /** Khoảng cách đường chim bay (km), dùng cho quy tắc "cùng một khu" (< 0,5 km thì không tính đoạn đi). */

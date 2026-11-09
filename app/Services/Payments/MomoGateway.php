@@ -222,7 +222,9 @@ class MomoGateway implements PaymentGateway
             'accessKey' => $this->cfg('access_key'), 'amount' => (int) $o['amount'],
             'description' => mb_substr((string) ($o['reason'] ?: 'Hoan tien don dat tour'), 0, 200),
             'orderId' => $o['refundRef'], 'partnerCode' => $this->cfg('partner_code'),
-            'requestId' => $o['refundRef'] . '-' . substr(bin2hex(random_bytes(3)), 0, 6), 'transId' => $transId,
+            // requestId = mã hoàn (cố định cho lần thử này): nếu cùng lệnh lỡ bị gửi lại, MoMo nhận ra trùng (idempotency)
+            // thay vì tạo thêm một giao dịch hoàn. Lần thử mới (sau thất bại chắc chắn) có refundRef mới.
+            'requestId' => $o['refundRef'], 'transId' => $transId,
         ];
         $body = ['partnerCode' => $p['partnerCode'], 'orderId' => $p['orderId'], 'requestId' => $p['requestId'], 'amount' => $p['amount'],
             'transId' => (int) $transId, 'lang' => 'vi', 'description' => $p['description'],

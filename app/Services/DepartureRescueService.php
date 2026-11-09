@@ -64,7 +64,7 @@ class DepartureRescueService
                 }
                 if ($type === 'tour_change') {
                     if ((int)$source->tourId === (int)$target->tourId) throw ValidationException::withMessages(['targetAvailabilityId'=>'Phải chọn sản phẩm tour khác.']);
-                    $people=DB::table('tbl_booking')->where('availabilityId',$source->availabilityId)->whereIn('bookingStatus',['n','y'])->sum(DB::raw('numAdults + numChildren'));
+                    $people=(int)DB::table('tbl_booking')->where('availabilityId',$source->availabilityId)->whereIn('bookingStatus',['n','y'])->sum(DB::raw('numAdults + numChildren'));
                     if (DepartureService::remaining($target)<$people) throw ValidationException::withMessages(['targetAvailabilityId'=>'Tour mới không đủ số chỗ.']);
                     $newTour=DB::table('tbl_tours')->where('tourId',$target->tourId)->first();
                     foreach(DB::table('tbl_booking')->where('availabilityId',$source->availabilityId)->where('bookingStatus','y')->get() as $book) {
@@ -73,7 +73,7 @@ class DepartureRescueService
                     }
                 } elseif ($type === 'date_change') {
                     if ($source->tourId !== $target->tourId || $source->departureDate === $target->departureDate) throw ValidationException::withMessages(['targetAvailabilityId'=>'Chỉ chuyển sang ngày khác của chính sản phẩm tour, không đổi tour hoặc giá.']);
-                    $people = DB::table('tbl_booking')->where('availabilityId', $source->availabilityId)->whereIn('bookingStatus', ['n','y'])->sum(DB::raw('numAdults + numChildren'));
+                    $people = (int) DB::table('tbl_booking')->where('availabilityId', $source->availabilityId)->whereIn('bookingStatus', ['n','y'])->sum(DB::raw('numAdults + numChildren'));
                     if (DepartureService::remaining($target) < $people) throw ValidationException::withMessages(['targetAvailabilityId'=>'Không đủ chỗ cho toàn bộ khách của lịch gốc.']);
                 } else {
                     if ($source->departureDate !== $target->departureDate) throw ValidationException::withMessages(['targetAvailabilityId'=>'Ghép chặng V2 chỉ hỗ trợ cùng ngày khởi hành.']);
@@ -249,7 +249,8 @@ class DepartureRescueService
                 if ($source->departureDate <= today()->toDateString() || $target->departureDate <= today()->toDateString() || $target->status !== 'open') throw ValidationException::withMessages(['plan'=>'Ngày khởi hành không còn hợp lệ.']);
                 // Never move pending holds: they would need separate consent; prevent use until resolved.
                 if ((int)$source->heldSlots !== 0) throw ValidationException::withMessages(['plan'=>'Còn đơn đang giữ chỗ; cần xử lý trước khi chuyển lịch.']);
-                $people = DB::table('tbl_booking')->where('availabilityId',$source->availabilityId)->where('bookingStatus','y')->sum(DB::raw('numAdults + numChildren'));
+                // SUM() của MySQL trả DECIMAL (PDO đọc thành chuỗi "2"): phải ép int trước khi so sánh chặt
+                $people = (int) DB::table('tbl_booking')->where('availabilityId',$source->availabilityId)->where('bookingStatus','y')->sum(DB::raw('numAdults + numChildren'));
                 if ($people !== (int)$source->bookedSlots || DepartureService::remaining($target) < $people) throw ValidationException::withMessages(['plan'=>'Số khách hoặc sức chứa đã thay đổi.']);
                 DB::table('tbl_tour_availability')->where('availabilityId',$target->availabilityId)->increment('bookedSlots',$people,['updatedAt'=>now()]);
                 DB::table('tbl_tour_availability')->where('availabilityId',$source->availabilityId)->decrement('bookedSlots',$people,['updatedAt'=>now()]);

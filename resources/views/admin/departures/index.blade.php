@@ -72,6 +72,7 @@
                                             data-id="{{ $r->availabilityId }}" data-date="{{ $r->departureDate }}" data-slots="{{ $r->totalSlots }}" data-min="{{ max(1, $r->bookedSlots + $r->heldSlots) }}"
                                             data-note="{{ $r->note }}" data-lock="{{ $r->bookings ? 1 : 0 }}" data-title="{{ $fmt($r->departureDate) }}">Sửa</button>
                                         @unless ($r->isPast)
+                                            <a class="ad-btn ad-btn--sm" href="{{ route('admin.resources', ['from' => $r->departureDate, 'availabilityId' => $r->availabilityId]) }}#dep-{{ $r->availabilityId }}" title="Xếp xe và hướng dẫn viên cho đoàn này"><i class="fa fa-bus"></i> Xe · HDV</a>
                                             <form method="POST" action="{{ route('admin.departures.toggle', $r->availabilityId) }}" class="ad-inline-form">@csrf
                                                 <button class="ad-btn ad-btn--sm" data-confirm="{{ $r->status === 'open' ? 'Ngừng nhận đặt cho ngày ' . $fmt($r->departureDate) . '? Đơn đã đặt vẫn giữ nguyên.' : 'Mở bán lại ngày ' . $fmt($r->departureDate) . '?' }}">{{ $r->status === 'open' ? 'Ngừng bán' : 'Mở bán' }}</button></form>
                                         @endunless
