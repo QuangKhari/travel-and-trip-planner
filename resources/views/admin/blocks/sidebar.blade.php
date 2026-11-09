@@ -10,7 +10,7 @@
     $kindNow = request()->route('kind');
     $onKind = fn(string $k) => ($k === 'itineraries' && $on('admin.itinerary*'))
         || ($on('admin.content', 'admin.content.create', 'admin.content.edit', 'admin.content.preview') && ($kindNow ?? 'foods') === $k);
-    $inTours = $on('admin.tours', 'admin.page-add-tours', 'admin.tour-edit', 'admin.departures*');
+    $inTours = $on('admin.tours', 'admin.page-add-tours', 'admin.tour-edit', 'admin.departures*', 'admin.incidents*', 'admin.waitlist*', 'admin.feasibility*', 'admin.profit*', 'admin.suppliers*');
     $inWrite = $on('admin.destinations*', 'admin.blog*', 'admin.itinerary*')
         || $on('admin.content', 'admin.content.create', 'admin.content.edit', 'admin.content.preview');
     $inReport = $on('admin.content.overview', 'admin.content.quality*');
@@ -31,6 +31,7 @@
     };
     // Việc về lịch khởi hành: lịch / đoàn sắp thiếu khách + phương án chờ áp dụng
     $depWork = (int) ($badge['shortfall'] ?? 0) + (int) ($badge['rescue'] ?? 0);
+    $tourWork = $depWork + (int) ($badge['incident'] ?? 0) + (int) ($badge['waitlist'] ?? 0);
 @endphp
 
 <aside class="ad-side" id="ad-side" aria-label="Menu quản trị">
@@ -50,13 +51,21 @@
             @if ($adMgr)
                 {!! $item('admin.refunds', 'Hoàn tiền', 'fa-undo', $on('admin.refunds*'), ($badge['refund'] ?? 0)) !!}
                 {!! $item('admin.payments', 'Thanh toán trực tuyến', 'fa-credit-card', $on('admin.payments*')) !!}
+                {!! $item('admin.reconciliation', 'Đối soát', 'fa-balance-scale', $on('admin.reconciliation*'), (int) ($badge['reconcile'] ?? 0)) !!}
+                {!! $item('admin.adjustments', 'Điều chỉnh số khách', 'fa-users', $on('admin.adjustments*'), (int) ($badge['adjust'] ?? 0)) !!}
+                {!! $item('admin.complaints', 'Khiếu nại', 'fa-commenting-o', $on('admin.complaints*'), (int) ($badge['complaint'] ?? 0)) !!}
                 <details class="ad-nav__fold" {{ $inTours ? 'open' : '' }}>
-                    <summary class="ad-nav__link{{ $inTours ? ' is-in' : '' }}" title="Tour"><i class="fa fa-suitcase" aria-hidden="true"></i><span class="ad-nav__txt">Tour</span>@if ($depWork > 0)<span class="ad-nav__pill" title="Lịch sắp thiếu khách / phương án chờ xử lý">{{ $depWork }}</span>@endif<i class="fa fa-angle-down ad-nav__caret" aria-hidden="true"></i></summary>
+                    <summary class="ad-nav__link{{ $inTours ? ' is-in' : '' }}" title="Tour"><i class="fa fa-suitcase" aria-hidden="true"></i><span class="ad-nav__txt">Tour</span>@if ($tourWork > 0)<span class="ad-nav__pill" title="Lịch sắp thiếu khách / phương án chờ / sự cố tour">{{ $tourWork }}</span>@endif<i class="fa fa-angle-down ad-nav__caret" aria-hidden="true"></i></summary>
                     <div class="ad-nav__subs">
                         {!! $sub('admin.tours', 'Danh sách tour', $on('admin.tours', 'admin.tour-edit')) !!}
                         {!! $sub('admin.departures', 'Lịch khởi hành', $on('admin.departures', 'admin.departures.store', 'admin.departures.update', 'admin.departures.toggle', 'admin.departures.destroy')) !!}
                         {!! $sub('admin.departures.rescue', 'Xử lý thiếu khách', $on('admin.departures.rescue*'), [], $depWork) !!}
                         {!! $sub('admin.departures.grouping', 'Ghép đoàn', $on('admin.departures.grouping*')) !!}
+                        {!! $sub('admin.incidents', 'Sự cố tour', $on('admin.incidents*'), [], (int) ($badge['incident'] ?? 0)) !!}
+                        {!! $sub('admin.waitlist', 'Danh sách chờ', $on('admin.waitlist*'), [], (int) ($badge['waitlist'] ?? 0)) !!}
+                        {!! $sub('admin.feasibility', 'Kiểm tra khả thi', $on('admin.feasibility*')) !!}
+                        {!! $sub('admin.profit', 'Lợi nhuận đoàn', $on('admin.profit*')) !!}
+                        {!! $sub('admin.suppliers', 'Nhà cung cấp', $on('admin.suppliers*')) !!}
                         {!! $sub('admin.page-add-tours', 'Thêm tour mới', $on('admin.page-add-tours')) !!}
                     </div>
                 </details>

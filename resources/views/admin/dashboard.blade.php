@@ -136,6 +136,16 @@
                         <span class="ad-todo__t">Lịch / đoàn sắp thiếu khách<small>Ghép đoàn, đổi ngày hoặc hủy và hoàn tiền</small></span><i class="fa fa-angle-right"></i></a></li>
                     <li><a href="{{ route('admin.departures.rescue') }}"><span class="ad-todo__n {{ ($todo['rescue'] ?? 0) ? 'is-hot' : '' }}">{{ $todo['rescue'] ?? 0 }}</span>
                         <span class="ad-todo__t">Phương án thiếu khách chờ xử lý<small>Khách đã trả lời: áp dụng hoặc hủy khởi hành</small></span><i class="fa fa-angle-right"></i></a></li>
+                    <li><a href="{{ route('admin.incidents') }}"><span class="ad-todo__n {{ ($todo['incident'] ?? 0) ? 'is-hot' : '' }}">{{ $todo['incident'] ?? 0 }}</span>
+                        <span class="ad-todo__t">Sự cố tour đang xử lý<small>Xe, khách sạn, HDV, thời tiết, sức khỏe khách</small></span><i class="fa fa-angle-right"></i></a></li>
+                    <li><a href="{{ route('admin.reconciliation') }}"><span class="ad-todo__n {{ ($todo['reconcile'] ?? 0) ? 'is-bad' : '' }}">{{ $todo['reconcile'] ?? 0 }}</span>
+                        <span class="ad-todo__t">Điểm đối soát không khớp<small>Đơn – tiền thu – hoàn tiền</small></span><i class="fa fa-angle-right"></i></a></li>
+                    <li><a href="{{ route('admin.complaints') }}"><span class="ad-todo__n {{ ($todo['complaint'] ?? 0) ? 'is-bad' : '' }}">{{ $todo['complaint'] ?? 0 }}</span>
+                        <span class="ad-todo__t">Khiếu nại đang xử lý<small>Phản hồi, giải quyết, bồi hoàn</small></span><i class="fa fa-angle-right"></i></a></li>
+                    <li><a href="{{ route('admin.adjustments') }}"><span class="ad-todo__n {{ ($todo['adjust'] ?? 0) ? 'is-hot' : '' }}">{{ $todo['adjust'] ?? 0 }}</span>
+                        <span class="ad-todo__t">Khoản thu thêm / hoàn do đổi số khách<small>Ghi nhận khi đã thu hoặc đã hoàn</small></span><i class="fa fa-angle-right"></i></a></li>
+                    <li><a href="{{ route('admin.waitlist') }}"><span class="ad-todo__n">{{ $todo['waitlist'] ?? 0 }}</span>
+                        <span class="ad-todo__t">Khách đang trong danh sách chờ<small>Tự mời khi có chỗ trống</small></span><i class="fa fa-angle-right"></i></a></li>
                 @endif
                 <li><a href="{{ route('admin.support') }}"><span class="ad-todo__n {{ $todo['support'] ? 'is-hot' : '' }}">{{ $todo['support'] }}</span>
                     <span class="ad-todo__t">Yêu cầu tư vấn đang mở<small>Khách cần nhân viên hỗ trợ lịch trình</small></span><i class="fa fa-angle-right"></i></a></li>

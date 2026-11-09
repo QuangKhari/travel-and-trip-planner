@@ -137,6 +137,18 @@ class BookingService
                 'holdExpiresAt' => min($online ? now()->addMinutes(OnlinePaymentService::holdMinutes($method)) : now()->addHours((int) config('travela.hold_hours', 48)), \Carbon\Carbon::parse($departureDate)->startOfDay()),
             ]));
 
+            // Chốt phiên bản nội dung tour khách đồng ý lúc đặt (giá, lịch trình, bao gồm / không bao gồm)
+            if (TourVersionService::ready()) {
+                try {
+                    $versionId = app(TourVersionService::class)->ensureCurrent($tourId);
+                    if ($versionId) {
+                        DB::table('tbl_booking')->where('bookingId', $bookingId)->update(['tourVersionId' => $versionId]);
+                    }
+                } catch (\Throwable $e) {
+                    report($e);   // không để lỗi chụp phiên bản làm hỏng việc đặt chỗ
+                }
+            }
+
             if ($promotionId !== null) {
                 $this->coupons->attach($promotionId, $userId, $bookingId, $discount);
             }
@@ -179,6 +191,12 @@ class BookingService
 
         // Trả chỗ về đúng ngày khởi hành (chỗ đang giữ nếu đơn chờ, chỗ đã bán nếu đơn đã xác nhận)
         $this->departures->release($booking);
+
+        // Có chỗ trống: sau khi commit, mời người đầu danh sách chờ (nếu có)
+        if (!empty($booking->availabilityId) && WaitlistService::ready()) {
+            $freedAvailability = (int) $booking->availabilityId;
+            DB::afterCommit(fn () => app(WaitlistService::class)->offerNext($freedAvailability));
+        }
 
         // Đơn đã thanh toán: RefundService::requestLocked quyết định nhả mã theo % hoàn (config booking.coupon_release_min_percent).
         if ($releaseCoupon) {

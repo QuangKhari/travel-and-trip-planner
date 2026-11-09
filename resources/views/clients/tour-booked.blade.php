@@ -62,7 +62,7 @@
         {{-- Tiến trình đơn (đơn đã hủy thì hiện thông báo thay vì tiến trình) --}}
         @if ($status === 'c')
             <div class="bk-alert bk-alert--bad" role="status">
-                <b>Đơn này đã được hủy{{ ['expired' => ' vì quá hạn giữ chỗ (chưa đến văn phòng xác nhận)', 'admin' => ' bởi Travela', 'shortfall' => ' vì tour không đủ khách tối thiểu — Travela hủy khởi hành', 'customer' => ' theo yêu cầu của bạn'][$tour_booked->cancelReason ?? ''] ?? '' }}.</b> Chỗ đã được trả lại cho tour. Bạn có thể
+                <b>Đơn này đã được hủy{{ ['expired' => ' vì quá hạn giữ chỗ (chưa đến văn phòng xác nhận)', 'admin' => ' bởi Travela', 'shortfall' => ' vì tour không đủ khách tối thiểu — Travela hủy khởi hành', 'incident' => ' vì sự cố khiến Travela không thể tổ chức khởi hành', 'customer' => ' theo yêu cầu của bạn'][$tour_booked->cancelReason ?? ''] ?? '' }}.</b> Chỗ đã được trả lại cho tour. Bạn có thể
                 <a href="{{ route('tours') }}">xem các tour khác</a> bất cứ lúc nào.
             </div>
         @else
@@ -156,6 +156,59 @@
                         <p>Cảm ơn bạn đã đồng hành. Một đánh giá ngắn giúp những du khách sau chọn tour dễ hơn.</p>
                         <a href="{{ route('tour-detail', ['id' => $b->tourId]) }}#danh-gia"
                             class="bk-btn bk-btn--cta bk-btn--inline">Viết đánh giá</a>
+                    </section>
+                @endif
+
+                @if (!empty($adjust['can']))
+                    <section class="bk-card" aria-labelledby="bkAdjH">
+                        <h2 id="bkAdjH">Thay đổi số khách</h2>
+                        @if (session('adjustQuote'))
+                            @php $q = session('adjustQuote'); $mm = fn ($v) => number_format((float) $v, 0, ',', '.') . ' đ'; @endphp
+                            <div style="padding:10px 12px;background:#F4F8F6;border-radius:8px;margin-bottom:10px">
+                                <b>Xem trước:</b> {{ $q['people']['old'][0] }}+{{ $q['people']['old'][1] }} → {{ $q['people']['new'][0] }}+{{ $q['people']['new'][1] }} người · tổng tiền {{ $mm($q['oldTotal']) }} → <b>{{ $mm($q['newTotal']) }}</b>
+                                @if ($q['moneyStatus'] === 'pending_collect')<br>Bạn cần thanh toán thêm <b>{{ $mm($q['settleAmount']) }}</b>.
+                                @elseif ($q['moneyStatus'] === 'pending_refund')<br>Được hoàn <b>{{ $mm($q['settleAmount']) }}</b> ({{ $q['refundPercent'] }}% phần dư theo chính sách hủy).
+                                @elseif ($q['paid'])<br>Không phát sinh thu / hoàn tiền.@endif
+                            </div>
+                        @endif
+                        <form method="POST" action="{{ route('booking.adjust', $b->bookingId) }}" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
+                            @csrf
+                            <label>Người lớn<br><input type="number" name="numAdults" min="1" max="50" value="{{ old('numAdults', $b->numAdults) }}" required style="width:90px"></label>
+                            <label>Trẻ em<br><input type="number" name="numChildren" min="0" max="50" value="{{ old('numChildren', $b->numChildren) }}" required style="width:90px"></label>
+                            @if (session('adjustQuote'))<input type="hidden" name="confirm" value="1"><button class="bk-btn" type="submit">Xác nhận thay đổi</button>
+                            @else<button class="bk-btn" type="submit">Xem giá mới</button>@endif
+                        </form>
+                        <p style="margin:8px 0 0;font-size:13px;color:#6b8592">Giá tính theo giá bạn đã đồng ý lúc đặt. Cho phép đến {{ \App\Services\BookingAdjustmentService::minDays() }} ngày trước khởi hành.</p>
+                    </section>
+                @endif
+                @if (!empty($complaint['can']))
+                    <section class="bk-card"><h2>Chuyến đi chưa như mong đợi?</h2>
+                        <p>Nếu dịch vụ không đúng mô tả, bạn có thể gửi khiếu nại trong {{ \App\Services\ComplaintService::windowDays() }} ngày sau khi kết thúc chuyến đi.</p>
+                        <a class="bk-btn" href="{{ route('complaint.index', ['bookingId' => $b->bookingId]) }}">Gửi khiếu nại</a></section>
+                @endif
+
+                @if (!empty($tourVersion))
+                    @php $tv = $tourVersion; $snap = $tv['snapshot']; @endphp
+                    <section class="bk-card" aria-labelledby="bkVerH">
+                        <h2 id="bkVerH">Nội dung tour bạn đã đặt <small style="font-weight:400">(phiên bản V{{ $tv['version'] }})</small></h2>
+                        @if ($tv['outdated'])
+                            <p style="padding:10px 12px;background:#FFF6D6;border-radius:8px;margin:0 0 10px">Tour này đã được cập nhật sau khi bạn đặt (thay đổi: {{ implode(', ', array_slice($tv['changes'], 0, 5)) }}). <b>Đơn của bạn vẫn áp dụng đúng nội dung dưới đây</b>, là bản bạn đã đồng ý khi đặt. Cần hỗ trợ, hãy liên hệ Travela.</p>
+                        @else
+                            <p style="margin:0 0 10px">Đây là nội dung và giá tại thời điểm bạn đặt; hiện vẫn trùng với trang tour.</p>
+                        @endif
+                        <details>
+                            <summary style="cursor:pointer;font-weight:600">Xem giá, dịch vụ và lịch trình đã chốt</summary>
+                            <dl class="bk-dl" style="margin-top:10px">
+                                @if (isset($snap['priceAdult']))<div><dt>Giá người lớn</dt><dd>{{ number_format((float) $snap['priceAdult'], 0, ',', '.') }} đ</dd></div>@endif
+                                @if (isset($snap['priceChild']))<div><dt>Giá trẻ em</dt><dd>{{ number_format((float) $snap['priceChild'], 0, ',', '.') }} đ</dd></div>@endif
+                                @if (!empty($snap['includes']))<div><dt>Giá đã bao gồm</dt><dd>{!! nl2br(e(strip_tags($snap['includes']))) !!}</dd></div>@endif
+                                @if (!empty($snap['excludes']))<div><dt>Giá không bao gồm</dt><dd>{!! nl2br(e(strip_tags($snap['excludes']))) !!}</dd></div>@endif
+                            </dl>
+                            @foreach ((array) ($snap['timeline'] ?? []) as $i => $day)
+                                <div style="margin-top:10px"><b>Ngày {{ $i + 1 }}: {{ $day['title'] }}</b>
+                                    <div>{!! strip_tags((string) $day['description'], '<p><br><ul><ol><li><b><strong><i><em>') !!}</div></div>
+                            @endforeach
+                        </details>
                     </section>
                 @endif
 

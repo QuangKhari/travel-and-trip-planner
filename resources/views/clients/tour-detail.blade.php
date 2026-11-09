@@ -415,6 +415,10 @@
                                         @endforeach
                                     </div>
                                 </fieldset>
+                                @php $soldOut = collect($departures)->filter(fn ($d) => (int) $d->remaining <= 0); @endphp
+                                @if ($soldOut->isNotEmpty() && \Illuminate\Support\Facades\Route::has('waitlist.index'))
+                                    <p style="margin:8px 0;font-size:14px">Ngày đã hết chỗ? @foreach ($soldOut as $so)<a href="{{ route('waitlist.index', ['availabilityId' => $so->availabilityId]) }}">Đăng ký chờ {{ date('d/m/Y', strtotime($so->departureDate)) }}</a>{{ $loop->last ? '' : ' · ' }}@endforeach</p>
+                                @endif
                                 <style>
                                     .px-deps{border:0;margin:0 0 14px;padding:0}.px-deps legend{font-size:14px;font-weight:600;margin-bottom:8px}
                                     .px-deps__list{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}

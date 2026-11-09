@@ -17,12 +17,12 @@ final class AdminBadges
     /**
      * shortfall: lịch + đoàn ghép sắp thiếu khách chưa có phương án; rescue: phương án đã đủ phản hồi chờ admin áp dụng / xử lý;
      * refundFail: yêu cầu hoàn bị cổng thanh toán từ chối, cần thử lại hoặc hoàn tay.
-     * @return array{booking:int, unpaid:int, contact:int, reviewed:int, draft:int, pending:int, refund:int, support:int, shortfall:int, rescue:int, refundFail:int}
+     * @return array{booking:int, unpaid:int, contact:int, reviewed:int, draft:int, pending:int, refund:int, support:int, shortfall:int, rescue:int, refundFail:int, incident:int, reconcile:int, waitlist:int, adjust:int, complaint:int}
      */
     public static function counts(): array
     {
         return Cache::remember(self::KEY, 45, function () {
-            $c = ['booking' => 0, 'unpaid' => 0, 'contact' => 0, 'reviewed' => 0, 'draft' => 0, 'pending' => 0, 'refund' => 0, 'support' => 0, 'shortfall' => 0, 'rescue' => 0, 'refundFail' => 0];
+            $c = ['booking' => 0, 'unpaid' => 0, 'contact' => 0, 'reviewed' => 0, 'draft' => 0, 'pending' => 0, 'refund' => 0, 'support' => 0, 'shortfall' => 0, 'rescue' => 0, 'refundFail' => 0, 'incident' => 0, 'reconcile' => 0, 'waitlist' => 0, 'adjust' => 0, 'complaint' => 0];
             try {
                 $c['booking'] = (int) DB::table('tbl_booking')->where('bookingStatus', 'n')->count();
                 $c['unpaid'] = (int) DB::table('tbl_booking')
@@ -49,6 +49,21 @@ final class AdminBadges
                         $c['shortfall'] += (int) DB::table('tbl_departure_groups')->whereNotNull('shortfallFlaggedAt')->where('status', 'active')
                             ->where('departureDate', '>', today()->toDateString())->count();
                     }
+                }
+                if (Schema::hasTable('tbl_waitlist')) {
+                    $c['waitlist'] = (int) DB::table('tbl_waitlist')->where('status', 'waiting')->count();
+                }
+                if (Schema::hasTable('tbl_booking_adjustments')) {
+                    $c['adjust'] = (int) DB::table('tbl_booking_adjustments')->whereIn('moneyStatus', ['pending_collect', 'pending_refund'])->count();
+                }
+                if (Schema::hasTable('tbl_complaints')) {
+                    $c['complaint'] = (int) DB::table('tbl_complaints')->whereIn('status', ['open', 'investigating'])->count();
+                }
+                if (Schema::hasTable('tbl_tour_incidents')) {
+                    $c['incident'] = (int) DB::table('tbl_tour_incidents')->whereIn('status', ['open', 'handling'])->count();
+                }
+                if (Schema::hasTable('tbl_reconciliation_findings')) {
+                    $c['reconcile'] = (int) DB::table('tbl_reconciliation_findings')->where('status', 'open')->whereIn('severity', ['high', 'medium'])->count();
                 }
                 if (Schema::hasTable('tbl_support_tickets')) {
                     $c['support'] = (int) DB::table('tbl_support_tickets')->whereIn('status', ['open', 'in_progress'])->count();

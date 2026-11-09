@@ -51,7 +51,13 @@ class TourBookedController extends Controller
             ->orderBy('sortOrder')
             ->value('imageURL');
 
-        return view("clients.tour-booked", compact('title', 'tour_booked', 'canCancel', 'bookingId', 'cover', 'policy', 'refund'));
+        // Nội dung tour theo đúng phiên bản khách đã đồng ý lúc đặt (giá / lịch trình có thể đã đổi sau đó)
+        $tourVersion = app(\App\Services\TourVersionService::class)->forBooking($tour_booked);
+        // Điều chỉnh số khách + khiếu nại sau tour (chỉ hiện khi đủ điều kiện)
+        $adjust = app(\App\Services\BookingAdjustmentService::class)->eligibility($tour_booked);
+        $complaint = app(\App\Services\ComplaintService::class)->eligibility($tour_booked);
+
+        return view("clients.tour-booked", compact('title', 'tour_booked', 'canCancel', 'bookingId', 'cover', 'policy', 'refund', 'tourVersion', 'adjust', 'complaint'));
     }
 
     public function cancelBooking(Request $req, BookingService $bookings)

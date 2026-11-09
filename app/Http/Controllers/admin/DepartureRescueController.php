@@ -20,6 +20,11 @@ class DepartureRescueController extends Controller
     {
         $title='Xử lý tour thiếu khách';
         $ready=$service->ready();
+        // Mở từ trang sự cố: gợi ý lịch và gắn phương án vào sự cố
+        $incident=null;
+        if (request('incidentId') && \App\Services\IncidentService::ready()) {
+            $incident=DB::table('tbl_tour_incidents')->where('incidentId',(int)request('incidentId'))->first(['incidentId','title','type','severity','confidential']);
+        }
         $departures=collect(); $plans=collect(); $resources=collect(); $alerts=collect(); $groupAlerts=collect();
         if ($ready) {
             $resources=DB::table('tbl_rescue_resources')->where('active',true)->orderBy('name')->get();
@@ -57,7 +62,7 @@ class DepartureRescueController extends Controller
                 }
             }
         }
-        return view('admin.departures.rescue',compact('title','ready','departures','plans','resources','alerts','groupAlerts'));
+        return view('admin.departures.rescue',compact('title','ready','departures','plans','resources','alerts','groupAlerts','incident'));
     }
 
     public function store(Request $request, DepartureRescueService $service)
@@ -66,6 +71,7 @@ class DepartureRescueController extends Controller
             'availabilityId'=>'required|integer|exists:tbl_tour_availability,availabilityId',
             'type'=>'required|in:partial,date_change,tour_change,keep,cancel_review',
             'declinePolicy'=>'nullable|in:reject_all,refund_decliners',
+            'incidentId'=>'nullable|integer|exists:tbl_tour_incidents,incidentId',
             'targetAvailabilityId'=>'required_if:type,partial,date_change,tour_change|nullable|integer|exists:tbl_tour_availability,availabilityId',
             'fromDay'=>'required_if:type,partial|nullable|integer|min:1|max:90',
             'toDay'=>'required_if:type,partial|nullable|integer|min:1|max:90',
@@ -78,6 +84,7 @@ class DepartureRescueController extends Controller
             'responseDeadline'=>'required|date|after:now',
         ]);
         $id=$service->create($data);
+        if (!empty($data['incidentId'])) \App\Services\IncidentService::linkPlan((int)$data['incidentId'],$id,(int)session('adminId'));
         AuditLog::record('departure.rescue.proposal','departure_rescue',$id,'Tạo phương án xử lý thiếu khách');
         AdminBadges::forget();
         return redirect()->route('admin.departures.rescue')->with('success','Đã tạo phương án #'.$id.'. Email sẽ được đưa vào hàng đợi khi chạy lệnh departures:rescue-notify.');

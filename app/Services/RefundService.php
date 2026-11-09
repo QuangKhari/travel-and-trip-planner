@@ -87,6 +87,10 @@ class RefundService
             if (!$viaGateway && ($r->gatewayStatus ?? null) === 'processing') {
                 return ['ok' => false, 'message' => 'Lệnh hoàn qua cổng thanh toán đang xử lý: bấm “Kiểm tra trạng thái” trước, không ghi nhận tay để tránh hoàn tiền hai lần.'];
             }
+            if (!$viaGateway && $reference !== null && $reference !== ''
+                && DB::table('tbl_refunds')->where('refundId', '!=', $refundId)->where('status', 'refunded')->where('method', mb_substr($method, 0, 40))->where('reference', mb_substr($reference, 0, 80))->exists()) {
+                return ['ok' => false, 'message' => 'Mã giao dịch hoàn này đã được dùng cho một khoản hoàn khác: kiểm tra lại để tránh ghi nhận / hoàn trùng.'];
+            }
             DB::table('tbl_refunds')->where('refundId', $refundId)->update([
                 'status' => 'refunded',
                 'method' => mb_substr($method, 0, 40),

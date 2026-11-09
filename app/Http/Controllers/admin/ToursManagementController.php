@@ -762,6 +762,10 @@ class ToursManagementController extends Controller
         $replaceImages   = count($images) > 0;
         $replaceTimeline = is_array($timelines) && count($timelines) > 0;
 
+        // Chụp nội dung đang bán TRƯỚC khi sửa: đơn đã đặt giữ nguyên bản này, khách mới nhận bản sau khi sửa
+        $versions = app(\App\Services\TourVersionService::class);
+        $beforeVersion = $versions->beforeEdit($tourId, (int) session('adminId'));
+
         $result = DB::transaction(function () use ($request, $tourId, $dataTours, $images, $name, $timelines, $replaceImages, $replaceTimeline) {
             $tour = DB::table('tbl_tours')
                 ->where('tourId', $tourId)
@@ -914,11 +918,29 @@ class ToursManagementController extends Controller
             $this->images->deleteMany(array_diff($result['oldStems'], $images));
         }
 
+        $ver = $versions->afterEdit($tourId, $beforeVersion, (int) session('adminId'));
+        $verNote = '';
+        if ($ver['changed']) {
+            AuditLog::record('tour.version', 'tour', $tourId, 'Tạo phiên bản V' . $ver['version'] . ' (trước đó V' . $ver['previous'] . '): ' . implode(', ', $ver['changes'])
+                . ' · ' . $ver['affected'] . ' đơn đang hiệu lực giữ nguyên bản cũ');
+            $verNote = ' Đã tạo phiên bản V' . $ver['version'] . ' (đổi: ' . implode(', ', array_slice($ver['changes'], 0, 4)) . (count($ver['changes']) > 4 ? '…' : '') . ').'
+                . ($ver['affected'] > 0 ? ' ' . $ver['affected'] . ' đơn đã đặt vẫn giữ nội dung bản V' . $ver['previous'] . '; khách thấy cả hai bản trong trang đơn của họ.' : '');
+        }
+
+        try {   // kiểm tra tính khả thi sau khi sửa: chỉ cảnh báo, không chặn việc lưu
+            $fz = app(\App\Services\FeasibilityService::class)->check($tourId);
+            if ($fz['counts']['error'] + $fz['counts']['warn'] > 0) {
+                $verNote .= ' Kiểm tra khả thi: ' . $fz['counts']['error'] . ' lỗi, ' . $fz['counts']['warn'] . ' cảnh báo (xem Tour → Kiểm tra khả thi).';
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         $tours = $this->tours->getAllTours();
 
         return response()->json([
             'success' => true,
-            'message' => 'Sửa tour thành công!',
+            'message' => 'Sửa tour thành công!' . $verNote,
             'data' => view('admin.partials.list-tours', compact('tours'))->render(),
         ]);
     }

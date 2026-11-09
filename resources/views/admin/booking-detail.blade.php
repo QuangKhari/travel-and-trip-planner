@@ -184,6 +184,9 @@
                         <dt>Ngày đi</dt><dd>{{ date('d/m/Y', strtotime($b->tripStart)) }}{{ $b->started && !$b->ended ? ' · đang diễn ra' : '' }}</dd>
                         <dt>Ngày về</dt><dd>{{ date('d/m/Y', strtotime($b->tripEnd)) }}</dd>
                         <dt>Số khách</dt><dd>{{ $b->numAdults }} người lớn{{ $b->numChildren ? ', ' . $b->numChildren . ' trẻ em' : '' }}</dd>
+                        @if (!empty($tourVersion))
+                            <dt>Nội dung đã bán</dt><dd>Phiên bản V{{ $tourVersion['version'] }}@if ($tourVersion['outdated']) <span class="ad-badge ad-badge--warn">Tour đã đổi sau khi đặt</span><span class="ad-sub">Khác: {{ implode(', ', array_slice($tourVersion['changes'], 0, 5)) }}. Khách vẫn được hưởng bản V{{ $tourVersion['version'] }}.</span>@endif</dd>
+                        @endif
                         @if ($canPreview = $canCancelPreview)
                             <dt>Nếu hủy</dt><dd>còn {{ $canPreview['days'] }} ngày · {{ $b->paymentStatus === 'y' ? 'hoàn ' . $canPreview['percent'] . '%' : 'không phát sinh hoàn tiền' }}</dd>
                         @endif
@@ -236,6 +239,36 @@
     ];
     @endphp
     <script type="application/json" id="inv-data">{!! json_encode($inv, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) !!}</script>
+
+    @if (isset($adjustEl))
+        <section class="ad-card" style="margin-top:20px">
+            <div class="ad-card__head"><h2>Điều chỉnh số khách</h2></div>
+            <div class="ad-card__body">
+                @if ($adjustEl['can'])
+                    <form method="POST" action="{{ route('admin.booking.adjust', $b->bookingId) }}" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">@csrf
+                        <label>Người lớn<br><input type="number" name="numAdults" min="1" max="50" value="{{ $b->numAdults }}" required style="width:90px"></label>
+                        <label>Trẻ em<br><input type="number" name="numChildren" min="0" max="50" value="{{ $b->numChildren }}" required style="width:90px"></label>
+                        <label>Ghi chú<br><input name="note" maxlength="255" placeholder="Lý do" style="width:220px"></label>
+                        <button class="ad-btn ad-btn--primary" type="submit" data-confirm="Đổi số khách của đơn này? Giá tính lại theo giá khách đã đồng ý lúc đặt, chỗ được cập nhật ngay.">Điều chỉnh</button>
+                    </form>
+                @else
+                    <p>{{ $adjustEl['why'] }}</p>
+                @endif
+                @if ($adjustments->count())
+                    <ul style="margin:12px 0 0;padding-left:18px">
+                        @foreach ($adjustments as $j)
+                            <li>{{ date('d/m H:i', strtotime($j->createdAt)) }} · {{ $j->oldAdults }}+{{ $j->oldChildren }} → {{ $j->newAdults }}+{{ $j->newChildren }} · {{ number_format($j->oldTotal, 0, ',', '.') }} → {{ number_format($j->newTotal, 0, ',', '.') }} đ
+                                @if ($j->moneyStatus === 'pending_collect') · <b>chờ thu thêm {{ number_format($j->settleAmount, 0, ',', '.') }} đ</b>
+                                @elseif ($j->moneyStatus === 'pending_refund') · <b>chờ hoàn {{ number_format($j->settleAmount, 0, ',', '.') }} đ</b>
+                                @elseif ($j->moneyStatus === 'collected') · đã thu thêm
+                                @elseif ($j->moneyStatus === 'refunded') · đã hoàn phần dư @endif
+                                ({{ $j->by === 'admin' ? 'admin' : 'khách' }})</li>
+                        @endforeach
+                    </ul>
+                @endif
+            </div>
+        </section>
+    @endif
 @endsection
 
 @push('scripts')

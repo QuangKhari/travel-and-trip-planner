@@ -189,7 +189,7 @@ class DepartureRescueService
                 foreach ($rows as $bk) {
                     $co = DB::table('tbl_checkout')->where('bookingId',$bk->bookingId)->lockForUpdate()->first();
                     $paid = $co && $co->paymentStatus === 'y';
-                    app(BookingService::class)->cancelLocked($bk,'shortfall',!$paid);
+                    app(BookingService::class)->cancelLocked($bk,!empty($plan->incidentId) ? 'incident' : 'shortfall',!$paid);
                     if ($paid) {
                         app(RefundService::class)->requestLocked($bk,'admin',$adminId,100,'Travela điều chỉnh khởi hành, khách không đồng ý — hoàn 100% (phương án #'.$planId.')',$planId);
                         $summary['refunds']++;
@@ -227,6 +227,10 @@ class DepartureRescueService
                     DB::table('tbl_rescue_transfers')->insert(['planId'=>$planId,'bookingId'=>$b->bookingId,'oldTourId'=>$s->tourId,'newTourId'=>$t->tourId,'oldAvailabilityId'=>$s->availabilityId,'newAvailabilityId'=>$t->availabilityId,'oldTotal'=>$b->totalPrice,'newTotal'=>$b->totalPrice,'createdAt'=>now()]);
                     DB::table('tbl_booking')->where('bookingId',$b->bookingId)->update(['tourId'=>$t->tourId,'availabilityId'=>$t->availabilityId,'departureDate'=>$t->departureDate]);
                 }
+                if (TourVersionService::ready() && ($newVersionId=app(TourVersionService::class)->ensureCurrent((int)$t->tourId))) {
+                    // khách đã đồng ý đổi sang tour này: nội dung họ nhận là phiên bản hiện tại của tour mới
+                    DB::table('tbl_booking')->whereIn('bookingId',$bookings->pluck('bookingId')->all())->update(['tourVersionId'=>$newVersionId]);
+                }
                 DB::table('tbl_tour_availability')->where('availabilityId',$t->availabilityId)->increment('bookedSlots',$people,['updatedAt'=>now()]);
                 DB::table('tbl_tour_availability')->where('availabilityId',$s->availabilityId)->decrement('bookedSlots',$people,['updatedAt'=>now()]);
                 DB::table('tbl_tour_availability')->where('availabilityId',$s->availabilityId)->update(['status'=>'closed','updatedAt'=>now()]);
@@ -257,6 +261,7 @@ class DepartureRescueService
             // 'keep' / 'cancel_review' are decisions for operations staff; never auto-cancel or auto-refund.
             $finalStatus = $plan->type === 'cancel_review' ? 'manual_review' : 'applied';
             DB::table('tbl_departure_rescue_plans')->where('planId',$planId)->update(['status'=>$finalStatus,'appliedAt'=>now(),'updatedAt'=>now()]);
+            if (!empty($plan->incidentId)) IncidentService::log((int)$plan->incidentId,$adminId,'plan','Phương án #'.$planId.' đã được áp dụng ('.$finalStatus.').');
             foreach (DB::table('tbl_departure_rescue_responses')->where('planId',$planId)->get() as $r) {
                 $event = $plan->type === 'cancel_review' ? 'manual_review'
                     : (in_array((int)$r->bookingId, $summary['declinedCancelled'], true) ? 'declined_refund' : 'applied');
@@ -288,9 +293,9 @@ class DepartureRescueService
             foreach($rows as $booking) {
                 $checkout=DB::table('tbl_checkout')->where('bookingId',$booking->bookingId)->lockForUpdate()->first();
                 $paid=$checkout && $checkout->paymentStatus === 'y';
-                app(BookingService::class)->cancelLocked($booking,'shortfall',!$paid);
+                app(BookingService::class)->cancelLocked($booking,!empty($plan->incidentId) ? 'incident' : 'shortfall',!$paid);
                 if ($paid) {
-                    app(RefundService::class)->requestLocked($booking,'admin',$adminId,100,'Travela hủy khởi hành do không đủ khách — phương án #'.$planId,$planId);
+                    app(RefundService::class)->requestLocked($booking,'admin',$adminId,100,(!empty($plan->incidentId) ? 'Travela hủy khởi hành do sự cố — phương án #' : 'Travela hủy khởi hành do không đủ khách — phương án #').$planId,$planId);
                     $refunds++;
                 }
                 $ids[]=(int)$booking->bookingId;
@@ -299,8 +304,10 @@ class DepartureRescueService
             if (Schema::hasColumn('tbl_tour_availability','shortfallFlaggedAt')) $close['shortfallFlaggedAt']=null;
             DB::table('tbl_tour_availability')->where('availabilityId',$source->availabilityId)->update($close);
             $group=app(DepartureGroupingService::class)->releaseMembership((int)$source->availabilityId);
+            app(WaitlistService::class)->closeForAvailability((int)$source->availabilityId);
             app(DepartureService::class)->syncTour((int)$source->tourId);
             DB::table('tbl_departure_rescue_plans')->where('planId',$planId)->update(['status'=>$refunds>0 ? 'refund_pending' : 'completed','appliedAt'=>now(),'updatedAt'=>now()]);
+            if (!empty($plan->incidentId)) IncidentService::log((int)$plan->incidentId,$adminId,'plan','Đã hủy khởi hành theo phương án #'.$planId.': '.count($ids).' đơn bị hủy, '.$refunds.' hồ sơ hoàn 100% chờ kế toán.');
 
             return ['planId'=>$planId,'cancelled'=>count($ids),'refunds'=>$refunds,'bookingIds'=>$ids,'groupReleased'=>$group];
         },3);

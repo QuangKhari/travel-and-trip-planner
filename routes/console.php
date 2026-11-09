@@ -45,6 +45,30 @@ Artisan::command('payments:process-refunds', function () {
 })->purpose('Đối soát và tự động hóa hoàn tiền qua cổng thanh toán');
 Schedule::command('payments:process-refunds')->everyFiveMinutes()->withoutOverlapping();
 
+// Đối soát booking – thanh toán – hoàn tiền: quét điểm không khớp mỗi giờ (xem Admin → Đối soát)
+Artisan::command('payments:audit', function () {
+    if (!\App\Services\Payments\PaymentReconciliationService::ready()) {
+        $this->warn('Chưa chạy migration 2026_11_29_000001.');
+
+        return;
+    }
+    $r = app(\App\Services\Payments\PaymentReconciliationService::class)->sync();
+    $this->line("Điểm không khớp: {$r['found']} (mới {$r['new']}, tự đóng {$r['resolved']}, đang mở {$r['open']})");
+})->purpose('Đối soát booking, thanh toán và hoàn tiền');
+Schedule::command('payments:audit')->hourly()->withoutOverlapping();
+
+// Danh sách chờ: hết hạn lời mời cũ và mời người kế tiếp khi có chỗ trống
+Artisan::command('waitlist:process', function () {
+    if (!\App\Services\WaitlistService::ready()) {
+        $this->warn('Chưa chạy migration 2026_11_30_000001.');
+
+        return;
+    }
+    $r = app(\App\Services\WaitlistService::class)->processAll();
+    $this->line("Lời mời hết hạn: {$r['expired']}; lời mời mới: {$r['offered']}");
+})->purpose('Xử lý danh sách chờ khi lịch khởi hành có chỗ trống');
+Schedule::command('waitlist:process')->everyFiveMinutes()->withoutOverlapping();
+
 // Hủy đơn quá hạn giữ chỗ, trả chỗ và nhả mã giảm giá - mỗi phút (A2: lệnh nhẹ, chỉ quét đơn n đã quá hạn)
 Schedule::command('bookings:expire-holds')->everyMinute()->withoutOverlapping();
 

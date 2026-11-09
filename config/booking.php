@@ -25,4 +25,13 @@ return [
 
     // Lịch khởi hành còn <= số ngày này mà chưa đủ khách tối thiểu (và đã có khách) thì gắn cờ "thiếu khách" cho admin
     'shortfall_flag_days' => (int) env('BOOKING_SHORTFALL_FLAG_DAYS', 10),
+
+    // Danh sách chờ: giờ giữ chỗ cho người được mời (không quá 0h ngày khởi hành)
+    'waitlist_offer_hours' => (int) env('BOOKING_WAITLIST_OFFER_HOURS', 12),
+
+    // Khách tự đổi số người của đơn được đến trước ngày khởi hành bấy nhiêu ngày (admin đổi được đến hết hôm trước ngày đi)
+    'adjust_min_days' => (int) env('BOOKING_ADJUST_MIN_DAYS', 7),
+
+    // Khiếu nại sau tour: số ngày được gửi kể từ khi chuyến đi kết thúc
+    'complaint_days' => (int) env('BOOKING_COMPLAINT_DAYS', 30),
 ];

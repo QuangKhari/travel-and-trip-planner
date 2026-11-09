@@ -31,7 +31,7 @@ class BookingManagementController extends Controller
 
     public const STATUS = ['n' => ['warn', 'Chờ xác nhận'], 'y' => ['info', 'Đã xác nhận'], 'f' => ['ok', 'Hoàn tất'], 'c' => ['bad', 'Đã hủy']];
     public const PAY = ['n' => ['bad', 'Chưa thanh toán'], 'y' => ['ok', 'Đã thanh toán'], 'refund_pending' => ['violet', 'Chờ hoàn tiền'], 'refunded' => ['mute', 'Đã hoàn tiền']];
-    public const CANCEL_REASON = ['customer' => 'khách hủy', 'admin' => 'admin hủy', 'expired' => 'hết hạn giữ chỗ', 'shortfall' => 'Travela hủy (thiếu khách)'];
+    public const CANCEL_REASON = ['customer' => 'khách hủy', 'admin' => 'admin hủy', 'expired' => 'hết hạn giữ chỗ', 'shortfall' => 'Travela hủy (thiếu khách)', 'incident' => 'Travela hủy (sự cố)'];
     public const METHOD = ['office-payment' => 'Tại văn phòng', 'momo' => 'Ví MoMo', 'zalopay' => 'ZaloPay', 'qr' => 'QR chuyển khoản', 'vnpay' => 'VNPay (cũ)', 'momo-payment' => 'MoMo', 'paypal-payment' => 'PayPal', 'bank-transfer' => 'Chuyển khoản'];
 
     public function __construct()
@@ -416,7 +416,12 @@ class BookingManagementController extends Controller
         $payLogs = Schema::hasTable('tbl_payment_logs')
             ? DB::table('tbl_payment_logs')->where('bookingId', $b->bookingId)->orderByDesc('logId')->limit(20)->get() : collect();
 
-        return view('admin.booking-detail', compact('title', 'b', 'refund', 'history', 'invoiceNo', 'canCancelPreview', 'payLogs'));
+        $tourVersion = app(\App\Services\TourVersionService::class)->forBooking($b);
+        $adjustSvc = app(\App\Services\BookingAdjustmentService::class);
+        $adjustments = $adjustSvc::ready() ? DB::table('tbl_booking_adjustments')->where('bookingId', $b->bookingId)->orderByDesc('adjustId')->get() : collect();
+        $adjustEl = $adjustSvc->eligibility($b, true);
+
+        return view('admin.booking-detail', compact('title', 'b', 'refund', 'history', 'invoiceNo', 'canCancelPreview', 'payLogs', 'tourVersion', 'adjustments', 'adjustEl'));
     }
 
     /**
