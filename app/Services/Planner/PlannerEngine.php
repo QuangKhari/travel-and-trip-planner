@@ -100,6 +100,11 @@ final class PlannerEngine
         $center = $ctx['center'] ?? $this->centroid($picked ?: $scored);
         $dayLists = $this->assignDays($picked, $req, $center, $perDayMax, $dayBudget, $log, $leftover);
 
+        // T-20: có dự báo theo ngày thì đưa mục ngoài trời khỏi ngày mưa, đổi chỗ với mục trong nhà của ngày khô
+        if (!empty($ctx['dayRain'])) {
+            $this->weatherSwap($dayLists, $req, $ctx, $center, $log);
+        }
+
         // bổ sung ngày thiếu mục từ phần còn lại (gần trọng tâm ngày, trong giới hạn khoảng cách)
         for ($d = 0; $d < $req['days']; $d++) {
             while (count($dayLists[$d]) < $perDayMin && $leftover) {
@@ -422,11 +427,15 @@ final class PlannerEngine
             }
         }
 
-        $rainy = isset($ctx['rainyShare']) && $ctx['rainyShare'] !== null && $ctx['rainyShare'] >= $this->cfg['rainy_share'];
+        // T-20: dự báo theo ngày (nếu có) thay số liệu khí hậu theo tháng
+        $fc = $this->forecastRainShare($ctx, $req);
+        $rainy = $fc !== null ? $fc >= $this->cfg['rainy_share']
+            : isset($ctx['rainyShare']) && $ctx['rainyShare'] !== null && $ctx['rainyShare'] >= $this->cfg['rainy_share'];
         $indoor = array_key_exists('indoor', $c) ? $c['indoor'] : null;
         if ($rainy && $indoor === true) {
             $score += $w['rain_indoor'];
-            $why[] = 'Tháng ' . $m . ' mưa nhiều, mục trong nhà nên hợp';
+            $why[] = $fc !== null ? 'Dự báo mưa ' . (int) round($fc * $req['days']) . '/' . $req['days'] . ' ngày của chuyến, mục trong nhà nên hợp'
+                : 'Tháng ' . $m . ' mưa nhiều, mục trong nhà nên hợp';
         } elseif ($rainy && $indoor === false) {
             $score += $w['rain_outdoor'];
         }
@@ -438,6 +447,69 @@ final class PlannerEngine
         }
 
         return [round($score, 2), $why];
+    }
+
+    /** Tỷ lệ ngày của chuyến được dự báo mưa (≥ swap_rain); null khi không có dự báo. */
+    private function forecastRainShare(array $ctx, array $req): ?float
+    {
+        if (empty($ctx['dayRain'])) {
+            return null;
+        }
+        $lim = (int) config('planner.weather.swap_rain', 60);
+        $wet = count(array_filter($ctx['dayRain'], fn($p) => (int) $p >= $lim));
+
+        return $wet / max(1, (int) $req['days']);
+    }
+
+    /**
+     * T-20: ngày dự báo mưa (≥ swap_rain) mà có mục NGOÀI TRỜI, còn ngày khô có mục TRONG NHÀ → đổi chỗ hai mục.
+     * Không đổi nếu nơi đóng cửa vào ngày mới, hoặc làm ngày vượt quỹ thời lượng. Mỗi lần đổi ghi vào filterLog (giải thích được).
+     *
+     * @param array<int,list<array>> $lists chỉ số ngày từ 0
+     */
+    private function weatherSwap(array &$lists, array $req, array $ctx, ?array $center, array &$log): void
+    {
+        $lim = (int) config('planner.weather.swap_rain', 60);
+        $rain = fn(int $d) => (int) ($ctx['dayRain'][$d + 1] ?? 0);
+        $touched = [];
+        foreach (array_keys($lists) as $wet) {
+            if ($rain($wet) < $lim) {
+                continue;
+            }
+            foreach ($lists[$wet] as $i => $out) {
+                if (($out['indoor'] ?? null) !== false || $out['type'] === 'event') {
+                    continue;
+                }
+                $best = null;
+                foreach (array_keys($lists) as $dry) {
+                    if ($dry === $wet || $rain($dry) >= $lim || ($best !== null && $rain($dry) >= $rain($best[0]))) {
+                        continue;
+                    }
+                    foreach ($lists[$dry] as $j => $in) {
+                        if (($in['indoor'] ?? null) !== true || $in['type'] === 'event'
+                            || $this->closedOn($out, $this->dowOf($req, $dry + 1)) || $this->closedOn($in, $this->dowOf($req, $wet + 1))) {
+                            continue;
+                        }
+                        $best = [$dry, $j];
+                        break;
+                    }
+                }
+                if ($best === null) {
+                    continue;
+                }
+                [$dry, $j] = $best;
+                $in = $lists[$dry][$j];
+                $lists[$dry][$j] = $out;
+                $lists[$wet][$i] = $in;
+                $touched[$wet] = $touched[$dry] = true;
+                $log[] = ['key' => $out['key'], 'name' => $out['name'], 'type' => $out['type'], 'code' => 'weather_swap',
+                    'reason' => 'Ngày ' . ($wet + 1) . ' dự báo mưa ' . $rain($wet) . '%: chuyển “' . $out['name'] . '” (ngoài trời) sang ngày ' . ($dry + 1)
+                        . ', đổi lấy “' . $in['name'] . '” (trong nhà)'];
+            }
+        }
+        foreach (array_keys($touched) as $d) {
+            $lists[$d] = $this->orderByRoute($lists[$d], $center);
+        }
     }
 
     /** Từ khóa ngắn (dưới 4 ký tự) chỉ khớp nguyên từ; từ khóa dài khớp theo đoạn con. $hay đã bỏ dấu, có khoảng trắng hai đầu. */

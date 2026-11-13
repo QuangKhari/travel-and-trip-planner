@@ -74,6 +74,10 @@ class TripPlanner
             'items.*.durationMin' => ['nullable', 'integer', 'between:5,720'],
             'items.*.costType' => ['nullable', 'in:' . implode(',', self::COST_TYPES)],
             'items.*.locked' => ['nullable', 'boolean'],
+            // T-05: phương tiện cho chặng đi TỪ mục này tới mục có vị trí kế tiếp (null = phương tiện mặc định của chuyến)
+            'items.*.legMode' => ['nullable', 'in:' . implode(',', array_keys((array) config('planner.route.leg_modes', [])))],
+            // đã ghé (khi đang đi): thời điểm đánh dấu, null = chưa
+            'items.*.visitedAt' => ['nullable', 'date'],
         ];
     }
 
@@ -341,6 +345,8 @@ class TripPlanner
                     'durationMin' => !empty($r->durationMin) ? (int) $r->durationMin : null,
                     'costType' => $r->costType ?? null,
                     'locked' => !empty($r->isLocked),
+                    'legMode' => $r->legMode ?? null,
+                    'visitedAt' => $r->visitedAt ?? null,
                 ];
                 continue;
             }
@@ -359,6 +365,8 @@ class TripPlanner
                 'durationMin' => !empty($r->durationMin) ? (int) $r->durationMin : ($res[$k]['durationMin'] ?? null),
                 'costType' => $r->costType ?? null,
                 'locked' => !empty($r->isLocked),
+                'legMode' => $r->legMode ?? null,
+                'visitedAt' => $r->visitedAt ?? null,
             ]);
         }
 
@@ -937,6 +945,7 @@ class TripPlanner
             'image' => $it['image'] ?? null, 'address' => $it['address'] ?? null, 'website' => $it['website'] ?? null, 'blurb' => $it['blurb'] ?? null,
             'startMin' => $it['startMin'] ?? null, 'durationMin' => $it['durationMin'] ?? null, 'defDur' => self::defaultDuration($it),
             'costType' => $it['costType'] ?? null, 'locked' => !empty($it['locked']),
+            'legMode' => $it['legMode'] ?? null, 'visitedAt' => $it['visitedAt'] ?? null,
             'hours' => $it['hours'] ?? null,   // giờ mở cửa theo thứ (OpeningHours); null = chưa biết
         ];
     }
@@ -976,9 +985,18 @@ class TripPlanner
         static $has = null;
         if ($has === null) {
             $has = ['startMin' => Schema::hasColumn('tbl_trip_items', 'startMin'), 'durationMin' => Schema::hasColumn('tbl_trip_items', 'durationMin'),
-                'costType' => Schema::hasColumn('tbl_trip_items', 'costType'), 'isLocked' => Schema::hasColumn('tbl_trip_items', 'isLocked')];
+                'costType' => Schema::hasColumn('tbl_trip_items', 'costType'), 'isLocked' => Schema::hasColumn('tbl_trip_items', 'isLocked'),
+                'legMode' => Schema::hasColumn('tbl_trip_items', 'legMode'), 'visitedAt' => Schema::hasColumn('tbl_trip_items', 'visitedAt')];
         }
         $out = [];
+        if ($has['legMode']) {
+            $m = $it['legMode'] ?? null;
+            $out['legMode'] = is_string($m) && isset(((array) config('planner.route.leg_modes', []))[$m]) ? $m : null;
+        }
+        if ($has['visitedAt']) {
+            $v = $it['visitedAt'] ?? null;
+            $out['visitedAt'] = $v ? \Carbon\Carbon::parse((string) $v)->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s') : null;
+        }
         if ($has['isLocked']) {
             $out['isLocked'] = !empty($it['locked']) ? 1 : 0;
         }

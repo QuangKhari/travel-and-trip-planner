@@ -84,6 +84,18 @@
         function day(list, opts) {
             var dow = opts && opts.dow != null ? opts.dow : null;
             var g = geo.legs(list), legOf = {};
+            // T-05: chặng có phương tiện riêng (legMode của mục xuất phát): phút = km / tốc độ phương tiện + chờ (cùng PlannerRules::legMinutes)
+            var LM = R.legModes || {}, defMode = (R.route && R.route.mode) || "driving";
+            if (g.legs.some(function (l) { return l.from.legMode && l.from.legMode !== defMode && LM[l.from.legMode]; })) {
+                var sum = 0;
+                g.legs = g.legs.map(function (l) {
+                    var m = l.from.legMode, x = m && m !== defMode && LM[m] && l.kmExact > 0 ? LM[m] : null;
+                    var c = x ? { from: l.from, to: l.to, km: l.km, kmExact: l.kmExact, min: Math.round(l.kmExact / Math.max(0.1, x.speedKmh) * 60) + (x.waitMin || 0), mode: m } : l;
+                    sum += c.min;
+                    return c;
+                });
+                g.minutes = sum;
+            }
             g.legs.forEach(function (l) { legOf[l.from.uid != null ? l.from.uid : list.indexOf(l.from)] = l; });
             var clock = R.dayStart, rows = [], act = 0, conflicts = [], free = 0, hasMeal = false;
             list.forEach(function (it, i) {

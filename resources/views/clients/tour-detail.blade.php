@@ -147,7 +147,8 @@
                         data-index="{{ $i }}" data-full="{{ \App\Support\TourImage::url($img, 1600) }}"
                         aria-label="Xem ảnh {{ $i + 1 }} / {{ $imgCount }}">
                         <img src="{{ \App\Support\TourImage::url($img, 600) }}"
-                            alt="{{ $tourDetail->title }} – ảnh {{ $i + 1 }}" loading="lazy" decoding="async">
+                            @if ($ss = \App\Support\TourImage::srcset($img)) srcset="{{ $ss }}" sizes="{{ $i === 0 ? '(max-width: 767px) 100vw, 60vw' : '(max-width: 767px) 50vw, 25vw' }}" @endif
+                            alt="{{ $tourDetail->title }} – ảnh {{ $i + 1 }}" {{ $i === 0 ? 'fetchpriority=high' : 'loading=lazy' }} decoding="async">
                     </button>
                 @endforeach
             </div>
@@ -300,6 +301,7 @@
                                     data-full="{{ \App\Support\TourImage::url($img, 1600) }}"
                                     aria-label="Xem ảnh {{ $j + 6 }} / {{ $imgCount }}">
                                     <img src="{{ \App\Support\TourImage::url($img, 700) }}"
+                                        @if ($ss = \App\Support\TourImage::srcset($img)) srcset="{{ $ss }}" sizes="(max-width: 767px) 50vw, 33vw" @endif
                                         alt="{{ $tourDetail->title }} – ảnh {{ $j + 6 }}" loading="lazy"
                                         decoding="async">
                                 </button>

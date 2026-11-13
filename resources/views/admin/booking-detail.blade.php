@@ -22,6 +22,10 @@
                 <span class="ad-badge ad-badge--{{ $sClass }}">{{ $sLabel }}{{ $b->bookingStatus === 'c' && $b->cancelReason ? ' · ' . (BM::CANCEL_REASON[$b->cancelReason] ?? $b->cancelReason) : '' }}</span>
                 <span class="ad-badge ad-badge--{{ $pClass }}">{{ $pLabel }}</span>
                 <span class="ad-muted">· đặt lúc {{ date('H:i d/m/Y', strtotime($b->bookingDate)) }}</span>
+                @if (!empty($b->tripId))
+                    {{-- A-05: đơn đặt từ banner "có tour giống lịch trình này" của Planner --}}
+                    <span class="ad-muted">· từ <a href="{{ route('admin.trips.show', $b->tripId) }}">chuyến đi #{{ $b->tripId }}</a>{{ $b->matchScore !== null ? ' (khớp ' . (int) round($b->matchScore * 100) . '%)' : '' }}</span>
+                @endif
             </p>
         </div>
         <div class="ad-actions no-print">

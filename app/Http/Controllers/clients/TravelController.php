@@ -35,7 +35,8 @@ class TravelController extends Controller
     /** Điền sẵn ô tìm kiếm: sân bay gần điểm đến chính. */
     public static function defaults(object $trip): array
     {
-        $slug = $trip->destinationId ? DB::table('tbl_destinations')->where('destinationId', $trip->destinationId)->value('slug') : null;
+        $dest = $trip->destinationId ? DB::table('tbl_destinations')->where('destinationId', $trip->destinationId)->first(['slug', 'name']) : null;
+        $slug = $dest->slug ?? null;
 
         return [
             'to' => $slug ? (config('travel_apis.airports.' . $slug) ?? '') : '',
@@ -45,6 +46,7 @@ class TravelController extends Controller
             'nights' => max(1, (int) ($trip->days ?: 2) - 1),
             'airports' => config('travel_apis.airport_names'),
             'simulateOnly' => TravelApi::simulateOnly(),
+            'city' => (string) ($dest->name ?? ''),   // deep-link Booking.com / Agoda
         ];
     }
 
@@ -145,8 +147,12 @@ class TravelController extends Controller
         }
         DB::transaction(function () use ($x, $id) {
             DB::table('tbl_trip_external')->where('externalId', $x->externalId)->delete();
+            if (!empty($x->attachPath)) {
+                \Illuminate\Support\Facades\Storage::disk('proofs')->delete($x->attachPath);
+            }
             // bỏ luôn mục lịch trình đã tạo kèm (nếu người dùng chưa đổi tên)
-            $label = mb_substr(($x->kind === 'flight' ? 'Bay ' : 'Nhận phòng ') . $x->title, 0, 120);
+            $manual = !empty($x->confirmationCode) || !empty($x->attachPath) || str_contains((string) $x->payload, '"manual":true');
+            $label = mb_substr(($manual ? ['hotel' => 'Nhận phòng ', 'flight' => 'Khởi hành ', 'ticket' => 'Vé '][$x->kind] ?? '' : ($x->kind === 'flight' ? 'Bay ' : 'Nhận phòng ')) . $x->title, 0, 120);
             DB::table('tbl_trip_items')->where('tripId', $id)->where('label', $label)->limit(1)->delete();
             DB::table('tbl_trips')->where('tripId', $id)->update(['rev' => DB::raw('rev + 1'), 'lastEditorId' => $this->uid(), 'updatedAt' => now()]);
             app(\App\Services\Planner\TripRevisions::class)->recordCurrent($id, $this->uid(), 'external');
@@ -157,13 +163,13 @@ class TravelController extends Controller
 
     /** Ghi tbl_trip_external và một mục lịch trình có chi phí (ngày tính theo ngày đi của chuyến; ngoài khoảng thì để "chưa xếp ngày"). */
     private function attach(object $trip, string $kind, string $provider, bool $sim, string $title, array $payload, Carbon $at, int $price,
-        string $itemType, string $label, string $note, int $startMin, int $duration, ?float $lat = null, ?float $lng = null): void
+        string $itemType, string $label, string $note, int $startMin, int $duration, ?float $lat = null, ?float $lng = null, array $extra = []): int
     {
-        DB::transaction(function () use ($trip, $kind, $provider, $sim, $title, $payload, $at, $price, $itemType, $label, $note, $startMin, $duration, $lat, $lng) {
-            DB::table('tbl_trip_external')->insert([
+        return DB::transaction(function () use ($trip, $kind, $provider, $sim, $title, $payload, $at, $price, $itemType, $label, $note, $startMin, $duration, $lat, $lng, $extra) {
+            $xid = (int) DB::table('tbl_trip_external')->insertGetId([
                 'tripId' => $trip->tripId, 'kind' => $kind, 'provider' => $provider, 'simulated' => $sim, 'title' => mb_substr($title, 0, 160),
                 'payload' => json_encode($payload, JSON_UNESCAPED_UNICODE), 'startAt' => $at, 'price' => $price, 'createdAt' => now(),
-            ]);
+            ] + $extra);
             $day = null;
             if ($trip->startDate) {
                 $n = (int) Carbon::parse($trip->startDate)->startOfDay()->diffInDays($at->copy()->startOfDay(), false) + 1;
@@ -179,6 +185,58 @@ class TravelController extends Controller
             // báo cho người đang mở chuyến ở tab khác: có thay đổi (cơ chế rev sẵn có)
             DB::table('tbl_trips')->where('tripId', $trip->tripId)->update(['rev' => DB::raw('rev + 1'), 'lastEditorId' => $this->uid(), 'updatedAt' => now()]);
             app(\App\Services\Planner\TripRevisions::class)->recordCurrent((int) $trip->tripId, $this->uid(), 'external');
+
+            return $xid;
         });
+    }
+
+    /**
+     * A-12 POST /len-ke-hoach/{id}/xac-nhan (multipart): lưu xác nhận đặt chỗ NGOÀI Travela (khách sạn, vé máy bay / xe, vé tham quan)
+     * kèm mã xác nhận và tệp PDF / ảnh (≤ 5 MB) trên đĩa riêng tư. Tạo luôn một mục trong lịch đúng ngày giờ.
+     */
+    public function addConfirmation(Request $r, int $id): JsonResponse
+    {
+        $trip = $this->trip($id, true);
+        $v = $r->validate([
+            'kind' => ['required', 'in:hotel,flight,ticket'],
+            'title' => ['required', 'string', 'max:120'],
+            'provider' => ['nullable', 'string', 'max:20'],
+            'code' => ['nullable', 'string', 'max:40', 'regex:/^[A-Za-z0-9\-_. ]+$/'],
+            'startAt' => ['required', 'date'],
+            'price' => ['nullable', 'integer', 'between:0,1000000000'],
+            'file' => ['nullable', 'file', 'max:5120', 'mimes:pdf,jpg,jpeg,png,webp'],
+        ], ['code.regex' => 'Mã xác nhận chỉ gồm chữ, số, dấu gạch và dấu chấm.', 'file.mimes' => 'Tệp phải là PDF hoặc ảnh JPG / PNG / WebP.', 'file.max' => 'Tệp tối đa 5 MB.']);
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('tbl_trip_external', 'confirmationCode')) {
+            return response()->json(['message' => 'Cần chạy php artisan migrate trước.'], 503);
+        }
+        $extra = ['confirmationCode' => isset($v['code']) ? trim($v['code']) : null];
+        if ($r->hasFile('file')) {
+            $f = $r->file('file');
+            $path = 'trips/' . $trip->tripId . '/' . \Illuminate\Support\Str::random(32) . '.' . strtolower($f->getClientOriginalExtension() ?: $f->extension());
+            \Illuminate\Support\Facades\Storage::disk('proofs')->put($path, (string) file_get_contents($f->getRealPath()));
+            $extra += ['attachPath' => $path, 'attachName' => mb_substr(preg_replace('/[^\pL\pN._ -]+/u', '_', $f->getClientOriginalName()), 0, 120), 'attachMime' => $f->getMimeType()];
+        }
+        $at = Carbon::parse($v['startAt']);
+        $kindLabel = ['hotel' => 'Nhận phòng', 'flight' => 'Khởi hành', 'ticket' => 'Vé'][$v['kind']];
+        $xid = $this->attach($trip, $v['kind'] === 'flight' ? 'flight' : ($v['kind'] === 'hotel' ? 'hotel' : 'ticket'), mb_substr((string) ($v['provider'] ?? 'manual'), 0, 20) ?: 'manual', false,
+            $v['title'], ['manual' => true], $at, (int) ($v['price'] ?? 0), $v['kind'] === 'flight' ? 'transport' : 'note', $kindLabel . ' ' . $v['title'],
+            'Đã đặt ngoài Travela' . (!empty($extra['confirmationCode']) ? ' · mã ' . $extra['confirmationCode'] : ''), (int) $at->format('H') * 60 + (int) $at->format('i'),
+            $v['kind'] === 'hotel' ? 30 : 60, null, null, $extra);
+
+        return response()->json(['ok' => true, 'externalId' => $xid, 'message' => 'Đã lưu xác nhận "' . $v['title'] . '" vào chuyến đi.']);
+    }
+
+    /** A-12: tải tệp xác nhận (chỉ người xem được chuyến), không có đường dẫn công khai. */
+    public function confirmationFile(int $id, int $externalId)
+    {
+        $this->trip($id);
+        $x = DB::table('tbl_trip_external')->where(['tripId' => $id, 'externalId' => $externalId])->first();
+        if (!$x || empty($x->attachPath) || !\Illuminate\Support\Facades\Storage::disk('proofs')->exists($x->attachPath)) {
+            abort(404);
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('proofs')->response($x->attachPath, $x->attachName ?: basename($x->attachPath), [
+            'Content-Type' => $x->attachMime ?: 'application/octet-stream', 'X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'private, no-store',
+        ], 'inline');
     }
 }

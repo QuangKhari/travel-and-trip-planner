@@ -192,6 +192,32 @@ final class PlannerRules
         ];
     }
 
+    /**
+     * T-05: phương tiện cho từng chặng. @return array<string,array{label:string,speedKmh:float,waitMin:int,costKm:int,costFixed:int,gmaps:string,icon:string}>
+     */
+    public function legModes(): array
+    {
+        $out = [];
+        foreach ((array) ($this->cfg['route']['leg_modes'] ?? []) as $k => $m) {
+            $out[(string) $k] = ['label' => (string) ($m['label'] ?? $k), 'speedKmh' => (float) ($m['speed_kmh'] ?? 40), 'waitMin' => (int) ($m['wait_min'] ?? 0),
+                'costKm' => (int) ($m['cost_km'] ?? 0), 'costFixed' => (int) ($m['cost_fixed'] ?? 0), 'gmaps' => (string) ($m['gmaps'] ?? 'driving'), 'icon' => (string) ($m['icon'] ?? 'fa-car-side'),
+                'co2Km' => (int) ($m['co2_km'] ?? 0), 'co2Per' => (string) ($m['co2_per'] ?? 'vehicle')];
+        }
+
+        return $out;
+    }
+
+    /** Phút của một chặng $km theo phương tiện $mode (ước tính: km / tốc độ + chờ). null nếu không biết phương tiện. Cùng công thức với planner-schedule.js. */
+    public function legMinutes(float $km, string $mode): ?int
+    {
+        $m = $this->legModes()[$mode] ?? null;
+        if (!$m) {
+            return null;
+        }
+
+        return (int) round($km / max(0.1, $m['speedKmh']) * 60) + $m['waitMin'];
+    }
+
     /** Ngưỡng quãng đi vòng (quanh tuyến): great / good / consider / far. */
     public function detourLevel(int $min): array
     {
@@ -236,6 +262,7 @@ final class PlannerRules
             'kindPatterns' => (array) ($this->cfg['kind_patterns'] ?? []),
             'placeKinds' => (array) ($this->cfg['kind_places'] ?? []),
             'route' => ['provider' => $r['provider'], 'mode' => $r['mode'], 'factor' => $r['factor'], 'speedKmh' => $r['speedKmh'], 'minLegKm' => $r['minLegKm']],
+            'legModes' => $this->legModes(),
             'estimateNote' => $this->estimateNote(),
         ];
     }

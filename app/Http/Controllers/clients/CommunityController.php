@@ -72,11 +72,16 @@ class CommunityController extends Controller
             'startDate' => ['nullable', 'date', 'after_or_equal:today'],
             'groupSize' => ['required', 'integer', 'between:1,50'],
             'budget' => ['nullable', 'numeric', 'between:0,100000000000'],
+            // T-29: cá nhân hóa theo người dùng mới
+            'interests' => ['nullable', 'array', 'max:6'],
+            'interests.*' => ['string', 'in:' . implode(',', array_keys((array) config('interests')))],
+            'dislikes' => ['nullable', 'array', 'max:4'],
+            'dislikes.*' => ['string', 'in:' . implode(',', array_keys((array) config('planner.dislikes')))],
         ], [
             'startDate.after_or_equal' => 'Ngày đi phải từ hôm nay trở đi.',
         ]);
         try {
-            $newId = $c->cloneTrip($this->uid(), $id, $data);
+            $newId = $c->cloneTrip($this->uid(), $id, array_diff_key($data, ['interests' => 1, 'dislikes' => 1]));
         } catch (\DomainException $e) {
             return back()->withErrors(['use' => $e->getMessage()]);
         }
@@ -84,7 +89,13 @@ class CommunityController extends Controller
             return redirect()->route('community.index')->with('error', 'Hành trình này không còn được chia sẻ.');
         }
 
-        return redirect()->route('planner.edit', $newId)->with('success', 'Đã tạo chuyến đi của bạn từ hành trình cộng đồng. Bạn có thể sửa thoải mái, bản gốc không bị ảnh hưởng.');
+        $changes = [];
+        if (!empty($data['interests']) || !empty($data['dislikes'])) {
+            $changes = app(\App\Services\Planner\TripPersonalizer::class)->apply($newId, (array) ($data['interests'] ?? []), (array) ($data['dislikes'] ?? []));
+        }
+
+        return redirect()->route('planner.edit', $newId)->with('personalized', $changes ?: null)
+            ->with('success', 'Đã tạo chuyến đi của bạn từ hành trình cộng đồng' . ($changes ? ', La bàn đã điều chỉnh ' . count($changes) . ' mục theo sở thích của bạn' : '') . '. Bạn có thể sửa thoải mái, bản gốc không bị ảnh hưởng.');
     }
 
     /** Chủ chuyến bật / tắt chia sẻ lên cộng đồng (từ trang sửa chuyến). */

@@ -23,7 +23,7 @@
 <env name="DB_URL" value=""/>
 <env name="MAIL_MAILER" value="array"/>
 <env name="QUEUE_CONNECTION" value="sync"/>
-<!--  Test cũ giả lập client chưa gửi rev; RevisionRequiredTest bật lại cờ để kiểm tra mặc định production (true).  -->
+<!--   Test cũ giả lập client chưa gửi rev; RevisionRequiredTest bật lại cờ để kiểm tra mặc định production (true).   -->
 <env name="PLANNER_REQUIRE_REVISION" value="false"/>
 <env name="SESSION_DRIVER" value="array"/>
 <env name="PULSE_ENABLED" value="false"/>
@@ -32,19 +32,20 @@
 <env name="JWT_SECRET" value="test-secret-key-test-secret-key-1234567890"/>
 <env name="JWT_BLACKLIST_ENABLED" value="true"/>
 <env name="JWT_BLACKLIST_GRACE_PERIOD" value="0"/>
-<!--    test không bao giờ gọi dịch vụ ngoài thật, kể cả khi .env máy dev đang bật    -->
+<!--     test không bao giờ gọi dịch vụ ngoài thật, kể cả khi .env máy dev đang bật     -->
 <env name="PLANNER_ROUTE_PROVIDER" value="haversine" force="true"/>
 <env name="PLANNER_OSRM_URL" value="null" force="true"/>
 <env name="PLANNER_TRAVEL_MODE" value="driving" force="true"/>
+<env name="PLANNER_WEATHER" value="off" force="true"/>
 <env name="AI_PLANNER_ENABLED" value="false" force="true"/>
-<!--    ảnh khi chạy test KHÔNG được ghi vào thư mục ảnh thật (MEDIA_*_ROOT trong .env, vd D:/travel-data)    -->
+<!--     ảnh khi chạy test KHÔNG được ghi vào thư mục ảnh thật (MEDIA_*_ROOT trong .env, vd D:/travel-data)     -->
 <env name="MEDIA_PUBLIC_ROOT" value="storage/framework/testing/media/public" force="true"/>
 <env name="MEDIA_PRIVATE_ROOT" value="storage/framework/testing/media/private" force="true"/>
-<!--    config/flasher.php: tắt đổi session('success'/'error') thành thông báo nổi, để assertSessionHas kiểm tra được    -->
+<!--     config/flasher.php: tắt đổi session('success'/'error') thành thông báo nổi, để assertSessionHas kiểm tra được     -->
 <env name="FLASHER_FLASH_BAG" value="false" force="true"/>
 <env name="AI_DRIVER" value="none" force="true"/>
 <env name="RAG_LLM_DRIVER" value="none" force="true"/>
-<!--    test không bao giờ gọi API thật qua chuỗi dự phòng đặt trong .env    -->
+<!--     test không bao giờ gọi API thật qua chuỗi dự phòng đặt trong .env     -->
 <env name="AI_FALLBACK_MODEL" value="" force="true"/>
 <env name="AI_FALLBACK2_MODEL" value="" force="true"/>
 </php>

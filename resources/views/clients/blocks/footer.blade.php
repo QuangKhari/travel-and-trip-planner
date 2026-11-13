@@ -39,7 +39,7 @@
 <script src="{{ asset('clients/assets/js/jquery.datetimepicker.full.min.js') }}"></script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-<script src="{{ asset('clients/assets/js/ux-pass.js') }}?v=4"></script>
+<script src="{{ asset('clients/assets/js/ux-pass.js') }}?v=6"></script>
 <script src="{{ asset('clients/assets/js/tv3.js') }}?v=1" defer></script>
 <script src="{{ asset('clients/assets/js/gx-discover.js') }}?v=1" defer></script>
 <script>window.TV_COMPARE_URL = @json(route('tours.compare'));</script>

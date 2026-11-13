@@ -105,6 +105,46 @@ class RouteExplorer
     }
 
     /**
+     * T-03: gợi ý lấp khoảng trống giữa hai mục A → B. Chỉ lấy nơi mà (thời gian ở + phút đi vòng thêm) vừa khoảng trống,
+     * và (nếu biết giờ mở cửa) đang mở trong khoảng đó. Xếp theo: vừa khít nhất (ít phút thừa) rồi ít đi vòng.
+     *
+     * @param array{0:float,1:float} $a  @param array{0:float,1:float} $b
+     * @return list<array<string,mixed>>
+     */
+    public function fillGap(array $a, array $b, int $gapMin, int $fromMin, ?int $dow, array $exclude = [], int $limit = 5): array
+    {
+        if ($gapMin < 20) {
+            return [];
+        }
+        $found = $this->around([$a, $b], (float) config('planner.gap_fill.km', 3), 'all', $exclude)['results'] ?? [];
+        $hours = app(OpeningHours::class)->forItems(array_map(fn($c) => ['type' => $c['type'], 'refId' => $c['refId']], $found));
+        $out = [];
+        foreach ($found as $c) {
+            $dur = max(15, (int) ($c['durationMin'] ?? 45));
+            $need = $dur + (int) $c['detourMin'];
+            if ($need > $gapMin) {
+                // ở ngắn hơn bình thường vẫn ổn nếu còn ≥ 2/3 thời lượng gợi ý
+                $dur = $gapMin - (int) $c['detourMin'];
+                if ($dur < max(20, (int) round(($c['durationMin'] ?? 45) * 2 / 3))) {
+                    continue;
+                }
+                $need = $gapMin;
+            }
+            $h = $hours[$c['type'] . ':' . $c['refId']] ?? null;
+            $start = $fromMin + intdiv((int) $c['detourMin'], 2);
+            $status = OpeningHours::check($h, $dow, $start, $start + $dur);
+            if ($status !== null) {
+                continue;   // biết giờ và đang đóng / chưa mở / sắp đóng trong khoảng trống
+            }
+            $out[] = $c + ['stayMin' => $dur, 'spareMin' => $gapMin - $need, 'hoursKnown' => $h !== null && $dow !== null,
+                'fitText' => 'Ở ' . $dur . '′ + đi thêm ' . (int) $c['detourMin'] . '′, vừa khoảng trống ' . $gapMin . '′' . ($h !== null && $dow !== null ? ' · đang mở cửa' : '')];
+        }
+        usort($out, fn($x, $y) => [$x['spareMin'], $x['detourKm'], -$x['rank']] <=> [$y['spareMin'], $y['detourKm'], -$y['rank']]);
+
+        return array_slice($out, 0, $limit);
+    }
+
+    /**
      * Đo một điểm P so với tuyến: offKm (khoảng cách tới tuyến), detourKm (đi thêm khi ghé), after (ghé sau điểm thứ mấy, tính từ 0).
      * Hàm thuần, dùng chung cho kiểm thử.
      *

@@ -67,6 +67,15 @@ return [
             'motorbike' => ['label' => 'Xe máy', 'speed_kmh' => 30, 'osrm' => 'driving'],
             'walking' => ['label' => 'Đi bộ', 'speed_kmh' => 4.5, 'osrm' => 'foot'],
         ],
+        // T-05…T-08: phương tiện cho TỪNG chặng (người dùng chọn trên đoạn di chuyển). Giá là THAM KHẢO do nhóm đặt, giao diện ghi "ước tính".
+        //   wait_min: thời gian chờ / gửi xe cộng thêm mỗi chặng; cost_km: đồng / km cho cả nhóm (taxi, xăng xe máy); cost_fixed: đồng / người / lượt (xe buýt)
+        //   co2_km: gam CO2 / km; co2_per: 'vehicle' (mỗi xe: ô tô 4 người, xe máy 2 người) | 'person' (xe buýt: mỗi khách). Hệ số tham khảo, giao diện ghi "ước tính".
+        'leg_modes' => [
+            'driving' => ['label' => 'Ô tô / taxi', 'speed_kmh' => 40, 'wait_min' => 0, 'cost_km' => 15000, 'cost_fixed' => 0, 'gmaps' => 'driving', 'icon' => 'fa-car-side', 'co2_km' => 170, 'co2_per' => 'vehicle'],
+            'motorbike' => ['label' => 'Xe máy', 'speed_kmh' => 30, 'wait_min' => 0, 'cost_km' => 1500, 'cost_fixed' => 0, 'gmaps' => 'driving', 'icon' => 'fa-motorcycle', 'co2_km' => 70, 'co2_per' => 'vehicle'],
+            'bus' => ['label' => 'Xe buýt', 'speed_kmh' => 20, 'wait_min' => 10, 'cost_km' => 0, 'cost_fixed' => 7000, 'gmaps' => 'transit', 'icon' => 'fa-bus', 'co2_km' => 30, 'co2_per' => 'person'],
+            'walking' => ['label' => 'Đi bộ', 'speed_kmh' => 4.5, 'wait_min' => 0, 'cost_km' => 0, 'cost_fixed' => 0, 'gmaps' => 'walking', 'icon' => 'fa-walking', 'co2_km' => 0, 'co2_per' => 'person'],
+        ],
     ],
 
     // Quanh tuyến: ngưỡng thời gian đi vòng thêm (phút) để gắn nhãn đáng ghé hay không
@@ -224,6 +233,16 @@ return [
     // Tour khớp chuyến đi (TourFit)
     'tour_fit' => ['limit' => 3, 'min_score' => 30, 'max_day_gap' => 14],
 
+    // A-01 / A-05: Tour Match = 0.35 ngân sách + 0.30 sở thích + 0.20 thời gian di chuyển + 0.15 nhóm (TourMatch)
+    'tour_match' => [
+        'weights' => ['budget' => 0.35, 'interest' => 0.30, 'travel' => 0.20, 'group' => 0.15],
+        'banner_min' => (float) env('PLANNER_TOUR_MATCH_MIN', 0.6),   // banner "có tour giống lịch trình này" khi Match ≥ ngưỡng
+        'limit' => 3,          // Top-N trên trang sửa chuyến
+        'api_max' => 10,       // Top-N tối đa của API
+        'scan' => 40,          // số tour tối đa đem ra chấm cho một lần
+        'max_day_gap' => 14,   // lệch ngày khởi hành từ mức này trở lên thì điểm ngày = 0
+    ],
+
     // Địa điểm người dùng nhập mà kho chưa có (UnknownPlace)
     'unknown' => [
         'nearest_km' => 150,      // chỉ gợi ý điểm đến gần nhất trong bán kính này
@@ -262,6 +281,20 @@ return [
 
     // Dịch vụ ngoài (Overpass, Photon, OSRM): cầu dao chống treo trang (xem ExternalGuard).
     //  PLANNER_EXTERNAL=off : demo không mạng, chỉ dùng dữ liệu có sẵn (CSDL + bản chụp OSM đã nạp bằng planner:warm-osm).
+    // T-15…T-22, A-10: dự báo theo giờ Open-Meteo cho chuyến đi (TripWeather), cache theo giờ
+    'weather' => [
+        'enabled' => env('PLANNER_WEATHER', 'on') !== 'off',
+        'endpoint' => env('PLANNER_WEATHER_URL', 'https://api.open-meteo.com/v1/forecast'),
+        'timezone' => 'Asia/Ho_Chi_Minh',
+        'days' => 16,              // phạm vi dự báo của Open-Meteo; xa hơn thì dùng số liệu theo mùa
+        'connect_timeout' => 2,
+        'timeout' => 4,
+        'rain_warn' => 60,         // % khả năng mưa từ mức này: cảnh báo hoạt động ngoài trời trùng giờ
+        'heat_warn' => 35,         // °C trong 11–15h: cảnh báo hoạt động ngoài trời giữa trưa
+        'wind_warn' => 40,         // km/h
+        'swap_rain' => 60,         // PlannerEngine: ngày dự báo mưa từ mức này thì đổi mục ngoài trời sang ngày khô (T-20)
+    ],
+
     'external' => [
         'enabled' => env('PLANNER_EXTERNAL', 'on') !== 'off',
         'down_seconds' => (int) env('PLANNER_EXTERNAL_DOWN_SECONDS', 300),   // lỗi một lần thì nghỉ 5 phút, không thử lại mỗi lần bấm

@@ -86,6 +86,36 @@ class PlannerAiController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    /**
+     * A-25 POST /la-ban/danh-gia {feature, helpful, reason?, note?, tripId?} : chip "Kết quả có đúng ý bạn không?".
+     * Gắn với lượt AI gần nhất (30 phút) của người dùng cho cùng tính năng / chuyến trong tbl_ai_runs để báo cáo được tỷ lệ "đúng ý" theo phiên bản lời nhắc.
+     */
+    public function rate(Request $request): JsonResponse
+    {
+        $v = $request->validate([
+            'feature' => ['required', 'in:brief,explain,copilot,tour_match'],
+            'helpful' => ['required', 'boolean'],
+            'reason' => ['nullable', 'in:wrong_place,wrong_time,not_my_taste,too_generic,other'],
+            'note' => ['nullable', 'string', 'max:200'],
+            'tripId' => ['nullable', 'integer', 'min:1'],
+        ]);
+        $uid = $this->uid();
+        $tripId = !empty($v['tripId']) && app(TripSharing::class)->access($uid, (int) $v['tripId']) ? (int) $v['tripId'] : null;
+        if (!\Illuminate\Support\Facades\Schema::hasTable('tbl_ai_feedback')) {
+            return response()->json(['ok' => false], 503);
+        }
+        $runId = DB::table('tbl_ai_runs')->where('userId', $uid)->where('feature', $v['feature'] === 'tour_match' ? 'brief' : $v['feature'])
+            ->when($tripId, fn($q) => $q->where('tripId', $tripId))->where('createdAt', '>=', now()->subMinutes(30))->orderByDesc('runId')->value('runId');
+        // một người, một lượt AI: chỉ giữ đánh giá mới nhất
+        if ($runId) {
+            DB::table('tbl_ai_feedback')->where(['userId' => $uid, 'runId' => $runId])->delete();
+        }
+        DB::table('tbl_ai_feedback')->insert(['userId' => $uid, 'tripId' => $tripId, 'runId' => $runId, 'feature' => $v['feature'], 'helpful' => (bool) $v['helpful'],
+            'reason' => $v['helpful'] ? null : ($v['reason'] ?? null), 'note' => isset($v['note']) ? mb_substr(strip_tags((string) $v['note']), 0, 200) : null]);
+
+        return response()->json(['ok' => true, 'runId' => $runId]);
+    }
+
     // ======================= Trợ lý trò chuyện tạo chuyến (kiểu Layla) =======================
     // GET  /len-ke-hoach/tro-ly       trang chat 2 cột
     // POST /len-ke-hoach/tro-ly/doc   đọc các câu đã nói -> 5 ô checklist + câu hỏi kế tiếp (KHÔNG ghi gì)

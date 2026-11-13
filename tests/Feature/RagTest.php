@@ -81,6 +81,19 @@ class RagTest extends TestCase
         $this->assertNotNull($r['notice']);
     }
 
+    /** C-13: trang tìm kiếm thêm "Có thể bạn đang tìm" theo ý nghĩa khi tìm theo chữ ra ít kết quả; bản nháp không lộ. */
+    public function test_tim_kiem_theo_y_nghia_khi_tim_theo_chu_it_ket_qua(): void
+    {
+        $r = $this->get('/tim-kiem?q=' . urlencode('giấy tờ khi mướn xe hai bánh'))->assertOk();
+        $html = $r->getContent();
+        $this->assertStringContainsString('Có thể bạn đang tìm', $html);
+        $this->assertStringContainsString('/cam-nang/di-lai/thue-xe-may', $html);
+        $this->assertStringNotContainsString('bí mật', $html);
+
+        config(['rag.semantic_search.enabled' => false]);
+        $this->get('/tim-kiem?q=' . urlencode('giấy tờ khi mướn xe hai bánh'))->assertOk()->assertDontSee('Có thể bạn đang tìm');
+    }
+
     public function test_du_kien_mua_dep_va_ngay_le_hoi_lay_tu_sql(): void
     {
         $r = $this->ask('Tháng 10 đi Ninh Bình có hợp không?');

@@ -60,6 +60,21 @@
             @endforeach
         @endif
 
+        @if (!empty($semantic))
+            {{-- C-13: tìm theo ý nghĩa (embedding) khi tìm theo chữ ra ít kết quả --}}
+            <section class="gx-box gx-semantic" aria-labelledby="h-semantic">
+                <h2 id="h-semantic">Có thể bạn đang tìm <small>· gần nghĩa với “{{ $q }}”</small></h2>
+                <ul class="gx-semantic__list">
+                    @foreach ($semantic as $sm)
+                        <li><a href="{{ $sm['url'] }}"><b>{{ $sm['title'] }}</b></a> <span class="gx-semantic__type">{{ $sm['type'] }}</span>
+                            <p>{{ $sm['text'] }}</p></li>
+                    @endforeach
+                </ul>
+            </section>
+            <style>.gx-semantic__list{list-style:none;margin:0;padding:0;display:grid;gap:12px}.gx-semantic__list p{margin:2px 0 0;color:#5b6b66;font-size:14px}
+                .gx-semantic__type{font-size:12px;color:#0f5f57;background:#e6f4f1;border-radius:999px;padding:1px 8px;margin-left:4px}.gx-semantic h2 small{font-weight:400;color:#6b7280;font-size:14px}</style>
+        @endif
+
         @if ($q !== '')
             <p class="gx-more">Đang tìm tour? <a href="{{ route('tours', ['keyword' => $q]) }}">Tìm tour với từ khóa “{{ $q }}”</a>.</p>
         @endif

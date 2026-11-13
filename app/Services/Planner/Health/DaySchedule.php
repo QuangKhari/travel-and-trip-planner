@@ -57,9 +57,20 @@ final class DaySchedule
         }
         $legAfter = [];
         $tt = $route->travelTime(array_map(fn($i) => [(float) $items[$i]['lat'], (float) $items[$i]['lng']], $posIdx));
+        // T-05: chặng có phương tiện riêng (legMode của mục xuất phát) thì tính lại phút theo tốc độ phương tiện đó (ước tính)
+        $defMode = $this->rules->route()['mode'];
+        $travelSum = 0;
         foreach ($tt['legs'] as $l) {
-            $legAfter[$posIdx[$l['from']]] = $l;
+            $from = $posIdx[$l['from']];
+            $mode = $items[$from]['legMode'] ?? null;
+            if ($mode !== null && $mode !== $defMode && (float) $l['km'] > 0 && ($m = $this->rules->legMinutes((float) $l['km'], (string) $mode)) !== null) {
+                $l['min'] = $m;
+                $l['mode'] = $mode;
+            }
+            $legAfter[$from] = $l;
+            $travelSum += (int) $l['min'];
         }
+        $tt['min'] = $tt['legs'] ? $travelSum : $tt['min'];
 
         $hasMeal = false;
         $prevEnd = null;

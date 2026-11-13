@@ -26,7 +26,8 @@
        ===================================================================== */
     function initBooking() {
         var form = $("#bkForm");
-        if (!form) {
+        // Trang đặt tour dạng wizard 3 bước có script riêng (booking-wizard.js)
+        if (!form || form.hasAttribute("data-wizard")) {
             return;
         }
 
@@ -1888,5 +1889,32 @@
         initIcs();
         initShelves();
         initMisc();
+        initPrefetch();
     });
+
+    /* PF-09: tải trước trang kế tiếp khi người dùng có ý định bấm (rê chuột / chạm vào thẻ tour, nút đặt tour).
+       Chỉ tải trước trang cùng nguồn, mỗi URL một lần, bỏ qua khi tiết kiệm dữ liệu hoặc mạng chậm. */
+    function initPrefetch() {
+        var c = navigator.connection;
+        if (c && (c.saveData || /(^|-)2g$/.test(c.effectiveType || ""))) return;
+        var done = {};
+        function go(href) {
+            if (!href || done[href]) return;
+            try { var u = new URL(href, location.href); if (u.origin !== location.origin || u.href === location.href) return; } catch (e) { return; }
+            done[href] = true;
+            var l = document.createElement("link");
+            l.rel = "prefetch";
+            l.href = href;
+            document.head.appendChild(l);
+        }
+        var sel = ".trc a[href], a[data-prefetch], .tm-card a[href], .tm-banner a[href]";
+        ["pointerenter", "touchstart", "focusin"].forEach(function (ev) {
+            document.addEventListener(ev, function (e) {
+                var a = e.target && e.target.closest ? e.target.closest(sel) : null;
+                if (a) go(a.href);
+                var f = e.target && e.target.closest ? e.target.closest("#tdBookForm") : null;
+                if (f && f.action) go(f.action);
+            }, { capture: true, passive: true });
+        });
+    }
 })();

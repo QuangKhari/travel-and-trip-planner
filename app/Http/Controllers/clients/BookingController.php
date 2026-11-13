@@ -79,7 +79,21 @@ class BookingController extends Controller
         $adults   = max(1, min($limit, (int) $request->input('adults', 1)));
         $children = max(0, min($limit - $adults, (int) $request->input('children', 0)));
 
-        return view('clients.booking', compact('title', 'tour', 'prefill', 'limit', 'adults', 'children', 'departure', 'departures'));
+        // A-05: đến từ banner "có tour giống lịch trình này" của Planner: giữ tripId (chỉ khi người đặt xem được chuyến đó)
+        $tripId = (int) $request->input('tripId', old('tripId', 0));
+        $fromTrip = $tripId > 0 ? app(\App\Services\Planner\TripSharing::class)->access((int) $this->getUserId(), $tripId) : null;
+        $fromTrip = $fromTrip ? ['id' => $tripId, 'title' => (string) $fromTrip['trip']->title] : null;
+
+        // Wizard (C-05): bước mở đầu. Lỗi từ máy chủ thì mở đúng bước chứa ô lỗi.
+        $errs = session('errors');
+        $step = 1;
+        if ($errs && $errs->hasAny(['payment', 'agree'])) {
+            $step = 3;
+        } elseif ($errs && $errs->hasAny(['fullName', 'email', 'tel', 'address', 'couponCode'])) {
+            $step = 2;
+        }
+
+        return view('clients.booking', compact('title', 'tour', 'prefill', 'limit', 'adults', 'children', 'departure', 'departures', 'fromTrip', 'step'));
     }
 
     public function createBooking(Request $req, BookingService $bookings)
@@ -96,6 +110,7 @@ class BookingController extends Controller
             'numChildren' => 'required|integer|min:0|max:50',
             'payment'     => 'required|in:' . implode(',', array_merge(['office-payment'], \App\Services\Payments\OnlinePaymentService::methods())),
             'couponCode'  => 'nullable|string|max:50',
+            'tripId'      => 'nullable|integer|min:1',
         ], [
             'fullName.required'    => 'Vui lòng nhập họ và tên.',
             'email.required'       => 'Vui lòng nhập email.',
@@ -117,7 +132,7 @@ class BookingController extends Controller
         // UX: lỗi thì quay lại ĐÚNG trang đặt tour và giữ nguyên dữ liệu đã nhập
         // (trước đây quay về trang chi tiết nên người dùng phải nhập lại từ đầu).
         $backToForm = fn() => $tourId > 0
-            ? redirect()->route('booking', ['id' => $tourId, 'availabilityId' => (int) $req->input('availabilityId') ?: null])
+            ? redirect()->route('booking', ['id' => $tourId, 'availabilityId' => (int) $req->input('availabilityId') ?: null, 'tripId' => (int) $req->input('tripId') ?: null])
             : redirect()->route('tours');
 
         if ($validator->fails()) {

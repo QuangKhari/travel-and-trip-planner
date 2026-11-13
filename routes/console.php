@@ -107,6 +107,8 @@ Schedule::call(function () {
 
 // Thời tiết điểm đến (Open-Meteo): 1-2 request mỗi lần, lưu cache DB; web không gọi trực tiếp.
 Schedule::command('discover:warm-weather')->everyThreeHours()->withoutOverlapping();
+// PF-11: nạp sẵn cache trang chủ, mùa đi, dự báo theo giờ của chuyến sắp đi (cache dự báo sống tới hết giờ)
+Schedule::command('cache:warm --only=home,stats,search,briefs,weather')->hourlyAt(5)->withoutOverlapping();
 
 Schedule::command('rag:build')->dailyAt('03:00')->withoutOverlapping();
 

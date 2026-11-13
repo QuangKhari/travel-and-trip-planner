@@ -107,6 +107,23 @@
                             <label>Ngân sách cả nhóm (đ)
                                 <input type="number" name="budget" min="0" step="100000" value="{{ old('budget', $trip->budget !== null ? (int) $trip->budget : '') }}" placeholder="Để trống nếu chưa tính">
                             </label>
+                            {{-- T-29: La bàn điều chỉnh bản sao theo sở thích của bạn (thay nơi trúng "không thích" bằng nơi gần đó) --}}
+                            <details class="cm-personal" @if (old('interests') || old('dislikes')) open @endif>
+                                <summary>Điều chỉnh theo sở thích của tôi <small>(không bắt buộc)</small></summary>
+                                <fieldset>
+                                    <legend>Tôi thích</legend>
+                                    @foreach ((array) config('interests') as $k => $def)
+                                        <label class="cm-chip"><input type="checkbox" name="interests[]" value="{{ $k }}" @checked(in_array($k, (array) old('interests', []), true))> {{ $def['label'] }}</label>
+                                    @endforeach
+                                </fieldset>
+                                <fieldset>
+                                    <legend>Tôi không thích</legend>
+                                    @foreach (['trekking' => 'Leo núi, đi bộ đường dài', 'crowds' => 'Chỗ đông người', 'outdoor' => 'Hoạt động ngoài trời'] as $k => $label)
+                                        <label class="cm-chip"><input type="checkbox" name="dislikes[]" value="{{ $k }}" @checked(in_array($k, (array) old('dislikes', []), true))> {{ $label }}</label>
+                                    @endforeach
+                                </fieldset>
+                                <p class="cm-muted" style="font-size:12.5px;margin:6px 0 0">Nơi trúng điều bạn không thích được thay bằng nơi gần đó hợp sở thích; không có nơi thay thì chuyển vào “Đã lưu”. Bạn xem lại được toàn bộ thay đổi sau khi tạo.</p>
+                            </details>
                             <button type="submit" class="cm-btn"><i class="far fa-copy" aria-hidden="true"></i> Tạo chuyến đi của tôi</button>
                         </form>
                     @else
@@ -127,6 +144,12 @@
         </div>
     </div>
 </main>
+<style>
+.cm-personal{margin:4px 0 12px;border:1px solid #e5e7eb;border-radius:12px;padding:8px 12px;background:#fbfdfd}
+.cm-personal summary{cursor:pointer;font-weight:600;font-size:14px}.cm-personal summary small{font-weight:400;color:#6b7280}
+.cm-personal fieldset{border:0;margin:8px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px}.cm-personal legend{font-size:13px;color:#4b5563;margin-bottom:4px;width:100%}
+.cm-chip{display:inline-flex;align-items:center;gap:5px;font-size:13px;padding:4px 10px;border:1px solid #dbe5e8;border-radius:999px;background:#fff;cursor:pointer}
+</style>
 <script>
     (function () {
         var f = document.getElementById('cmLikeForm');

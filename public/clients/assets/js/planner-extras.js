@@ -152,4 +152,16 @@
             })
             .finally(function () { label.textContent = old; pdfBtn.disabled = false; });
     });
+
+    /* ---------------- A-05: ẩn banner "có tour giống lịch trình này" (nhớ theo tour, trong phiên trình duyệt) ---------------- */
+    var tb = document.getElementById("tpTourBanner");
+    if (tb) {
+        var x = tb.querySelector("[data-tm-dismiss]");
+        var tbKey = "tp.tourBanner." + (x ? x.getAttribute("data-tm-dismiss") : "");
+        try { if (sessionStorage.getItem(tbKey)) tb.hidden = true; } catch (e) { /* bỏ qua */ }
+        if (x) x.addEventListener("click", function () {
+            tb.hidden = true;
+            try { sessionStorage.setItem(tbKey, "1"); } catch (e) { /* bỏ qua */ }
+        });
+    }
 })();

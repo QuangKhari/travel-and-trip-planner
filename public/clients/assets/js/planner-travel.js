@@ -26,6 +26,22 @@
             .catch(function (e) { btn.disabled = false; btn.textContent = "Thêm vào lịch trình"; btn.parentNode.appendChild(el("small", null, errText(e))); });
     }
 
+    // A-12: lưu xác nhận đặt chỗ ngoài + tệp (multipart)
+    var cf = document.getElementById("tpConfirmForm");
+    if (cf) cf.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        var msg = cf.querySelector(".tp-confirm__msg"), btn = cf.querySelector("[type=submit]"), fd = new FormData(cf);
+        var file = cf.elements.file && cf.elements.file.files[0];
+        if (file && file.size > 5 * 1024 * 1024) { msg.textContent = "Tệp tối đa 5 MB."; return; }
+        if (!(file && file.size)) fd.delete("file");
+        fd.append("_token", csrf);
+        btn.disabled = true; msg.textContent = "Đang lưu…";
+        fetch(cf.getAttribute("data-url"), { method: "POST", body: fd, credentials: "same-origin", headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" } })
+            .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw j; return j; }); })
+            .then(function (j) { msg.textContent = j.message || "Đã lưu."; location.reload(); })
+            .catch(function (e) { btn.disabled = false; msg.textContent = errText(e); });
+    });
+
     var ff = document.getElementById("tpFlightForm");
     ff.addEventListener("submit", function (ev) {
         ev.preventDefault();
@@ -51,6 +67,22 @@
     });
 
     var hf = document.getElementById("tpHotelForm");
+    /* Deep-link Booking.com / Agoda với cùng điểm đến, ngày nhận phòng, số đêm và số khách */
+    function deepLinks(name) {
+        var q = qs(hf), city = hf.getAttribute("data-city") || "";
+        var inD = q.checkIn || "", n = Math.max(1, +q.nights || 1), ad = Math.max(1, +q.adults || 1), out = "";
+        if (inD) { var d = new Date(inD + "T00:00:00"); d.setDate(d.getDate() + n); out = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+        var ss = (name ? name + ", " : "") + city;
+        return {
+            booking: "https://www.booking.com/searchresults.html?" + new URLSearchParams({ ss: ss, checkin: inD, checkout: out, group_adults: String(ad), no_rooms: String(Math.ceil(ad / 2)) }),
+            agoda: "https://www.agoda.com/search?" + new URLSearchParams({ textToSearch: ss, checkIn: inD, checkOut: out, adults: String(ad), rooms: String(Math.ceil(ad / 2)) }),
+        };
+    }
+    function paintDeep() {
+        var l = deepLinks("");
+        hf.querySelectorAll(".tp-travel__deep [data-deep]").forEach(function (a) { a.href = l[a.getAttribute("data-deep")]; });
+    }
+    if (hf.querySelector(".tp-travel__deep")) { paintDeep(); hf.addEventListener("input", paintDeep); }
     hf.addEventListener("submit", function (ev) {
         ev.preventDefault();
         var res = hf.querySelector(".tp-travel__res"), q = qs(hf);
@@ -63,6 +95,11 @@
                 info.appendChild(el("small", null, (h.address ? h.address + " · " : "") + "cách trung tâm " + (h.distanceM >= 1000 ? (h.distanceM / 1000).toFixed(1) + " km" : h.distanceM + " m")));
                 row.appendChild(info);
                 row.appendChild(el("span", "tp-offer__p", "≈ " + money(h.price)));
+                if (hf.getAttribute("data-city")) {
+                    var dl = el("a", "tp-link tp-small", "Xem trên Booking");
+                    dl.href = deepLinks(h.name).booking; dl.target = "_blank"; dl.rel = "noopener nofollow";
+                    row.appendChild(dl);
+                }
                 if (canEdit) {
                     var b = el("button", "tp-mini", "Thêm vào lịch trình"); b.type = "button";
                     b.addEventListener("click", function () { adder(box.getAttribute("data-hotels"), Object.assign({}, q, { hotelId: h.id }), b); });

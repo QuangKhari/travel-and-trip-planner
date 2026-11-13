@@ -30,7 +30,7 @@
             <div class="cmp-scroll"><div class="cmp-grid">
                 <div class="cmp-k"></div>
                 @foreach ($rows as $t)
-                    <div class="cmp-head"><img src="{{ \App\Support\TourImage::url($t->cover, 800) }}" alt="">
+                    <div class="cmp-head"><img src="{{ \App\Support\TourImage::url($t->cover, 800) }}" @if ($ss = \App\Support\TourImage::srcset($t->cover)) srcset="{{ $ss }}" sizes="(max-width: 767px) 100vw, 33vw" @endif alt="" loading="lazy" decoding="async">
                         <h2><a href="{{ route('tour-detail', ['id' => $t->tourId]) }}">{{ $t->title }}</a></h2>
                         <small style="color:#6b8592">{{ $t->destination }}</small></div>
                 @endforeach

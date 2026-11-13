@@ -8,7 +8,7 @@ use App\Services\Planner\TripPlanner;
 
 /**
  * Sức khỏe chuyến đi = tổng hợp 5 nhóm ràng buộc trên lịch đã xếp giờ của từng ngày:
- *   TimeConstraint · OpeningHoursConstraint · RouteConstraint · CapacityConstraint · BudgetConstraint · ContextConstraint
+ *   TimeConstraint · OpeningHoursConstraint · RouteConstraint · CapacityConstraint · BudgetConstraint · ContextConstraint · WeatherConstraint
  * Không dùng AI: mọi kết luận đều có công thức và nguyên nhân cụ thể, kèm mã thao tác gợi ý (action) để giao diện gắn nút xử lý.
  *
  * RÀNG BUỘC CỨNG (severity = hard, luôn level "bad" = lỗi): lịch không thực hiện được như đã đặt
@@ -27,19 +27,32 @@ class TripHealth
 
     public function __construct(private TripPlanner $planner, private RouteService $route)
     {
-        $this->constraints = [new TimeConstraint(), new OpeningHoursConstraint(), new RouteConstraint(), new CapacityConstraint(), new BudgetConstraint(), new ContextConstraint()];
+        $this->constraints = [new TimeConstraint(), new OpeningHoursConstraint(), new RouteConstraint(), new CapacityConstraint(), new BudgetConstraint(), new ContextConstraint(), new WeatherConstraint()];
     }
 
     /** @return array{score:int, level:string, days:list<array>, checks:list<array>, provider:string} */
     public function forTrip(object $trip): array
     {
-        $payload = $this->planner->payload($trip);
+        $payload = self::withWeather($trip, $this->planner->payload($trip));
         $days = [];
         foreach ($payload['days'] as $d) {
             $days[(int) $d['day']] = new DaySchedule((int) $d['day'], $d['items'], $this->route, null, $d['dow'] ?? null);
         }
 
         return $this->evaluate(new TripContext($trip, $days, $payload['unassigned'], $payload));
+    }
+
+    /** Gắn dự báo theo giờ (T-15, T-22) vào payload; tắt / lỗi mạng thì payload['weather'] cho biết lý do, không ném lỗi. */
+    public static function withWeather(object $trip, array $payload): array
+    {
+        try {
+            $payload['weather'] = app(\App\Services\Planner\TripWeather::class)->forTrip($trip, $payload);
+        } catch (\Throwable $e) {
+            report($e);
+            $payload['weather'] = ['source' => 'none', 'reason' => 'error', 'days' => [], 'fetchedAt' => null, 'stale' => false];
+        }
+
+        return $payload;
     }
 
     /** Mã vấn đề là ràng buộc cứng (lịch không thực hiện được như đã đặt). */
@@ -106,6 +119,7 @@ class TripHealth
                     'estimatedDuration' => empty($r['item']['durationMin'])], $d->rows),
             ], $ctx->days)),
             'checks' => $checks,
+            'weather' => WeatherConstraint::summary($ctx),
         ];
     }
 
@@ -126,6 +140,8 @@ class TripHealth
             'hours.late' => fn($c) => 'Sửa giờ mở cửa ngày ' . $c['day'],
             'route.long_day' => fn($c) => 'Tối ưu tuyến ngày ' . $c['day'],
             'context.rain' => fn($c) => 'Chuẩn bị phương án mưa ngày ' . $c['day'],
+            'weather.rain' => fn($c) => 'Chuẩn bị phương án mưa ngày ' . $c['day'],
+            'weather.storm' => fn($c) => 'Chuẩn bị phương án mưa ngày ' . $c['day'],
         ];
         $out = [];
         $seen = [];

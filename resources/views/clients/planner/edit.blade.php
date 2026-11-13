@@ -1,6 +1,6 @@
 @include('clients.blocks.header')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=24">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=26">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai.css') }}?v=3">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ux.css') }}?v=1">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/nature-luxury-planner.css') }}?v=bl20261104">
@@ -145,6 +145,7 @@
                     <div class="tpx-view" role="group" aria-label="Kiểu hiển thị">
                         <button type="button" class="tpx-view__b is-on" data-view="full" aria-pressed="true" title="Hiện ảnh, ghi chú và lý do chọn">Chi tiết</button>
                         <button type="button" class="tpx-view__b" data-view="compact" aria-pressed="false" title="Chỉ giờ và tên, hợp với chuyến nhiều ngày">Gọn</button>
+                        <button type="button" class="tpx-view__b" data-view="list" aria-pressed="false" title="Danh sách phẳng mọi điểm, đánh dấu đã ghé khi đang đi">Danh sách</button>
                     </div>
                 </div>
 
@@ -169,6 +170,37 @@
                     {{-- La bàn F3: thanh bản nháp khi đang xem đề xuất (viền vàng trên lịch = thay đổi CHƯA áp dụng) --}}
                     <div class="ai-draft" id="aiDraft" role="status" hidden></div>
                 @endif
+                @if (session('personalized'))
+                    {{-- T-29: báo cáo cá nhân hóa của bản sao từ Cộng đồng --}}
+                    <aside class="tm-banner tm-banner--ai" role="status" aria-label="La bàn đã điều chỉnh chuyến theo sở thích">
+                        <i class="fas fa-compass tm-banner__ico" aria-hidden="true"></i>
+                        <div class="tm-banner__txt">
+                            <b>La bàn đã điều chỉnh {{ count(session('personalized')) }} mục theo sở thích của bạn</b>
+                            <ul class="tm-banner__list">
+                                @foreach (session('personalized') as $c)
+                                    <li>{{ $c['day'] ? 'Ngày ' . $c['day'] . ': ' : '' }}{{ $c['action'] === 'replace' ? $c['from'] . ' → ' . $c['to'] : $c['from'] . ' → Đã lưu' }} <small>({{ $c['reason'] }})</small></li>
+                                @endforeach
+                            </ul>
+                            <span>Muốn quay lại bản gốc: menu ⋮ → Lịch sử phiên bản.</span>
+                        </div>
+                    </aside>
+                @endif
+                @if (!empty($tourBanner))
+                    {{-- A-05: có tour giống lịch trình này (Match ≥ ngưỡng, còn đủ chỗ). Bấm đặt: điền sẵn ngày, số người và gắn tripId vào đơn. --}}
+                    <aside class="tm-banner" id="tpTourBanner" role="note" aria-label="Có tour giống lịch trình này">
+                        <i class="fas fa-suitcase-rolling tm-banner__ico" aria-hidden="true"></i>
+                        <div class="tm-banner__txt">
+                            <b>Có tour giống lịch trình này · khớp {{ $tourBanner['pct'] }}%</b>
+                            <span>{{ $tourBanner['title'] }} · khởi hành {{ $tourBanner['start'] }} · {{ number_format($tourBanner['forGroup'], 0, ',', '.') }}đ cho {{ $t['groupSize'] }} người
+                                @if ($tourBanner['matchedPlaces']) · có {{ count($tourBanner['matchedPlaces']) }} địa điểm trong lịch của bạn @endif</span>
+                        </div>
+                        <div class="tm-banner__act">
+                            <a class="tp-btn tp-btn--sm" href="{{ $tourBanner['bookUrl'] }}">Đặt tour</a>
+                            <a class="tp-btn tp-btn--ghost tp-btn--sm" href="#tpTourMatch">Vì sao hợp?</a>
+                            <button type="button" class="tp-mini tm-banner__x" aria-label="Ẩn gợi ý tour" data-tm-dismiss="{{ $tourBanner['tourId'] }}"><i class="fas fa-times" aria-hidden="true"></i></button>
+                        </div>
+                    </aside>
+                @endif
                 <div id="tpDaysBox" class="tpx-timeline"></div>
                 <p id="tpTotals" class="tp-totals tpx-totals" role="status"></p>
                 <p class="tp-muted tp-small tpx-hint">
@@ -177,19 +209,32 @@
                 </p>
 
                 @if (!empty($tourFit))
-                    <details class="tpx-more tp-tourfit" open>
+                    {{-- A-01 Tour Match: Top-N tour + 4 điểm thành phần (Match = 0.35 ngân sách + 0.30 sở thích + 0.20 thời gian + 0.15 nhóm) --}}
+                    <details class="tpx-more tp-tourfit" id="tpTourMatch" data-ai-fb="tour_match" open>
                         <summary><i class="fas fa-suitcase-rolling" aria-hidden="true"></i> Tour Travela hợp chuyến này ({{ count($tourFit) }})</summary>
-                        <p class="tp-muted tp-small">Xếp theo độ khớp với ngày đi, số ngày, số người và ngân sách của bạn. Điểm chỉ để xếp thứ tự.</p>
+                        <p class="tp-muted tp-small">Điểm khớp = 35% ngân sách + 30% sở thích &amp; địa điểm + 20% thời gian + 15% chỗ cho nhóm. Thành phần ghi “chưa đủ dữ liệu” được tính trung tính 50%.</p>
                         <ul class="tp-tours">
                             @foreach ($tourFit as $tf)
-                                <li class="tp-tours__item">
-                                    <a href="{{ $tf['url'] }}"><strong>{{ $tf['title'] }}</strong></a>
-                                    <span class="tp-muted tp-small">{{ $tf['destName'] }} · {{ $tf['time'] }} · khởi hành {{ $tf['start'] }}</span>
+                                <li class="tp-tours__item tm-card" data-tour-match="{{ $tf['tourId'] }}" data-score="{{ $tf['score'] }}">
+                                    <div class="tm-card__top">
+                                        <a href="{{ $tf['url'] }}"><strong>{{ $tf['title'] }}</strong></a>
+                                        <span class="tm-pct {{ $tf['score'] >= \App\Services\Planner\TourMatch::threshold() ? 'is-high' : '' }}" title="Điểm khớp">{{ $tf['pct'] }}%</span>
+                                    </div>
+                                    <span class="tp-muted tp-small">{{ $tf['destName'] }} · {{ $tf['time'] }} · khởi hành {{ $tf['start'] }} · còn {{ $tf['remaining'] }} chỗ</span>
                                     <span class="tp-small">Cho nhóm: {{ number_format($tf['forGroup'], 0, ',', '.') }}đ</span>
-                                    <ul class="tp-why">
-                                        @foreach ($tf['reasons'] as $r)<li class="tp-why--good">{{ $r }}</li>@endforeach
-                                        @foreach ($tf['warns'] as $w)<li class="tp-why--warn">{{ $w }}</li>@endforeach
+                                    <ul class="tm-bars">
+                                        @foreach ($tf['components'] as $k => $c)
+                                            <li class="{{ $c['known'] ? '' : 'is-unknown' }}">
+                                                <span class="tm-bars__l">{{ $c['label'] }} <small>×{{ rtrim(rtrim(number_format($c['weight'], 2, ',', ''), '0'), ',') }}</small></span>
+                                                <span class="tm-bars__bar" aria-hidden="true"><i style="width: {{ (int) round($c['value'] * 100) }}%"></i></span>
+                                                <span class="tm-bars__v">{{ $c['known'] ? (int) round($c['value'] * 100) . '%' : 'chưa đủ dữ liệu' }}</span>
+                                                <small class="tm-bars__n">{{ $c['note'] }}</small>
+                                            </li>
+                                        @endforeach
                                     </ul>
+                                    @if ($role !== 'view' && $tf['enoughSeats'])
+                                        <a class="tp-btn tp-btn--sm" href="{{ $tf['bookUrl'] }}">Đặt tour này với ngày và số người của chuyến</a>
+                                    @endif
                                 </li>
                             @endforeach
                         </ul>
@@ -253,13 +298,36 @@
                         <ul class="tp-ext" id="tpExtList">
                             @foreach ($externals as $x)
                                 <li data-id="{{ $x->externalId }}">
-                                    <i class="fas {{ $x->kind === 'flight' ? 'fa-plane' : 'fa-hotel' }}" aria-hidden="true"></i>
-                                    <span><b>{{ $x->title }}</b><small>{{ \Carbon\Carbon::parse($x->startAt)->format('H:i d/m/Y') }}{{ $x->price ? ' · ' . number_format((float) $x->price, 0, ',', '.') . ' đ' : '' }}{{ $x->simulated ? ' · Dữ liệu thử nghiệm' : '' }}</small></span>
+                                    <i class="fas {{ $x->kind === 'flight' ? 'fa-plane' : ($x->kind === 'ticket' ? 'fa-ticket-alt' : 'fa-hotel') }}" aria-hidden="true"></i>
+                                    <span><b>{{ $x->title }}</b><small>{{ \Carbon\Carbon::parse($x->startAt)->format('H:i d/m/Y') }}{{ $x->price ? ' · ' . number_format((float) $x->price, 0, ',', '.') . ' đ' : '' }}{{ $x->simulated ? ' · Dữ liệu thử nghiệm' : '' }}{{ !empty($x->confirmationCode) ? ' · mã ' . $x->confirmationCode : '' }}</small>
+                                        @if (!empty($x->attachPath))<a class="tp-small" href="{{ route('travel.confirm.file', [$t['id'], $x->externalId]) }}" target="_blank" rel="noopener"><i class="fas fa-paperclip" aria-hidden="true"></i> {{ $x->attachName ?: 'Tệp xác nhận' }}</a>@endif</span>
                                     <span class="tp-ext__st" data-status-for="{{ $x->externalId }}"></span>
                                     @if ($role !== 'view')<button type="button" class="tp-mini tp-ext__rm" aria-label="Bỏ {{ $x->title }} khỏi danh sách">Bỏ</button>@endif
                                 </li>
                             @endforeach
                         </ul>
+                    @endif
+
+                    @if ($role !== 'view')
+                        {{-- A-12: xác nhận đặt chỗ đã đặt ở nơi khác (Booking, Agoda, hãng bay...) + tệp PDF / ảnh, lưu riêng tư --}}
+                        <details class="tp-travel__f tp-confirm">
+                            <summary><i class="fas fa-file-invoice" aria-hidden="true"></i> Lưu xác nhận đặt chỗ đã có</summary>
+                            <form id="tpConfirmForm" data-url="{{ route('travel.confirm', $t['id']) }}" enctype="multipart/form-data">
+                                <div class="tp-travel__row">
+                                    <label>Loại<select name="kind" class="no-nice"><option value="hotel">Khách sạn</option><option value="flight">Vé máy bay / xe</option><option value="ticket">Vé tham quan</option></select></label>
+                                    <label>Tên<input type="text" name="title" maxlength="120" required placeholder="Ví dụ: Dalat Palace 2 đêm"></label>
+                                    <label>Nơi đặt<input type="text" name="provider" maxlength="20" placeholder="Booking, Agoda, VNA…"></label>
+                                </div>
+                                <div class="tp-travel__row">
+                                    <label>Mã xác nhận<input type="text" name="code" maxlength="40" placeholder="ABC123"></label>
+                                    <label>Ngày giờ<input type="datetime-local" name="startAt" required value="{{ $travel['date'] }}T14:00"></label>
+                                    <label>Đã trả (đ)<input type="number" name="price" min="0" step="1000"></label>
+                                </div>
+                                <label class="tp-small">Tệp xác nhận (PDF, JPG, PNG, WebP, tối đa 5 MB)<input type="file" name="file" accept=".pdf,image/jpeg,image/png,image/webp"></label>
+                                <button type="submit" class="tp-btn tp-btn--ghost">Lưu xác nhận</button>
+                                <p class="tp-small tp-confirm__msg" role="status"></p>
+                            </form>
+                        </details>
                     @endif
 
                     <form class="tp-travel__f" id="tpFlightForm">
@@ -274,7 +342,7 @@
                         <div class="tp-travel__res" aria-live="polite"></div>
                     </form>
 
-                    <form class="tp-travel__f" id="tpHotelForm">
+                    <form class="tp-travel__f" id="tpHotelForm" data-city="{{ $travel['city'] ?? '' }}">
                         <h3><i class="fas fa-bed" aria-hidden="true"></i> Khách sạn gần điểm đến</h3>
                         <div class="tp-travel__row">
                             <label>Nhận phòng<input type="date" name="checkIn" value="{{ $travel['date'] }}"></label>
@@ -282,6 +350,12 @@
                             <label>Số khách<input type="number" name="adults" min="1" max="20" value="{{ $travel['adults'] }}"></label>
                         </div>
                         <button type="submit" class="tp-btn tp-btn--ghost">Tìm khách sạn</button>
+                        @if (!empty($travel['city']))
+                            {{-- deep-link: mở trang tìm phòng thật với cùng điểm đến, ngày và số khách (Travela không đặt phòng) --}}
+                            <p class="tp-small tp-travel__deep">Đặt phòng thật trên
+                                <a href="#" data-deep="booking" target="_blank" rel="noopener nofollow">Booking.com</a> ·
+                                <a href="#" data-deep="agoda" target="_blank" rel="noopener nofollow">Agoda</a></p>
+                        @endif
                         <div class="tp-travel__res" aria-live="polite"></div>
                     </form>
                     <p class="tp-muted tp-small" style="margin-top:10px">Nguồn khi có khóa API: giá vé Duffel, trạng thái chuyến bay AeroDataBox / AviationStack, khách sạn Geoapify (giá phòng là ước tính theo hạng sao).</p>
@@ -480,15 +554,16 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 {{-- planner-geo (tuyến) + planner-schedule (xếp giờ): lõi tính xem trước, tham số từ cfg.rules (PlannerRules); planner-api: gọi máy chủ; planner.js: giao diện --}}
 <script src="{{ asset('clients/assets/js/planner-geo.js') }}?v=4"></script>
-<script src="{{ asset('clients/assets/js/planner-schedule.js') }}?v=5"></script>
+<script src="{{ asset('clients/assets/js/planner-schedule.js') }}?v=6"></script>
 <script src="{{ asset('clients/assets/js/planner-api.js') }}?v=2"></script>
-<script src="{{ asset('clients/assets/js/planner-save.js') }}?v=2"></script>
+<script src="{{ asset('clients/assets/js/planner-save.js') }}?v=3"></script>
 <script src="{{ asset('clients/assets/js/planner-resolve.js') }}?v=2"></script>
 <script src="{{ asset('clients/assets/js/planner-map.js') }}?v=5"></script>
-<script src="{{ asset('clients/assets/js/planner.js') }}?v=25" defer></script>
-<script src="{{ asset('clients/assets/js/planner-extras.js') }}?v=1" defer></script>
-<script src="{{ asset('clients/assets/js/planner-travel.js') }}?v=1" defer></script>
+<script src="{{ asset('clients/assets/js/planner.js') }}?v=26" defer></script>
+<script src="{{ asset('clients/assets/js/planner-extras.js') }}?v=2" defer></script>
+<script src="{{ asset('clients/assets/js/planner-travel.js') }}?v=2" defer></script>
 @if (!empty($client['historyUrl']))<script src="{{ asset('clients/assets/js/planner-history.js') }}?v=1" defer></script>@endif
+@if ($role !== 'view')<script src="{{ asset('clients/assets/js/ai-feedback.js') }}?v=1" data-url="{{ route('planner.ai.rate') }}" data-csrf="{{ csrf_token() }}" data-trip="{{ $client['trip']['id'] ?? '' }}" defer></script>@endif
 <script type="application/json" id="aiData">{!! json_encode(['explainUrl' => route('planner.ai.explain', ['id' => $t['id']]), 'csrf' => csrf_token(), 'on' => $aiExplainOn,
     'copilot' => $aiCopilotOn ? ['url' => route('planner.ai.copilot', ['id' => $t['id']]), 'recheckUrl' => route('planner.ai.recheck', ['id' => $t['id']]),
         'feedbackUrl' => route('planner.ai.feedback', ['id' => $t['id']])] : null], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>

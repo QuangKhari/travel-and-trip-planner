@@ -251,6 +251,7 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::post('/len-ke-hoach/{id}/la-ban', [PlannerAiController::class, 'copilot'])->whereNumber('id')->middleware('throttle:12,1,planner-ai-copilot')->name('planner.ai.copilot');
     Route::post('/len-ke-hoach/{id}/la-ban/kiem-tra-lai', [PlannerAiController::class, 'recheck'])->whereNumber('id')->middleware('throttle:30,1,planner-ai-recheck')->name('planner.ai.recheck');
     Route::post('/len-ke-hoach/{id}/la-ban/ket-qua', [PlannerAiController::class, 'feedback'])->whereNumber('id')->middleware('throttle:60,1,planner-ai-feedback')->name('planner.ai.feedback');
+    Route::post('/la-ban/danh-gia', [PlannerAiController::class, 'rate'])->middleware('throttle:30,1,planner-ai-rate')->name('planner.ai.rate');
     Route::post('/len-ke-hoach/{id}/trang-thai', [PlannerController::class, 'status'])->whereNumber('id')->middleware('throttle:60,1,planner-status')->name('planner.status');
     Route::post('/len-ke-hoach', [PlannerController::class, 'store'])->middleware('throttle:20,1,planner-store')->name('planner.store');
     Route::get('/len-ke-hoach/{id}', [PlannerController::class, 'edit'])->whereNumber('id')->name('planner.edit');
@@ -267,6 +268,8 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::get('/len-ke-hoach/{id}/khach-san', [TravelController::class, 'hotels'])->whereNumber('id')->middleware('throttle:20,1,travel-hotel')->name('travel.hotels');
     Route::post('/len-ke-hoach/{id}/khach-san', [TravelController::class, 'addHotel'])->whereNumber('id')->middleware('throttle:20,1,travel-add')->name('travel.hotels.add');
     Route::post('/len-ke-hoach/{id}/ngoai/{externalId}/xoa', [TravelController::class, 'remove'])->whereNumber(['id', 'externalId'])->middleware('throttle:30,1,travel-rm')->name('travel.remove');
+    Route::post('/len-ke-hoach/{id}/xac-nhan', [TravelController::class, 'addConfirmation'])->whereNumber('id')->middleware('throttle:20,1,travel-confirm')->name('travel.confirm');
+    Route::get('/len-ke-hoach/{id}/xac-nhan/{externalId}/tep', [TravelController::class, 'confirmationFile'])->whereNumber(['id', 'externalId'])->name('travel.confirm.file');
     Route::post('/len-ke-hoach/{id}/khoa', [PlannerController::class, 'lock'])->whereNumber('id')->middleware('throttle:30,1,planner-lock')->name('planner.lock');
     Route::get('/len-ke-hoach/{id}/lich-su', [PlannerController::class, 'history'])->whereNumber('id')->middleware('throttle:60,1,planner-history')->name('planner.history');
     Route::get('/len-ke-hoach/{id}/lich-su/{revisionNo}', [PlannerController::class, 'historyShow'])->whereNumber(['id', 'revisionNo'])->middleware('throttle:60,1,planner-history')->name('planner.historyShow');
@@ -281,6 +284,7 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::get('/len-ke-hoach/{id}/phuong-an-mua', [PlannerController::class, 'rainSuggest'])->whereNumber('id')->middleware('throttle:60,1,planner-rain')->name('planner.rainSuggest');
     Route::post('/tour/{id}/len-ke-hoach', [PlannerController::class, 'fromTour'])->whereNumber('id')->middleware('throttle:10,1,tour-to-trip')->name('planner.fromTour');
     Route::get('/len-ke-hoach/{id}/quanh-tuyen', [PlannerController::class, 'around'])->whereNumber('id')->middleware('throttle:60,1,planner-around')->name('planner.around');
+    Route::get('/len-ke-hoach/{id}/lap-khoang-trong', [PlannerController::class, 'gapFill'])->whereNumber('id')->middleware('throttle:60,1,planner-gap')->name('planner.gapFill');
     Route::post('/len-ke-hoach/{id}/toi-uu', [PlannerController::class, 'optimize'])->whereNumber('id')->middleware('throttle:60,1,planner-opt')->name('planner.optimize');
     Route::get('/len-ke-hoach/{id}/suc-khoe', [PlannerController::class, 'health'])->whereNumber('id')->middleware('throttle:60,1,planner-health')->name('planner.health');
     Route::get('/len-ke-hoach/{id}/suc-khoe/xu-ly', [PlannerController::class, 'resolve'])->whereNumber('id')->middleware('throttle:60,1,planner-resolve')->name('planner.resolve');

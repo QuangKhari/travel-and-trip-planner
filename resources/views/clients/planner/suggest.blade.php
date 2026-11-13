@@ -256,5 +256,6 @@
 <script type="application/json" id="aiData">{!! json_encode($aiData, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
 <script src="{{ asset('clients/assets/js/planner-suggest.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-ai-brief.js') }}?v=1" defer></script>
+@if (session('userId'))<script src="{{ asset('clients/assets/js/ai-feedback.js') }}?v=1" data-url="{{ route('planner.ai.rate') }}" data-csrf="{{ csrf_token() }}" defer></script>@endif
 
 @include('clients.blocks.footer')

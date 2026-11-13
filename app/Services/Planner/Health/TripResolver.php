@@ -50,7 +50,7 @@ final class TripResolver
     public function forTrip(object $trip, string $code, ?int $day, ?int $index): array
     {
         $this->trip = $trip;
-        $this->payload = $this->planner->payload($trip);
+        $this->payload = TripHealth::withWeather($trip, $this->planner->payload($trip));
         $this->days = [];
         foreach ($this->payload['days'] as $d) {
             $this->days[(int) $d['day']] = array_values($d['items']);
@@ -74,7 +74,7 @@ final class TripResolver
             in_array($code, ['time.overlap', 'time.travel'], true) && $day !== null && $index !== null => $this->timeOptions($day, $index, $target),
             str_starts_with($code, 'hours.') && $day !== null && $index !== null => $this->hoursOptions($day, $index, $target),
             $code === 'route.long_day' && $day !== null => $this->routeOptions($day, $target),
-            $code === 'context.rain' && $day !== null => $this->rainOptions($day, $target),
+            in_array($code, ['context.rain', 'weather.rain', 'weather.storm'], true) && $day !== null => $this->rainOptions($day, $target),
             default => [],
         };
         // phương án giải quyết được lên trước, rồi theo điểm sau khi áp dụng

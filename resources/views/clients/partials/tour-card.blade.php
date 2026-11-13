@@ -32,7 +32,8 @@
         <button type="button" class="trc-cmp" data-cmp="{{ $tour->tourId }}" data-cmp-title="{{ $tour->title }}" aria-pressed="false"
             title="Thêm vào so sánh (tối đa 3 tour)"><i class="fal fa-exchange-alt" aria-hidden="true"></i> So sánh</button>
         <img loading="lazy" decoding="async" width="800" height="500"
-            src="{{ \App\Support\TourImage::url($cover, 800) }}" alt="{{ $tour->title }}">
+            src="{{ \App\Support\TourImage::url($cover, 800) }}" alt="{{ $tour->title }}"
+            @if ($ss = \App\Support\TourImage::srcset($cover)) srcset="{{ $ss }}" sizes="(max-width: 575px) 100vw, (max-width: 991px) 50vw, 380px" @endif>
         @if ($badge)
             <span class="trc__badge {{ $badge[1] }}">{{ $badge[0] }}</span>
         @endif

@@ -137,6 +137,12 @@ class BookingService
                 'holdExpiresAt' => min($online ? now()->addMinutes(OnlinePaymentService::holdMinutes($method)) : now()->addHours((int) config('travela.hold_hours', 48)), \Carbon\Carbon::parse($departureDate)->startOfDay()),
             ]));
 
+            // A-05: đơn đặt từ chuyến đi trong Planner (banner "có tour giống lịch trình này"): ghi chuyến gốc + điểm Match lúc đặt.
+            // Chỉ nhận chuyến mà người đặt được xem (chủ / thành viên); chuyến lạ bị bỏ qua, không chặn việc đặt.
+            if (!empty($in['tripId'])) {
+                $this->linkTrip($bookingId, $userId, (int) $in['tripId'], $tourId, $adults, $children);
+            }
+
             // Chốt phiên bản nội dung tour khách đồng ý lúc đặt (giá, lịch trình, bao gồm / không bao gồm)
             if (TourVersionService::ready()) {
                 try {
@@ -176,6 +182,37 @@ class BookingService
                 'departureDate'  => $departureDate,
             ];
         }, 3);
+    }
+
+    /** Gắn đơn với chuyến đi Planner (A-05). Lỗi tính điểm không được làm hỏng việc đặt chỗ. */
+    private function linkTrip(int $bookingId, int $userId, int $tripId, int $tourId, int $adults, int $children): void
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('tbl_booking', 'tripId')) {
+            return;
+        }
+        $access = app(\App\Services\Planner\TripSharing::class)->access($userId, $tripId);
+        if (!$access || ($access['trip']->kind ?? 'trip') !== 'trip') {
+            return;
+        }
+        $score = null;
+        try {
+            $trip = $access['trip'];
+            $payload = app(\App\Services\Planner\TripPlanner::class)->payload($trip);
+            $items = array_merge($payload['unassigned'], ...array_map(fn($d) => $d['items'], $payload['days']));
+            $want = \App\Services\Planner\TourMatch::wantFromTrip($trip, $items);
+            $want['adults'] = $adults;
+            $want['children'] = $children;
+            $destId = (int) DB::table('tbl_tours')->where('tourId', $tourId)->value('destinationId');
+            foreach (app(\App\Services\Planner\TourMatch::class)->rank($want, [$destId], 40) as $r) {
+                if ($r['tourId'] === $tourId) {
+                    $score = $r['score'];
+                    break;
+                }
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+        DB::table('tbl_booking')->where('bookingId', $bookingId)->update(['tripId' => $tripId, 'matchScore' => $score]);
     }
 
     /**

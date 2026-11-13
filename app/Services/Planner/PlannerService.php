@@ -80,6 +80,15 @@ final class PlannerService
             $ctx['tMax'] = $brief['climate']['tMax'];
         }
 
+        // T-20: chuyến trong 16 ngày tới → dự báo mưa từng ngày (Open-Meteo, cache theo giờ) thay số liệu theo tháng
+        $weather = null;
+        if ($center && $nreq['startDate']) {
+            $weather = $this->dayRain($center, (string) $nreq['startDate'], (int) $nreq['days']);
+            if ($weather) {
+                $ctx['dayRain'] = $weather;
+            }
+        }
+
         $log = [];
         $cands = $dest ? $this->candidates($dest, $nreq, $year, $log) : [];
         $openSources = null;
@@ -107,8 +116,42 @@ final class PlannerService
             'verdict' => $brief ? DestinationMonthBrief::summaryText($brief) : null,
             'gate' => $status,
             'openSources' => $openSources,
+            'weather' => $weather ? ['source' => 'forecast', 'dayRain' => $weather] : null,
             'disclaimer' => DestinationMonthBrief::DISCLAIMER,
         ];
+    }
+
+    /** @return array<int,int>|null  ngày (1..n) => % mưa cao nhất 08–20h, chỉ các ngày nằm trong phạm vi dự báo */
+    private function dayRain(array $center, string $start, int $days): ?array
+    {
+        if (!TripWeather::enabled()) {
+            return null;
+        }
+        $horizon = (int) config('planner.weather.days', 16);
+        $first = (int) now()->startOfDay()->diffInDays(\Carbon\Carbon::parse($start)->startOfDay(), false);
+        if ($first < 0 || $first >= $horizon) {
+            return null;
+        }
+        try {
+            $fc = app(TripWeather::class)->forPoints([$center]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return null;
+        }
+        $f = reset($fc);
+        if (!$f) {
+            return null;
+        }
+        $out = [];
+        for ($d = 1; $d <= $days; $d++) {
+            $date = \Carbon\Carbon::parse($start)->addDays($d - 1)->toDateString();
+            if (isset($f['days'][$date])) {
+                $out[$d] = TripWeather::dayRain($f['days'][$date]);
+            }
+        }
+
+        return $out ?: null;
     }
 
     /**
@@ -244,10 +287,14 @@ final class PlannerService
         }
         $out = [];
 
+        // trong nhà / ngoài trời theo loại nơi (cùng danh sách với ItemInsights): dùng cho mưa theo mùa và dự báo theo ngày (T-20)
+        $inKinds = (array) config('planner.indoor_place_kinds', []);
+        $outKinds = array_merge((array) config('planner.dislikes.outdoor.place_kinds', []), ['peak', 'beach', 'viewpoint', 'cave_entrance', 'hot_spring']);
         foreach (DB::table('tbl_external_places')->where('destinationId', $id)->where('reviewStatus', 'published')->get() as $p) {
             $out[] = ['key' => 'place:' . $p->placeId, 'type' => 'place', 'refId' => (int) $p->placeId, 'name' => $p->name, 'kind' => $p->kind,
                 'group' => $kindGroup[$p->kind] ?? 'see', 'lat' => $p->latitude !== null ? (float) $p->latitude : null, 'lng' => $p->longitude !== null ? (float) $p->longitude : null,
-                'rank' => (int) $p->rank, 'mustTry' => !empty($p->isMustTry)];
+                'rank' => (int) $p->rank, 'mustTry' => !empty($p->isMustTry),
+                'indoor' => in_array($p->kind, $inKinds, true) ? true : (in_array($p->kind, $outKinds, true) ? false : null)];
         }
 
         foreach (DB::table('tbl_experiences')->where('destinationId', $id)->where('reviewStatus', 'published')->get() as $x) {
@@ -360,6 +407,25 @@ final class PlannerService
                 'forGroup' => (float) $t->priceAdult * ($req['adults'] ?? $req['groupSize']) + (float) ($t->priceChild ?? $t->priceAdult) * ($req['children'] ?? 0),
                 'url' => route('tour-detail', ['id' => $t->tourId])];
         }
+        if (!$out) {
+            return $out;
+        }
+        // A-01: cùng công thức Tour Match với trang sửa chuyến (điểm thành phần để La bàn / giao diện giải thích vì sao hợp)
+        $want = ['startDate' => $req['startDate'] ?? null, 'month' => $req['month'] ?? null, 'days' => (int) $req['days'],
+            'adults' => (int) ($req['adults'] ?? $req['groupSize'] ?? 1), 'children' => (int) ($req['children'] ?? 0),
+            'budget' => $req['budget'] ?? null, 'interests' => (array) ($req['interests'] ?? []), 'placeNames' => []];
+        $ranked = [];
+        foreach (app(TourMatch::class)->rank($want, [$destId], 40) as $m) {
+            $ranked[$m['tourId']] = $m;
+        }
+        foreach ($out as &$o) {
+            if (isset($ranked[$o['id']])) {
+                $m = $ranked[$o['id']];
+                $o += ['score' => $m['score'], 'pct' => $m['pct'], 'components' => $m['components'], 'bookUrl' => $m['bookUrl']];
+            }
+        }
+        unset($o);
+        usort($out, fn($a, $b) => [($b['score'] ?? 0), $a['id']] <=> [($a['score'] ?? 0), $b['id']]);
 
         return $out;
     }

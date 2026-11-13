@@ -22,7 +22,8 @@
     }
     function item(x) {
         var o = { type: x.type, refId: CUSTOM[x.type] ? null : x.refId, day: x.day, note: x.note, cost: x.cost, slot: x.slot || null, reasons: x.reasons || [],
-            startMin: x.startMin == null ? null : x.startMin, durationMin: x.durationMin || null, costType: x.cost != null ? (x.costType || null) : null, locked: !!x.locked };
+            startMin: x.startMin == null ? null : x.startMin, durationMin: x.durationMin || null, costType: x.cost != null ? (x.costType || null) : null, locked: !!x.locked,
+            legMode: x.legMode || null, visitedAt: x.visitedAt || null };
         if (CUSTOM[x.type]) {
             o.label = x.name;
             if (hasPos(x)) { o.lat = x.lat; o.lng = x.lng; o.source = x.source || "map"; }

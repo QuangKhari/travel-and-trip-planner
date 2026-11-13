@@ -61,6 +61,13 @@ class PlannerContractTest extends TestCase
                 ['key' => 'place:31', 'type' => 'place', 'kind' => 'museum', 'name' => 'Bảo tàng', 'lat' => 21.04, 'lng' => 105.80, 'defDur' => 90],
                 ['key' => 'place:32', 'type' => 'place', 'kind' => 'restaurant', 'name' => 'Ngon', 'lat' => 21.035, 'lng' => 105.84, 'defDur' => 60, 'slot' => 'noon'],
             ],
+            7 => [   // T-05: phương tiện riêng từng chặng (legMode của mục xuất phát): xe buýt (+10' chờ), đi bộ, xe máy, mặc định
+                ['key' => 'place:40', 'type' => 'place', 'name' => 'Văn Miếu', 'lat' => 21.0277, 'lng' => 105.8355, 'defDur' => 60, 'legMode' => 'bus'],
+                ['key' => 'place:41', 'type' => 'place', 'name' => 'Bảo tàng Dân tộc học', 'lat' => 21.0405, 'lng' => 105.7985, 'defDur' => 60, 'legMode' => 'walking'],
+                ['key' => 'place:42', 'type' => 'place', 'name' => 'Công viên Nghĩa Đô', 'lat' => 21.0450, 'lng' => 105.8000, 'defDur' => 60, 'legMode' => 'motorbike'],
+                ['key' => 'place:43', 'type' => 'place', 'name' => 'Hồ Tây', 'lat' => 21.0560, 'lng' => 105.8190, 'defDur' => 60, 'legMode' => 'driving'],
+                ['key' => 'place:44', 'type' => 'place', 'name' => 'Phố cổ', 'lat' => 21.0340, 'lng' => 105.8520, 'defDur' => 60],
+            ],
         ];
     }
 
@@ -121,6 +128,13 @@ class PlannerContractTest extends TestCase
         $this->assertSame(1020, $d5['rows'][2]['start']);                    // buổi chiều nhưng quán nghỉ 14:00-17:00: chờ ca tối
         $this->assertSame('late', $d5['rows'][3]['hours']);                  // giờ cố định 16:00-17:00, chùa đóng 16:30
         $this->assertNull($d5['rows'][4]['hours']);                          // không có giờ Thứ Hai: chưa biết, không cảnh báo
+        $d7 = (new DaySchedule(7, $days[7], $route, $rules))->contract();
+        $plain = (new DaySchedule(7, array_map(fn($x) => array_diff_key($x, ['legMode' => 1]), $days[7]), $route, $rules))->contract();
+        $kmBus = $d7['rows'][0]['travelKm'];
+        $this->assertEqualsWithDelta(round($kmBus / 20 * 60) + 10, $d7['rows'][0]['travelMin'], 1, 'xe buýt: km / 20 km/h + 10 phút chờ');
+        $this->assertGreaterThan($plain['rows'][1]['travelMin'], $d7['rows'][1]['travelMin'], 'đi bộ chậm hơn ô tô');
+        $this->assertSame($plain['rows'][3]['travelMin'], $d7['rows'][3]['travelMin'], 'chọn đúng phương tiện mặc định = không đổi');
+        $this->assertSame(array_sum(array_column($d7['rows'], 'travelMin')), $d7['travelMin']);
         $d6 = (new DaySchedule(6, $days[6], $route, $rules))->contract();
         $this->assertSame(30, $d6['rows'][0]['dur']);                         // khách sạn trong kho: lưu trú 30 phút
         $this->assertSame(0, $d6['mealMin']);                                 // quán ăn trong kho là bữa ăn: không chừa thêm
