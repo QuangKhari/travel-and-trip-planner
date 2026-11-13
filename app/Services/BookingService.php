@@ -115,7 +115,7 @@ class BookingService
 
             // 5. Tạo đơn + thanh toán
             $bookingCode = $this->newBookingCode();
-            // Thanh toán trực tuyến (MoMo / ZaloPay / QR): giữ chỗ ngắn (A2, C-06), hết hạn mà chưa nhận được tiền thì tự hủy và nhả chỗ
+            // Thanh toán trực tuyến (VNPay / MoMo / QR): giữ chỗ ngắn (A2, C-06), hết hạn mà chưa nhận được tiền thì tự hủy và nhả chỗ
             $method = (string) ($in['payment'] ?? 'office-payment');
             $online = OnlinePaymentService::isOnline($method);
 

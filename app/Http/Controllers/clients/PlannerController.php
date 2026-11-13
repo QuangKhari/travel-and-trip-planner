@@ -518,7 +518,8 @@ class PlannerController extends Controller
         return view('clients.planner.edit', [
             'aiExplainOn' => app(\App\Services\Ai\AiGateway::class)->featureOn('explain'),
             // La bàn Copilot chỉ cho người sửa được chuyến; tắt cờ thì không có nút, không tải script
-            'aiCopilotOn' => app(\App\Services\Ai\AiGateway::class)->featureOn('copilot') && TripSharing::canEdit($role),
+            'aiCopilotOn' => (app(\App\Services\Ai\AiGateway::class)->featureOn('copilot') || config('ai.features.suggest', true)) && TripSharing::canEdit($role),
+            'aiLlmOn' => app(\App\Services\Ai\AiGateway::class)->featureOn('copilot'),
             'cover' => $cover ? \App\Support\DiscoverImage::url((string) $cover) : null,
             'lastEdit' => ['by' => $rv['by'], 'at' => $trip->updatedAt ?? null, 'byMe' => (int) ($trip->lastEditorId ?? 0) === $uid],
             'title' => $trip->title,

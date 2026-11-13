@@ -144,6 +144,12 @@
                         <span class="ad-todo__t">Khiếu nại đang xử lý<small>Phản hồi, giải quyết, bồi hoàn</small></span><i class="fa fa-angle-right"></i></a></li>
                     <li><a href="{{ route('admin.adjustments') }}"><span class="ad-todo__n {{ ($todo['adjust'] ?? 0) ? 'is-hot' : '' }}">{{ $todo['adjust'] ?? 0 }}</span>
                         <span class="ad-todo__t">Khoản thu thêm / hoàn do đổi số khách<small>Ghi nhận khi đã thu hoặc đã hoàn</small></span><i class="fa fa-angle-right"></i></a></li>
+                    @if (($todo['noShowCheck'] ?? 0) > 0)
+                        <li><a href="{{ route('admin.booking') }}"><span class="ad-todo__n is-hot">{{ $todo['noShowCheck'] }}</span>
+                            <span class="ad-todo__t">Đơn đã qua ngày khởi hành chưa chốt<small>Mở đơn: hoàn tất hoặc đánh dấu khách không đến</small></span><i class="fa fa-angle-right"></i></a></li>
+                    @endif
+                    <li><a href="{{ route('admin.travel-alerts') }}"><span class="ad-todo__n {{ ($todo['travelAlerts'] ?? 0) ? 'is-hot' : '' }}">{{ $todo['travelAlerts'] ?? 0 }}</span>
+                        <span class="ad-todo__t">Cảnh báo điểm đến đang hiệu lực<small>La bàn nhắc các chuyến trùng ngày, gợi ý đổi lịch</small></span><i class="fa fa-angle-right"></i></a></li>
                     <li><a href="{{ route('admin.waitlist') }}"><span class="ad-todo__n">{{ $todo['waitlist'] ?? 0 }}</span>
                         <span class="ad-todo__t">Khách đang trong danh sách chờ<small>Tự mời khi có chỗ trống</small></span><i class="fa fa-angle-right"></i></a></li>
                 @endif

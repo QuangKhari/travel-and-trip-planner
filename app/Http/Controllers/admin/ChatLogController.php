@@ -122,7 +122,18 @@ class ChatLogController extends Controller
             $byOutcome = $this->aiFiltered($request)->selectRaw('feature, outcome, COUNT(*) n')->groupBy('feature', 'outcome')->orderBy('feature')->orderByDesc('n')->get();
         }
 
+        // A-25: chip "Kết quả có đúng ý bạn không?" — tỷ lệ đúng ý, lý do chưa đúng, ghi chú gần đây
+        $fb = ['has' => Schema::hasTable('tbl_ai_feedback'), 'rows' => [], 'reasons' => [], 'recent' => collect()];
+        if ($fb['has']) {
+            $fq = DB::table('tbl_ai_feedback')->when($request->query('from'), fn($q, $v) => $q->where('createdAt', '>=', $v))
+                ->when($request->query('to'), fn($q, $v) => $q->where('createdAt', '<', \Carbon\Carbon::parse($v)->addDay()));
+            $fb['rows'] = (clone $fq)->selectRaw('feature, COUNT(*) n, SUM(helpful = 1) yes')->groupBy('feature')->get()->keyBy('feature');
+            $fb['reasons'] = (clone $fq)->where('helpful', 0)->whereNotNull('reason')->selectRaw('feature, reason, COUNT(*) n')->groupBy('feature', 'reason')->orderByDesc('n')->get()->groupBy('feature');
+            $fb['recent'] = (clone $fq)->where('helpful', 0)->orderByDesc('feedbackId')->limit(10)->get();
+        }
+
         return view('admin.chat.ai', [
+            'fb' => $fb,
             'title' => 'Nhật ký AI (La bàn)',
             'has' => $has,
             'stats' => $stats,

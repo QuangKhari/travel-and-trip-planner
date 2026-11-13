@@ -41,6 +41,37 @@
         <p class="text-muted small">"Gọi AI" = lượt có engine llm. "Chế độ cơ bản" = lùi về luật / câu mẫu (AI tắt, hết lượt, ngắt mạch, lỗi). Đề xuất Copilot luôn đã qua TripHealth: "không đề xuất được" là khi mọi phương án đều tạo lỗi cứng mới.</p>
     </div></div>
 
+    @if ($fb['has'])
+    @php
+        $fbLabel = ['brief' => 'F1 Vé hành trình', 'explain' => 'F2 Tóm tắt', 'copilot' => 'F3 La bàn (đề xuất, gợi ý)', 'tour_match' => 'Tour phù hợp'];
+        $rsLabel = ['wrong_place' => 'Sai nơi', 'wrong_time' => 'Sai giờ / ngày', 'not_my_taste' => 'Không hợp sở thích', 'too_generic' => 'Chung chung', 'other' => 'Khác'];
+    @endphp
+    <div class="x_panel"><div class="x_title"><h2>Người dùng đánh giá <small>chip “Kết quả có đúng ý bạn không?”</small></h2><div class="clearfix"></div></div><div class="x_content">
+        @if (count($fb['rows']))
+            <table class="table table-bordered" style="font-variant-numeric:tabular-nums">
+                <thead><tr><th>Tính năng</th><th class="text-center">Lượt đánh giá</th><th class="text-center">Đúng ý</th><th>Lý do chưa đúng (nhiều nhất)</th></tr></thead>
+                <tbody>
+                @foreach ($fb['rows'] as $f => $x)
+                    <tr><td><b>{{ $fbLabel[$f] ?? $f }}</b></td><td class="text-center">{{ (int) $x->n }}</td>
+                        <td class="text-center">{{ $pct($x->yes, $x->n) }}</td>
+                        <td>@forelse (($fb['reasons'][$f] ?? collect())->take(3) as $r)<span class="ad-badge ad-badge--mute" style="margin:0 4px 4px 0">{{ $rsLabel[$r->reason] ?? $r->reason }} · {{ $r->n }}</span>@empty<span class="text-muted">—</span>@endforelse</td></tr>
+                @endforeach
+                </tbody>
+            </table>
+            @if ($fb['recent']->count())
+                <p style="margin:12px 0 6px"><b>Góp ý gần đây (chưa đúng ý)</b></p>
+                <ul style="margin:0;padding-left:18px">
+                    @foreach ($fb['recent'] as $r)
+                        <li>{{ date('d/m H:i', strtotime($r->createdAt)) }} · {{ $fbLabel[$r->feature] ?? $r->feature }}{{ $r->reason ? ' · ' . ($rsLabel[$r->reason] ?? $r->reason) : '' }}{{ $r->tripId ? ' · chuyến #' . $r->tripId : '' }}{{ $r->note ? ': “' . $r->note . '”' : '' }}</li>
+                    @endforeach
+                </ul>
+            @endif
+        @else
+            <p class="text-muted" style="margin:0">Chưa có lượt đánh giá nào trong khoảng thời gian này.</p>
+        @endif
+    </div></div>
+    @endif
+
     <div class="x_panel"><div class="x_title"><h2>Kết quả theo loại</h2><div class="clearfix"></div></div><div class="x_content">
         <table class="table table-condensed"><thead><tr><th>Tính năng</th><th>Kết quả</th><th>Số lượt</th></tr></thead><tbody>
         @forelse ($byOutcome as $o)<tr><td>{{ $features[$o->feature] ?? $o->feature }}</td><td>{{ $outcomeLabel[$o->outcome] ?? $o->outcome }} <code>{{ $o->outcome }}</code></td><td>{{ $o->n }}</td></tr>
@@ -50,10 +81,10 @@
 
     <div class="x_panel"><div class="x_content">
         <form method="GET" class="form-inline" style="margin-bottom:12px">
-            <select name="feature" class="form-control"><option value="">Mọi tính năng</option>@foreach ($features as $k => $l)<option value="{{ $k }}" @selected($q['feature'] === $k)>{{ $l }}</option>@endforeach</select>
-            <select name="outcome" class="form-control"><option value="">Mọi kết quả</option>@foreach ($outcomes as $k)<option value="{{ $k }}" @selected($q['outcome'] === $k)>{{ $outcomeLabel[$k] ?? $k }}</option>@endforeach</select>
-            <select name="engine" class="form-control"><option value="">Mọi engine</option>@foreach (['llm', 'rules', 'template', 'cache'] as $k)<option value="{{ $k }}" @selected($q['engine'] === $k)>{{ $k }}</option>@endforeach</select>
-            <input type="date" class="form-control" name="from" value="{{ $q['from'] }}"> – <input type="date" class="form-control" name="to" value="{{ $q['to'] }}">
+            <select name="feature" class="form-control" aria-label="Lọc theo tính năng"><option value="">Mọi tính năng</option>@foreach ($features as $k => $l)<option value="{{ $k }}" @selected($q['feature'] === $k)>{{ $l }}</option>@endforeach</select>
+            <select name="outcome" class="form-control" aria-label="Lọc theo kết quả"><option value="">Mọi kết quả</option>@foreach ($outcomes as $k)<option value="{{ $k }}" @selected($q['outcome'] === $k)>{{ $outcomeLabel[$k] ?? $k }}</option>@endforeach</select>
+            <select name="engine" class="form-control" aria-label="Lọc theo engine"><option value="">Mọi engine</option>@foreach (['llm', 'rules', 'template', 'cache'] as $k)<option value="{{ $k }}" @selected($q['engine'] === $k)>{{ $k }}</option>@endforeach</select>
+            <input type="date" class="form-control" name="from" aria-label="Từ ngày" value="{{ $q['from'] }}"> – <input type="date" class="form-control" name="to" aria-label="Đến ngày" value="{{ $q['to'] }}">
             <button class="btn btn-default">Lọc</button>
         </form>
         <table class="table table-striped table-bordered"><thead><tr><th>Lúc</th><th>Tính năng</th><th>Kết quả</th><th>Engine · model · prompt</th><th>Chuyến</th><th>ms</th><th>Token</th><th>Cờ</th></tr></thead><tbody>

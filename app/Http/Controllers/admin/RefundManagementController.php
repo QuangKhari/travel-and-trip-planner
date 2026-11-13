@@ -69,7 +69,7 @@ class RefundManagementController extends Controller
         return back()->with('success', $res['message']);
     }
 
-    /** Gửi lệnh hoàn tiền qua API MoMo / ZaloPay cho hồ sơ $id (đã kiểm tra điều kiện trong GatewayRefundService). */
+    /** Gửi lệnh hoàn tiền qua API VNPay / MoMo cho hồ sơ $id (đã kiểm tra điều kiện trong GatewayRefundService). */
     public function gateway(Request $request, int $id, GatewayRefundService $gateway)
     {
         $res = $gateway->process($id, (int) session('adminId'), $request->ip());

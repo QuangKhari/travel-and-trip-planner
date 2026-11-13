@@ -18,6 +18,9 @@ return [
         'copilot' => (bool) env('AI_FEATURE_COPILOT', true),   // F3: La bàn Copilot (sửa lịch bằng lời, engine kiểm chứng)
         'ask' => (bool) env('AI_FEATURE_ASK', true),           // F5: hỏi về chuyến trong ngăn La bàn (dùng AskService + hạn mức của Hỏi đáp)
         'packing' => (bool) env('AI_FEATURE_PACKING', true),   // A-13: danh sách đồ mang theo (lùi về danh sách theo luật)
+        // Gợi ý để chọn trong ngăn La bàn (món ăn, điểm tham quan, lễ hội, cảnh báo dông / sự cố): chạy bằng luật, KHÔNG cần khóa LLM,
+        // nên ngăn La bàn vẫn mở được khi AI_PLANNER_ENABLED=false (khi đó câu sửa lịch tự do báo chưa dùng được).
+        'suggest' => (bool) env('AI_FEATURE_SUGGEST', true),
     ],
 
     // anthropic | openai | none. Mặc định dùng chung driver với RAG để chỉ cần một khóa API.

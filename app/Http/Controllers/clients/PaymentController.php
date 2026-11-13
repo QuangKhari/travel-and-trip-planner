@@ -9,8 +9,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Thanh toán trực tuyến phía khách (§7.1): MoMo, ZaloPay, QR chuyển khoản.
- *   pay     tạo giao dịch → chuyển sang cổng (MoMo / ZaloPay) hoặc hiện mã QR.
+ * Thanh toán trực tuyến phía khách (§7.1): VNPay, MoMo, QR chuyển khoản.
+ *   pay     tạo giao dịch → chuyển sang cổng (VNPay / MoMo) hoặc hiện mã QR.
  *   notify  cổng gọi máy chủ (IPN / callback / webhook): nguồn xác nhận chính. Không phiên, không CSRF.
  *   return  khách quay về: chỉ hiển thị (đơn còn chờ thì hỏi lại cổng).
  *   check   khách bấm "Tôi đã thanh toán – kiểm tra lại".

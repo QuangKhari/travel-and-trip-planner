@@ -6,13 +6,13 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Một cổng thanh toán trực tuyến (MoMo, ZaloPay, QR chuyển khoản).
+ * Một cổng thanh toán trực tuyến (VNPay, MoMo, QR chuyển khoản).
  * Cổng chỉ lo "nói chuyện" với nhà cung cấp: ký / kiểm chữ ký, dựng yêu cầu, đọc phản hồi về một dạng chung.
  * Mọi việc với đơn (giữ chỗ, xác nhận, hoàn tiền, nhật ký) nằm ở OnlinePaymentService, dùng chung cho cả ba cổng.
  */
 interface PaymentGateway
 {
-    /** momo | zalopay | qr */
+    /** vnpay | momo | qr */
     public function code(): string;
 
     public function label(): string;
@@ -54,7 +54,7 @@ interface PaymentGateway
     /** Diễn giải mã kết quả của cổng. */
     public function describe(string $code): string;
 
-    /** Cổng có API hoàn tiền không (MoMo, ZaloPay có; QR chuyển khoản không: hoàn thủ công). */
+    /** Cổng có API hoàn tiền không (VNPay, MoMo có; QR chuyển khoản không: hoàn thủ công). */
     public function supportsRefund(): bool;
 
     /** Mã giao dịch hoàn riêng cho mỗi lần thử (cổng không nhận trùng). Được lưu vào tbl_refunds TRƯỚC khi gọi cổng. */
@@ -62,7 +62,7 @@ interface PaymentGateway
 
     /**
      * Gửi lệnh hoàn tiền một phần hoặc toàn phần của giao dịch gốc.
-     * @param array{txnRef:string, providerTxnNo:?string, amount:int, refundRef:string, reason:string, bookingCode:string} $o
+     * @param array{txnRef:string, providerTxnNo:?string, amount:int, refundRef:string, reason:string, bookingCode:string, transactionDate:?string, paidAmount:int, createdBy:string} $o
      * @return array{ok:bool, status:string, refundNo:?string, code:string, message:string, raw:array}
      *   status: refunded (tiền đã hoàn) | pending (cổng đang xử lý) | failed (cổng từ chối, được thử lại) | unknown (không biết lệnh có tới cổng không: KHÔNG gửi lại, phải hỏi trạng thái)
      */

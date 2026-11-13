@@ -2,7 +2,7 @@
 @php
     $money = fn($v) => number_format((float) $v, 0, ',', '.');
     $kinds = ['create' => ['info', 'Tạo giao dịch'], 'return' => ['mute', 'Khách quay về'], 'notify' => ['teal', 'Cổng báo về'], 'query' => ['violet', 'Đối soát'], 'manual' => ['warn', 'Xác nhận tay']];
-    $providers = ['momo' => 'MoMo', 'zalopay' => 'ZaloPay', 'qr' => 'QR chuyển khoản', 'vnpay' => 'VNPay (cũ)'];
+    $providers = ['vnpay' => 'VNPay', 'momo' => 'MoMo', 'qr' => 'QR chuyển khoản', 'zalopay' => 'ZaloPay (cũ)'];
     $tone = fn($r) => in_array($r, ['paid', 'url', 'duplicate'], true) ? 'ok'
         : (in_array($r, ['bad_signature', 'bad_amount', 'not_found', 'error', 'http_error', 'rejected'], true) ? 'bad'
         : (str_starts_with((string) $r, 'failed') || $r === 'unmatched' ? 'warn' : 'mute'));
@@ -13,7 +13,7 @@
     <div class="ad-head">
         <div>
             <h1>Thanh toán trực tuyến</h1>
-            <p>MoMo, ZaloPay và QR chuyển khoản. Mọi lần tạo giao dịch, khách quay về, cổng báo về và đối soát đều được ghi lại. Thông báo của cổng (có chữ ký) là nguồn xác nhận chính; trang khách quay về chỉ hiển thị. Đơn sắp hết hạn giữ chỗ được hỏi lại cổng tự động mỗi phút.</p>
+            <p>VNPay, MoMo và QR chuyển khoản. Mọi lần tạo giao dịch, khách quay về, cổng báo về và đối soát đều được ghi lại. Thông báo của cổng (có chữ ký) là nguồn xác nhận chính; trang khách quay về chỉ hiển thị. Đơn sắp hết hạn giữ chỗ được hỏi lại cổng tự động mỗi phút.</p>
         </div>
     </div>
 
@@ -31,10 +31,10 @@
                         @endif
                     @else
                         @if ($g['on'])
-                            <p style="margin:0 0 6px">Địa chỉ nhận thông báo (gửi kèm mỗi giao dịch, không cần khai báo với cổng):</p>
+                            <p style="margin:0 0 6px">{{ $code === 'vnpay' ? 'URL IPN cần khai báo trong trang quản trị merchant VNPay:' : 'Địa chỉ nhận thông báo (gửi kèm mỗi giao dịch, không cần khai báo với cổng):' }}</p>
                             <code class="ad-code" style="word-break:break-all">{{ $g['notify'] }}</code>
                         @else
-                            <p style="margin:0">Điền khóa sandbox vào <code class="ad-code">.env</code> ({{ $code === 'momo' ? 'MOMO_ENABLED, MOMO_PARTNER_CODE, MOMO_ACCESS_KEY, MOMO_SECRET_KEY' : 'ZALOPAY_ENABLED, ZALOPAY_APP_ID, ZALOPAY_KEY1, ZALOPAY_KEY2' }}) rồi chạy <code class="ad-code">php artisan config:clear</code>.</p>
+                            <p style="margin:0">Điền khóa sandbox vào <code class="ad-code">.env</code> ({{ $code === 'momo' ? 'MOMO_ENABLED, MOMO_PARTNER_CODE, MOMO_ACCESS_KEY, MOMO_SECRET_KEY' : 'VNPAY_ENABLED, VNPAY_TMN_CODE, VNPAY_HASH_SECRET (và khai báo URL IPN ' . \App\Services\Payments\OnlinePaymentService::publicRoute('payment.notify', ['method' => 'vnpay']) . ' trong trang merchant VNPay)' }}) rồi chạy <code class="ad-code">php artisan config:clear</code>.</p>
                         @endif
                     @endif
                 </div>
@@ -78,7 +78,7 @@
         <form class="ad-toolbar" method="GET" action="{{ route('admin.payments') }}">
             <div class="ad-chips">
                 <a class="ad-chip {{ !$kind && !$provider && !request('problem') ? 'is-on' : '' }}" href="{{ route('admin.payments') }}">Tất cả</a>
-                @foreach (['momo', 'zalopay', 'qr'] as $pv)<a class="ad-chip {{ $provider === $pv ? 'is-on' : '' }}" href="{{ route('admin.payments', ['provider' => $pv]) }}">{{ $providers[$pv] }}</a>@endforeach
+                @foreach (['vnpay', 'momo', 'qr'] as $pv)<a class="ad-chip {{ $provider === $pv ? 'is-on' : '' }}" href="{{ route('admin.payments', ['provider' => $pv]) }}">{{ $providers[$pv] }}</a>@endforeach
                 @foreach ($kinds as $k => [$c, $l])<a class="ad-chip {{ $kind === $k ? 'is-on' : '' }}" href="{{ route('admin.payments', array_filter(['kind' => $k, 'provider' => $provider])) }}">{{ $l }}</a>@endforeach
                 <a class="ad-chip {{ request('problem') ? 'is-on' : '' }}" href="{{ route('admin.payments', ['problem' => 1]) }}">Bất thường</a>
             </div>
@@ -111,7 +111,7 @@
             </div>
             @if ($rows->hasPages())<div class="ad-pager"><span class="ad-note">{{ $rows->total() }} dòng</span>{{ $rows->links('admin.partials.pager') }}</div>@endif
         @else
-            <div class="ad-empty"><i class="fa fa-credit-card"></i><b>Chưa có giao dịch</b>Nhật ký xuất hiện khi khách chọn MoMo, ZaloPay hoặc QR chuyển khoản.</div>
+            <div class="ad-empty"><i class="fa fa-credit-card"></i><b>Chưa có giao dịch</b>Nhật ký xuất hiện khi khách chọn VNPay, MoMo hoặc QR chuyển khoản.</div>
         @endif
     </div>
 @endsection

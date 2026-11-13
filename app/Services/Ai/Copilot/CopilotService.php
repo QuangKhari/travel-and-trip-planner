@@ -195,6 +195,30 @@ final class CopilotService
         return ['ok' => true, 'rev' => (int) ($trip->rev ?? 0), 'rechecked' => true] + $p['body'];
     }
 
+    /**
+     * Thẻ gợi ý của La bàn (TripSuggest) -> phiếu kiểm chứng: thao tác dạng khóa đã dựng sẵn bằng luật (không gọi LLM),
+     * đi qua CÙNG bước biên dịch + mô phỏng TripHealth như đề xuất của LLM, rồi trả về để người dùng bấm Áp dụng.
+     */
+    public function proposeDirect(object $trip, ?int $userId, array $keyed, array $cands, array $explicit, string $say): array
+    {
+        $t0 = microtime(true);
+        $ctx = $this->context($trip);
+        $rev = (int) ($trip->rev ?? 0);
+        $p = $this->propose($trip, $ctx, $keyed, $cands, $explicit, $say);
+        $ms = (int) round((microtime(true) - $t0) * 1000);
+        $runId = $this->gateway->log(['feature' => 'copilot', 'userId' => $userId, 'tripId' => (int) $trip->tripId, 'engine' => 'rules',
+            'outcome' => $p['ok'] ? 'proposed' : 'refused', 'inputChars' => 0, 'ms' => $ms, 'flags' => ['suggest' => $keyed[0]['op'] ?? null]]);
+        if (!$p['ok']) {
+            return ['ok' => false, 'kind' => 'reply', 'rev' => $rev,
+                'say' => [['t' => 'La bàn chưa thêm được gợi ý này vì sẽ làm lịch có vấn đề: ' . preg_replace('/^Đề xuất tạo vấn đề mới: /u', '', $p['errors'][0]) . ' Bạn thử ngày khác nhé.']]];
+        }
+        if ($runId) {
+            $this->remember($p['body']['id'], ['runId' => $runId]);
+        }
+
+        return ['ok' => true, 'rev' => $rev, 'quick' => $ctx['quick'], 'ms' => $ms] + $p['body'];
+    }
+
     /** Người dùng bấm Áp dụng / Bỏ qua: cập nhật outcome của lượt (đo tỷ lệ chấp nhận, mục 8 tài liệu). */
     public function feedback(object $trip, string $id, bool $applied): void
     {

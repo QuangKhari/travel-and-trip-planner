@@ -80,7 +80,7 @@
 
     function payLabel() {
         var p = form.querySelector('input[name="payment"]:checked');
-        var map = { momo: "Đặt tour và thanh toán MoMo", zalopay: "Đặt tour và thanh toán ZaloPay", qr: "Đặt tour và lấy mã QR" };
+        var map = { momo: "Đặt tour và thanh toán MoMo", vnpay: "Đặt tour và thanh toán VNPay", qr: "Đặt tour và lấy mã QR" };
         return (p && map[p.value]) || "Xác nhận đặt tour";
     }
 

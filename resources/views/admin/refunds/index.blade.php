@@ -4,7 +4,7 @@
     <div class="ad-head">
         <div>
             <h1>Hoàn tiền</h1>
-            <p>Đơn đã thanh toán bị hủy tạo yêu cầu hoàn theo chính sách: còn từ 14 ngày hoàn 100%, 7–13 ngày hoàn 50%. Đơn trả bằng MoMo / ZaloPay có thể hoàn thẳng qua API của cổng (khi PAYMENT_REFUND_ENABLED=true); đơn QR chuyển khoản hoặc xác nhận tay thì chuyển tiền cho khách rồi bấm “Đã hoàn” để ghi nhận.</p>
+            <p>Đơn đã thanh toán bị hủy tạo yêu cầu hoàn theo chính sách: còn từ 14 ngày hoàn 100%, 7–13 ngày hoàn 50%. Đơn trả bằng VNPay / MoMo có thể hoàn thẳng qua API của cổng (khi PAYMENT_REFUND_ENABLED=true); đơn QR chuyển khoản hoặc xác nhận tay thì chuyển tiền cho khách rồi bấm “Đã hoàn” để ghi nhận.</p>
         </div>
     </div>
 

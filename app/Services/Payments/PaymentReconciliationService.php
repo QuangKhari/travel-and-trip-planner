@@ -114,7 +114,7 @@ class PaymentReconciliationService
         }
 
         // 7. Online đã xác nhận nhưng chưa thu
-        foreach ($base()->where('b.bookingStatus', 'y')->where('c.paymentStatus', 'n')->whereIn('c.provider', ['momo', 'zalopay', 'qr'])->limit(500)
+        foreach ($base()->where('b.bookingStatus', 'y')->where('c.paymentStatus', 'n')->whereIn('c.provider', ['vnpay', 'momo', 'qr'])->limit(500)
             ->get(['b.bookingId', 'b.bookingCode', 'c.provider']) as $x) {
             $add('online_confirmed_unpaid', (int) $x->bookingId, null, "Đơn {$x->bookingCode} đã xác nhận nhưng chưa ghi nhận khoản thu qua {$x->provider}.");
         }

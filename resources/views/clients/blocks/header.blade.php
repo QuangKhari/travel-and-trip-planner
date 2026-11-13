@@ -134,6 +134,7 @@
         <link rel="stylesheet" href="{{ asset('clients/assets/css/blue-lagoon-tour-explore.css') }}?v=4">
         <link rel="stylesheet" href="{{ asset('clients/assets/css/blue-lagoon-layout-fix.css') }}?v=1">
     @endif
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/layout-offset.css') }}?v=2">
 </head>
 
 <body class="tv-sea page-{{ str_replace('.', '-', request()->route()?->getName() ?? 'page') }}">

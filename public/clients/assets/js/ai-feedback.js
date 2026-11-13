@@ -44,7 +44,7 @@
     function hasText(node) { return node && (node.textContent || "").trim().length > 20; }
     function attach(node, feature) {
         if (!node || node.querySelector(":scope > .ai-fb") || !hasText(node)) return;
-        if (node.querySelector(".is-run, .ai-co__think, [aria-busy='true']")) return;   // đang chạy: chờ có kết quả
+        if (node.querySelector(".is-run, .ai-co__think, .ai-loading, [aria-busy='true']")) return;   // đang chạy: chờ có kết quả
         node.appendChild(chip(feature));
     }
     function scan() {
@@ -52,7 +52,8 @@
         if (r && !r.hidden) attach(r, "brief");
         var st = document.getElementById("aiStoryBody");
         if (st && !st.hidden) attach(st, "explain");
-        document.querySelectorAll("#aiCoFeed .ai-msg--ai").forEach(function (m) { attach(m, "copilot"); });
+        // gắn vào thân bong bóng (.ai-msg__b), không gắn thành phần tử con thứ ba của hàng flex (làm bong bóng bị bóp hẹp)
+        document.querySelectorAll("#aiCoFeed .ai-msg--ai > .ai-msg__b").forEach(function (m) { attach(m, "copilot"); });
         document.querySelectorAll("[data-ai-fb]").forEach(function (m) { attach(m, m.getAttribute("data-ai-fb")); });
     }
     var css = el("style");

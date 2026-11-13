@@ -16,22 +16,22 @@ Schedule::command('media:cleanup-orphans')->dailyAt('04:00')->withoutOverlapping
 // Tự hoàn tất đơn đã thanh toán của tour đã kết thúc, để khách đánh giá được ngay (L-F-11) - mỗi đêm.
 Schedule::command('bookings:complete-finished')->dailyAt('00:30')->withoutOverlapping();
 
-// Đối soát thanh toán trực tuyến (MoMo, ZaloPay) cho đơn sắp / vừa hết hạn giữ chỗ mà chưa nhận được thông báo của cổng — chạy TRƯỚC expire-holds (A1).
+// Đối soát thanh toán trực tuyến (VNPay, MoMo) cho đơn sắp / vừa hết hạn giữ chỗ mà chưa nhận được thông báo của cổng — chạy TRƯỚC expire-holds (A1).
 // QR chuyển khoản không có API hỏi trạng thái: chờ webhook SePay hoặc admin xác nhận.
 Artisan::command('payments:reconcile', function () {
     $svc = app(\App\Services\Payments\OnlinePaymentService::class);
     $ids = DB::table('tbl_booking as b')->join('tbl_checkout as c', 'c.bookingId', '=', 'b.bookingId')
-        ->where('b.bookingStatus', 'n')->where('c.paymentStatus', 'n')->whereIn('c.paymentMethod', ['momo', 'zalopay'])
+        ->where('b.bookingStatus', 'n')->where('c.paymentStatus', 'n')->whereIn('c.paymentMethod', ['vnpay', 'momo'])
         ->whereNotNull('c.providerTxnRef')->whereNotNull('b.holdExpiresAt')
         ->where('b.holdExpiresAt', '<=', now()->addMinutes(2))->limit(50)->pluck('b.bookingId');
     foreach ($ids as $id) {
         $r = $svc->queryAndSettle((int) $id);
         $this->line("#{$id}: {$r['message']}");
     }
-})->purpose('Hỏi MoMo / ZaloPay trạng thái các đơn sắp hết hạn giữ chỗ');
+})->purpose('Hỏi VNPay / MoMo trạng thái các đơn sắp hết hạn giữ chỗ');
 Schedule::command('payments:reconcile')->everyMinute()->withoutOverlapping();
 
-// Hoàn tiền qua API MoMo / ZaloPay: hỏi lại các lệnh đang xử lý và (nếu PAYMENT_REFUND_AUTO=true) tự gửi lệnh hoàn lần đầu. Mặc định tắt cả hai.
+// Hoàn tiền qua API VNPay / MoMo: hỏi lại các lệnh đang xử lý và (nếu PAYMENT_REFUND_AUTO=true) tự gửi lệnh hoàn lần đầu. Mặc định tắt cả hai.
 Artisan::command('payments:process-refunds', function () {
     if (!\App\Services\Payments\GatewayRefundService::enabled()) {
         $this->line('Hoàn qua cổng đang tắt (PAYMENT_REFUND_ENABLED=false).');

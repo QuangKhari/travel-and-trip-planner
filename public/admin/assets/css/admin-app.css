@@ -526,3 +526,27 @@ footer { display: none; }
 
 /* Biểu mẫu nằm trong thẻ: bo góc chân thẻ theo thẻ */
 .ad-card > form:last-child > .ad-card__foot:last-child, .ad-card > .ad-card__foot:last-child { border-radius: 0 0 var(--ad-r) var(--ad-r); }
+
+/* B5: khách không đến */
+.ad-noshow { position: relative; display: inline-block; }
+.ad-noshow > summary { list-style: none; cursor: pointer; }
+.ad-noshow > summary::-webkit-details-marker { display: none; }
+.ad-noshow__f { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; width: 300px; display: grid; gap: 8px; padding: 12px; background: #fff;
+    border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 12px 32px rgba(15, 23, 42, .14); }
+.ad-noshow__f input { width: 100%; }
+.ad-noshow__f small { color: #6b7280; font-size: 12px; }
+
+/* ---- Chống tràn ngang trên màn hình hẹp (quét giao diện 11/2026) ----
+ * Phần tử lưới / flex mặc định min-width:auto nên bị nội dung dài (bảng, select, tên tour) kéo rộng hơn màn hình. */
+.ad-grid > *, .ad-wrap > *, .ad-card, .ad-card__body, .ad-card__head > *, .ad-invoice__head > *, .ad-invoice__parties > * { min-width: 0; }
+.ad-card__head { flex-wrap: wrap; row-gap: 8px; }
+.ad-field, select.ad-field { max-width: 100%; }
+.x_content { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+@media (max-width: 767.98px) {
+    .ad-card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .ad-card > .ad-table, .ad-card__body > .ad-table { min-width: 560px; }
+    .ad-steps { flex-wrap: wrap; }
+    .right_col .table { min-width: 520px; }
+}
+.ad-top__title > small { color: #566a5e; }
+.right_col code { color: #b0275f; }

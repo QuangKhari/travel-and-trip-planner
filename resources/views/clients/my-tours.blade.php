@@ -38,7 +38,7 @@
 
             <div class="tv-orders" id="tvOrders">
                 @foreach ($myTours as $tour)
-                    @php $info = $statusMap[$tour->bookingStatus] ?? ['Không xác định', '']; @endphp
+                    @php $info = !empty($tour->noShowAt) ? ['Không tham gia', 'is-cancel'] : ($statusMap[$tour->bookingStatus] ?? ['Không xác định', '']); @endphp
                     <article class="tv-order" data-status="{{ $tour->bookingStatus }}">
                         <a class="tv-order__img"
                             href="{{ route('tour-booked', ['bookingId' => $tour->bookingId, 'checkoutId' => $tour->checkoutId]) }}">
@@ -66,7 +66,7 @@
                             <div class="tv-order__actions">
                                 <a href="{{ route('tour-booked', ['bookingId' => $tour->bookingId, 'checkoutId' => $tour->checkoutId]) }}"
                                     class="tv-btn-ghost tv-btn-sm">Chi tiết đơn</a>
-                                @if ($tour->bookingStatus == 'f')
+                                @if ($tour->bookingStatus == 'f' && empty($tour->noShowAt))
                                     <a href="{{ route('tour-detail', ['id' => $tour->tourId]) }}#danh-gia"
                                         class="tv-btn-solid tv-btn-sm">{{ $tour->rating ? 'Đã đánh giá' : 'Viết đánh giá' }}</a>
                                 @endif

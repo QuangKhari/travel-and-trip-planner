@@ -14,7 +14,7 @@
     $values = [
         ['Trải nghiệm thật', 'Lịch trình, ảnh và thông tin điểm đến được kiểm tra trước khi đăng.', 'fa-leaf', '#2f9e5b', '#e3f4e8'],
         ['Giá minh bạch', 'Giá và số chỗ còn lại lấy trực tiếp từ hệ thống, không phát sinh khi thanh toán.', 'fa-receipt', '#0b9488', '#dff4f1'],
-        ['An toàn, tin cậy', 'Thanh toán online qua MoMo, ZaloPay hoặc QR ngân hàng, thông tin cá nhân được mã hoá khi lưu.', 'fa-shield-check', '#2f6fdb', '#e2ecfc'],
+        ['An toàn, tin cậy', 'Thanh toán online qua VNPay, MoMo hoặc QR ngân hàng, thông tin cá nhân được mã hoá khi lưu.', 'fa-shield-check', '#2f6fdb', '#e2ecfc'],
         ['Luôn có người hỗ trợ', 'Hỏi qua trang liên hệ hoặc trợ lý chat, có người trả lời bạn.', 'fa-headset', '#d93a6c', '#fde3ec'],
     ];
 @endphp
@@ -101,7 +101,7 @@
                     nơi đang vào mùa, món nên thử, lịch trình mẫu và một bản đồ cảm hứng để bạn chọn chuyến đi hợp với
                     mình.</p>
                 <ul class="ab-checks">
-                    <li><i class="fas fa-check" aria-hidden="true"></i>Đặt tour, thanh toán MoMo / ZaloPay / QR</li>
+                    <li><i class="fas fa-check" aria-hidden="true"></i>Đặt tour, thanh toán VNPay / MoMo / QR</li>
                     <li><i class="fas fa-check" aria-hidden="true"></i>Gợi ý theo mùa và cảm hứng</li>
                     <li><i class="fas fa-check" aria-hidden="true"></i>Tự lên lịch trình</li>
                     <li><i class="fas fa-check" aria-hidden="true"></i>Cẩm nang, ẩm thực, lễ hội</li>
@@ -154,7 +154,7 @@
                 </div>
                 <div class="ab-step v3-rv" style="--d: 2">
                     <h3>Đặt tour</h3>
-                    <p>Chọn ngày, số khách, thanh toán MoMo, ZaloPay hoặc QR ngân hàng và nhận xác nhận qua email.</p>
+                    <p>Chọn ngày, số khách, thanh toán VNPay, MoMo hoặc QR ngân hàng và nhận xác nhận qua email.</p>
                     <a class="v3-more" href="{{ route('tours') }}">Xem tour</a>
                 </div>
             </div>

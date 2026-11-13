@@ -31,8 +31,8 @@ class BookingManagementController extends Controller
 
     public const STATUS = ['n' => ['warn', 'Chờ xác nhận'], 'y' => ['info', 'Đã xác nhận'], 'f' => ['ok', 'Hoàn tất'], 'c' => ['bad', 'Đã hủy']];
     public const PAY = ['n' => ['bad', 'Chưa thanh toán'], 'y' => ['ok', 'Đã thanh toán'], 'refund_pending' => ['violet', 'Chờ hoàn tiền'], 'refunded' => ['mute', 'Đã hoàn tiền']];
-    public const CANCEL_REASON = ['customer' => 'khách hủy', 'admin' => 'admin hủy', 'expired' => 'hết hạn giữ chỗ', 'shortfall' => 'Travela hủy (thiếu khách)', 'incident' => 'Travela hủy (sự cố)'];
-    public const METHOD = ['office-payment' => 'Tại văn phòng', 'momo' => 'Ví MoMo', 'zalopay' => 'ZaloPay', 'qr' => 'QR chuyển khoản', 'vnpay' => 'VNPay (cũ)', 'momo-payment' => 'MoMo', 'paypal-payment' => 'PayPal', 'bank-transfer' => 'Chuyển khoản'];
+    public const CANCEL_REASON = ['customer' => 'khách hủy', 'admin' => 'admin hủy', 'expired' => 'hết hạn giữ chỗ', 'shortfall' => 'Travela hủy (thiếu khách)', 'incident' => 'Travela hủy (sự cố)', 'no_show' => 'khách không đến'];
+    public const METHOD = ['office-payment' => 'Tại văn phòng', 'momo' => 'Ví MoMo', 'zalopay' => 'ZaloPay (cũ)', 'qr' => 'QR chuyển khoản', 'vnpay' => 'VNPay', 'momo-payment' => 'MoMo', 'paypal-payment' => 'PayPal', 'bank-transfer' => 'Chuyển khoản'];
 
     public function __construct()
     {
@@ -505,6 +505,22 @@ class BookingManagementController extends Controller
         app(\App\Services\BookingNotifier::class)->send($bookingId, $event);
     }
 
+    /** B5: khách không đến ngày khởi hành. */
+    public function noShow(Request $request, int $id, \App\Services\NoShowService $svc)
+    {
+        $d = $request->validate(['note' => 'nullable|string|max:255']);
+        $r = $svc->mark($id, (int) session('adminId'), $d['note'] ?? null);
+
+        return back()->with($r['ok'] ? 'success' : 'error', $r['message']);
+    }
+
+    public function noShowUndo(int $id, \App\Services\NoShowService $svc)
+    {
+        $r = $svc->undo($id, (int) session('adminId'));
+
+        return back()->with($r['ok'] ? 'success' : 'error', $r['message']);
+    }
+
     private function decorate($rows)
     {
         $today = now()->toDateString();
@@ -513,6 +529,8 @@ class BookingManagementController extends Controller
             $b->ended = $b->tripEnd < $today;
             $b->started = $b->tripStart <= $today;
             $b->canFinish = $b->bookingStatus === 'y' && $b->ended && $b->paymentStatus === 'y';
+            $b->noShow = !empty($b->noShowAt);
+            $b->canNoShow = !$b->noShow && in_array($b->bookingStatus, ['y', 'f'], true) && $b->started;
             $b->holdLeft = ($b->bookingStatus === 'n' && $b->holdExpiresAt) ? Carbon::parse($b->holdExpiresAt) : null;
 
             return $b;
@@ -531,6 +549,7 @@ class BookingManagementController extends Controller
             'c' => $rows->where('bookingStatus', 'c')->count(),
             'unpaid' => $rows->filter(fn($b) => $b->paymentStatus === 'n' && $b->bookingStatus !== 'c')->count(),
             'refund' => $rows->where('paymentStatus', 'refund_pending')->count(),
+            'noshow' => $rows->filter(fn($b) => !empty($b->noShowAt))->count(),
         ];
     }
 

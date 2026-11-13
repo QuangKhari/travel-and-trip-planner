@@ -9,7 +9,7 @@
         $why = $booking->bookingStatus === 'c' && !empty($booking->cancelReason) ? (BM::CANCEL_REASON[$booking->cancelReason] ?? $booking->cancelReason) : null;
         $detail = route('admin.booking-detail', ['id' => $booking->bookingId]);
     @endphp
-    <tr data-status="{{ $booking->bookingStatus }}" data-pay="{{ $booking->paymentStatus }}" data-href="{{ $detail }}" class="{{ $booking->bookingStatus === 'c' ? 'is-muted' : '' }}">
+    <tr data-status="{{ $booking->bookingStatus }}" data-pay="{{ $booking->paymentStatus }}" data-noshow="{{ !empty($booking->noShowAt) ? 1 : 0 }}" data-href="{{ $detail }}" class="{{ $booking->bookingStatus === 'c' ? 'is-muted' : '' }}">
         <td class="nowrap">
             <a href="{{ $detail }}"><b>{{ $booking->bookingCode }}</b></a>
             <span class="ad-sub">đặt {{ date('H:i d/m/Y', strtotime($booking->bookingDate)) }}</span>
@@ -27,6 +27,7 @@
             @if (!empty($booking->couponCode))<span class="ad-sub">mã {{ $booking->couponCode }}</span>@endif</td>
         <td>
             <span class="ad-badge ad-badge--{{ $sClass }}">{{ $sLabel }}</span>
+            @if (!empty($booking->noShowAt))<span class="ad-badge ad-badge--warn" title="{{ $booking->noShowNote }}">Không đến</span>@endif
             @if ($why)<span class="ad-sub">{{ $why }}</span>@endif
             @if ($booking->holdLeft && $booking->paymentStatus === 'n')
                 <span class="ad-sub" title="Hết hạn giữ chỗ lúc {{ $booking->holdLeft->format('H:i d/m/Y') }}">giữ chỗ đến {{ $booking->holdLeft->format('H:i d/m') }}</span>

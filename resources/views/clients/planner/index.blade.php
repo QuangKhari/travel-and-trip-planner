@@ -1,6 +1,6 @@
 @include('clients.blocks.header')
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=11">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai-chat.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai-chat.css') }}?v=4">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/nature-luxury-planner.css') }}?v=bl20261104">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
 

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Services\BookingService;
 use App\Services\Payments\MomoGateway;
 use App\Services\Payments\OnlinePaymentService;
+use App\Services\Payments\VnpayGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 /**
- * Thanh toán trực tuyến MoMo / ZaloPay / QR chuyển khoản (§7.6, N-02):
+ * Thanh toán trực tuyến VNPay / MoMo / QR chuyển khoản (§7.6, N-02):
  * chữ ký sai · số tiền lệch · thông báo gửi lặp (chỉ ghi nhận một lần) · tiền về sau khi hết hạn · trang quay về không đổi trạng thái ·
  * đối soát chủ động · webhook SePay · admin xác nhận tay. Khóa giả, cổng giả lập bằng Http::fake, không gọi cổng thật.
  */
@@ -21,8 +22,7 @@ class OnlinePaymentTest extends TestCase
     use RefreshDatabase;
 
     private const MOMO_SECRET = 'momo-secret-test';
-    private const ZP_KEY1 = 'zalopay-key1-test';
-    private const ZP_KEY2 = 'zalopay-key2-test';
+    private const VNP_SECRET = 'VNPAYSECRETTESTKEY0123456789ABCD';
 
     protected function setUp(): void
     {
@@ -31,8 +31,8 @@ class OnlinePaymentTest extends TestCase
             'app.url' => 'https://travela.test',
             'payments.momo' => ['enabled' => true, 'partner_code' => 'MOMOTEST', 'access_key' => 'ACCESSTEST', 'secret_key' => self::MOMO_SECRET,
                 'endpoint' => 'https://test-payment.momo.vn', 'request_type' => 'captureWallet', 'hold_minutes' => 15],
-            'payments.zalopay' => ['enabled' => true, 'app_id' => '2553', 'key1' => self::ZP_KEY1, 'key2' => self::ZP_KEY2,
-                'endpoint' => 'https://sb-openapi.zalopay.vn', 'hold_minutes' => 15],
+            'payments.vnpay' => ['enabled' => true, 'tmn_code' => 'TRAVELA1', 'hash_secret' => self::VNP_SECRET, 'bank_code' => '',
+                'pay_url' => 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html', 'api_url' => 'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction', 'hold_minutes' => 15],
             'payments.qr' => ['enabled' => true, 'bank_id' => 'MB', 'bank_name' => 'MB Bank', 'account_no' => '0123456789', 'account_name' => 'CONG TY TRAVELA',
                 'image_url' => 'https://img.vietqr.io/image', 'template' => 'compact2', 'sepay_api_key' => 'sepay-key-test', 'hold_minutes' => 30],
         ]);
@@ -40,8 +40,6 @@ class OnlinePaymentTest extends TestCase
         Http::fake([
             'test-payment.momo.vn/v2/gateway/api/create' => fn($r) => Http::response(['resultCode' => 0, 'message' => 'Thành công', 'orderId' => $r['orderId'],
                 'payUrl' => 'https://test-payment.momo.vn/v2/gateway/pay?t=' . $r['orderId']]),
-            'sb-openapi.zalopay.vn/v2/create' => fn($r) => Http::response(['return_code' => 1, 'return_message' => 'Giao dịch thành công',
-                'order_url' => 'https://qcgateway.zalopay.vn/openinapp?order=' . $r['app_trans_id']]),
         ]);
     }
 
@@ -85,12 +83,15 @@ class OnlinePaymentTest extends TestCase
         return $d;
     }
 
-    private function zpCallback(string $appTransId, int $amount, ?string $key2 = null): array
+    /** Tham số IPN / return của VNPay, ký HMAC-SHA512 như VNPay. */
+    private function vnp(string $txnRef, int $amount, string $code = '00', ?string $secret = null, string $status = '00'): array
     {
-        $data = json_encode(['app_id' => 2553, 'app_trans_id' => $appTransId, 'app_time' => 1, 'app_user' => 'travela', 'amount' => $amount, 'embed_data' => '{}',
-            'item' => '[]', 'zp_trans_id' => random_int(100000000, 999999999), 'server_time' => 1, 'channel' => 38, 'merchant_user_id' => 'x', 'user_fee_amount' => 0, 'discount_amount' => 0]);
+        $q = ['vnp_Amount' => $amount * 100, 'vnp_BankCode' => 'NCB', 'vnp_BankTranNo' => 'VNP' . random_int(1000, 9999), 'vnp_CardType' => 'ATM',
+            'vnp_OrderInfo' => 'Thanh toan don dat tour', 'vnp_PayDate' => now('Asia/Ho_Chi_Minh')->format('YmdHis'), 'vnp_ResponseCode' => $code,
+            'vnp_TmnCode' => 'TRAVELA1', 'vnp_TransactionNo' => (string) random_int(14000000, 14999999), 'vnp_TransactionStatus' => $status, 'vnp_TxnRef' => $txnRef];
+        $q['vnp_SecureHash'] = hash_hmac('sha512', VnpayGateway::hashData($q), $secret ?? self::VNP_SECRET);
 
-        return ['data' => $data, 'mac' => hash_hmac('sha256', $data, $key2 ?? self::ZP_KEY2), 'type' => 1];
+        return $q;
     }
 
     private function sepay(string $content, int $amount, string $key = 'sepay-key-test', string $type = 'in'): \Illuminate\Testing\TestResponse
@@ -113,9 +114,9 @@ class OnlinePaymentTest extends TestCase
         $tour = $this->tour();
         $user = $this->user();
         $this->withSession(['userId' => $user, 'username' => 'op'])->get("/booking/$tour")->assertOk()
-            ->assertSee('Thanh toán bằng ví MoMo')->assertSee('Thanh toán bằng ZaloPay')->assertSee('Chuyển khoản bằng mã QR');
+            ->assertSee('Thanh toán bằng ví MoMo')->assertSee('Thanh toán qua VNPay')->assertSee('Chuyển khoản bằng mã QR');
 
-        config(['payments.zalopay.enabled' => false]);
+        config(['payments.vnpay.enabled' => false]);
         $res = $this->withSession(['userId' => $user, 'username' => 'op'])->post('/create-booking', ['tourId' => $tour, 'fullName' => 'Khách', 'email' => 'k@example.com',
             'tel' => '0900000000', 'address' => 'HN', 'numAdults' => 1, 'numChildren' => 0, 'payment' => 'momo', 'couponCode' => '']);
         $id = (int) DB::table('tbl_booking')->value('bookingId');
@@ -124,7 +125,11 @@ class OnlinePaymentTest extends TestCase
             ->assertRedirectContains('test-payment.momo.vn/v2/gateway/pay');
         // cổng đang tắt thì không nhận
         $this->withSession(['userId' => $user, 'username' => 'op'])->post('/create-booking', ['tourId' => $tour, 'fullName' => 'Khách', 'email' => 'k@example.com',
+            'tel' => '0900000000', 'address' => 'HN', 'numAdults' => 1, 'numChildren' => 0, 'payment' => 'vnpay', 'couponCode' => ''])->assertSessionHasErrors('payment');
+        // ZaloPay đã bỏ
+        $this->withSession(['userId' => $user, 'username' => 'op'])->post('/create-booking', ['tourId' => $tour, 'fullName' => 'Khách', 'email' => 'k@example.com',
             'tel' => '0900000000', 'address' => 'HN', 'numAdults' => 1, 'numChildren' => 0, 'payment' => 'zalopay', 'couponCode' => ''])->assertSessionHasErrors('payment');
+        $this->get('/thanh-toan/ket-qua/zalopay')->assertNotFound();
     }
 
     public function test_momo_create_is_signed_and_sends_ipn_url_and_short_hold(): void
@@ -145,12 +150,27 @@ class OnlinePaymentTest extends TestCase
         $this->assertStringEndsWith('-2', DB::table('tbl_checkout')->where('bookingId', $id)->value('providerTxnRef'));
     }
 
-    public function test_public_url_overrides_app_url_for_notify(): void
+    public function test_public_url_overrides_app_url_for_return(): void
     {
         config(['payments.public_url' => 'https://abc-8000.asse.devtunnels.ms/']);
-        $this->book('zalopay');
-        Http::assertSent(fn($r) => str_contains($r->url(), '/v2/create') && $r['callback_url'] === 'https://abc-8000.asse.devtunnels.ms/thanh-toan/thong-bao/zalopay'
-            && str_starts_with($r['app_trans_id'], now('Asia/Ho_Chi_Minh')->format('ymd') . '_'));
+        [, , , $start] = $this->book('vnpay');
+        parse_str((string) parse_url($start['url'], PHP_URL_QUERY), $q);
+        $this->assertSame('https://abc-8000.asse.devtunnels.ms/thanh-toan/ket-qua/vnpay', $q['vnp_ReturnUrl']);
+    }
+
+    public function test_vnpay_url_is_signed_with_hmac_sha512(): void
+    {
+        [$id, $txn, , $start] = $this->book('vnpay', 2);
+        $this->assertStringStartsWith('https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?', $start['url']);
+        parse_str((string) parse_url($start['url'], PHP_URL_QUERY), $q);
+        $hash = $q['vnp_SecureHash'];
+        unset($q['vnp_SecureHash']);
+        $this->assertSame(hash_hmac('sha512', VnpayGateway::hashData($q), self::VNP_SECRET), $hash);
+        $this->assertSame('200000000', (string) $q['vnp_Amount']);   // × 100
+        $this->assertSame($txn, $q['vnp_TxnRef']);
+        $this->assertMatchesRegularExpression('/^[A-Za-z0-9 ]+$/', $q['vnp_OrderInfo']);
+        $this->assertSame('2.1.0', $q['vnp_Version']);
+        $this->assertTrue($q['vnp_ExpireDate'] > $q['vnp_CreateDate']);
     }
 
     // ---------------------------------------------------------------- MoMo IPN
@@ -230,40 +250,54 @@ class OnlinePaymentTest extends TestCase
 
         // đơn khác hết hạn, chỗ đã bán cho người khác -> hoàn 100%
         $tour2 = $this->tour(2);
-        [$b, $txnB] = $this->book('zalopay', 2, $tour2);
+        [$b, $txnB] = $this->book('vnpay', 2, $tour2);
         $this->travel(20)->minutes();
         app(BookingService::class)->expireHolds();
         $this->book('momo', 2, $tour2);
-        $this->postJson('/thanh-toan/thong-bao/zalopay', $this->zpCallback($txnB, 2000000))->assertJson(['return_code' => 1]);
+        $this->getJson('/thanh-toan/thong-bao/vnpay?' . http_build_query($this->vnp($txnB, 2000000)))->assertJson(['RspCode' => '00']);
         $this->assertSame(['c', 'refund_pending'], $this->st($b));
         $this->assertSame(100, (int) DB::table('tbl_refunds')->where('bookingId', $b)->value('percent'));
     }
 
-    // ---------------------------------------------------------------- ZaloPay
+    // ---------------------------------------------------------------- VNPay
 
-    public function test_zalopay_callback_mac_amount_and_duplicates(): void
+    public function test_vnpay_ipn_signature_amount_duplicates_and_failures(): void
     {
-        [$id, $txn] = $this->book('zalopay', 2);
-        $this->assertMatchesRegularExpression('/^\d{6}_TOUR\d{18}$/', $txn);
-        $this->postJson('/thanh-toan/thong-bao/zalopay', $this->zpCallback($txn, 2000000, 'khoa-sai'))->assertJson(['return_code' => -1]);
-        $this->postJson('/thanh-toan/thong-bao/zalopay', $this->zpCallback($txn, 5))->assertJson(['return_code' => 2]);
+        [$id, $txn] = $this->book('vnpay', 2);
+        $this->getJson('/thanh-toan/thong-bao/vnpay?' . http_build_query($this->vnp($txn, 2000000, '00', 'khoa-sai')))->assertJson(['RspCode' => '97']);
+        $this->getJson('/thanh-toan/thong-bao/vnpay?' . http_build_query($this->vnp($txn, 5)))->assertJson(['RspCode' => '04']);
+        $this->getJson('/thanh-toan/thong-bao/vnpay?' . http_build_query($this->vnp('KHONGCO123', 2000000)))->assertJson(['RspCode' => '01']);
+        // khách hủy (24): đơn vẫn chờ, VNPay nhận 00
+        $this->getJson('/thanh-toan/thong-bao/vnpay?' . http_build_query($this->vnp($txn, 2000000, '24', null, '02')))->assertJson(['RspCode' => '00']);
         $this->assertSame(['n', 'n'], $this->st($id));
-        $cb = $this->zpCallback($txn, 2000000);
-        $this->postJson('/thanh-toan/thong-bao/zalopay', $cb)->assertJson(['return_code' => 1, 'return_message' => 'success']);
-        $this->postJson('/thanh-toan/thong-bao/zalopay', $cb)->assertJson(['return_code' => 1]);
+        $this->assertSame('24', DB::table('tbl_checkout')->where('bookingId', $id)->value('responseCode'));
+
+        $ok = $this->vnp($txn, 2000000);
+        $this->getJson('/thanh-toan/thong-bao/vnpay?' . http_build_query($ok))->assertJson(['RspCode' => '00', 'Message' => 'Confirm Success']);
+        $this->getJson('/thanh-toan/thong-bao/vnpay?' . http_build_query($ok))->assertJson(['RspCode' => '02']);   // gửi lại: đã xác nhận
         $this->assertSame(['y', 'y'], $this->st($id));
+        $this->assertSame($ok['vnp_TransactionNo'], DB::table('tbl_checkout')->where('bookingId', $id)->value('providerTxnNo'));
         $this->assertSame(1, DB::table('tbl_audit_log')->where('action', 'payment.online')->count());
     }
 
-    public function test_zalopay_redirect_checksum_and_query(): void
+    public function test_vnpay_return_checks_hash_and_queries_when_ipn_missing(): void
     {
-        [$id, $txn, $user] = $this->book('zalopay', 1);
-        $q = ['appid' => '2553', 'apptransid' => $txn, 'pmcid' => '38', 'bankcode' => '', 'amount' => '1000000', 'discountamount' => '0', 'status' => '1'];
-        $q['checksum'] = hash_hmac('sha256', implode('|', $q), self::ZP_KEY2);
-        Http::fake(['sb-openapi.zalopay.vn/v2/query' => Http::response(['return_code' => 1, 'return_message' => 'Thành công', 'amount' => 1000000, 'zp_trans_id' => 230001])]);
-        $this->withSession(['userId' => $user])->get('/thanh-toan/ket-qua/zalopay?' . http_build_query($q))->assertOk()->assertSee('Thanh toán thành công');
+        [$id, $txn, $user] = $this->book('vnpay', 1);
+        Http::fake(['sandbox.vnpayment.vn/merchant_webapi/*' => Http::response(['vnp_ResponseId' => 'x', 'vnp_Command' => 'querydr', 'vnp_ResponseCode' => '00',
+            'vnp_Message' => 'OK', 'vnp_TmnCode' => 'TRAVELA1', 'vnp_TxnRef' => $txn, 'vnp_Amount' => 100000000, 'vnp_TransactionNo' => '14112233', 'vnp_TransactionType' => '01', 'vnp_TransactionStatus' => '00'])]);
+        $this->withSession(['userId' => $user])->get('/thanh-toan/ket-qua/vnpay?' . http_build_query(['vnp_Amount' => 1] + $this->vnp($txn, 1000000)))->assertOk()->assertSee('Không xác thực được');
+        $this->assertSame(['n', 'n'], $this->st($id));
+        $this->withSession(['userId' => $user])->get('/thanh-toan/ket-qua/vnpay?' . http_build_query($this->vnp($txn, 1000000)))->assertOk()->assertSee('Thanh toán thành công');
         $this->assertSame(['y', 'y'], $this->st($id));
-        Http::assertSent(fn($r) => str_contains($r->url(), '/v2/query') && $r['mac'] === hash_hmac('sha256', "2553|$txn|" . self::ZP_KEY1, self::ZP_KEY1));
+        $create = DB::table('tbl_checkout')->where('bookingId', $id)->value('providerCreateDate');
+        Http::assertSent(function ($r) use ($txn, $create) {
+            if (($r['vnp_Command'] ?? null) !== 'querydr') {
+                return false;
+            }
+            $data = implode('|', [$r['vnp_RequestId'], '2.1.0', 'querydr', 'TRAVELA1', $txn, $create, $r['vnp_CreateDate'], $r['vnp_IpAddr'], $r['vnp_OrderInfo']]);
+
+            return $r['vnp_TransactionDate'] === $create && hash_equals(hash_hmac('sha512', $data, self::VNP_SECRET), $r['vnp_SecureHash']);
+        });
     }
 
     // ---------------------------------------------------------------- QR chuyển khoản
@@ -315,6 +349,6 @@ class OnlinePaymentTest extends TestCase
         [$id, $txn, $user] = $this->book('momo', 1);
         $this->withSession(['userId' => $this->user()])->get(route('payment.pay', ['method' => 'momo', 'bookingId' => $id]))->assertNotFound();
         $this->postJson('/thanh-toan/thong-bao/momo', $this->momoIpn($txn, 1000000))->assertNoContent();
-        $this->assertFalse(app(OnlinePaymentService::class)->start($id, 'zalopay', null)['ok']);
+        $this->assertFalse(app(OnlinePaymentService::class)->start($id, 'vnpay', null)['ok']);
     }
 }

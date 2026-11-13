@@ -25,7 +25,7 @@
         busyBox = $("aiCoBusy"), busyT = $("aiCoBusyT"), pickBtn = $("aiCoPick"), ctxBox = $("aiCoCtx"), draft = $("aiDraft");
     var DAYC = ["#167A85", "#c9583a", "#4c57c9", "#a86a12", "#7a4bb3", "#2f7d32", "#b23a6b"];
     var OPN = { move: "chuyển", time: "giờ", reorder: "xếp lại", replace: "thay", add: "thêm", rainplan: "dự phòng" };
-    var st = { open: false, busy: false, ctl: null, t0: 0, tick: null, history: [], mentions: [], cur: null, picking: false, health: null, greeted: false, editedWhileBusy: false };
+    var st = { open: false, busy: false, ctl: null, t0: 0, tick: null, history: [], mentions: [], cur: null, picking: false, health: null, greeted: false, editedWhileBusy: false, alerts: null, intent: null };
 
     function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
     function button(cls, text, fn, title) { var b = el("button", cls, text); b.type = "button"; if (title) b.title = title; if (fn) b.addEventListener("click", fn); return b; }
@@ -81,7 +81,9 @@
         if (!st.open) return;
         var r = mapcol && !small() ? mapcol.getBoundingClientRect() : null;
         if (!r || r.width < 300 || r.height < 300) { drawer.removeAttribute("style"); return; }
-        var w = Math.min(420, r.width), top = Math.max(r.top, 8), bottom = Math.min(r.bottom, window.innerHeight - 8);
+        // cột bản đồ còn ở thấp (đầu trang): kéo ngăn lên để khung trò chuyện đủ cao (≥ 620px khi màn hình cho phép)
+        var w = Math.min(420, r.width), bottom = Math.min(r.bottom, window.innerHeight - 8);
+        var top = Math.max(8, Math.min(r.top, bottom - Math.min(620, window.innerHeight - 16)));
         drawer.style.top = top + "px";
         drawer.style.left = (r.right - w) + "px";
         drawer.style.right = "auto";
@@ -128,7 +130,7 @@
             else if (k === "route.long_day" || k === "route.long_leg") add("Đi lại nhiều ngày " + d, "Ngày " + d + " đi lại nhiều quá, sắp lại cho gọn.");
             else if (k === "context.rain") add("Nếu mưa ngày " + d, "Ngày " + d + " nếu mưa thì có nơi nào trong nhà gần đó?");
         });
-        [["Thêm quán cà phê", "Thêm một quán cà phê gần lịch ngày 1."], ["Cần mang gì?", "Chuyến này cần mang theo gì?"], ["Món nên thử?", "Đồ ăn phải thử ở đây là gì?"]]
+        [["Thêm quán cà phê", "Thêm một quán cà phê gần lịch ngày 1."], ["Cần mang gì?", "Chuyến này cần mang theo gì?"], ["Ngày nào nhẹ nhất?", "Ngày nào trong chuyến đang nhẹ nhất?"]]
             .forEach(function (x) { if (out.length < 4) out.push({ label: x[0], prompt: x[1] }); });
         return out;
     }
@@ -152,7 +154,9 @@
         feed.textContent = "";
         var box = el("div", "ai-co__idle");
         box.appendChild(el("h3", null, "Bạn muốn chỉnh gì trong chuyến này?"));
-        box.appendChild(el("p", null, "Nhờ sửa: La bàn đề xuất, công cụ Sức khỏe chuyến đi kiểm tra giờ mở cửa, trùng giờ, quãng đường; lịch chỉ đổi khi bạn bấm Áp dụng. Hỏi (“cần mang áo mưa không?”): La bàn trả lời từ lịch của bạn và cẩm nang Travela, có ghi nguồn."));
+        if (cfg.llm === false) box.appendChild(el("p", null, "Chọn một chủ đề ở trên (món ăn, điểm tham quan, lễ hội, cảnh báo) để La bàn gợi ý từ dữ liệu đã duyệt của Travela; mỗi gợi ý được kiểm tra giờ mở cửa và quãng đường trước khi bạn bấm Áp dụng. Bạn cũng có thể hỏi về chuyến (“cần mang áo mưa không?”)."));
+        else box.appendChild(el("p", null, "Nhờ sửa: La bàn đề xuất, công cụ Sức khỏe chuyến đi kiểm tra giờ mở cửa, trùng giờ, quãng đường; lịch chỉ đổi khi bạn bấm Áp dụng. Hỏi (“cần mang áo mưa không?”): La bàn trả lời từ lịch của bạn và cẩm nang Travela, có ghi nguồn."));
+        if (st.alerts && st.alerts.length) box.appendChild(alertBox());
         var acts = el("div", "ai-co__acts");
         quick().forEach(function (x) {
             var b = button("ai-act" + (x.hot ? " is-hot" : ""), null, function () { send(x.prompt); });
@@ -251,6 +255,7 @@
                     st.history.push({ role: "ai", text: plain(r.say) });
                     st.history = st.history.slice(-6);
                     if (r.kind === "proposal") proposal(bubble, r);
+                    else if (r.kind === "suggest") suggestView(bubble, r);
                     else if (r.kind === "answer") answer(bubble, r);
                     else reply(bubble, r);
                 })
@@ -412,6 +417,197 @@
         sec.classList.add("ai-flash-day");
         setTimeout(function () { sec.classList.remove("ai-flash-day"); }, 1500);
     }
+
+    /* ---------------- Gợi ý để CHỌN: món ăn, điểm tham quan, lễ hội, cảnh báo (máy chủ: TripSuggest, chạy bằng luật) ----------------
+     * POST {suggestUrl} {intent, day?} -> {kind:"suggest", cards:[{kind,title,sub,text,tags,img,url,tone,source,actions:[{label,apply|prompt|url,pickDay}]}], more}
+     * POST {suggestApplyUrl} {op,type,refId,toDay,item,startMin,rev} -> phiếu đề xuất như Copilot (kiểm chứng trước, chỉ đổi lịch khi bấm Áp dụng)
+     */
+    var TOPICS = [["food", "Món nên thử", "fa-utensils"], ["places", "Điểm tham quan", "fa-map-marker-alt"], ["festival", "Lễ hội dịp đi", "fa-calendar-alt"], ["alerts", "Cảnh báo", "fa-exclamation-triangle"]];
+    var topicBox = $("aiCoTopics");
+    var ICON = { food: "fa-utensils", place: "fa-map-marker-alt", event: "fa-calendar-alt", alert: "fa-exclamation-triangle" };
+    function renderTopics() {
+        if (!topicBox || !cfg.suggestUrl) return;
+        topicBox.textContent = "";
+        TOPICS.forEach(function (t) {
+            var b = button("ai-topic" + (t[0] === "alerts" && st.alerts && st.alerts.length ? " is-warn" : ""), null, function () { askSuggest(t[0], t[1]); });
+            var i = el("i", "fas " + t[2]); i.setAttribute("aria-hidden", "true");
+            b.appendChild(i);
+            b.appendChild(el("span", null, t[1]));
+            if (t[0] === "alerts" && st.alerts && st.alerts.length) b.appendChild(el("b", "ai-topic__n", String(st.alerts.length)));
+            topicBox.appendChild(b);
+        });
+    }
+    function alertBox() {
+        var n = st.alerts.length, a = st.alerts[0];
+        var box = el("div", "ai-alertbox is-" + (a.tone || "warn"));
+        var i = el("i", "fas fa-exclamation-triangle"); i.setAttribute("aria-hidden", "true");
+        box.appendChild(i);
+        var t = el("div");
+        t.appendChild(el("b", null, n === 1 ? a.title : "La bàn thấy " + n + " cảnh báo cho lịch của bạn"));
+        t.appendChild(el("small", null, n === 1 ? (a.sub || "") : a.title + (n > 1 ? " và " + (n - 1) + " điều khác" : "")));
+        box.appendChild(t);
+        box.appendChild(button("ai-alertbox__go", "Xem cách đổi lịch", function () { askSuggest("alerts", "Cảnh báo cho chuyến"); }));
+        return box;
+    }
+    function setAlertBadge(n) {
+        ["aiCoOpen", "aiCoOpen2", "tpuxMobAi"].forEach(function (id) {
+            var b = $(id);
+            if (!b) return;
+            var x = b.querySelector(".ai-co-badge");
+            if (!n) { if (x) x.remove(); b.removeAttribute("data-alerts"); return; }
+            if (!x) { x = el("span", "ai-co-badge"); b.appendChild(x); }
+            x.textContent = n > 9 ? "9+" : String(n);
+            x.setAttribute("aria-label", n + " cảnh báo cho chuyến");
+            b.setAttribute("data-alerts", String(n));
+        });
+    }
+    var alertTimer = null;
+    function checkAlerts() {
+        if (!cfg.suggestUrl) return;
+        post(cfg.suggestUrl, { intent: "alerts" }).then(function (r) {
+            st.alerts = (r && r.cards) || [];
+            setAlertBadge(st.alerts.length);
+            renderTopics();
+            var idleBox = feed.querySelector(".ai-co__idle");
+            if (idleBox && !idleBox.querySelector(".ai-alertbox") && st.alerts.length) idleBox.insertBefore(alertBox(), idleBox.children[2] || null);
+        }).catch(function () { /* cảnh báo là phụ */ });
+    }
+    function askSuggest(intent, label, day) {
+        if (st.busy || !cfg.suggestUrl) return;
+        if (st.cur && st.cur.status === "pending") setStatus(st.cur, "skipped");
+        if (!feed.querySelector(".ai-msg")) feed.textContent = "";
+        feed.appendChild(el("div", "ai-msg ai-msg--me", label));
+        var bubble = aiBubble();
+        bubble.body.appendChild(el("p", "ai-small ai-loading", intent === "alerts" ? "Đang đối chiếu dự báo theo giờ, giờ mở cửa và cảnh báo điểm đến…" : "Đang tìm trong dữ liệu đã duyệt của Travela…"));
+        scroll();
+        setBusy(true);
+        post(cfg.suggestUrl, { intent: intent, day: day || null }, st.ctl ? st.ctl.signal : undefined)
+            .then(function (r) {
+                bubble.body.textContent = "";
+                st.history.push({ role: "user", text: label });
+                st.history.push({ role: "ai", text: plain(r.say) });
+                st.history = st.history.slice(-6);
+                suggestView(bubble, r);
+            })
+            .catch(function (s) {
+                bubble.body.textContent = "";
+                bubble.body.appendChild(el("p", "ai-err", s === 429 ? "Bạn bấm hơi nhanh. Đợi một phút rồi thử lại nhé." : "La bàn chưa lấy được gợi ý lúc này. Lịch của bạn không đổi."));
+            })
+            .then(function () { setBusy(false); scroll(); renderCtx(); });
+    }
+    function suggestView(bubble, r) {
+        if (!r || r.kind !== "suggest") { reply(bubble, r || {}); return; }
+        st.intent = r.intent;
+        bubble.body.appendChild(segs(el("p"), r.say));
+        if (r.intent === "alerts") { st.alerts = r.cards || []; setAlertBadge(st.alerts.length); renderTopics(); }
+        if ((r.cards || []).length) {
+            var list = el("div", "ai-sg");
+            list.setAttribute("role", "list");
+            r.cards.forEach(function (c) { list.appendChild(sgCard(c, r)); });
+            bubble.body.appendChild(list);
+        }
+        if ((r.more || []).length) {
+            var more = el("div", "ai-sg__more");
+            more.appendChild(el("span", "ai-small", "Xem thêm:"));
+            r.more.forEach(function (m) { more.appendChild(button("ai-chip", m.label, function () { askSuggest(m.intent, m.label); })); });
+            bubble.body.appendChild(more);
+        }
+    }
+    function sgCard(c, r) {
+        var card = el("article", "ai-sg__c is-" + c.kind + (c.tone ? " is-" + c.tone : ""));
+        card.setAttribute("role", "listitem");
+        var h = el("header", "ai-sg__h");
+        if (c.img) {
+            var im = el("img", "ai-sg__img"); im.src = c.img; im.alt = ""; im.loading = "lazy"; im.width = 56; im.height = 56;
+            im.addEventListener("error", function () { im.remove(); });
+            h.appendChild(im);
+        } else {
+            var ic = el("span", "ai-sg__ic"); var ii = el("i", "fas " + (ICON[c.kind] || "fa-map-marker-alt")); ii.setAttribute("aria-hidden", "true"); ic.appendChild(ii); h.appendChild(ic);
+        }
+        var tt = el("div", "ai-sg__tt");
+        if (c.url) { var a = el("a", "ai-sg__name", c.title); a.href = c.url; a.target = "_blank"; a.rel = "noopener"; tt.appendChild(a); }
+        else tt.appendChild(el("b", "ai-sg__name", c.title));
+        if (c.sub) {
+            if (c.item && c.sub) tt.appendChild(button("ai-sg__sub ai-sg__sub--btn", c.sub, function () { if (c.day) jumpDay(c.day); }, "Xem trong lịch"));
+            else tt.appendChild(el("small", "ai-sg__sub", c.sub));
+        }
+        h.appendChild(tt);
+        card.appendChild(h);
+        if ((c.tags || []).length) {
+            var tg = el("div", "ai-sg__tags");
+            c.tags.forEach(function (t) { tg.appendChild(el("span", "ai-sg__tag" + (t.tone ? " is-" + t.tone : ""), t.t)); });
+            card.appendChild(tg);
+        }
+        if (c.text) card.appendChild(el("p", "ai-sg__t", c.text));
+        if (c.source) card.appendChild(el("p", "ai-sg__src", "Nguồn: " + c.source));
+        var acts = el("div", "ai-sg__acts");
+        (c.actions || []).forEach(function (x) {
+            if (x.url) {
+                var l = el("a", "ai-sg__btn ai-sg__btn--link", x.label); l.href = x.url; l.target = "_blank"; l.rel = "noopener"; acts.appendChild(l);
+            } else if (x.prompt) {
+                acts.appendChild(button("ai-sg__btn" + (x.primary ? " is-primary" : ""), x.label, function () { send(x.prompt); }));
+            } else if (x.apply) {
+                var ap = Object.assign({}, x.apply);
+                var b = button("ai-sg__btn" + (x.primary ? " is-primary" : ""), x.label, function () { applySg(ap, b); }, x.hint || "");
+                if (x.pickDay && r.days > 0) {
+                    var sel = el("select", "ai-sg__day no-nice");
+                    sel.setAttribute("aria-label", "Chọn ngày để thêm " + c.title);
+                    for (var d = 1; d <= r.days; d++) {
+                        var o = el("option", null, (r.dayLabels && r.dayLabels[d]) || ("Ngày " + d)); o.value = String(d);
+                        if (ap.toDay === d) o.selected = true;
+                        sel.appendChild(o);
+                    }
+                    var o2 = el("option", null, "Đã lưu (chưa xếp ngày)"); o2.value = ""; if (!ap.toDay) o2.selected = true; sel.appendChild(o2);
+                    sel.addEventListener("change", function () {
+                        ap.toDay = sel.value ? +sel.value : null;
+                        b.textContent = ap.toDay ? "Thêm vào ngày " + ap.toDay : "Thêm vào Đã lưu";
+                    });
+                    var g = el("span", "ai-sg__pick"); g.appendChild(b); g.appendChild(sel); acts.appendChild(g);
+                } else acts.appendChild(b);
+            }
+        });
+        if (acts.childNodes.length) card.appendChild(acts);
+        return card;
+    }
+    function applySg(ap, btn) {
+        var p = P();
+        if (st.busy || !p) return;
+        if (st.cur && st.cur.status === "pending") setStatus(st.cur, "skipped");
+        var bubble = aiBubble();
+        bubble.body.appendChild(el("p", "ai-small ai-loading", "Đang kiểm tra giờ mở cửa, trùng giờ và quãng đường…"));
+        scroll();
+        setBusy(true);
+        btn.disabled = true;
+        var go = function () {
+            post(cfg.suggestApplyUrl, Object.assign({}, ap, { rev: p.state().rev }), st.ctl ? st.ctl.signal : undefined)
+                .then(function (r) {
+                    bubble.body.textContent = "";
+                    if (r.kind === "proposal") { proposal(bubble, r); return; }
+                    reply(bubble, r);
+                    if (r.stale && st.intent) bubble.body.appendChild(button("ai-chip", "Gợi ý lại", function () { askSuggest(st.intent, "Gợi ý lại"); }));
+                })
+                .catch(function () { bubble.body.textContent = ""; bubble.body.appendChild(el("p", "ai-err", "Chưa kiểm tra được gợi ý này. Lịch của bạn không đổi.")); })
+                .then(function () { setBusy(false); btn.disabled = false; scroll(); });
+        };
+        if (p.state().dirty) {
+            waitSaved(8000).then(function (ok) {
+                if (!ok) { bubble.body.textContent = ""; bubble.body.appendChild(el("p", "ai-err", "Chưa lưu được thay đổi của bạn. Bấm “Lưu ngay” rồi thử lại.")); setBusy(false); btn.disabled = false; return; }
+                go();
+            });
+            p.saveNow();
+        } else go();
+    }
+    renderTopics();
+    setTimeout(checkAlerts, 1500);
+    // ?la-ban=food|places|festival|alerts (từ trang trò chuyện tạo chuyến): mở ngăn và hỏi ngay chủ đề đó
+    (function () {
+        var m = /[?&]la-ban=(food|places|festival|alerts)\b/.exec(location.search);
+        if (!m || !cfg.suggestUrl) return;
+        var t = TOPICS.filter(function (x) { return x[0] === m[1]; })[0];
+        try { history.replaceState(null, "", location.pathname + location.search.replace(/([?&])la-ban=[a-z]+&?/, "$1").replace(/[?&]$/, "") + location.hash); } catch (e) { /* bỏ qua */ }
+        setTimeout(function () { setOpen(true); askSuggest(m[1], t ? t[1] : "Gợi ý"); }, 400);
+    })();
+    document.addEventListener("tp:saved", function () { clearTimeout(alertTimer); alertTimer = setTimeout(checkAlerts, 4000); });
 
     /* ---------------- thẻ đề xuất ---------------- */
     function proposal(bubble, r) {

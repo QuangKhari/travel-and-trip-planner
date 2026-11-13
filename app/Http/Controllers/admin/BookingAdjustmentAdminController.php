@@ -61,4 +61,22 @@ class BookingAdjustmentAdminController extends Controller
 
         return back()->with($res['ok'] ? 'success' : 'error', $res['message']);
     }
+
+    /** Hoàn phần dư qua API cổng (VNPay / MoMo). */
+    public function gateway(Request $request, int $id, \App\Services\Payments\GatewayRefundService $gw)
+    {
+        $res = $gw->processAdjustment($id, (int) session('adminId'), $request->ip());
+        AuditLog::record('adjust.gateway.request', 'booking_adjustment', $id, 'Gửi lệnh hoàn phần dư qua cổng: ' . $res['status'] . ' — ' . $res['message']);
+        AdminBadges::forget();
+
+        return back()->with($res['ok'] ? 'success' : 'error', $res['message']);
+    }
+
+    public function gatewaySync(Request $request, int $id, \App\Services\Payments\GatewayRefundService $gw)
+    {
+        $res = $gw->syncAdjustment($id, (int) session('adminId'), $request->ip());
+        AdminBadges::forget();
+
+        return back()->with($res['ok'] ? 'success' : 'error', $res['message']);
+    }
 }

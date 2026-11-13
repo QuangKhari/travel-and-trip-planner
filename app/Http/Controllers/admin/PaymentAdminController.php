@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Thanh toán trực tuyến (MoMo, ZaloPay, QR chuyển khoản): nhật ký tạo giao dịch / khách quay về / thông báo của cổng / đối soát,
+ * Thanh toán trực tuyến (VNPay, MoMo, QR chuyển khoản): nhật ký tạo giao dịch / khách quay về / thông báo của cổng / đối soát,
  * nút hỏi lại cổng cho từng đơn, và nút xác nhận đã nhận tiền cho đơn chuyển khoản QR.
  */
 class PaymentAdminController extends Controller
@@ -20,7 +20,7 @@ class PaymentAdminController extends Controller
     {
         $title = 'Thanh toán trực tuyến';
         $kind = in_array($request->query('kind'), self::KINDS, true) ? $request->query('kind') : null;
-        $provider = in_array($request->query('provider'), ['momo', 'zalopay', 'qr'], true) ? $request->query('provider') : null;
+        $provider = in_array($request->query('provider'), ['vnpay', 'momo', 'qr', 'zalopay'], true) ? $request->query('provider') : null;
         $q = DB::table('tbl_payment_logs as l')->leftJoin('tbl_booking as b', 'b.bookingId', '=', 'l.bookingId')
             ->select('l.*', 'b.bookingCode', 'b.bookingStatus')->orderByDesc('l.logId');
         if ($kind) {
@@ -37,7 +37,7 @@ class PaymentAdminController extends Controller
         }
         $rows = $q->paginate(30)->withQueryString();
 
-        $online = ['momo', 'zalopay', 'qr'];
+        $online = ['vnpay', 'momo', 'qr'];
         $today = now()->startOfDay();
         $stats = [
             'paidToday' => DB::table('tbl_checkout')->whereIn('paymentMethod', $online)->where('paidAt', '>=', $today)->count(),

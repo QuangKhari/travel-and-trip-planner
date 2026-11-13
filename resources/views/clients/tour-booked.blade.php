@@ -10,6 +10,11 @@
         'c' => ['Đã hủy', 'is-cancel'],
     ];
     [$statusLabel, $statusClass] = $statusMap[$status] ?? ['Không xác định', ''];
+    // B5: khách không có mặt ngày khởi hành (admin đánh dấu) — không còn là "Hoàn thành"
+    $noShow = !empty($b->noShowAt);
+    if ($noShow) {
+        [$statusLabel, $statusClass] = ['Không tham gia', 'is-cancel'];
+    }
 
     $start = \Carbon\Carbon::parse($b->startDate);
     $end = \Carbon\Carbon::parse($b->endDate);
@@ -60,9 +65,15 @@
         </header>
 
         {{-- Tiến trình đơn (đơn đã hủy thì hiện thông báo thay vì tiến trình) --}}
-        @if ($status === 'c')
+        @if ($noShow)
             <div class="bk-alert bk-alert--bad" role="status">
-                <b>Đơn này đã được hủy{{ ['expired' => ' vì quá hạn giữ chỗ (chưa đến văn phòng xác nhận)', 'admin' => ' bởi Travela', 'shortfall' => ' vì tour không đủ khách tối thiểu — Travela hủy khởi hành', 'incident' => ' vì sự cố khiến Travela không thể tổ chức khởi hành', 'customer' => ' theo yêu cầu của bạn'][$tour_booked->cancelReason ?? ''] ?? '' }}.</b> Chỗ đã được trả lại cho tour. Bạn có thể
+                <b>Bạn không có mặt vào ngày khởi hành {{ $start->format('d/m/Y') }}.</b>
+                Theo chính sách hủy, đơn vắng mặt không được hoàn tiền. Nếu có nhầm lẫn, vui lòng
+                <a href="{{ route('contact') }}">liên hệ Travela</a> trong 72 giờ để được kiểm tra lại.
+            </div>
+        @elseif ($status === 'c')
+            <div class="bk-alert bk-alert--bad" role="status">
+                <b>Đơn này đã được hủy{{ ['expired' => ' vì quá hạn giữ chỗ (chưa đến văn phòng xác nhận)', 'admin' => ' bởi Travela', 'shortfall' => ' vì tour không đủ khách tối thiểu — Travela hủy khởi hành', 'incident' => ' vì sự cố khiến Travela không thể tổ chức khởi hành', 'customer' => ' theo yêu cầu của bạn', 'no_show' => ' vì bạn không có mặt ngày khởi hành'][$tour_booked->cancelReason ?? ''] ?? '' }}.</b> Chỗ đã được trả lại cho tour. Bạn có thể
                 <a href="{{ route('tours') }}">xem các tour khác</a> bất cứ lúc nào.
             </div>
         @else
@@ -150,7 +161,7 @@
                             <b>{{ $start->format('d/m/Y') }}</b>.
                         </p>
                     </section>
-                @elseif ($status === 'f')
+                @elseif ($status === 'f' && !$noShow)
                     <section class="bk-next bk-next--done" aria-labelledby="bkNextH">
                         <h2 id="bkNextH"><i class="fal fa-star" aria-hidden="true"></i> Chuyến đi thế nào?</h2>
                         <p>Cảm ơn bạn đã đồng hành. Một đánh giá ngắn giúp những du khách sau chọn tour dễ hơn.</p>

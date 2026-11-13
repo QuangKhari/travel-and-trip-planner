@@ -37,7 +37,7 @@ class TourDetailController extends Controller
 
         // Chỉ hiện form đánh giá cho khách CÓ đơn hoàn tất và chưa đánh giá (máy chủ cũng kiểm lại khi gửi)
         $checkReviewExist = $this->tours->checkReviewExist($id, $userId);
-        $completed = $userId && DB::table('tbl_booking')->where('userId', $userId)->where('tourId', $id)->where('bookingStatus', 'f')->exists();
+        $completed = $userId && DB::table('tbl_booking')->where('userId', $userId)->where('tourId', $id)->where('bookingStatus', 'f')->whereNull('noShowAt')->exists();
         $checkDisplay = !$checkReviewExist && $completed ? '' : 'hide';
 
         $related = $this->relatedTours($tourDetail);
@@ -81,6 +81,7 @@ class TourDetailController extends Controller
             ->where('userId', $userId)
             ->where('tourId', $tourId)
             ->where('bookingStatus', 'f')
+            ->whereNull('noShowAt')          // B5: khách không đến thì không được đánh giá
             ->exists();
 
         if (!$completed) {

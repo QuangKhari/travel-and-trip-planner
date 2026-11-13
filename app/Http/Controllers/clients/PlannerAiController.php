@@ -7,6 +7,7 @@ use App\Services\Ai\Ask\QuestionRouter;
 use App\Services\Ai\Ask\TripAskService;
 use App\Services\Ai\Brief\BriefService;
 use App\Services\Ai\Copilot\CopilotService;
+use App\Services\Ai\Copilot\TripSuggest;
 use App\Services\Ai\Explain\ExplainService;
 use App\Services\Planner\PlannerGate;
 use App\Services\Planner\PlannerService;
@@ -61,12 +62,45 @@ class PlannerAiController extends Controller
             'history.*.text' => ['required', 'string', 'max:600'],
         ]);
 
+        // Gợi ý món ăn / địa điểm / lễ hội / cảnh báo: chạy bằng luật trên dữ liệu đã duyệt, trả THẺ để chọn (không cần LLM)
+        if (config('ai.features.suggest', true) && ($intent = TripSuggest::intent($v['text'], $v['mentions'] ?? []))) {
+            return response()->json(app(TripSuggest::class)->suggest($trip, $intent, TripSuggest::dayOf($v['text'])));
+        }
+
         // F5: câu HỎI (không có động từ sửa lịch) -> trả lời có nguồn từ lịch + cẩm nang, không đổi lịch, không gọi Copilot
         if (config('ai.features.ask', true) && QuestionRouter::isQuestion($v['text'])) {
             return response()->json(app(TripAskService::class)->ask($trip, $this->uid() ?: null, $v['text']));
         }
 
         return response()->json($copilot->chat($trip, $this->uid() ?: null, $v['text'], $v['mentions'] ?? [], $v['history'] ?? []));
+    }
+
+    /** POST /len-ke-hoach/{id}/la-ban/goi-y {intent, day?}: thẻ gợi ý (nút nhanh, và kiểm tra cảnh báo chủ động khi mở trình soạn). */
+    public function suggest(Request $request, int $id, TripSuggest $suggest): JsonResponse
+    {
+        $trip = (app(TripSharing::class)->editable($this->uid(), $id) ?? abort(404))['trip'];
+        abort_unless(config('ai.features.suggest', true), 404);
+        $v = $request->validate(['intent' => ['required', 'in:' . implode(',', TripSuggest::INTENTS)], 'day' => ['nullable', 'integer', 'min:1', 'max:60']]);
+
+        return response()->json($suggest->suggest($trip, $v['intent'], $v['day'] ?? null));
+    }
+
+    /** POST /len-ke-hoach/{id}/la-ban/goi-y/ap-dung {op, type?, refId?, toDay?, item?, startMin?, rev}: nút trên thẻ -> phiếu kiểm chứng. */
+    public function suggestApply(Request $request, int $id, TripSuggest $suggest, CopilotService $copilot): JsonResponse
+    {
+        abort_unless(config('ai.features.suggest', true), 404);
+        $trip = (app(TripSharing::class)->editable($this->uid(), $id) ?? abort(404))['trip'];
+        $v = $request->validate([
+            'op' => ['required', 'in:add,replace,move,time'],
+            'type' => ['required_if:op,add,replace', 'nullable', 'in:place,food,event,experience'],
+            'refId' => ['required_if:op,add,replace', 'nullable', 'integer', 'min:1'],
+            'toDay' => ['nullable', 'integer', 'min:1', 'max:60'],
+            'item' => ['required_if:op,replace,move,time', 'nullable', 'string', 'regex:/^i\d{1,4}$/'],
+            'startMin' => ['required_if:op,time', 'nullable', 'integer', 'min:300', 'max:1380'],
+            'rev' => ['required', 'integer', 'min:0'],
+        ]);
+
+        return response()->json($suggest->apply($trip, $this->uid() ?: null, $v, $copilot));
     }
 
     public function recheck(Request $request, int $id, CopilotService $copilot): JsonResponse

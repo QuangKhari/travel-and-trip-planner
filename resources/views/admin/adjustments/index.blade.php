@@ -27,7 +27,17 @@
                                 @elseif ($r->moneyStatus === 'refunded')<span class="ad-badge ad-badge--ok">Đã hoàn {{ $r->method }}</span>
                                 @else<span class="ad-badge ad-badge--mute">Không phát sinh</span>@endif</td>
                             <td>{{ $r->by === 'admin' ? 'Admin' : 'Khách' }}</td>
-                            <td class="num">@if (in_array($r->moneyStatus, ['pending_collect', 'pending_refund'], true))
+                            <td class="num">@if ($r->moneyStatus === 'pending_refund' && \App\Services\Payments\GatewayRefundService::enabled() && \App\Services\Payments\GatewayRefundService::adjustReady())
+                                    {{-- hoàn phần dư qua API VNPay / MoMo (cùng cơ chế an toàn với trang Hoàn tiền) --}}
+                                    @if (($r->gatewayStatus ?? null) === 'processing')
+                                        <span class="ad-badge ad-badge--warn" title="{{ $r->gatewayMessage }}">Cổng đang xử lý</span>
+                                        <form method="POST" action="{{ route('admin.adjustments.gateway.sync', $r->adjustId) }}" style="display:inline">@csrf<button class="ad-btn ad-btn--sm" type="submit">Kiểm tra trạng thái</button></form>
+                                    @else
+                                        @if (($r->gatewayStatus ?? null) === 'failed')<span class="ad-sub" style="color:#b42318">{{ $r->gatewayMessage }}</span>@endif
+                                        <form method="POST" action="{{ route('admin.adjustments.gateway', $r->adjustId) }}" style="display:inline">@csrf<button class="ad-btn ad-btn--sm" type="submit" data-confirm="Gửi lệnh hoàn {{ number_format($r->settleAmount, 0, ',', '.') }} đ qua cổng thanh toán? Đây là tiền thật.">Hoàn qua cổng</button></form>
+                                    @endif
+                                @endif
+                                @if (in_array($r->moneyStatus, ['pending_collect', 'pending_refund'], true) && ($r->gatewayStatus ?? null) !== 'processing')
                                 <form method="POST" action="{{ route('admin.adjustments.settle', $r->adjustId) }}" style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">@csrf
                                     <select name="method"><option>Tiền mặt</option><option>Chuyển khoản</option><option>Ví điện tử</option></select>
                                     <input name="reference" maxlength="80" placeholder="Mã giao dịch" style="width:130px">

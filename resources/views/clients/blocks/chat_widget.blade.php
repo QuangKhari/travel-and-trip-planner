@@ -13,7 +13,7 @@
     $chatFaq = [
         'Chính sách hủy tour' => "Bạn có thể tự hủy đơn trong mục “Tour đã đặt” khi còn hơn {$cancelDays} ngày trước ngày khởi hành. Gần ngày hơn, vui lòng nhắn cho tư vấn viên để được hỗ trợ.",
         'Thời gian giữ chỗ' => "Sau khi đặt, chỗ của bạn được giữ {$holdHours} giờ để hoàn tất thanh toán. Quá hạn mà đơn chưa được xác nhận, đơn sẽ tự hủy.",
-        'Cách thanh toán' => 'Bạn có thể thanh toán trực tuyến bằng ví MoMo, ZaloPay hoặc quét mã QR chuyển khoản khi đặt tour; đơn được xác nhận ngay khi nhận được tiền. Hoặc giữ chỗ và thanh toán tại văn phòng.',
+        'Cách thanh toán' => 'Bạn có thể thanh toán trực tuyến bằng VNPay, ví MoMo hoặc quét mã QR chuyển khoản khi đặt tour; đơn được xác nhận ngay khi nhận được tiền. Hoặc giữ chỗ và thanh toán tại văn phòng.',
     ];
     // Lưu ý: không viết json nhiều dòng bằng lệnh Blade; Blade cắt chuỗi theo dấu phẩy nên sẽ gây ParseError.
     $chatConfig = [

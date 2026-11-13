@@ -57,6 +57,11 @@ class DashboardController extends Controller
         $todo = AdminBadges::counts() + [
             'toursNoDest' => (int) DB::table('tbl_tours')->whereNull('destinationId')->count(),
             'toursHidden' => (int) DB::table('tbl_tours')->where('availability', 0)->count(),
+            // B5: đơn đã tới ngày khởi hành mà chưa chốt (vẫn "Đã xác nhận") — hoàn tất hoặc đánh dấu khách không đến
+            'noShowCheck' => \App\Services\NoShowService::ready() ? (int) DB::table('tbl_booking')->where('bookingStatus', 'y')->whereNull('noShowAt')
+                ->whereNotNull('departureDate')->where('departureDate', '<', now()->toDateString())->where('departureDate', '>=', now()->subDays(14)->toDateString())->count() : 0,
+            'travelAlerts' => \Illuminate\Support\Facades\Schema::hasTable('tbl_travel_alerts') ? (int) DB::table('tbl_travel_alerts')->where('isActive', 1)
+                ->where(fn($w) => $w->whereNull('endsOn')->orWhere('endsOn', '>=', now()->toDateString()))->count() : 0,
         ];
 
         return view('admin.dashboard', [

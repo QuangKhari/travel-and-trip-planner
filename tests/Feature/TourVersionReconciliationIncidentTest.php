@@ -134,7 +134,7 @@ class TourVersionReconciliationIncidentTest extends TestCase
         [$tour, $av] = $this->tour(30, 'dup');
         $this->rawBooking($tour, $av, 'y', 'y', 'momo', 'DUP-1');
         $this->rawBooking($tour, $av, 'y', 'y', 'momo', 'DUP-1');
-        $this->rawBooking($tour, $av, 'y', 'y', 'zalopay', 'OK-9', 2000000, 1500000);   // thu 1,5tr, đơn 2tr
+        $this->rawBooking($tour, $av, 'y', 'y', 'vnpay', 'OK-9', 2000000, 1500000);   // thu 1,5tr, đơn 2tr
         $svc = app(PaymentReconciliationService::class);
         $svc->sync();
         $types = DB::table('tbl_reconciliation_findings')->pluck('type')->all();

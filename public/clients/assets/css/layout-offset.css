@@ -1,0 +1,40 @@
+/* Lớp cuối cùng (sau mọi lớp giao diện): chừa chỗ cho thanh đầu trang CỐ ĐỊNH ở các trang mở đầu bằng tiêu đề / đường dẫn.
+ * Quét giao diện 11/2026 phát hiện tiêu đề, breadcrumb bị che ở: Liên hệ, Tour, Tìm kiếm, Tour đã đặt, Tài khoản, Sổ tay du hành,
+ * Đề xuất điều chỉnh chuyến đi, Trợ lý tạo chuyến. Chiều cao thanh: 90px (máy tính), 82px (điện thoại). */
+:root { --tl-head: 90px; }
+@media (max-width: 991.98px) { :root { --tl-head: 82px; } }
+
+body.page-my-tours main.tv-mytours,
+body.page-departure-rescue-responses main.tv-mytours { padding-top: calc(var(--tl-head) + 8px); }
+body.page-user-profile main.pf,
+body.page-journal main.jn { padding-top: calc(var(--tl-head) + 24px); }
+body.page-contact .ct-hero { padding-top: calc(var(--tl-head) + 28px); }
+body.page-tours .tr-hero,
+body.page-site-search .tr-hero,
+body.page-search .tr-hero { padding-top: calc(var(--tl-head) + 14px); }
+body.page-planner-ai-chat main.pai { margin-top: var(--tl-head); height: calc(100vh - var(--tl-head)); }
+
+/* Đề xuất điều chỉnh chuyến đi (khách) */
+.tv-rescue__card { background: #fff; border: 1px solid #dfe9e6; border-radius: 16px; padding: 20px 22px; margin: 0 0 16px; box-shadow: 0 1px 2px rgba(16, 40, 34, .04); }
+.tv-rescue__top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+.tv-rescue__type { font-size: .82rem; color: #5d6b68; }
+.tv-rescue__card h2 { font-size: 1.15rem; margin: 0 0 4px; }
+.tv-rescue__meta { color: #5d6b68; font-size: .9rem; margin: 0 0 12px; }
+.tv-rescue__note { background: #fff6e6; border: 1px solid #f1cf93; border-radius: 10px; padding: 10px 12px; font-size: .92rem; margin: 0 0 12px; }
+.tv-rescue__dl { display: grid; gap: 8px; margin: 0 0 14px; }
+.tv-rescue__dl > div { display: grid; grid-template-columns: 140px 1fr; gap: 10px; }
+.tv-rescue__dl dt { color: #5d6b68; font-weight: 600; font-size: .88rem; }
+.tv-rescue__dl dd { margin: 0; }
+.tv-rescue__acts { display: flex; flex-wrap: wrap; gap: 10px; }
+.tv-rescue__acts form { margin: 0; }
+@media (max-width: 575.98px) { .tv-rescue__dl > div { grid-template-columns: 1fr; gap: 2px; } }
+
+/* Liên hệ: tiêu đề hero bị lớp giao diện chung đổi sang màu chữ tối trên nền xanh đậm (độ tương phản thấp) */
+body.page-contact .ct-hero h1, body.page-contact .ct-hero .ct-title { color: #fff; }
+
+/* Độ tương phản chữ (axe WCAG AA, quét 11/2026) */
+.td-noreview, .td-noreview p { color: #4b5b57; }
+.tp .tpx-side__h { color: #6b7280; }
+.tp .tpx-score { color: #2f6b45; }
+.tvp-badge { background-color: #11616a; }
+.gx-chip.is-on .gx-cnt { background-color: rgba(0, 0, 0, .28); }

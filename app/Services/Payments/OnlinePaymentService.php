@@ -14,10 +14,10 @@ use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Thanh toán trực tuyến dùng chung cho MoMo, ZaloPay và QR chuyển khoản (đặc tả §7.1, §7.6; N-02).
+ * Thanh toán trực tuyến dùng chung cho VNPay, MoMo và QR chuyển khoản (đặc tả §7.1, §7.6; N-02).
  *
  *   start()          tạo giao dịch ở cổng khách chọn (mỗi lần thử một mã riêng, trừ QR) → link chuyển sang cổng hoặc dữ liệu QR.
- *   handleNotify()   NGUỒN XÁC NHẬN CHÍNH (IPN MoMo, callback ZaloPay, webhook SePay): kiểm chữ ký → tìm đơn → so số tiền → khóa dòng → ghi nhận.
+ *   handleNotify()   NGUỒN XÁC NHẬN CHÍNH (IPN VNPay / MoMo, webhook SePay): kiểm chữ ký → tìm đơn → so số tiền → khóa dòng → ghi nhận.
  *                    Gửi lặp bao nhiêu lần cũng chỉ ghi nhận một lần.
  *   handleReturn()   trang khách quay về: chỉ hiển thị; nếu cổng báo thành công mà đơn còn chờ thì HỎI LẠI cổng (query), không tin trình duyệt.
  *   queryAndSettle() đối soát chủ động: khách bấm "Kiểm tra lại", admin bấm đối soát, lệnh payments:reconcile mỗi phút.
@@ -33,7 +33,7 @@ class OnlinePaymentService
 
     public function __construct(private BookingService $bookings, private DepartureService $departures, private RefundService $refunds, ?array $gateways = null)
     {
-        $this->gateways = $gateways ?? ['momo' => new MomoGateway(), 'zalopay' => new ZaloPayGateway(), 'qr' => new QrTransferGateway()];
+        $this->gateways = $gateways ?? ['vnpay' => new VnpayGateway(), 'momo' => new MomoGateway(), 'qr' => new QrTransferGateway()];
     }
 
     public function gateway(string $code): ?PaymentGateway
@@ -45,7 +45,7 @@ class OnlinePaymentService
     public function enabledGateways(): array
     {
         $out = [];
-        foreach ((array) config('payments.methods', ['momo', 'zalopay', 'qr']) as $code) {
+        foreach ((array) config('payments.methods', ['vnpay', 'momo', 'qr']) as $code) {
             if (($g = $this->gateway($code)) && $g->enabled()) {
                 $out[$code] = $g;
             }
@@ -61,7 +61,7 @@ class OnlinePaymentService
 
     public static function isOnline(?string $method): bool
     {
-        return in_array($method, ['momo', 'zalopay', 'qr'], true);
+        return in_array($method, ['vnpay', 'momo', 'qr'], true);
     }
 
     public static function holdMinutes(string $method): int
@@ -71,7 +71,7 @@ class OnlinePaymentService
 
     public static function label(?string $method): string
     {
-        return ['momo' => 'Ví MoMo', 'zalopay' => 'ZaloPay', 'qr' => 'QR chuyển khoản', 'vnpay' => 'VNPay', 'office-payment' => 'Tại văn phòng'][$method ?? ''] ?? (string) $method;
+        return ['momo' => 'Ví MoMo', 'zalopay' => 'ZaloPay (cũ)', 'qr' => 'QR chuyển khoản', 'vnpay' => 'VNPay', 'office-payment' => 'Tại văn phòng'][$method ?? ''] ?? (string) $method;
     }
 
     /** Địa chỉ tuyệt đối cổng gọi về; PAYMENT_PUBLIC_URL thay cho APP_URL khi chạy sau đường hầm. */

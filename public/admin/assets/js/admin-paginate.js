@@ -38,6 +38,7 @@
 
         function statusOk(r) {
             if (!state.status) return true;
+            if (state.status === "noshow") return r.dataset.noshow === "1";
             if (state.status === "unpaid") return r.dataset.pay === "n" && r.dataset.status !== "c";
             if (state.status === "refund_pending" || state.status === "refunded") return r.dataset.pay === state.status;
             return r.dataset.status === state.status;

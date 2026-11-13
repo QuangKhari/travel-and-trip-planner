@@ -24,9 +24,9 @@
 
     <div class="x_panel"><div class="x_content">
         <form method="GET" class="form-inline" style="margin-bottom:12px">
-            <select name="f" class="form-control">@foreach (['' => 'Tất cả', 'refused' => 'Bị từ chối', 'uncited' => 'Trả lời không dẫn nguồn', 'error' => 'Có lỗi', 'cached' => 'Từ bộ nhớ đệm', 'trip' => 'Hỏi về chuyến (La bàn)'] as $k => $l)<option value="{{ $k }}" @selected($f === $k)>{{ $l }}</option>@endforeach</select>
-            <input class="form-control" name="q" value="{{ $search }}" placeholder="Tìm câu hỏi">
-            <input type="date" class="form-control" name="from" value="{{ $from }}"> – <input type="date" class="form-control" name="to" value="{{ $to }}">
+            <select name="f" class="form-control" aria-label="Lọc lượt hỏi">@foreach (['' => 'Tất cả', 'refused' => 'Bị từ chối', 'uncited' => 'Trả lời không dẫn nguồn', 'error' => 'Có lỗi', 'cached' => 'Từ bộ nhớ đệm', 'trip' => 'Hỏi về chuyến (La bàn)'] as $k => $l)<option value="{{ $k }}" @selected($f === $k)>{{ $l }}</option>@endforeach</select>
+            <input class="form-control" name="q" value="{{ $search }}" placeholder="Tìm câu hỏi" aria-label="Tìm câu hỏi">
+            <input type="date" class="form-control" name="from" aria-label="Từ ngày" value="{{ $from }}"> – <input type="date" class="form-control" name="to" aria-label="Đến ngày" value="{{ $to }}">
             <button class="btn btn-default">Lọc</button>
         </form>
         <table class="table table-striped table-bordered"><thead><tr><th>Lúc</th><th>Câu hỏi</th><th>Kết quả</th><th>Engine</th><th>ms</th></tr></thead><tbody>

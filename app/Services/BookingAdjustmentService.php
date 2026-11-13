@@ -213,6 +213,10 @@ class BookingAdjustmentService
             if (!$a || $a->moneyStatus !== $from) {
                 return ['ok' => false, 'message' => 'Khoản này không còn ở trạng thái chờ xử lý.'];
             }
+            // lệnh hoàn qua cổng còn đang xử lý: không ghi nhận tay (tránh hoàn hai lần); chỉ chính GatewayRefundService được ghi
+            if (($a->gatewayStatus ?? null) === 'processing' && !str_starts_with($method, 'Hoàn qua ')) {
+                return ['ok' => false, 'message' => 'Lệnh hoàn qua cổng đang xử lý: bấm “Kiểm tra trạng thái”, không ghi nhận tay.'];
+            }
             if ($reference !== null && $reference !== '' && (
                 DB::table('tbl_booking_adjustments')->where('adjustId', '!=', $adjustId)->where('method', mb_substr($method, 0, 40))->where('reference', mb_substr($reference, 0, 80))->exists()
                 || (Schema::hasTable('tbl_refunds') && DB::table('tbl_refunds')->where('method', mb_substr($method, 0, 40))->where('reference', mb_substr($reference, 0, 80))->exists())

@@ -16,13 +16,13 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
-/** Hoàn tiền qua API MoMo / ZaloPay (Http::fake, không gọi cổng thật) và cờ thiếu khách cho đoàn ghép + chấm vàng. */
+/** Hoàn tiền qua API MoMo / VNPay (Http::fake, không gọi cổng thật) và cờ thiếu khách cho đoàn ghép + chấm vàng. */
 class GatewayRefundAndShortfallBadgesTest extends TestCase
 {
     use RefreshDatabase;
 
     private const MOMO_SECRET = 'momo-secret-test';
-    private const ZP_KEY1 = 'zalopay-key1-test';
+    private const VNP_SECRET = 'VNPAYSECRETTESTKEY0123456789ABCD';
 
     protected function setUp(): void
     {
@@ -31,7 +31,8 @@ class GatewayRefundAndShortfallBadgesTest extends TestCase
         config([
             'payments.momo' => ['enabled' => true, 'partner_code' => 'MOMOTEST', 'access_key' => 'ACCESSTEST', 'secret_key' => self::MOMO_SECRET,
                 'endpoint' => 'https://test-payment.momo.vn', 'request_type' => 'captureWallet', 'hold_minutes' => 15],
-            'payments.zalopay' => ['enabled' => true, 'app_id' => '2553', 'key1' => self::ZP_KEY1, 'key2' => 'k2', 'endpoint' => 'https://sb-openapi.zalopay.vn', 'hold_minutes' => 15],
+            'payments.vnpay' => ['enabled' => true, 'tmn_code' => 'TRAVELA1', 'hash_secret' => self::VNP_SECRET, 'bank_code' => '', 'hold_minutes' => 15,
+                'pay_url' => 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html', 'api_url' => 'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction'],
             'payments.refund' => ['enabled' => true, 'auto' => false, 'auto_delay_minutes' => 0, 'max_attempts' => 3],
         ]);
     }
@@ -64,7 +65,7 @@ class GatewayRefundAndShortfallBadgesTest extends TestCase
         ]));
         DB::table('tbl_tour_availability')->where('availabilityId', $av)->increment('bookedSlots', 2);
         DB::table('tbl_checkout')->insert(['bookingId' => $id, 'paymentMethod' => $provider, 'provider' => $provider, 'providerTxnRef' => 'TXN' . $id,
-            'providerTxnNo' => $txnNo, 'amount' => 2000000, 'paymentStatus' => 'y']);
+            'providerTxnNo' => $txnNo, 'amount' => 2000000, 'paymentStatus' => 'y', 'providerCreateDate' => '20261101093000']);
 
         return $id;
     }
@@ -148,20 +149,62 @@ class GatewayRefundAndShortfallBadgesTest extends TestCase
         $this->assertSame('555001', DB::table('tbl_refunds')->where('refundId', $rid)->value('gatewayRefundNo'));
     }
 
-    public function test_zalopay_refund_is_signed_with_key1(): void
+    public function test_vnpay_full_refund_is_signed_with_sha512(): void
     {
-        Http::fake(['sb-openapi.zalopay.vn/v2/refund' => Http::response(['return_code' => 1, 'return_message' => 'ok', 'refund_id' => 998877])]);
-        [, $rid] = $this->pendingRefund('zalopay', '221100334455');
+        Http::fake(['sandbox.vnpayment.vn/merchant_webapi/*' => Http::response(['vnp_ResponseCode' => '00', 'vnp_Message' => 'Refund success', 'vnp_TransactionStatus' => '00', 'vnp_TransactionNo' => '14220001'])]);
+        [, $rid] = $this->pendingRefund('vnpay', '14110001');
 
         $this->assertSame('refunded', app(GatewayRefundService::class)->process($rid, 7)['status']);
-        $this->assertSame('Hoàn qua ZaloPay', DB::table('tbl_refunds')->where('refundId', $rid)->value('method'));
+        $this->assertSame('Hoàn qua VNPay', DB::table('tbl_refunds')->where('refundId', $rid)->value('method'));
         Http::assertSent(function ($req) {
             $d = $req->data();
-            $mac = hash_hmac('sha256', implode('|', [$d['app_id'], $d['zp_trans_id'], $d['amount'], $d['description'], $d['timestamp']]), self::ZP_KEY1);
+            $data = implode('|', [$d['vnp_RequestId'], '2.1.0', 'refund', 'TRAVELA1', $d['vnp_TransactionType'], $d['vnp_TxnRef'], $d['vnp_Amount'], $d['vnp_TransactionNo'],
+                $d['vnp_TransactionDate'], $d['vnp_CreateBy'], $d['vnp_CreateDate'], $d['vnp_IpAddr'], $d['vnp_OrderInfo']]);
 
-            return str_ends_with($req->url(), '/v2/refund') && $d['zp_trans_id'] === '221100334455' && hash_equals($mac, $d['mac'])
-                && preg_match('/^\d{6}_2553_\d+$/', $d['m_refund_id']) === 1;
+            return $d['vnp_Command'] === 'refund' && $d['vnp_TransactionType'] === '02' && (int) $d['vnp_Amount'] === 200000000
+                && $d['vnp_TransactionDate'] === '20261101093000' && $d['vnp_TransactionNo'] === '14110001' && hash_equals(hash_hmac('sha512', $data, self::VNP_SECRET), $d['vnp_SecureHash']);
         });
+    }
+
+    public function test_vnpay_refund_pending_then_synced_via_querydr(): void
+    {
+        Http::fake(['sandbox.vnpayment.vn/merchant_webapi/*' => Http::sequence()
+            ->push(['vnp_ResponseCode' => '00', 'vnp_Message' => 'Refund accepted', 'vnp_TransactionStatus' => '05'])
+            ->push(['vnp_ResponseCode' => '00', 'vnp_TransactionType' => '02', 'vnp_TransactionStatus' => '00', 'vnp_TransactionNo' => '14220009'])]);
+        [, $rid] = $this->pendingRefund('vnpay', '14110002');
+        $svc = app(GatewayRefundService::class);
+        $this->assertSame('pending', $svc->process($rid, 7)['status']);
+        $this->assertSame('processing', DB::table('tbl_refunds')->where('refundId', $rid)->value('gatewayStatus'));
+        $this->assertSame(1, $svc->syncAll());
+        $this->assertSame('refunded', DB::table('tbl_refunds')->where('refundId', $rid)->value('status'));
+    }
+
+    public function test_partial_refund_of_guest_reduction_goes_through_gateway_and_auto_mode(): void
+    {
+        Http::fake(['sandbox.vnpayment.vn/merchant_webapi/*' => Http::response(['vnp_ResponseCode' => '00', 'vnp_TransactionStatus' => '00', 'vnp_TransactionNo' => '14330001'])]);
+        [$tour, $av] = $this->departure(30, uniqid());
+        $b = $this->booking($tour, $av, 'vnpay', '14110003');
+        $adj = DB::table('tbl_booking_adjustments')->insertGetId(['bookingId' => $b, 'kind' => 'decrease', 'oldAdults' => 2, 'oldChildren' => 0, 'newAdults' => 1, 'newChildren' => 0,
+            'oldTotal' => 2000000, 'newTotal' => 1000000, 'moneyStatus' => 'pending_refund', 'refundPercent' => 100, 'settleAmount' => 1000000, 'by' => 'customer', 'createdAt' => now()->subHour()]);
+        // tay không ghi được khi cổng đang xử lý; tự động: hoàn một phần (vnp_TransactionType 03)
+        config(['payments.refund.auto' => true]);
+        $this->assertSame(1, app(GatewayRefundService::class)->autoProcess());
+        $row = DB::table('tbl_booking_adjustments')->where('adjustId', $adj)->first();
+        $this->assertSame(['refunded', 'succeeded', 'Hoàn qua VNPay'], [$row->moneyStatus, $row->gatewayStatus, $row->method]);
+        Http::assertSent(fn($r) => $r['vnp_TransactionType'] === '03' && (int) $r['vnp_Amount'] === 100000000);
+        // gửi lại không có tác dụng
+        $this->assertSame('blocked', app(GatewayRefundService::class)->processAdjustment($adj, 7)['status']);
+    }
+
+    public function test_adjustment_manual_settle_blocked_while_gateway_processing(): void
+    {
+        Http::fake(['sandbox.vnpayment.vn/merchant_webapi/*' => fn() => throw new ConnectionException('timeout')]);
+        [$tour, $av] = $this->departure(30, uniqid());
+        $b = $this->booking($tour, $av, 'vnpay', '14110004');
+        $adj = DB::table('tbl_booking_adjustments')->insertGetId(['bookingId' => $b, 'kind' => 'decrease', 'oldAdults' => 2, 'oldChildren' => 0, 'newAdults' => 1, 'newChildren' => 0,
+            'oldTotal' => 2000000, 'newTotal' => 1000000, 'moneyStatus' => 'pending_refund', 'refundPercent' => 100, 'settleAmount' => 1000000, 'by' => 'customer', 'createdAt' => now()]);
+        $this->assertSame('unknown', app(GatewayRefundService::class)->processAdjustment($adj, 7)['status']);
+        $this->assertFalse(app(\App\Services\BookingAdjustmentService::class)->markRefunded($adj, 7, 'Chuyển khoản', 'FT9')['ok']);
     }
 
     public function test_qr_manual_confirmed_and_disabled_flag_are_not_refunded_via_gateway(): void

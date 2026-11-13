@@ -89,9 +89,9 @@ use App\Http\Controllers\clients\TravelController;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 // Kiểm tra sức khỏe hệ thống cho giám sát / Docker healthcheck (PF-08): DB, cache, hàng đợi, đĩa
 Route::get('/health', HealthController::class)->middleware('throttle:60,1,health')->name('health');
-// Thanh toán trực tuyến: cổng gọi máy chủ (MoMo IPN, ZaloPay callback, webhook SePay — không phiên, không CSRF) và trang khách quay về
-Route::match(['get', 'post'], '/thanh-toan/thong-bao/{method}', [PaymentController::class, 'notify'])->whereIn('method', ['momo', 'zalopay', 'qr'])->middleware('throttle:240,1,pay-notify')->name('payment.notify');
-Route::get('/thanh-toan/ket-qua/{method}', [PaymentController::class, 'return'])->whereIn('method', ['momo', 'zalopay'])->middleware('throttle:30,1,pay-return')->name('payment.return');
+// Thanh toán trực tuyến: cổng gọi máy chủ (VNPay / MoMo IPN, webhook SePay — không phiên, không CSRF) và trang khách quay về
+Route::match(['get', 'post'], '/thanh-toan/thong-bao/{method}', [PaymentController::class, 'notify'])->whereIn('method', ['vnpay', 'momo', 'qr'])->middleware('throttle:240,1,pay-notify')->name('payment.notify');
+Route::get('/thanh-toan/ket-qua/{method}', [PaymentController::class, 'return'])->whereIn('method', ['vnpay', 'momo'])->middleware('throttle:30,1,pay-return')->name('payment.return');
 Route::get('/about', [AboutController::class, 'index'])->name('about');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:5,1,contact')->name('contact.send');
@@ -219,7 +219,7 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     // đặt tour
     // GET để F5 hoặc mở link trực tiếp không bị 405 
     Route::match(['get', 'post'], '/booking/{id?}', [BookingController::class, 'index'])->whereNumber('id')->name('booking');
-    Route::get('/thanh-toan/{method}/{bookingId}', [PaymentController::class, 'pay'])->whereIn('method', ['momo', 'zalopay', 'qr'])->whereNumber('bookingId')->middleware('throttle:10,1,pay-start')->name('payment.pay');
+    Route::get('/thanh-toan/{method}/{bookingId}', [PaymentController::class, 'pay'])->whereIn('method', ['vnpay', 'momo', 'qr'])->whereNumber('bookingId')->middleware('throttle:10,1,pay-start')->name('payment.pay');
     Route::post('/thanh-toan/{bookingId}/kiem-tra', [PaymentController::class, 'check'])->whereNumber('bookingId')->middleware('throttle:6,1,pay-check')->name('payment.check');
     Route::get('/thanh-toan/{bookingId}/trang-thai', [PaymentController::class, 'status'])->whereNumber('bookingId')->middleware('throttle:40,1,pay-status')->name('payment.status');
     Route::post('/create-booking', [BookingController::class, 'createBooking'])->middleware('throttle:10,1,create-booking')->name('create-booking');
@@ -249,6 +249,8 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::post('/len-ke-hoach/tro-ly/tao', [PlannerAiController::class, 'chatCreate'])->middleware('throttle:6,1,planner-ai-make')->name('planner.ai.chat.make');
     Route::post('/len-ke-hoach/{id}/tom-tat-ai', [PlannerAiController::class, 'explain'])->whereNumber('id')->middleware('throttle:10,1,planner-ai-explain')->name('planner.ai.explain');
     Route::post('/len-ke-hoach/{id}/la-ban', [PlannerAiController::class, 'copilot'])->whereNumber('id')->middleware('throttle:12,1,planner-ai-copilot')->name('planner.ai.copilot');
+    Route::post('/len-ke-hoach/{id}/la-ban/goi-y', [PlannerAiController::class, 'suggest'])->whereNumber('id')->middleware('throttle:30,1,planner-ai-suggest')->name('planner.ai.suggest');
+    Route::post('/len-ke-hoach/{id}/la-ban/goi-y/ap-dung', [PlannerAiController::class, 'suggestApply'])->whereNumber('id')->middleware('throttle:30,1,planner-ai-suggest-apply')->name('planner.ai.suggest.apply');
     Route::post('/len-ke-hoach/{id}/la-ban/kiem-tra-lai', [PlannerAiController::class, 'recheck'])->whereNumber('id')->middleware('throttle:30,1,planner-ai-recheck')->name('planner.ai.recheck');
     Route::post('/len-ke-hoach/{id}/la-ban/ket-qua', [PlannerAiController::class, 'feedback'])->whereNumber('id')->middleware('throttle:60,1,planner-ai-feedback')->name('planner.ai.feedback');
     Route::post('/la-ban/danh-gia', [PlannerAiController::class, 'rate'])->middleware('throttle:30,1,planner-ai-rate')->name('planner.ai.rate');
@@ -375,6 +377,8 @@ Route::prefix('admin')->group(function () {
         //Management Booking - thêm quyền
         Route::post('/finish-booking', [BookingManagementController::class, 'finishBooking'])->name('admin.finish-booking');
         Route::post('/admin-cancel-booking', [BookingManagementController::class, 'cancelBooking'])->name('admin.cancel-booking');
+        Route::post('/booking/{id}/no-show', [BookingManagementController::class, 'noShow'])->whereNumber('id')->name('admin.booking.noshow');
+        Route::post('/booking/{id}/no-show/undo', [BookingManagementController::class, 'noShowUndo'])->whereNumber('id')->name('admin.booking.noshow.undo');
         Route::post('/received-money', [BookingManagementController::class, 'receiviedMoney'])->name('admin.received');
         Route::post('/confirm-payment', [BookingManagementController::class, 'confirmPayment'])->name('admin.confirm-payment');
         Route::post('/send-pdf', [BookingManagementController::class, 'sendPdf'])->middleware('throttle:10,1,send-pdf')->name('admin.send.pdf');
@@ -420,6 +424,8 @@ Route::prefix('admin')->group(function () {
         Route::post('/waitlist/{id}/cancel', [WaitlistAdminController::class, 'cancel'])->whereNumber('id')->name('admin.waitlist.cancel');
         Route::get('/adjustments', [BookingAdjustmentAdminController::class, 'index'])->name('admin.adjustments');
         Route::post('/adjustments/{id}/settle', [BookingAdjustmentAdminController::class, 'settle'])->whereNumber('id')->name('admin.adjustments.settle');
+        Route::post('/adjustments/{id}/gateway', [BookingAdjustmentAdminController::class, 'gateway'])->whereNumber('id')->middleware('throttle:10,1,adjust-gateway')->name('admin.adjustments.gateway');
+        Route::post('/adjustments/{id}/gateway/sync', [BookingAdjustmentAdminController::class, 'gatewaySync'])->whereNumber('id')->middleware('throttle:30,1,adjust-sync')->name('admin.adjustments.gateway.sync');
         Route::post('/bookings/{bookingId}/adjust', [BookingAdjustmentAdminController::class, 'adjust'])->whereNumber('bookingId')->name('admin.booking.adjust');
         Route::get('/feasibility', [FeasibilityController::class, 'index'])->name('admin.feasibility');
         Route::get('/feasibility/{id}', [FeasibilityController::class, 'show'])->whereNumber('id')->name('admin.feasibility.show');
@@ -429,6 +435,10 @@ Route::prefix('admin')->group(function () {
         Route::post('/profit/{id}/costs/{costId}/actual', [ProfitController::class, 'costStatus'])->whereNumber(['id', 'costId'])->name('admin.profit.cost.actual');
         Route::post('/profit/{id}/costs/{costId}/delete', [ProfitController::class, 'deleteCost'])->whereNumber(['id', 'costId'])->name('admin.profit.cost.delete');
         Route::post('/profit/{id}/rate', [ProfitController::class, 'rate'])->whereNumber('id')->name('admin.profit.rate');
+        Route::get('/travel-alerts', [\App\Http\Controllers\admin\TravelAlertAdminController::class, 'index'])->name('admin.travel-alerts');
+        Route::post('/travel-alerts', [\App\Http\Controllers\admin\TravelAlertAdminController::class, 'store'])->name('admin.travel-alerts.store');
+        Route::post('/travel-alerts/{id}', [\App\Http\Controllers\admin\TravelAlertAdminController::class, 'update'])->whereNumber('id')->name('admin.travel-alerts.update');
+        Route::post('/travel-alerts/{id}/toggle', [\App\Http\Controllers\admin\TravelAlertAdminController::class, 'toggle'])->whereNumber('id')->name('admin.travel-alerts.toggle');
         Route::get('/suppliers', [SupplierController::class, 'index'])->name('admin.suppliers');
         Route::post('/suppliers', [SupplierController::class, 'store'])->name('admin.suppliers.store');
         Route::get('/suppliers/{id}', [SupplierController::class, 'show'])->whereNumber('id')->name('admin.suppliers.show');

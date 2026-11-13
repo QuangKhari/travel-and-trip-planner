@@ -142,3 +142,6 @@
   .pai-e { max-width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { .pai-progress__line span { transition: none; } }
+.pai-next{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pai-next__a{display:inline-block;padding:6px 12px;border:1px solid var(--ink);border-radius:999px;color:var(--ink);text-decoration:none;font-size:.86rem;font-weight:600}
+.pai-next__a:hover{background:var(--ink);color:#fff}

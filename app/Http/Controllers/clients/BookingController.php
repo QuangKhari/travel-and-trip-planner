@@ -147,7 +147,7 @@ class BookingController extends Controller
             return $backToForm()->withInput();
         }
 
-        // Thanh toán trực tuyến: chuyển ngay sang MoMo / ZaloPay, hoặc trang mã QR (đơn giữ chỗ ngắn, có đồng hồ đếm ngược)
+        // Thanh toán trực tuyến: chuyển ngay sang VNPay / MoMo, hoặc trang mã QR (đơn giữ chỗ ngắn, có đồng hồ đếm ngược)
         $method = (string) ($validator->validated()['payment'] ?? '');
         if (\App\Services\Payments\OnlinePaymentService::isOnline($method) && !$result['duplicate']) {
             return redirect()->route('payment.pay', ['bookingId' => $result['bookingId'], 'method' => $method]);

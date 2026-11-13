@@ -1,7 +1,7 @@
 @include('clients.blocks.header')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=26">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai.css') }}?v=6">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ux.css') }}?v=1">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/nature-luxury-planner.css') }}?v=bl20261104">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
@@ -488,13 +488,14 @@
             </header>
             <div class="tpux-ai-trust"><i class="fas fa-shield-alt" aria-hidden="true"></i> AI có thể ước tính sai. Hãy xem lại thay đổi trước khi áp dụng.</div>
             <div class="ai-co__ctx" id="aiCoCtx"></div>
+            <div class="ai-co__topics" id="aiCoTopics" role="toolbar" aria-label="Gợi ý nhanh cho chuyến"></div>
             <div class="ai-co__feed" id="aiCoFeed" aria-live="polite"></div>
             <div class="ai-co__comp">
                 <div class="ai-co__busy" id="aiCoBusy" hidden><span>La bàn đang xử lý… <b id="aiCoBusyT">0s</b></span><button type="button" class="tp-mini" id="aiCoCancel">Hủy</button></div>
                 <div class="ai-co__sug" id="aiCoSug"></div>
                 <form class="ai-co__box" id="aiCoForm">
                     <span class="ai-co__chips" id="aiCoChips"></span>
-                    <input id="aiCoQ" maxlength="400" autocomplete="off" placeholder="Ví dụ: ngày 2 nhẹ hơn · cần mang áo mưa không?" aria-label="Yêu cầu cho La bàn">
+                    <input id="aiCoQ" maxlength="400" autocomplete="off" placeholder="Ví dụ: gợi ý món ăn · ngày 2 nhẹ hơn · có lễ hội gì không?" aria-label="Yêu cầu cho La bàn">
                     <button type="button" class="ai-co__icon" id="aiCoPick" aria-pressed="false" title="Chạm vào một mục trong lịch để nhắc tới nó" aria-label="Chọn mục trong lịch">@</button>
                     <button type="submit" class="ai-co__icon ai-co__icon--send" aria-label="Gửi"><i class="fas fa-paper-plane" aria-hidden="true"></i></button>
                 </form>
@@ -563,14 +564,16 @@
 <script src="{{ asset('clients/assets/js/planner-extras.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-travel.js') }}?v=2" defer></script>
 @if (!empty($client['historyUrl']))<script src="{{ asset('clients/assets/js/planner-history.js') }}?v=1" defer></script>@endif
-@if ($role !== 'view')<script src="{{ asset('clients/assets/js/ai-feedback.js') }}?v=1" data-url="{{ route('planner.ai.rate') }}" data-csrf="{{ csrf_token() }}" data-trip="{{ $client['trip']['id'] ?? '' }}" defer></script>@endif
+@if ($role !== 'view')<script src="{{ asset('clients/assets/js/ai-feedback.js') }}?v=2" data-url="{{ route('planner.ai.rate') }}" data-csrf="{{ csrf_token() }}" data-trip="{{ $client['trip']['id'] ?? '' }}" defer></script>@endif
 <script type="application/json" id="aiData">{!! json_encode(['explainUrl' => route('planner.ai.explain', ['id' => $t['id']]), 'csrf' => csrf_token(), 'on' => $aiExplainOn,
     'copilot' => $aiCopilotOn ? ['url' => route('planner.ai.copilot', ['id' => $t['id']]), 'recheckUrl' => route('planner.ai.recheck', ['id' => $t['id']]),
-        'feedbackUrl' => route('planner.ai.feedback', ['id' => $t['id']])] : null], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
+        'feedbackUrl' => route('planner.ai.feedback', ['id' => $t['id']]),
+        'suggestUrl' => config('ai.features.suggest', true) ? route('planner.ai.suggest', ['id' => $t['id']]) : null, 'suggestApplyUrl' => route('planner.ai.suggest.apply', ['id' => $t['id']]),
+        'llm' => (bool) ($aiLlmOn ?? true)] : null], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
 <script src="{{ asset('clients/assets/js/planner-ai-explain.js') }}?v=1" defer></script>
 <script src="{{ asset('clients/assets/js/planner-ux.js') }}?v=1" defer></script>
 @if ($aiCopilotOn)
-    <script src="{{ asset('clients/assets/js/planner-ai-copilot.js') }}?v=2" defer></script>
+    <script src="{{ asset('clients/assets/js/planner-ai-copilot.js') }}?v=3" defer></script>
 @endif
 
 @include('clients.blocks.footer')

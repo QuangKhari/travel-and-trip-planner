@@ -82,6 +82,7 @@
                 {!! $item('admin.contact', 'Hộp thư liên hệ', 'fa-envelope-o', $on('admin.contact*'), $badge['contact']) !!}
                 {!! $item('admin.users', 'Người dùng', 'fa-users', $on('admin.users*')) !!}
                 {!! $item('admin.trips', 'Chuyến đi (Planner)', 'fa-map-o', $on('admin.trips*')) !!}
+                {!! $item('admin.travel-alerts', 'Cảnh báo điểm đến', 'fa-exclamation-triangle', $on('admin.travel-alerts*')) !!}
                 {!! $item('admin.content-requests', 'Nhu cầu thiếu dữ liệu', 'fa-lightbulb-o', $on('admin.content-requests*')) !!}
             @endif
         </div>

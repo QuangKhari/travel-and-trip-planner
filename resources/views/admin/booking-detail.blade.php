@@ -38,12 +38,31 @@
             @if ($canManage && $b->canFinish)
                 <button type="button" class="ad-btn js-bk" data-act="finish" data-id="{{ $b->bookingId }}" data-code="{{ $b->bookingCode }}" data-url="{{ route('admin.finish-booking') }}"><i class="fa fa-flag-checkered"></i> Hoàn tất</button>
             @endif
+            @if ($canManage && $b->canNoShow)
+                {{-- B5: khách không đến (từ ngày khởi hành) --}}
+                <details class="ad-noshow">
+                    <summary class="ad-btn"><i class="fa fa-user-times"></i> Khách không đến</summary>
+                    <form method="POST" action="{{ route('admin.booking.noshow', $b->bookingId) }}" class="ad-noshow__f">@csrf
+                        <input name="note" maxlength="255" placeholder="Ghi chú (gọi không nghe máy, đến trễ…)">
+                        <button class="ad-btn ad-btn--sm ad-btn--danger" type="submit" data-confirm="Đánh dấu khách đơn {{ $b->bookingCode }} không đến? {{ $b->paymentStatus === 'y' ? 'Đơn đã thu, KHÔNG hoàn tiền.' : 'Đơn chưa thu sẽ bị hủy.' }}">Xác nhận</button>
+                        <small>Không hoàn tiền theo chính sách; hoàn tác được trong {{ \App\Services\NoShowService::UNDO_HOURS }} giờ.</small>
+                    </form>
+                </details>
+            @endif
+            @if ($canManage && $b->noShow)
+                <form method="POST" action="{{ route('admin.booking.noshow.undo', $b->bookingId) }}" style="display:inline">@csrf
+                    <button class="ad-btn" type="submit" data-confirm="Hoàn tác đánh dấu khách không đến?"><i class="fa fa-undo"></i> Hoàn tác "không đến"</button></form>
+            @endif
             @if ($canManage && in_array($b->bookingStatus, ['n', 'y'], true))
                 <button type="button" class="ad-btn ad-btn--danger js-bk" data-act="cancel" data-id="{{ $b->bookingId }}" data-code="{{ $b->bookingCode }}" data-url="{{ route('admin.cancel-booking') }}"><i class="fa fa-ban"></i> Hủy đơn</button>
             @endif
         </div>
     </div>
 
+    @if ($b->noShow)
+        <div class="ad-flash ad-flash--warn"><i class="fa fa-user-times"></i>
+            <div><b>Khách không đến</b> (đánh dấu lúc {{ \Carbon\Carbon::parse($b->noShowAt)->format('H:i d/m/Y') }}){{ $b->noShowNote ? ': ' . $b->noShowNote : '' }}. Không hoàn tiền theo chính sách.</div></div>
+    @endif
     @if ($b->holdLeft && $b->paymentStatus === 'n')
         <div class="ad-flash ad-flash--warn"><i class="fa fa-clock-o"></i>
             <div>Chỗ được giữ đến <b>{{ $b->holdLeft->format('H:i d/m/Y') }}</b> ({{ $b->holdLeft->diffForHumans() }}). Quá hạn mà chưa xác nhận / chưa thu tiền thì hệ thống tự hủy và trả chỗ.</div></div>

@@ -270,6 +270,13 @@
             wipe();
             var d = msg("ai", "Đã tạo " + (r.title || "chuyến đi") + ". Bạn có thể mở và chỉnh từng ngày.", true);
             var link = el("a", "pai-link", "Mở lịch trình"); link.href = r.url; d.appendChild(link);
+            // sau khi có chuyến: La bàn gợi ý tiếp ngay trong trình soạn (món ăn, điểm tham quan, lễ hội, cảnh báo thời tiết / sự cố)
+            var nx = msg("ai", "Muốn La bàn gợi ý thêm cho chuyến này? Chọn một chủ đề, La bàn mở lịch và đưa các lựa chọn để bạn thêm vào ngày phù hợp.", true);
+            var row = el("div", "pai-next");
+            [["Món nên thử", "food"], ["Điểm tham quan", "places"], ["Lễ hội dịp đi", "festival"], ["Cảnh báo thời tiết, sự cố", "alerts"]].forEach(function (x) {
+                var a = el("a", "pai-next__a", x[0]); a.href = r.url + (r.url.indexOf("?") >= 0 ? "&" : "?") + "la-ban=" + x[1]; row.appendChild(a);
+            });
+            nx.appendChild(row);
             setBusy(false);
             plate();
             link.focus();

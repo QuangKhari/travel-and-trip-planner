@@ -282,7 +282,7 @@
                                 $payGw = app(\App\Services\Payments\OnlinePaymentService::class)->enabledGateways();
                                 $payInfo = [
                                     'momo' => ['fa-wallet', 'Thanh toán bằng ví MoMo', 'Quét mã QR bằng app MoMo hoặc dùng thẻ ATM liên kết.'],
-                                    'zalopay' => ['fa-mobile', 'Thanh toán bằng ZaloPay', 'Ví ZaloPay, thẻ ATM nội địa hoặc thẻ quốc tế trên cổng ZaloPay.'],
+                                    'vnpay' => ['fa-university', 'Thanh toán qua VNPay', 'Thẻ ATM nội địa, thẻ quốc tế hoặc quét VNPAY-QR bằng app ngân hàng.'],
                                     'qr' => ['fa-qrcode', 'Chuyển khoản bằng mã QR', 'Quét mã VietQR bằng app ngân hàng bất kỳ, số tiền và nội dung đã điền sẵn.'],
                                 ];
                             @endphp
@@ -387,7 +387,7 @@
                         <ol>
                             <li><b>Nhận mã đơn ngay</b><span>Mã hiện trên màn hình để bạn lưu lại hoặc gửi cho nhân
                                     viên.</span></li>
-                            <li><b>Thanh toán</b><span>Trực tuyến ngay (MoMo, ZaloPay, mã QR) hoặc tại văn phòng trong {{ $holdHours }} giờ.</span></li>
+                            <li><b>Thanh toán</b><span>Trực tuyến ngay (VNPay, MoMo, mã QR) hoặc tại văn phòng trong {{ $holdHours }} giờ.</span></li>
                             <li><b>Nhân viên xác nhận đơn</b><span>Bạn theo dõi trạng thái trong mục “Tour đã
                                     đặt”.</span></li>
                         </ol>

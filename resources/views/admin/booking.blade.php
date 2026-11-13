@@ -24,7 +24,7 @@
     <div class="ad-card" id="bk-card" data-url-preview="{{ $canManage ? route('admin.cancel-preview') : '' }}">
         <div class="ad-toolbar">
             <div class="ad-chips" id="bk-chips">
-                @foreach (['' => ['Tất cả', 'all'], 'n' => ['Chờ xác nhận', 'n'], 'y' => ['Đã xác nhận', 'y'], 'unpaid' => ['Chưa thu tiền', 'unpaid'], 'f' => ['Hoàn tất', 'f'], 'c' => ['Đã hủy', 'c'], 'refund_pending' => ['Chờ hoàn tiền', 'refund']] as $k => [$label, $ck])
+                @foreach (['' => ['Tất cả', 'all'], 'n' => ['Chờ xác nhận', 'n'], 'y' => ['Đã xác nhận', 'y'], 'unpaid' => ['Chưa thu tiền', 'unpaid'], 'f' => ['Hoàn tất', 'f'], 'c' => ['Đã hủy', 'c'], 'refund_pending' => ['Chờ hoàn tiền', 'refund'], 'noshow' => ['Khách không đến', 'noshow']] as $k => [$label, $ck])
                     <button type="button" class="ad-chip {{ $k === '' ? 'is-on' : '' }}" data-ad-status-chip="{{ $k }}" data-target="datatable-booking">{{ $label }} <b data-count="{{ $ck }}">{{ $counts[$ck] ?? 0 }}</b></button>
                 @endforeach
             </div>
