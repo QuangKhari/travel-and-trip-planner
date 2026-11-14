@@ -21,8 +21,31 @@ final class WebPush
     /** @return array{public:string,private:string} khóa mới: public = base64url điểm không nén, private = base64(PEM) */
     public static function generateKeys(): array
     {
-        $k = openssl_pkey_new(['curve_name' => 'prime256v1', 'private_key_type' => OPENSSL_KEYTYPE_EC]);
-        openssl_pkey_export($k, $pem);
+        // PHP trên Windows thường không tìm thấy openssl.cnf -> openssl_pkey_new / export thất bại.
+        // Thử lần lượt: cấu hình mặc định, OPENSSL_CONF, tệp đi kèm PHP (extras/ssl), rồi một tệp cấu hình tối thiểu tự tạo.
+        $tmp = null;
+        $configs = [null, getenv('OPENSSL_CONF') ?: null, dirname(PHP_BINARY) . '/extras/ssl/openssl.cnf'];
+        $configs[] = $tmp = tempnam(sys_get_temp_dir(), 'ossl');
+        file_put_contents($tmp, "openssl_conf = default_conf\n[default_conf]\n[req]\ndistinguished_name = req_dn\n[req_dn]\n");
+        $pem = null;
+        $k = false;
+        foreach ($configs as $cnf) {
+            if ($cnf !== null && !is_file($cnf)) {
+                continue;
+            }
+            $opt = ['curve_name' => 'prime256v1', 'private_key_type' => OPENSSL_KEYTYPE_EC] + ($cnf ? ['config' => $cnf] : []);
+            $k = @openssl_pkey_new($opt);
+            if ($k !== false && @openssl_pkey_export($k, $pem, null, $cnf ? ['config' => $cnf] : [])) {
+                break;
+            }
+            $k = false;
+        }
+        @unlink($tmp);
+        while (openssl_error_string() !== false) {
+        }
+        if ($k === false || !$pem) {
+            throw new \RuntimeException('OpenSSL không tạo được khóa EC. Bật extension=openssl trong php.ini, hoặc đặt biến môi trường OPENSSL_CONF trỏ tới một tệp openssl.cnf.');
+        }
         $d = openssl_pkey_get_details($k)['ec'];
 
         return ['public' => self::b64u("\x04" . str_pad($d['x'], 32, "\0", STR_PAD_LEFT) . str_pad($d['y'], 32, "\0", STR_PAD_LEFT)), 'private' => base64_encode($pem)];
@@ -75,7 +98,8 @@ final class WebPush
             }
             try {
                 $res = Http::timeout(5)->withHeaders([
-                    'TTL' => (string) config('push.ttl', 21600), 'Urgency' => 'normal',
+                    'TTL' => (string) config('push.ttl', 21600),
+                    'Urgency' => 'normal',
                     'Authorization' => 'vapid t=' . self::jwt($u['scheme'] . '://' . $u['host'], time() + 12 * 3600) . ', k=' . config('push.public'),
                 ])->withBody('', 'application/octet-stream')->post($s->endpoint);
                 if (in_array($res->status(), [404, 410], true)) {
