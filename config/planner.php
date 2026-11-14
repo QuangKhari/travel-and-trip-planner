@@ -36,6 +36,15 @@ return [
     'day_items_warn' => 7,              // hơn 7 mục một ngày là hơi nhiều (trang sửa, TripHealth, cảnh báo khi lưu)
     'day_cost_over_avg' => 0.4,         // chi phí một ngày cao hơn trung bình các ngày 40% thì nhắc
 
+    // ---- Đến nơi / rời đi (đặt chỗ ngoài: vé máy bay, tàu, xe khách) và chỗ ở làm điểm xuất phát / về mỗi ngày ----
+    // Ngày đầu: không xếp hoạt động trước giờ tới nơi + thời gian ra khỏi ga / sân bay. Ngày cuối: phải xong trước giờ khởi hành - thời gian có mặt sớm.
+    // Chưa biết giờ đến thì ước tính từ giờ đi + thời gian di chuyển điển hình (ghi rõ "khoảng"); ước tính vượt qua nửa đêm thì bỏ.
+    'transfer' => [
+        'exit_min' => ['flight' => 45, 'train' => 20, 'bus' => 15],          // từ lúc tới tới lúc bắt đầu chơi được
+        'before_min' => ['flight' => 120, 'train' => 40, 'bus' => 30],       // có mặt trước giờ khởi hành
+        'typical_min' => ['flight' => 120, 'train' => 360, 'bus' => 360],    // thời gian đi điển hình khi chưa nhập giờ đến
+    ],
+
     // Buổi trong ngày (phút kể từ 00:00, [start, end)). Mục chọn buổi không bắt đầu trước `start`; giờ thuộc buổi nào tra theo khoảng.
     'slots' => [
         'morning' => ['label' => 'Sáng', 'start' => 480, 'end' => 690],      // 08:00 - 11:30
@@ -46,7 +55,7 @@ return [
 
     // Mục tự thêm (note) đoán loại theo tên. Viết theo cú pháp chung của PCRE và JavaScript (không dấu phân cách, không cờ).
     'kind_patterns' => [
-        'lodging' => 'khách sạn|hotel|homestay|resort|nhà nghỉ|hostel|villa|lưu trú|căn hộ|bungalow',
+        'lodging' => 'khách sạn|hotel|homestay|resort|nhà nghỉ|hostel|villa|lưu trú|căn hộ|bungalow|nhận phòng|trả phòng',
         'meal' => 'nhà hàng|cà phê|cafe|coffee|phở|bún|buffet|cơm|lẩu|ăn uống|ăn sáng|ăn trưa|ăn tối|restaurant|(^|\\s)quán(\\s|$)',
     ],
     // Địa điểm trong kho (type = place) nhận diện theo kind: quán ăn là bữa ăn, khách sạn là lưu trú (cùng ở máy chủ và trình duyệt)

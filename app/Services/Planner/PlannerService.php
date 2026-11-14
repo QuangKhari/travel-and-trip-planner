@@ -357,7 +357,7 @@ final class PlannerService
      */
     private function verifyWithSchedule(array &$plan, array $req): void
     {
-        if (empty($req['startDate'])) {
+        if (empty($req['startDate']) && ($req['arriveMin'] ?? null) === null && ($req['leaveMin'] ?? null) === null) {
             return;   // chưa có ngày đi: không biết thứ, TripHealth cũng không kiểm tra giờ mở cửa
         }
         $route = RouteService::make();
@@ -365,10 +365,11 @@ final class PlannerService
             for ($guard = 0; $guard < 10; $guard++) {
                 $rows = array_map(fn($it) => ['type' => $it['type'], 'refId' => $it['refId'], 'name' => $it['name'], 'kind' => $it['kind'] ?? null,
                     'lat' => $it['lat'] ?? null, 'lng' => $it['lng'] ?? null, 'slot' => $it['slot'], 'durationMin' => $it['durationMin'], 'hours' => $it['hours'] ?? null], $day['items']);
-                $sch = new DaySchedule($day['day'], $rows, $route, null, OpeningHours::dowOf($req['startDate'], $day['day']));
+                $ctx = ['arrive' => $day['day'] === 1 ? ($req['arriveMin'] ?? null) : null, 'leave' => $day['day'] === (int) $req['days'] ? ($req['leaveMin'] ?? null) : null];
+                $sch = new DaySchedule($day['day'], $rows, $route, null, $req['startDate'] ? OpeningHours::dowOf($req['startDate'], $day['day']) : null, $ctx);
                 $bad = null;
                 foreach ($sch->rows as $i => $r) {
-                    if (in_array($r['hours'], ['closed', 'late'], true)) {
+                    if (in_array($r['hours'], ['closed', 'late'], true) || $r['conflict'] === 'departure') {
                         $bad = $i;
                         break;
                     }
@@ -378,7 +379,7 @@ final class PlannerService
                 }
                 $it = $day['items'][$bad];
                 array_splice($day['items'], $bad, 1);
-                $why = 'Ngày ' . $day['day'] . ': ' . ($sch->rows[$bad]['hours'] === 'closed' ? 'đóng cửa' : 'tới sau giờ đóng cửa');
+                $why = 'Ngày ' . $day['day'] . ': ' . ($sch->rows[$bad]['conflict'] === 'departure' ? 'không kịp trước giờ phải rời đi' : ($sch->rows[$bad]['hours'] === 'closed' ? 'đóng cửa' : 'tới sau giờ đóng cửa'));
                 $plan['filterLog'][] = ['key' => $it['key'], 'name' => $it['name'], 'type' => $it['type'], 'code' => 'hours', 'reason' => $why];
                 $plan['unplaced'][] = ['key' => $it['key'], 'name' => $it['name'], 'type' => $it['type'], 'refId' => (int) $it['refId'], 'score' => $it['score'] ?? 0,
                     'reasons' => $it['reasons'] ?? [], 'durationMin' => $it['durationMin'] ?? null, 'priceMin' => $it['priceMin'] ?? null, 'why' => $why,

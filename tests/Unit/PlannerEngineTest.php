@@ -99,6 +99,29 @@ class PlannerEngineTest extends TestCase
         }
     }
 
+    public function test_arrival_and_departure_times_bound_first_and_last_day(): void
+    {
+        // tới nơi 14:00 (đã gồm thời gian ra sân bay), ngày cuối phải rời đi 12:00
+        $p = $this->engine()->plan($this->dataset(), $this->req(['days' => 3, 'arriveMin' => 840, 'leaveMin' => 720]), ['center' => self::CENTER]);
+        $first = $p['days'][0]['items'];
+        $last = $p['days'][2]['items'];
+        $this->assertNotEmpty($first);
+        foreach ($first as $i) {
+            $this->assertGreaterThanOrEqual(840, $i['startMin'], 'ngày đầu không xếp gì trước giờ tới nơi');
+            $this->assertNotSame('noon', $i['slot'], 'tới sau giờ trưa thì không xếp bữa trưa');
+        }
+        foreach ($last as $i) {
+            $this->assertLessThanOrEqual(720, $i['startMin'] + $i['durationMin'], 'ngày cuối xong trước giờ phải rời đi');
+        }
+        // ngày giữa vẫn đầy đủ hơn ngày đầu / ngày cuối
+        $acts = fn($d) => count(array_filter($d['items'], fn($i) => !$i['isMeal']));
+        $this->assertGreaterThanOrEqual($acts($p['days'][0]), $acts($p['days'][1]));
+
+        // không cho giờ thì như cũ
+        $plain = $this->engine()->plan($this->dataset(), $this->req(['days' => 3]), ['center' => self::CENTER]);
+        $this->assertSame(480, min(array_column($plain['days'][0]['items'], 'startMin')));
+    }
+
     public function test_no_item_is_used_twice(): void
     {
         $p = $this->engine()->plan($this->dataset(), $this->req(['days' => 3]), ['center' => self::CENTER]);

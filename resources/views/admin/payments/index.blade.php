@@ -83,7 +83,7 @@
                 <a class="ad-chip {{ request('problem') ? 'is-on' : '' }}" href="{{ route('admin.payments', ['problem' => 1]) }}">Bất thường</a>
             </div>
             <span class="ad-grow"></span>
-            <div class="ad-search" style="max-width:280px"><i class="fa fa-search"></i><input type="search" name="q" value="{{ request('q') }}" placeholder="Mã đơn / mã giao dịch"></div>
+            <div class="ad-search" style="max-width:280px"><i class="fa fa-search"></i><input type="search" name="q" value="{{ is_string(request('q')) ? request('q') : '' }}" placeholder="Mã đơn / mã giao dịch"></div>
         </form>
         @if ($rows->count())
             <div class="ad-tablewrap">

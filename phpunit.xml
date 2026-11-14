@@ -13,6 +13,8 @@
 </include>
 </source>
 <php>
+<!--   cả bộ test chạy trong một tiến trình, đỉnh khoảng 135 MB: PHP trên Windows mặc định memory_limit 128M sẽ dừng giữa chừng   -->
+<ini name="memory_limit" value="512M"/>
 <env name="APP_ENV" value="testing"/>
 <env name="APP_MAINTENANCE_DRIVER" value="file"/>
 <env name="BCRYPT_ROUNDS" value="4"/>
@@ -47,6 +49,10 @@
 <env name="RAG_LLM_DRIVER" value="none" force="true"/>
 <!--     test không bao giờ gọi API thật qua chuỗi dự phòng đặt trong .env     -->
 <env name="AI_FALLBACK_MODEL" value="" force="true"/>
+<!--   thanh toán: không lấy địa chỉ Dev Tunnels hay chế độ hoàn tiền tự động trong .env máy dev   -->
+<env name="PAYMENT_PUBLIC_URL" value="" force="true"/>
+<env name="PAYMENT_REFUND_ENABLED" value="false" force="true"/>
+<env name="PAYMENT_REFUND_AUTO" value="false" force="true"/>
 <env name="AI_FALLBACK2_MODEL" value="" force="true"/>
 </php>
 </phpunit>

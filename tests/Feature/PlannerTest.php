@@ -123,7 +123,7 @@ class PlannerTest extends TestCase
         $id = $this->trip(['days' => 2]);
         $body = ['title' => 'Đã sửa', 'startDate' => '2027-03-10', 'days' => 2, 'groupSize' => 3, 'budget' => 5000000, 'items' => [
             ['type' => 'destination', 'refId' => $this->hn, 'day' => 1],
-            ['type' => 'food', 'refId' => $f, 'day' => 9, 'note' => 'Ăn sáng', 'cost' => 50000],   // ngày 9 > 2: chặn về 2
+            ['type' => 'food', 'refId' => $f, 'day' => 9, 'note' => 'Ăn sáng', 'cost' => 50000],   // ngày 9 > 2: vào "Đã lưu" (không dồn vào ngày cuối)
             ['type' => 'food', 'refId' => $f, 'day' => 1],                                         // trùng: bỏ
             ['type' => 'experience', 'refId' => $x, 'day' => null],                                // chưa xếp
             ['type' => 'tour', 'refId' => $t, 'day' => 2, 'cost' => 2000000],
@@ -133,7 +133,7 @@ class PlannerTest extends TestCase
 
         $rows = DB::table('tbl_trip_items')->where('tripId', $id)->get()->keyBy(fn($r) => $r->refType . ':' . $r->refId);
         $this->assertCount(4, $rows);
-        $this->assertSame(2, (int) $rows["food:$f"]->dayNo);
+        $this->assertNull($rows["food:$f"]->dayNo);
         $this->assertSame('Ăn sáng', $rows["food:$f"]->note);
         $this->assertNull($rows["experience:$x"]->dayNo);
         $trip = DB::table('tbl_trips')->where('tripId', $id)->first();

@@ -21,7 +21,7 @@
             <span class="ad-grow"></span>
             <input type="hidden" name="status" value="{{ $status }}">
             <label class="ad-check"><input type="checkbox" name="mine" value="1" @checked(request('mine')) onchange="this.form.submit()"> Của tôi</label>
-            <div class="ad-search" style="max-width:260px"><i class="fa fa-search"></i><input type="search" name="q" value="{{ request('q') }}" placeholder="Mã, tiêu đề, tên khách"></div>
+            <div class="ad-search" style="max-width:260px"><i class="fa fa-search"></i><input type="search" name="q" value="{{ is_string(request('q')) ? request('q') : '' }}" placeholder="Mã, tiêu đề, tên khách"></div>
         </form>
         @if ($rows->count())
             <div class="ad-tablewrap">

@@ -271,6 +271,10 @@ class PlannerController extends Controller
             'dislikes.*' => ['string', 'in:' . implode(',', array_keys((array) config('planner.dislikes')))],
             // ghi chú từ câu mô tả (La bàn F1: ăn chay, đi cùng ông bà...): lưu vào tbl_trips.notes, F2 đọc lại
             'notes' => ['nullable', 'string', 'max:500'],
+            // giờ tới nơi ngày đầu / giờ khởi hành về ngày cuối (không bắt buộc)
+            'moveKind' => ['nullable', 'in:flight,train,bus,self'],
+            'arriveAt' => ['nullable', 'date_format:H:i'],
+            'leaveAt' => ['nullable', 'date_format:H:i'],
         ];
     }
 
@@ -283,6 +287,16 @@ class PlannerController extends Controller
         if (!empty($data['adults'])) {
             $data['children'] = (int) ($data['children'] ?? 0);
             $data['groupSize'] = (int) $data['adults'] + $data['children'];
+        }
+        // giờ tới / giờ về -> phút chơi được: + thời gian ra khỏi ga / sân bay, - thời gian có mặt sớm (PlannerRules::transfer)
+        $tr = PlannerRules::fromConfig()->transfer();
+        $kind = $data['moveKind'] ?? 'self';
+        $min = fn(string $hm) => (int) substr($hm, 0, 2) * 60 + (int) substr($hm, 3, 2);
+        if (!empty($data['arriveAt'])) {
+            $data['arriveMin'] = min(1439, $min($data['arriveAt']) + ($tr['exit'][$kind] ?? 0));
+        }
+        if (!empty($data['leaveAt'])) {
+            $data['leaveMin'] = max(0, $min($data['leaveAt']) - ($tr['before'][$kind] ?? 0));
         }
 
         return $data;
@@ -407,6 +421,7 @@ class PlannerController extends Controller
         if (!empty($data['notes']) && \Illuminate\Support\Facades\Schema::hasColumn('tbl_trips', 'notes')) {
             DB::table('tbl_trips')->where('tripId', $id)->update(['notes' => mb_substr(strip_tags((string) $data['notes']), 0, 500)]);
         }
+        $this->recordTransfers($id, $data);
         $spare = count(array_filter($result['plan']['unplaced'] ?? [], fn($u) => !empty($u['refId']) || !empty($u['osm'])));
         $how = $result['mode'] === 'open'
             ? ' bằng đề xuất mở rộng: các mục ghi "Ngoài dữ liệu Travela" lấy từ bản đồ OpenStreetMap, nên kiểm tra lại giờ mở cửa và giá trước khi đi. '
@@ -415,6 +430,33 @@ class PlannerController extends Controller
         return redirect()->route('planner.edit', ['id' => $id])
             ->with('planner_notice', 'Đã tạo lịch trình ' . $result['destination']['name'] . $how . ($result['plan']['budget']['message'] ?? '')
                 . ($spare ? ' ' . $spare . ' mục điểm cao chưa xếp được đang nằm ở khu "Đã lưu", bạn kéo vào ngày nào cũng được.' : ''));
+    }
+
+    /**
+     * Có ngày đi + giờ tới / giờ về + đi bằng máy bay / tàu / xe khách: ghi hai việc "cần đặt" (vé đi, vé về) để lịch ngày đầu / ngày cuối
+     * giữ đúng giờ khi sửa sau này, mục Đặt chỗ nhắc đặt vé, email nhắc khi tới hạn. Tự lái thì không ghi gì.
+     */
+    private function recordTransfers(int $tripId, array $data): void
+    {
+        $kind = $data['moveKind'] ?? 'self';
+        if (empty($data['startDate']) || !in_array($kind, \App\Services\Planner\BookingPlan::TRANSPORT, true) || !\App\Services\Planner\BookingPlan::ready()) {
+            return;
+        }
+        $label = ['flight' => 'Vé máy bay', 'train' => 'Vé tàu', 'bus' => 'Vé xe khách'][$kind];
+        $start = \Carbon\Carbon::parse($data['startDate']);
+        $needBy = \Carbon\Carbon::today()->max($start->copy()->subDays(7))->toDateString();
+        $row = fn(string $title, \Carbon\Carbon $at, ?\Carbon\Carbon $end) => ['tripId' => $tripId, 'kind' => $kind, 'provider' => 'manual', 'simulated' => false,
+            'title' => $title, 'payload' => json_encode(['manual' => true, 'fromPlanner' => true]), 'startAt' => $at, 'endAt' => $end, 'price' => 0, 'createdAt' => now(),
+            'status' => 'planned', 'needBy' => $needBy];
+        if (!empty($data['arriveAt'])) {
+            // chỉ biết giờ tới: coi giờ khởi hành = giờ tới (người dùng sửa khi đặt vé), giờ tới giữ ở endAt
+            $at = $start->copy()->setTimeFromTimeString($data['arriveAt']);
+            DB::table('tbl_trip_external')->insert($row($label . ' đi (tới ' . $data['arriveAt'] . ')', $at, $at));
+        }
+        if (!empty($data['leaveAt'])) {
+            $at = $start->copy()->addDays(max(1, (int) $data['days']) - 1)->setTimeFromTimeString($data['leaveAt']);
+            DB::table('tbl_trip_external')->insert($row($label . ' về (' . $data['leaveAt'] . ')', $at, null));
+        }
     }
 
     /** POST /len-ke-hoach/{id}/trang-thai {status} */
@@ -494,6 +536,8 @@ class PlannerController extends Controller
             'estimateNote' => $payload['estimateNote'],
             'costRef' => config('planner.costs'),
             'rain' => $payload['rain'],
+            // chỗ ở (vị trí, đêm) + vé đi / về: trình duyệt tự tính ngữ cảnh từng ngày theo ngày đi đang sửa (TpSchedule.dayCtx)
+            'logistics' => $payload['logistics'] ?? ['stays' => [], 'moves' => []],
             'rainSuggestUrl' => route('planner.rainSuggest', ['id' => $id]),
             'rainMax' => (int) config('planner.rain_plan.max_per_day', 4),
             'limits' => ['maxDays' => TripPlanner::MAX_DAYS, 'maxItems' => TripPlanner::MAX_ITEMS],
@@ -997,6 +1041,10 @@ class PlannerController extends Controller
             }
             unset($d);
             $payload['unassigned'] = array_map(fn($it) => ['note' => null] + $it, $payload['unassigned']);
+        }
+        if (!$show['bookings']) {
+            // ẩn đặt chỗ thì ẩn luôn mục "Nhận phòng … / Bay …" trên lịch (khách sạn, số hiệu chuyến bay là thông tin riêng)
+            $payload = \App\Services\Planner\TripLogistics::stripBookingItems($payload, (int) $trip->tripId);
         }
         // đặt chỗ: chỉ tên, loại, thời gian; KHÔNG mã xác nhận, tệp, giá
         $bookings = $show['bookings'] ? DB::table('tbl_trip_external')->where('tripId', $trip->tripId)

@@ -36,7 +36,7 @@ class TripHealth
         $payload = self::withWeather($trip, $this->planner->payload($trip));
         $days = [];
         foreach ($payload['days'] as $d) {
-            $days[(int) $d['day']] = new DaySchedule((int) $d['day'], $d['items'], $this->route, null, $d['dow'] ?? null);
+            $days[(int) $d['day']] = new DaySchedule((int) $d['day'], $d['items'], $this->route, null, $d['dow'] ?? null, $d['ctx'] ?? null);
         }
 
         return $this->evaluate(new TripContext($trip, $days, $payload['unassigned'], $payload));
@@ -56,7 +56,7 @@ class TripHealth
     }
 
     /** Mã vấn đề là ràng buộc cứng (lịch không thực hiện được như đã đặt). */
-    public const HARD = ['time.overlap', 'time.travel', 'hours.closed', 'hours.early', 'hours.late', 'route.unreachable'];
+    public const HARD = ['time.overlap', 'time.travel', 'time.arrival', 'time.departure', 'hours.closed', 'hours.early', 'hours.late', 'route.unreachable'];
 
     public static function severity(string $code): string
     {
@@ -113,6 +113,10 @@ class TripHealth
                 'bufferMin' => $d->bufferMin, 'freeMin' => $d->freeMin, 'availableMin' => $d->availableMin, 'occupiedMin' => $d->occupiedMin(),
                 'start' => DaySchedule::hhmm($d->start), 'end' => DaySchedule::hhmm($d->end), 'cost' => round($d->cost),
                 'routeConfidence' => $d->routeConfidence,
+                // chỗ ở / đi về: chặng từ và về khách sạn, giờ tới nơi, giờ phải rời đi
+                'startLeg' => $d->startLeg, 'endLeg' => $d->endLeg,
+                'arrive' => isset($d->ctx['arrive']) ? DaySchedule::hhmm((int) $d->ctx['arrive']) : null,
+                'leave' => isset($d->ctx['leave']) ? DaySchedule::hhmm((int) $d->ctx['leave']) : null,
                 'rows' => array_map(fn($r) => ['type' => $r['item']['type'], 'refId' => $r['item']['refId'] ?? null, 'name' => $r['item']['name'],
                     'start' => DaySchedule::hhmm($r['start']), 'end' => DaySchedule::hhmm($r['end']), 'durationMin' => $r['dur'], 'fixed' => $r['fixed'], 'hours' => $r['hours'],
                     'travelMin' => $r['travelMin'], 'travelKm' => round($r['travelKm'], 1), 'routeStatus' => $r['routeStatus'] ?? null, 'waitMin' => $r['waitMin'], 'conflict' => $r['conflict'],

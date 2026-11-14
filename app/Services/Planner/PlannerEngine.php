@@ -107,7 +107,7 @@ final class PlannerEngine
 
         // bổ sung ngày thiếu mục từ phần còn lại (gần trọng tâm ngày, trong giới hạn khoảng cách)
         for ($d = 0; $d < $req['days']; $d++) {
-            while (count($dayLists[$d]) < $perDayMin && $leftover) {
+            while (count($dayLists[$d]) < (int) round($perDayMin * $this->dayShare($req, $d + 1)) && $leftover) {
                 $cent = $this->centroid($dayLists[$d] ?: $picked) ?? $center;
                 $best = null;
                 foreach ($leftover as $i => $c) {
@@ -172,13 +172,15 @@ final class PlannerEngine
         $target = (float) ($pace['target_load'] ?? 0.8);
         for ($d = 0; $d < $req['days']; $d++) {
             $acts = $dayLists[$d];
+            $share = $this->dayShare($req, $d + 1);   // ngày tới nơi / ngày về: chỉ phần thời gian còn lại
+            $dayTarget = $target * $share;
             for ($guard = 0; ; $guard++) {
                 $w = [];
                 $drop = [];
                 $day = $this->timeline($d + 1, $acts, $dayMeals[$d], $center, $dayBudget, $w, $req, $drop);
                 $load = $this->loadOf($day);
                 $nAct = count(array_filter($day['items'], fn($i) => !$i['isMeal']));
-                if ($load <= $target || $nAct <= 1 || $guard > 8) {
+                if ($load <= $dayTarget || $nAct <= 1 || $guard > 8) {
                     break;
                 }
                 $worst = null;
@@ -196,7 +198,7 @@ final class PlannerEngine
             // ngày còn thưa (dưới mức tối thiểu của nhịp): bù từ phần còn lại, gần trọng tâm ngày, miễn không vượt mức mục tiêu
             $minLoad = (float) ($pace['min_load'] ?? 0.45);
             $tries = 0;
-            while ($load < $minLoad && $leftover && $tries++ < 6) {
+            while ($load < $minLoad * $share && $leftover && $tries++ < 6) {
                 $cent = $this->centroid($acts) ?? $center;
                 $best = null;
                 foreach ($leftover as $i => $c) {
@@ -215,7 +217,7 @@ final class PlannerEngine
                 $w2 = [];
                 $drop2 = [];
                 $try = $this->timeline($d + 1, $this->orderByRoute(array_merge($acts, [$c]), $center), $dayMeals[$d], $center, $dayBudget, $w2, $req, $drop2);
-                if ($this->loadOf($try) > $target || $drop2) {
+                if ($this->loadOf($try) > $dayTarget || $drop2) {
                     $leftover[$best[0]]['triedDay'][$d] = true;   // không vừa ngày này, thử mục khác
                     continue;
                 }
@@ -236,7 +238,7 @@ final class PlannerEngine
             // ngày thưa đo bằng độ dày (cùng thang với Sức khỏe chuyến đi), không đếm số mục: một lớp nấu ăn 3 giờ đã đủ một buổi
             $thin = [];
             foreach ($days as $x) {
-                if ($x['items'] && $this->loadOf($x) < (float) ($pace['min_load'] ?? 0.45)) {
+                if ($x['items'] && $this->loadOf($x) < (float) ($pace['min_load'] ?? 0.45) * $this->dayShare($req, (int) $x['day'])) {
                     $thin[] = $x['day'];
                 }
             }
@@ -293,6 +295,9 @@ final class PlannerEngine
             'pace' => $pace,
             'maxDifficulty' => $diff,
             'startDate' => !empty($r['startDate']) ? (string) $r['startDate'] : null,
+            // giờ tới nơi ngày đầu / giờ phải rời đi ngày cuối (phút từ 00:00, đã trừ thời gian ra ga / có mặt sớm): lịch không xếp ra ngoài
+            'arriveMin' => isset($r['arriveMin']) && $r['arriveMin'] !== '' && $r['arriveMin'] !== null ? max(0, min(1439, (int) $r['arriveMin'])) : null,
+            'leaveMin' => isset($r['leaveMin']) && $r['leaveMin'] !== '' && $r['leaveMin'] !== null ? max(0, min(1439, (int) $r['leaveMin'])) : null,
         ];
     }
 
@@ -565,7 +570,7 @@ final class PlannerEngine
                 $seeds[$d] = $this->pt($l[0], $center);
             }
         }
-        $free = array_keys(array_diff_key(array_fill(0, $n, 1), $seeds));
+        $free = array_values(array_filter(array_keys(array_diff_key(array_fill(0, $n, 1), $seeds)), fn($d) => $this->dayShare($req, $d + 1) > 0.15));
         foreach ($free as $d) {
             $best = null;
             foreach ($pool as $i => $c) {
@@ -598,7 +603,8 @@ final class PlannerEngine
                 if ($this->closedOn($c, $this->dowOf($req, $d + 1))) {
                     continue;   // biết ngày đi: không xếp vào ngày nơi này đóng cửa
                 }
-                if (count($lists[$d]) < $perDayMax && $load[$d] + $dur <= $dayBudget) {
+                $share = $this->dayShare($req, $d + 1);
+                if (count($lists[$d]) < max($share > 0.15 ? 1 : 0, (int) round($perDayMax * $share)) && $load[$d] + $dur <= $dayBudget * $share) {
                     $lists[$d][] = $c;
                     $load[$d] += $dur;
                     $placed = true;
@@ -646,6 +652,23 @@ final class PlannerEngine
         return $out;
     }
 
+    /** Phần thời gian chơi được của ngày d (1 = cả ngày): ngày đầu sau giờ tới nơi, ngày cuối trước giờ phải rời đi. */
+    private function dayShare(array $req, int $dayNo): float
+    {
+        $from = $this->rules->dayStart();
+        $to = $this->rules->softEnd();
+        $s = $from;
+        $e = $to;
+        if ($dayNo === 1 && $req['arriveMin'] !== null) {
+            $s = max($s, $req['arriveMin']);
+        }
+        if ($dayNo === $req['days'] && $req['leaveMin'] !== null) {
+            $e = min($e, $req['leaveMin']);
+        }
+
+        return max(0.0, min(1.0, ($e - $s) / max(1, $to - $from)));
+    }
+
     // ------------------------------------------------------------------ (6) timeline
 
     /**
@@ -682,6 +705,12 @@ final class PlannerEngine
         }
 
         $clock = $this->rules->dayStart();   // phút kể từ 00:00, cùng thang với startMin của mục chuyến đi
+        $arrive = $dayNo === 1 ? ($req['arriveMin'] ?? null) : null;
+        $leave = $dayNo === ($req['days'] ?? 0) ? ($req['leaveMin'] ?? null) : null;
+        if ($arrive !== null) {
+            $clock = max($clock, (int) $arrive);
+        }
+        $noonEnd = (int) ($this->rules->slots()['noon']['end'] ?? 810);
         $prev = null;
         $items = [];
         $travelTotal = 0;
@@ -704,6 +733,15 @@ final class PlannerEngine
                 $start = (int) $this->rules->slotStart($forced);   // bữa trưa không sớm hơn đầu buổi trưa, bữa tối không sớm hơn đầu buổi tối
             }
             $dur = $this->dur($c);
+            if ($forced === 'noon' && $start >= $noonEnd) {
+                continue;   // tới nơi sau giờ trưa: bỏ bữa trưa đã chọn, không xếp bữa trưa lúc chiều
+            }
+            if ($leave !== null && $start + $dur > $leave) {
+                if (!$c['isMeal']) {
+                    $dropped[] = $c + ['dropWhy' => 'Ngày ' . $dayNo . ' phải rời đi lúc ' . sprintf('%02d:%02d', intdiv((int) $leave, 60), (int) $leave % 60) . ', không đủ thời gian'];
+                }
+                continue;
+            }
             if ($dow !== null && isset($c['hours'][(string) $dow])) {
                 $fit = OpeningHours::fit($c['hours'], $dow, $start, $dur);
                 if ($fit === null || $fit - $start > $maxWait) {
@@ -725,6 +763,12 @@ final class PlannerEngine
                     }
                 }
                 $start = max($start, $fit);
+                if ($leave !== null && $start + $dur > $leave) {
+                    if (!$c['isMeal']) {
+                        $dropped[] = $c + ['dropWhy' => 'Ngày ' . $dayNo . ' phải rời đi trước khi nơi này mở cửa đủ lâu'];
+                    }
+                    continue;
+                }
             }
             $slot = $forced ?? $this->rules->slotOf($start);
             if ($forced === null && $slot === 'noon') {

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
 use App\Services\Planner\BookingPlan;
+use App\Services\Planner\TripLogistics;
 use App\Services\Planner\TripSharing;
 use App\Services\Travel\FlightSearchService;
 use App\Services\Travel\FlightStatusService;
@@ -134,7 +135,8 @@ class TravelController extends Controller
         $in = Carbon::parse($q['checkIn'])->setTime(14, 0);
         $title = $h['name'] . ' (' . $q['nights'] . ' đêm)';
         $this->attach($trip, 'hotel', $res['provider'], (bool) $h['simulated'], $title, $h + ['nights' => (int) $q['nights']], $in, (int) $h['price'],
-            'note', 'Nhận phòng ' . $title, $h['stars'] . ' sao · giá ước tính' . ($h['simulated'] ? ' · ' . TravelApi::SIM_LABEL : ''), 14 * 60, 30, $h['lat'], $h['lng']);
+            'note', 'Nhận phòng ' . $title, $h['stars'] . ' sao · giá ước tính' . ($h['simulated'] ? ' · ' . TravelApi::SIM_LABEL : ''), 14 * 60, 30, $h['lat'], $h['lng'],
+            TripLogistics::ready() && isset($h['lat'], $h['lng']) ? ['latitude' => (float) $h['lat'], 'longitude' => (float) $h['lng']] : []);
 
         return response()->json(['ok' => true, 'message' => 'Đã thêm ' . $h['name'] . ' vào lịch trình.']);
     }
@@ -236,6 +238,9 @@ class TravelController extends Controller
             'needBy' => ['nullable', 'date'],
             'bookUrl' => ['nullable', 'url:http,https', 'max:500'],
             'note' => ['nullable', 'string', 'max:255'],
+            'lat' => ['nullable', 'required_with:lng', 'numeric', 'between:-90,90'],
+            'lng' => ['nullable', 'required_with:lat', 'numeric', 'between:-180,180'],
+            'address' => ['nullable', 'string', 'max:255'],
         ], ['bookUrl.url' => 'Nơi đặt phải là đường dẫn http(s).', 'endAt.after' => 'Ngày kết thúc phải sau ngày bắt đầu.']);
         if (DB::table('tbl_trip_external')->where('tripId', $id)->count() >= 60) {
             return response()->json(['message' => 'Mỗi chuyến tối đa 60 mục đặt chỗ.'], 422);
@@ -245,7 +250,8 @@ class TravelController extends Controller
             'payload' => json_encode(['manual' => true]), 'startAt' => isset($v['startAt']) ? Carbon::parse($v['startAt']) : ($trip->startDate ? Carbon::parse($trip->startDate)->setTime(12, 0) : now()),
             'endAt' => isset($v['endAt']) ? Carbon::parse($v['endAt']) : null, 'price' => 0, 'createdAt' => now(),
             'status' => 'planned', 'needBy' => $v['needBy'] ?? null, 'bookUrl' => $v['bookUrl'] ?? null, 'note' => $v['note'] ?? null,
-        ]);
+        ] + $this->locationOf($v));
+        $this->touch($trip);   // chỗ ở có vị trí đổi lịch từng ngày (đường đi từ / về khách sạn)
 
         return response()->json(['ok' => true, 'message' => 'Đã thêm vào danh sách cần đặt.'] + $bp->forTrip($trip) + ['canEdit' => true]);
     }
@@ -283,7 +289,8 @@ class TravelController extends Controller
                 $at = Carbon::parse($x2->startAt);
                 $isMove = in_array($x2->kind, BookingPlan::TRANSPORT, true);
                 $this->placeItem($trip, $isMove ? 'transport' : 'note', $label, 'Đã đặt ngoài Travela', $at, (int) $x2->price,
-                    $x2->kind === 'hotel' ? 14 * 60 : (int) $at->format('H') * 60 + (int) $at->format('i'), $x2->kind === 'hotel' ? 30 : 60);
+                    $x2->kind === 'hotel' ? 14 * 60 : (int) $at->format('H') * 60 + (int) $at->format('i'), $x2->kind === 'hotel' ? 30 : 60,
+                    $x2->kind === 'hotel' && isset($x2->latitude) ? (float) $x2->latitude : null, $x2->kind === 'hotel' && isset($x2->longitude) ? (float) $x2->longitude : null);
             } elseif ($v['status'] !== 'booked' && $from === 'booked') {
                 DB::table('tbl_trip_items')->where('tripId', $trip->tripId)->where('label', self::itemLabel($x))->limit(1)->delete();
                 $this->touch($trip);
@@ -292,6 +299,51 @@ class TravelController extends Controller
         $msg = ['booked' => 'Đã đánh dấu đã đặt và đưa vào lịch.', 'cancelled' => 'Đã đánh dấu đã hủy và gỡ khỏi lịch (bản ghi vẫn giữ để đối chiếu).', 'planned' => 'Đã chuyển về "cần đặt".'][$v['status']];
 
         return response()->json(['ok' => true, 'message' => $msg] + $bp->forTrip(DB::table('tbl_trips')->where('tripId', $id)->first()) + ['canEdit' => true]);
+    }
+
+    /**
+     * POST /len-ke-hoach/{id}/dat-cho/{externalId}/vi-tri {lat, lng, address?} | {clear: 1}
+     * Gắn vị trí cho chỗ ở: lịch mỗi ngày tính đường từ khách sạn đi và về khách sạn; mục "Nhận phòng" trên lịch cũng có vị trí.
+     */
+    public function planLocate(Request $r, int $id, int $externalId, BookingPlan $bp): JsonResponse
+    {
+        $trip = $this->trip($id, true);
+        abort_unless(TripLogistics::ready(), 503, 'Cần chạy php artisan migrate.');
+        $v = $r->validate([
+            'clear' => ['nullable', 'boolean'],
+            'lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'lng' => ['nullable', 'numeric', 'between:-180,180'],
+            'address' => ['nullable', 'string', 'max:255'],
+        ]);
+        if (empty($v['clear']) && (!isset($v['lat']) || !isset($v['lng']))) {
+            return response()->json(['message' => 'Chọn một vị trí.', 'errors' => ['lat' => ['Chọn một vị trí.']]], 422);
+        }
+        $x = DB::table('tbl_trip_external')->where(['tripId' => $id, 'externalId' => $externalId])->first() ?? abort(404);
+        if ($x->kind !== 'hotel') {
+            return response()->json(['message' => 'Chỉ gắn vị trí cho chỗ ở.'], 422);
+        }
+        $clear = !empty($v['clear']);
+        $set = $clear ? ['latitude' => null, 'longitude' => null, 'address' => null] : $this->locationOf($v);
+        DB::transaction(function () use ($x, $set, $trip) {
+            DB::table('tbl_trip_external')->where('externalId', $x->externalId)->update($set);
+            DB::table('tbl_trip_items')->where('tripId', $trip->tripId)->where('label', self::itemLabel($x))
+                ->update(['latitude' => $set['latitude'], 'longitude' => $set['longitude'], 'source' => $set['latitude'] !== null ? 'search' : null]);
+            $this->touch($trip);
+        });
+
+        return response()->json(['ok' => true, 'message' => $clear ? 'Đã bỏ vị trí chỗ ở.' : 'Đã gắn vị trí "' . $x->title . '". Lịch mỗi ngày tính đường đi từ và về đây.']
+            + $bp->forTrip(DB::table('tbl_trips')->where('tripId', $id)->first()) + ['canEdit' => true]);
+    }
+
+    /** @return array{latitude?:float,longitude?:float,address?:?string} */
+    private function locationOf(array $v): array
+    {
+        if (!TripLogistics::ready() || !isset($v['lat'], $v['lng'])) {
+            return [];
+        }
+
+        return ['latitude' => round((float) $v['lat'], 7), 'longitude' => round((float) $v['lng'], 7),
+            'address' => isset($v['address']) ? mb_substr(strip_tags((string) $v['address']), 0, 255) : null];
     }
 
     /** POST /len-ke-hoach/{id}/dat-cho/bo-qua {key: stay|go|back, skip} */
@@ -320,11 +372,14 @@ class TravelController extends Controller
             'startAt' => ['required', 'date'],
             'price' => ['nullable', 'integer', 'between:0,1000000000'],
             'file' => ['nullable', 'file', 'max:5120', 'mimes:pdf,jpg,jpeg,png,webp'],
+            'lat' => ['nullable', 'required_with:lng', 'numeric', 'between:-90,90'],
+            'lng' => ['nullable', 'required_with:lat', 'numeric', 'between:-180,180'],
+            'address' => ['nullable', 'string', 'max:255'],
         ], ['code.regex' => 'Mã xác nhận chỉ gồm chữ, số, dấu gạch và dấu chấm.', 'file.mimes' => 'Tệp phải là PDF hoặc ảnh JPG / PNG / WebP.', 'file.max' => 'Tệp tối đa 5 MB.']);
         if (!\Illuminate\Support\Facades\Schema::hasColumn('tbl_trip_external', 'confirmationCode')) {
             return response()->json(['message' => 'Cần chạy php artisan migrate trước.'], 503);
         }
-        $extra = ['confirmationCode' => isset($v['code']) ? trim($v['code']) : null];
+        $extra = ['confirmationCode' => isset($v['code']) ? trim($v['code']) : null] + $this->locationOf($v);
         if (BookingPlan::ready()) {
             $extra += ['status' => 'booked', 'endAt' => isset($v['endAt']) ? Carbon::parse($v['endAt']) : null];
         }
@@ -340,7 +395,7 @@ class TravelController extends Controller
             $v['title'], ['manual' => true], $at, (int) ($v['price'] ?? 0), in_array($v['kind'], BookingPlan::TRANSPORT, true) ? 'transport' : 'note', $kindLabel . ' ' . $v['title'],
             // mã xác nhận chỉ nằm ở tbl_trip_external: ghi chú của mục có thể hiện ở bản chia sẻ / Cộng đồng
             'Đã đặt ngoài Travela', (int) $at->format('H') * 60 + (int) $at->format('i'),
-            $v['kind'] === 'hotel' ? 30 : 60, null, null, $extra);
+            $v['kind'] === 'hotel' ? 30 : 60, $v['kind'] === 'hotel' && isset($v['lat']) ? (float) $v['lat'] : null, $v['kind'] === 'hotel' && isset($v['lng']) ? (float) $v['lng'] : null, $extra);
 
         return response()->json(['ok' => true, 'externalId' => $xid, 'message' => 'Đã lưu xác nhận "' . $v['title'] . '" vào chuyến đi.']);
     }

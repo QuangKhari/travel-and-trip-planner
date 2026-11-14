@@ -238,3 +238,26 @@ a.tgs-it__name:hover { color: var(--tg-brand-d); }
 .tp .tgb__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
 .tp .tgb__w2 { grid-column: 1 / -1; }
 @media (max-width: 575.98px) { .tp .tgb__it { grid-template-columns: 22px 1fr; } .tp .tgb__it .tgb__acts { grid-column: 2; } }
+
+/* ---- Mốc trong lịch ngày: xuất phát / về chỗ ở, giờ tới nơi, giờ phải rời đi ---- */
+.tpx-base { list-style: none; display: flex; align-items: flex-start; gap: 10px; margin: 4px 0 4px 34px; padding: 7px 12px; border-radius: 10px; background: #f3f8f8; color: #1f3b3d; font-size: .85rem; }
+.tpx-base .fas { margin-top: 3px; color: #2a7f84; width: 16px; text-align: center; }
+.tpx-base__m { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.tpx-base__m b { font-weight: 600; }
+.tpx-base__m small { color: #5b6f71; font-size: .78rem; }
+.tpx-base.is-arrive, .tpx-base.is-leave { background: #fff7e8; color: #6b4a10; }
+.tpx-base.is-arrive .fas, .tpx-base.is-leave .fas { color: #b7791f; }
+.tpx-base.is-hint { background: transparent; border: 1px dashed #cbd5d5; color: #5b6f71; }
+.tpx-base.is-hint .fas { color: #94a3b8; }
+
+/* ---- Vị trí chỗ ở trong thẻ Đặt chỗ ---- */
+.tp .tgb__loc { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 4px; font-size: .8rem; color: #3d5557; }
+.tp .tgb__loc .fas { color: #2a7f84; }
+.tp .tgb__loc.is-missing { color: #8a5a00; }
+.tp .tgb__loc.is-missing .fas { color: #b7791f; }
+.tp .tgb__locate { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tp .tgb__locate input[type=search] { flex: 1 1 200px; min-width: 0; padding: 6px 10px; border: 1px solid #cfdcdd; border-radius: 8px; font-size: .86rem; }
+.tp .tgb__locres { flex-basis: 100%; list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.tp .tgb__pick { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 1px; padding: 6px 10px; border: 1px solid #e1eaea; border-radius: 8px; background: #fff; cursor: pointer; }
+.tp .tgb__pick:hover, .tp .tgb__pick:focus-visible { border-color: #2a7f84; background: #f3f8f8; }
+.tp .tgb__pick small { color: #5b6f71; font-size: .76rem; }

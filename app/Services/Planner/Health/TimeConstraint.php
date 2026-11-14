@@ -24,6 +24,15 @@ final class TimeConstraint implements Constraint
                     $out[] = ['level' => 'warn', 'code' => 'time.travel', 'day' => $d->day, 'index' => $i, 'action' => 'unfix',
                         'text' => 'Ngày ' . $d->day . ': không kịp đi từ “' . $prev['item']['name'] . '” tới “' . $r['item']['name'] . '” trước ' . DaySchedule::hhmm($r['start']) . ' (cần ' . $prev['travelMin'] . ' phút di chuyển).'];
                 }
+                if ($r['conflict'] === 'arrival') {
+                    $out[] = ['level' => 'bad', 'code' => 'time.arrival', 'day' => $d->day, 'index' => $i, 'action' => 'unfix',
+                        'text' => 'Ngày ' . $d->day . ': “' . $r['item']['name'] . '” đặt lúc ' . DaySchedule::hhmm($r['start']) . ' nhưng khoảng ' . DaySchedule::hhmm((int) $d->ctx['arrive'])
+                            . ' bạn mới tới nơi' . (!empty($d->ctx['arriveText']) ? ' (' . $d->ctx['arriveText'] . ')' : '') . '.'];
+                } elseif ($r['conflict'] === 'departure') {
+                    $out[] = ['level' => 'bad', 'code' => 'time.departure', 'day' => $d->day, 'index' => $i, 'action' => 'move',
+                        'text' => 'Ngày ' . $d->day . ': “' . $r['item']['name'] . '” (' . DaySchedule::hhmm($r['start']) . '–' . DaySchedule::hhmm($r['end']) . ') chưa xong thì đã tới lúc phải rời đi '
+                            . DaySchedule::hhmm((int) $d->ctx['leave']) . (!empty($d->ctx['leaveText']) ? ' (' . $d->ctx['leaveText'] . ')' : '') . '.'];
+                }
                 $prev = $r;
             }
             if ($d->count() && $d->end > $late) {

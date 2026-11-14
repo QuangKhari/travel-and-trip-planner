@@ -43,9 +43,11 @@ class TripPayloadBuilder
         $time = ItemInsights::timeContext($trip);
         [$rainCtx, $rainPlan] = $this->rainContext($trip, $items, $time);
 
+        $logistics = app(TripLogistics::class)->raw((int) $trip->tripId);
         $byDay = [];
         for ($d = 1; $d <= $days; $d++) {
             $byDay[$d] = ['day' => $d, 'date' => $start?->modify('+' . ($d - 1) . ' days')->format('Y-m-d'), 'dow' => OpeningHours::dowOf($trip->startDate, $d),
+                'ctx' => TripLogistics::dayContext($logistics, $trip->startDate ? substr((string) $trip->startDate, 0, 10) : null, $d, $days, $rules),
                 'items' => [], 'legs' => [], 'km' => 0, 'minutes' => 0, 'cost' => 0.0];
         }
         $unassigned = [];
@@ -65,8 +67,11 @@ class TripPayloadBuilder
                 $byDay[$d]['legs'][] = ['from' => $pts[$l['from']]['name'], 'to' => $pts[$l['to']]['name'], 'km' => (int) round($l['km']), 'min' => $l['min'], 'status' => $l['status'] ?? 'estimated'];
             }
             $byDay[$d]['routeConfidence'] = $tt['confidence'] ?? 'estimated';
-            $byDay[$d]['km'] = (int) round($tt['km']);
-            $byDay[$d]['minutes'] = $tt['min'];
+            // đi từ / về chỗ ở (cùng DaySchedule): tính vào km và phút đi lại của ngày
+            $bl = TripLogistics::baseLegs($day['items'], $day['ctx'] ?? null, $this->route);
+            $byDay[$d]['baseLegs'] = $bl;
+            $byDay[$d]['km'] = (int) round($tt['km'] + ($bl['start']['km'] ?? 0) + ($bl['end']['km'] ?? 0));
+            $byDay[$d]['minutes'] = $tt['min'] + ($bl['start']['min'] ?? 0) + ($bl['end']['min'] ?? 0);
             $byDay[$d]['cost'] = array_sum(array_map(fn($x) => $x['cost'] ?? 0, $day['items']));
 
             $outdoorN = count(array_filter($day['items'], fn($x) => ($x['outdoor'] ?? null) === true));
@@ -115,6 +120,7 @@ class TripPayloadBuilder
                 'month' => $time['month'],
             ],
             'rain' => ['context' => $rainCtx, 'plan' => $rainPlan],
+            'logistics' => $logistics,
             'days' => array_values($byDay),
             'unassigned' => $unassigned,
             'totals' => ['cost' => $cost, 'budget' => $budget, 'left' => $budget !== null ? $budget - $cost : null],

@@ -31,7 +31,7 @@ final class BookingPlan
     {
         $rows = DB::table('tbl_trip_external')->where('tripId', $trip->tripId)->orderBy('startAt')->get();
         $skip = array_fill_keys((array) json_decode((string) ($trip->bookingSkip ?? ''), true) ?: [], true);
-        $dest = $trip->destinationId ? DB::table('tbl_destinations')->where('destinationId', $trip->destinationId)->first(['name', 'province']) : null;
+        $dest = $trip->destinationId ? DB::table('tbl_destinations')->where('destinationId', $trip->destinationId)->first(['name', 'province', 'latitude', 'longitude']) : null;
         $city = $dest ? ($dest->name ?: $dest->province) : '';
         $active = $rows->filter(fn($r) => ($r->status ?? 'booked') !== 'cancelled');
         $booked = $active->filter(fn($r) => ($r->status ?? 'booked') === 'booked');
@@ -99,6 +99,7 @@ final class BookingPlan
             'startAt' => $r->startAt, 'endAt' => $r->endAt ?? null, 'needBy' => $r->needBy ?? null, 'bookUrl' => $r->bookUrl ?? null, 'note' => $r->note ?? null,
             'overdue' => ($r->status ?? '') === 'planned' && !empty($r->needBy) && Carbon::parse($r->needBy)->lt($now),
             'code' => $r->confirmationCode ?? null, 'hasFile' => !empty($r->attachPath), 'price' => (int) $r->price, 'simulated' => (bool) $r->simulated,
+            'lat' => isset($r->latitude) ? (float) $r->latitude : null, 'lng' => isset($r->longitude) ? (float) $r->longitude : null, 'address' => $r->address ?? null,
         ];
 
         return [
@@ -108,6 +109,9 @@ final class BookingPlan
             'cancelled' => $rows->filter(fn($r) => ($r->status ?? '') === 'cancelled')->count(),
             'skip' => $skip,
             'city' => $city,
+            // trang sửa dùng để tính lại lịch ngay (đường đi từ / về khách sạn, giờ tới nơi, giờ phải rời đi)
+            'logistics' => app(TripLogistics::class)->raw((int) $trip->tripId),
+            'center' => $dest && isset($dest->latitude) ? ['lat' => (float) $dest->latitude, 'lng' => (float) $dest->longitude] : null,
         ];
     }
 
@@ -161,6 +165,44 @@ final class BookingPlan
             ['label' => 'Tàu (Đường sắt VN)', 'url' => 'https://dsvn.vn/'],
             ['label' => 'Xe khách (Vexere)', 'url' => 'https://vexere.com/vi-VN'],
         ];
+    }
+
+    /**
+     * Mục lịch tạo kèm đặt chỗ (đã đặt) đặt lại đúng ngày theo ngày giờ thật của đặt chỗ khi chuyến đổi ngày đi.
+     * Ngoài khoảng ngày của chuyến thì vào "Đã lưu" (giao diện Đặt chỗ báo "ngoài ngày đi").
+     *
+     * @param list<array> $rows các dòng tbl_trip_items sắp ghi
+     * @return list<array>
+     */
+    public static function realignRows(int $tripId, array $rows, ?string $startDate, int $days): array
+    {
+        if (!self::ready()) {
+            return $rows;
+        }
+        $want = [];
+        foreach (DB::table('tbl_trip_external')->where('tripId', $tripId)->where(fn($q) => $q->whereNull('status')->orWhere('status', 'booked'))->get() as $x) {
+            $day = null;
+            if ($startDate) {
+                $n = (int) Carbon::parse($startDate)->startOfDay()->diffInDays(Carbon::parse($x->startAt)->startOfDay(), false) + 1;
+                $day = $n >= 1 && $n <= $days ? $n : null;
+            }
+            $want[mb_strtolower(\App\Http\Controllers\clients\TravelController::itemLabel($x))] = $day;
+        }
+        if (!$want) {
+            return $rows;
+        }
+        foreach ($rows as $i => $r) {
+            $k = mb_strtolower((string) ($r['label'] ?? ''));
+            if ($k !== '' && array_key_exists($k, $want) && $r['dayNo'] !== $want[$k]) {
+                $rows[$i]['dayNo'] = $want[$k];
+                $rows[$i]['orderNo'] = min(127, 100 + $i);   // cuối ngày mới (cột orderNo nhỏ); giờ cố định (nếu có) vẫn quyết định vị trí trong lịch
+                if ($want[$k] === null && array_key_exists('startMin', $r)) {
+                    $rows[$i]['startMin'] = null;
+                }
+            }
+        }
+
+        return $rows;
     }
 
     /** "Không cần" một nhắc (stay / go / back), hoặc bật lại. */

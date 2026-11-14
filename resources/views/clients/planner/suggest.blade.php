@@ -1,6 +1,6 @@
 @include('clients.blocks.header')
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=21">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-flow.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-flow.css') }}?v=4">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai.css') }}?v=1">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/nature-luxury-planner.css') }}?v=bl20261104">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
@@ -38,7 +38,7 @@
                     <label id="aiSayH" for="aiText">Kể chuyến đi bằng một câu</label>
                     <span class="ai-say__mode" id="aiMode">{{ $aiOn ? 'La bàn đọc giúp bạn' : 'Chế độ cơ bản' }}</span>
                 </div>
-                <textarea id="aiText" name="q" rows="2" maxlength="500" placeholder="Ví dụ: Tôi đi Hà Nội 3 ngày cuối tháng 11, 2 người, khoảng 5 triệu, thích văn hóa và ăn uống, không thích đi quá nhiều">{{ request('q') }}</textarea>
+                <textarea id="aiText" name="q" rows="2" maxlength="500" placeholder="Ví dụ: Tôi đi Hà Nội 3 ngày cuối tháng 11, 2 người, khoảng 5 triệu, thích văn hóa và ăn uống, không thích đi quá nhiều">{{ is_string(request('q')) ? request('q') : '' }}</textarea>
                 <div class="ai-say__row">
                     <p class="ai-say__priv">{{ $aiOn ? 'Câu bạn nhập được gửi tới nhà cung cấp AI để đọc hiểu. Đừng ghi email hay số điện thoại.' : 'Travela đọc câu bằng luật có sẵn, không gửi đi đâu.' }}</p>
                     <button type="submit" class="tp-btn ai-btn" id="aiGo">Hiểu giúp mình</button>
@@ -162,6 +162,26 @@
                         @endforeach
                         <p class="tpf-err" id="sgWhenErr" hidden>Hãy chọn ngày đi hoặc tháng đi.</p>
                     </fieldset>
+                    {{-- Giờ tới nơi / giờ về: ngày đầu không xếp gì trước lúc tới, ngày cuối xong trước lúc phải ra ga / sân bay --}}
+                    <details class="tpf-more" @if ($v('arriveAt') || $v('leaveAt')) open @endif>
+                        <summary>Đã biết giờ tới nơi và giờ về? <small>(không bắt buộc)</small></summary>
+                        <div class="tpf-row">
+                            <label class="tpf-field"><span>Đi bằng</span>
+                                <select name="moveKind" id="sgMoveKind" class="no-nice">
+                                    @foreach (['flight' => 'Máy bay', 'train' => 'Tàu hỏa', 'bus' => 'Xe khách', 'self' => 'Tự lái xe / xe máy'] as $k => $l)
+                                        <option value="{{ $k }}" @selected(($v('moveKind') ?? 'flight') === $k)>{{ $l }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                            <label class="tpf-field"><span>Tới nơi ngày đầu lúc</span>
+                                <input type="time" name="arriveAt" value="{{ $v('arriveAt') }}" step="300">
+                            </label>
+                            <label class="tpf-field"><span>Khởi hành về ngày cuối lúc</span>
+                                <input type="time" name="leaveAt" value="{{ $v('leaveAt') }}" step="300">
+                            </label>
+                        </div>
+                        <small class="tpf-note">Travela tự cộng thời gian ra khỏi sân bay / ga và trừ thời gian có mặt sớm (máy bay 2 giờ, tàu 40 phút, xe khách 30 phút). Có ngày đi thì chặng đi, về được ghi vào mục "Cần đặt" để nhắc bạn đặt vé.</small>
+                    </details>
                 </section>
 
                 {{-- 3. Ai đi --}}

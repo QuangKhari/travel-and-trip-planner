@@ -117,6 +117,35 @@ class PlannerOpenModeTest extends TestCase
         $this->assertGreaterThan(0, DB::table('tbl_trip_items')->where('tripId', $trip->tripId)->count());
     }
 
+    public function test_generate_respects_arrival_and_departure_and_records_tickets(): void
+    {
+        $start = now()->addDays(20)->toDateString();
+        $q = $this->q(['startDate' => $start, 'days' => 2, 'moveKind' => 'flight', 'arriveAt' => '13:00', 'leaveAt' => '15:00']);
+        $this->withSession($this->s)->post(route('planner.generate'), $q)->assertRedirect()->assertSessionHas('planner_notice');
+        $trip = DB::table('tbl_trips')->first();
+        // lịch đã lưu (xếp lại bằng chính DaySchedule của trang sửa / sức khỏe): ngày đầu sau giờ tới, ngày cuối xong trước giờ phải đi
+        $h0 = $this->withSession($this->s)->getJson("/len-ke-hoach/{$trip->tripId}/suc-khoe")->assertOk()->json('days');
+        $this->assertNotEmpty($h0[0]['rows']);
+        foreach ($h0[0]['rows'] as $r) {
+            $this->assertGreaterThanOrEqual('13:45', $r['start'], 'bay tới 13:00 + 45 phút ra sân bay');
+        }
+        foreach ($h0[1]['rows'] as $r) {
+            $this->assertLessThanOrEqual('13:00', $r['end'], 'bay về 15:00, có mặt trước 2 giờ');
+        }
+        // vé đi / về được ghi vào "Cần đặt" để nhắc, và lịch sau này vẫn giữ đúng giờ
+        $moves = DB::table('tbl_trip_external')->where('tripId', $trip->tripId)->orderBy('startAt')->get();
+        $this->assertCount(2, $moves);
+        $this->assertSame(['planned', 'planned'], $moves->pluck('status')->all());
+        $this->assertSame($start . ' 13:00:00', (string) $moves[0]->endAt);
+        $h = $this->withSession($this->s)->getJson("/len-ke-hoach/{$trip->tripId}/suc-khoe")->assertOk()->json();
+        $this->assertSame('13:45', $h['days'][0]['arrive']);
+        $this->assertSame('13:00', $h['days'][1]['leave']);
+        $this->assertNotContains('time.arrival', array_column($h['checks'], 'code'));
+        $this->assertNotContains('time.departure', array_column($h['checks'], 'code'));
+
+        $this->withSession($this->s)->post(route('planner.generate'), $this->q(['arriveAt' => '25:00']))->assertSessionHasErrors('arriveAt');
+    }
+
     public function test_request_needs_a_destination_or_a_place(): void
     {
         $this->withSession($this->s)->get(route('planner.preview', ['month' => 6, 'days' => 2, 'adults' => 2]))->assertSessionHasErrors(['destinationId', 'placeLat']);

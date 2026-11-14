@@ -38,6 +38,8 @@ final class TripResolver
     private array $days = [];
     /** @var array<int,?int> */
     private array $dows = [];
+    /** @var array<int,?array> ngữ cảnh chỗ ở / đi về của từng ngày (TripLogistics::dayContext) */
+    private array $ctxs = [];
     private array $unassigned = [];
     private array $before;
 
@@ -55,6 +57,7 @@ final class TripResolver
         foreach ($this->payload['days'] as $d) {
             $this->days[(int) $d['day']] = array_values($d['items']);
             $this->dows[(int) $d['day']] = $d['dow'] ?? null;
+            $this->ctxs[(int) $d['day']] = $d['ctx'] ?? null;
         }
         $this->unassigned = $this->payload['unassigned'];
         $this->before = $this->healthOf($this->days, $this->unassigned);
@@ -73,6 +76,7 @@ final class TripResolver
             in_array($code, ['capacity.overload', 'capacity.tight', 'time.late'], true) && $day !== null => $this->balanceOptions($day, $target),
             in_array($code, ['time.overlap', 'time.travel'], true) && $day !== null && $index !== null => $this->timeOptions($day, $index, $target),
             str_starts_with($code, 'hours.') && $day !== null && $index !== null => $this->hoursOptions($day, $index, $target),
+            in_array($code, ['time.arrival', 'time.departure'], true) && $day !== null && $index !== null => $this->transferOptions($day, $index, $target),
             $code === 'route.long_day' && $day !== null => $this->routeOptions($day, $target),
             in_array($code, ['context.rain', 'weather.rain', 'weather.storm'], true) && $day !== null => $this->rainOptions($day, $target),
             default => [],
@@ -98,6 +102,7 @@ final class TripResolver
         foreach ($this->payload['days'] as $d) {
             $this->days[(int) $d['day']] = array_values($d['items']);
             $this->dows[(int) $d['day']] = $d['dow'] ?? null;
+            $this->ctxs[(int) $d['day']] = $d['ctx'] ?? null;
         }
         $this->unassigned = $this->payload['unassigned'];
         $this->before = $this->healthOf($this->days, $this->unassigned);
@@ -151,7 +156,7 @@ final class TripResolver
 
     private function schedule(int $day, ?array $items = null): DaySchedule
     {
-        return new DaySchedule($day, $items ?? ($this->days[$day] ?? []), $this->route, $this->rules, $this->dows[$day] ?? null);
+        return new DaySchedule($day, $items ?? ($this->days[$day] ?? []), $this->route, $this->rules, $this->dows[$day] ?? null, $this->ctxs[$day] ?? null);
     }
 
     private function healthOf(array $days, array $unassigned, ?array $payload = null): array
@@ -366,6 +371,44 @@ final class TripResolver
             [['op' => 'time', 'day' => $day, 'index' => $index, 'startMin' => $earliest]], $target);
         $opts[] = $this->option('unfix', 'Bỏ giờ cố định của “' . $it['name'] . '”', [$why, 'Planner tự xếp nối tiếp mục trước.'],
             [['op' => 'time', 'day' => $day, 'index' => $index, 'startMin' => null]], $target);
+
+        return $opts;
+    }
+
+    /** Ngày tới nơi / ngày về: hoạt động rơi vào trước giờ tới hoặc sau lúc phải ra ga / sân bay. */
+    private function transferOptions(int $day, int $index, array $target): array
+    {
+        $s = $this->schedule($day);
+        if (!isset($s->rows[$index])) {
+            return [];
+        }
+        $r = $s->rows[$index];
+        $it = $r['item'];
+        $why = $target['text'];
+        $opts = [];
+        if ($r['fixed'] && $r['conflict'] === 'arrival') {
+            $opts[] = $this->option('unfix', 'Bỏ giờ cố định của “' . $it['name'] . '”', [$why, 'Planner tự xếp sau giờ tới nơi.'],
+                [['op' => 'time', 'day' => $day, 'index' => $index, 'startMin' => null]], $target);
+        }
+        // ngày khác còn chỗ: ngày giữa chuyến (không phải ngày tới / ngày về) nhẹ nhất
+        $best = null;
+        foreach ($this->days as $d => $list) {
+            if ($d === $day || !empty($this->ctxs[$d]['arrive']) || !empty($this->ctxs[$d]['leave'])) {
+                continue;
+            }
+            $it2 = $it;
+            $it2['startMin'] = null;
+            $load = $this->schedule($d, array_merge($list, [$it2]))->load();
+            if ($load < 1 && ($best === null || $load < $best[1])) {
+                $best = [$d, $load];
+            }
+        }
+        if ($best) {
+            $opts[] = $this->option('move', 'Chuyển sang ngày ' . $best[0], [$why, 'Ngày ' . $best[0] . ' sau khi thêm dùng khoảng ' . (int) round($best[1] * 100) . '% thời gian.'],
+                [['op' => 'move', 'day' => $day, 'index' => $index, 'toDay' => $best[0]]], $target);
+        }
+        $opts[] = $this->option('park', 'Đưa “' . $it['name'] . '” vào “Đã lưu”', [$why, 'Giữ lại để xếp sau, không mất mục.'],
+            [['op' => 'move', 'day' => $day, 'index' => $index, 'toDay' => null]], $target);
 
         return $opts;
     }

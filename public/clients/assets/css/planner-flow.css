@@ -34,7 +34,7 @@
 .tpf-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
 .tpf-field { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: .92rem; margin-bottom: 12px; }
 .tpf-field small { font-weight: 400; color: var(--f-mut); font-size: .8rem; }
-.tpf-field input[type="date"], .tpf-money input { border: 1px solid #cfdcd8; border-radius: 12px; padding: 10px 12px; font: inherit; font-weight: 500; background: #fff; }
+.tpf-field input[type="date"], .tpf-field input[type="time"], .tpf-field select, .tpf-money input { border: 1px solid #cfdcd8; border-radius: 12px; padding: 10px 12px; font: inherit; font-weight: 500; background: #fff; }
 .tpf-field input:focus, .tpf-money input:focus { outline: 0; border-color: var(--f-brand); box-shadow: 0 0 0 3px rgba(13, 111, 106, .15); }
 .tpf-money { display: flex; align-items: center; gap: 8px; }
 .tpf-money input { flex: 1; }
@@ -199,3 +199,5 @@
     .tpf-hint { flex-direction: column; align-items: flex-start; }
 }
 .tpf-hint > span { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.tpf-more .tpf-row { margin-top: 10px; } .tpf-more > small { display: block; margin-top: 8px; }
+.tpf-field select, .tpf-field input[type="time"] { min-height: 46px; width: 100%; }

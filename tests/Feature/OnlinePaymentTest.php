@@ -29,6 +29,8 @@ class OnlinePaymentTest extends TestCase
         parent::setUp();
         config([
             'app.url' => 'https://travela.test',
+            // máy dev đặt PAYMENT_PUBLIC_URL (Dev Tunnels) trong .env: test không được phụ thuộc vào đó
+            'payments.public_url' => null,
             'payments.momo' => ['enabled' => true, 'partner_code' => 'MOMOTEST', 'access_key' => 'ACCESSTEST', 'secret_key' => self::MOMO_SECRET,
                 'endpoint' => 'https://test-payment.momo.vn', 'request_type' => 'captureWallet', 'hold_minutes' => 15],
             'payments.vnpay' => ['enabled' => true, 'tmn_code' => 'TRAVELA1', 'hash_secret' => self::VNP_SECRET, 'bank_code' => '',

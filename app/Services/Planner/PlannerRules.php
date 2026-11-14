@@ -243,6 +243,18 @@ final class PlannerRules
     // ---------------------------------------------------------------- gửi xuống trình duyệt
 
     /** Hợp đồng quy tắc cho planner-schedule.js / planner-geo.js. Đổi tên khóa ở đây thì phải đổi cả hai file JS. */
+    /** @return array{exit:array<string,int>,before:array<string,int>,typical:array<string,int>} */
+    public function transfer(): array
+    {
+        $t = (array) ($this->cfg['transfer'] ?? []);
+
+        return [
+            'exit' => array_map('intval', (array) ($t['exit_min'] ?? ['flight' => 45, 'train' => 20, 'bus' => 15])),
+            'before' => array_map('intval', (array) ($t['before_min'] ?? ['flight' => 120, 'train' => 40, 'bus' => 30])),
+            'typical' => array_map('intval', (array) ($t['typical_min'] ?? ['flight' => 120, 'train' => 360, 'bus' => 360])),
+        ];
+    }
+
     public function client(): array
     {
         $r = $this->route();
@@ -263,6 +275,7 @@ final class PlannerRules
             'placeKinds' => (array) ($this->cfg['kind_places'] ?? []),
             'route' => ['provider' => $r['provider'], 'mode' => $r['mode'], 'factor' => $r['factor'], 'speedKmh' => $r['speedKmh'], 'minLegKm' => $r['minLegKm']],
             'legModes' => $this->legModes(),
+            'transfer' => $this->transfer(),
             'estimateNote' => $this->estimateNote(),
         ];
     }

@@ -23,8 +23,14 @@
         if (!m) { m = el("p", "tgb__msg"); m.setAttribute("role", "status"); root.insertBefore(m, body); }
         m.textContent = t || ""; m.classList.toggle("is-bad", !!bad);
     }
+    function ymdPlus(ymd, n) {
+        var d = new Date(ymd + "T00:00:00"); d.setDate(d.getDate() + n);
+        return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
     function apply(j) {
         if (j && j.needs) { S = j; render(); }
+        // lịch từng ngày tính lại ngay: đường đi từ / về khách sạn, giờ tới nơi, giờ phải rời đi
+        if (j && j.logistics && window.TpPlanner && window.TpPlanner.setLogistics) window.TpPlanner.setLogistics(j.logistics);
         if (j && j.message) flash(j.message, !j.__ok);
         else if (j && !j.__ok) flash(j.errors ? j.errors[Object.keys(j.errors)[0]][0] : "Chưa lưu được.", true);
     }
@@ -75,8 +81,10 @@
                         var need = new Date((n.checkIn || n.date) + "T00:00:00"); need.setDate(need.getDate() - 7);
                         var t0 = new Date(); if (need < t0) need = t0;
                         var nb = need.getFullYear() + "-" + String(need.getMonth() + 1).padStart(2, "0") + "-" + String(need.getDate()).padStart(2, "0");
-                        req(url, "POST", { kind: n.kind === "hotel" ? "hotel" : "bus", title: n.kind === "hotel" ? "Chỗ ở " + n.nights + " đêm từ " + dmy(n.checkIn) : (n.key === "go" ? "Vé đi" : "Vé về"),
-                            startAt: (n.checkIn || n.date) + (n.kind === "hotel" ? "T14:00" : "T07:00"), needBy: nb, bookUrl: n.links[0].url }).then(apply);
+                        var payload = { kind: n.kind === "hotel" ? "hotel" : "bus", title: n.kind === "hotel" ? "Chỗ ở " + n.nights + " đêm từ " + dmy(n.checkIn) : (n.key === "go" ? "Vé đi" : "Vé về"),
+                            startAt: (n.checkIn || n.date) + (n.kind === "hotel" ? "T14:00" : "T07:00"), needBy: nb, bookUrl: n.links[0].url };
+                        if (n.kind === "hotel") payload.endAt = ymdPlus(n.checkIn, n.nights) + "T12:00";   // đủ số đêm còn thiếu, không chỉ 1 đêm
+                        req(url, "POST", payload).then(apply);
                     }));
                     acts.appendChild(btn("tp-mini tgb__muted", "Không cần", function () { req(url + "/bo-qua", "POST", { key: n.key, skip: true }).then(apply); },
                         "Không cần nhắc: " + n.title));
@@ -107,6 +115,7 @@
                 if (x.outside) m.appendChild(el("span", "tgb__due is-bad", "Ngoài ngày đi của chuyến"));
                 if (x.needBy) m.appendChild(el("span", "tgb__due" + (x.overdue ? " is-bad" : ""), (x.overdue ? "Quá hạn đặt " : "Đặt trước ") + dmy(x.needBy)));
                 if (x.bookUrl) { var a = el("a", "tgb__lnk", "Mở nơi đặt"); a.href = x.bookUrl; a.target = "_blank"; a.rel = "noopener nofollow"; m.appendChild(a); }
+                locLine(m, x, can, li);
                 li.appendChild(m);
                 if (can) {
                     var acts = el("div", "tgb__acts");
@@ -132,6 +141,7 @@
                 var m = el("div", "tgb__m"); m.appendChild(el("b", null, x.title));
                 m.appendChild(el("small", null, KIND[x.kind] + " · " + dmy(x.startAt) + (x.endAt ? "–" + dmy(x.endAt) : "") + (x.code ? " · mã " + x.code : "") + (x.simulated ? " · dữ liệu thử nghiệm" : "")));
                 if (x.outside) m.appendChild(el("span", "tgb__due is-bad", "Ngoài ngày đi của chuyến — kiểm tra lại hoặc đổi đặt chỗ"));
+                locLine(m, x, can, li);
                 li.appendChild(m);
                 if (can) {
                     var acts = el("div", "tgb__acts");
@@ -147,6 +157,64 @@
         }
         if (S.cancelled) body.appendChild(el("p", "tp-muted tp-small", S.cancelled + " đặt chỗ đã hủy (giữ lại để đối chiếu)."));
         if (can) body.appendChild(addForm());
+    }
+
+    /** Chỗ ở: vị trí (để lịch tính đường từ / về khách sạn) + nút gắn / đổi vị trí. */
+    function locLine(m, x, can, li) {
+        if (x.kind !== "hotel") return;
+        var p = el("span", "tgb__loc" + (x.lat == null ? " is-missing" : ""));
+        var ic = el("i", "fas fa-map-marker-alt"); ic.setAttribute("aria-hidden", "true"); p.appendChild(ic);
+        p.appendChild(document.createTextNode(x.lat == null ? " Chưa có vị trí: lịch chưa tính đường đi từ khách sạn" : " " + (x.address || "Đã gắn vị trí")));
+        if (can) p.appendChild(btn("tp-link tp-small", x.lat == null ? "Gắn vị trí" : "Đổi", function () { locateForm(li, x); }, "Gắn vị trí cho " + x.title));
+        m.appendChild(p);
+    }
+    function locateForm(li, x) {
+        var old = li.querySelector(".tgb__locate"); if (old) { old.remove(); return; }
+        var f = el("form", "tgb__locate");
+        var inp = el("input"); inp.type = "search"; inp.maxLength = 80; inp.value = x.title.replace(/^Chỗ ở \d+ đêm từ .*$/, "").replace(/\s*\(\d+ đêm\)\s*$/, "");
+        inp.placeholder = "Tên khách sạn hoặc địa chỉ"; inp.setAttribute("aria-label", "Tìm vị trí chỗ ở");
+        var go = el("button", "tp-mini tgb__primary", "Tìm"); go.type = "submit";
+        var res = el("ul", "tgb__locres");
+        f.appendChild(inp); f.appendChild(go);
+        if (window.TpPlanner && window.TpPlanner.pickOnMap) f.appendChild(btn("tp-mini", "Chọn trên bản đồ", function () {
+            var ok = window.TpPlanner.pickOnMap(function (pos) {
+                req(url + "/" + x.id + "/vi-tri", "POST", { lat: pos.lat, lng: pos.lng, address: "Vị trí chọn trên bản đồ" }).then(apply);
+            });
+            if (ok) flash("Bấm vào vị trí chỗ ở trên bản đồ (Esc để hủy).");
+        }));
+        if (x.lat != null) f.appendChild(btn("tp-mini tgb__muted", "Bỏ vị trí", function () { req(url + "/" + x.id + "/vi-tri", "POST", { clear: true }).then(apply); }));
+        f.appendChild(res);
+        f.addEventListener("submit", function (e) {
+            e.preventDefault();
+            var q = inp.value.trim();
+            if (q.length < 2) { inp.focus(); return; }
+            res.textContent = "";
+            res.appendChild(el("li", "tp-muted tp-small", "Đang tìm…"));
+            var c = S.center || {}, jobs = [];
+            if (cfg.searchUrl) jobs.push(req(cfg.searchUrl + "?type=place&q=" + encodeURIComponent(q)).then(function (j) {
+                return (j.results || []).filter(function (r) { return r.lat != null && r.lng != null; }).map(function (r) { return { name: r.name, sub: [r.sub, r.destName].filter(Boolean).join(" · "), lat: r.lat, lng: r.lng }; });
+            }).catch(function () { return []; }));
+            if (cfg.searchExtUrl) jobs.push(req(cfg.searchExtUrl + "?q=" + encodeURIComponent(q) + (c.lat != null ? "&lat=" + c.lat + "&lng=" + c.lng : "")).then(function (j) {
+                return (j.results || []).map(function (r) { return { name: r.name, sub: r.address || "", lat: r.lat, lng: r.lng }; });
+            }).catch(function () { return []; }));
+            Promise.all(jobs).then(function (lists) {
+                var all = [].concat.apply([], lists).slice(0, 8);
+                res.textContent = "";
+                if (!all.length) { res.appendChild(el("li", "tp-muted tp-small", "Không tìm thấy. Thử tên ngắn hơn hoặc kèm tên đường.")); return; }
+                all.forEach(function (r) {
+                    var it = el("li");
+                    var b = btn("tgb__pick", null, function () {
+                        req(url + "/" + x.id + "/vi-tri", "POST", { lat: r.lat, lng: r.lng, address: [r.name, r.sub].filter(Boolean).join(", ") }).then(apply);
+                    }, "Chọn " + r.name);
+                    b.appendChild(el("b", null, r.name));
+                    if (r.sub) b.appendChild(el("small", null, r.sub));
+                    it.appendChild(b);
+                    res.appendChild(it);
+                });
+            });
+        });
+        li.appendChild(f);
+        inp.focus();
     }
 
     function bookedForm(li, x) {

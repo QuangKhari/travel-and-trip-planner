@@ -274,6 +274,7 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::get('/len-ke-hoach/{id}/dat-cho', [TravelController::class, 'plan'])->whereNumber('id')->middleware('throttle:60,1,travel-plan')->name('travel.plan');
     Route::post('/len-ke-hoach/{id}/dat-cho', [TravelController::class, 'planAdd'])->whereNumber('id')->middleware('throttle:30,1,travel-plan-w')->name('travel.plan.add');
     Route::post('/len-ke-hoach/{id}/dat-cho/bo-qua', [TravelController::class, 'planSkip'])->whereNumber('id')->middleware('throttle:30,1,travel-plan-w')->name('travel.plan.skip');
+    Route::post('/len-ke-hoach/{id}/dat-cho/{externalId}/vi-tri', [TravelController::class, 'planLocate'])->whereNumber(['id', 'externalId'])->middleware('throttle:30,1,travel-plan-w')->name('travel.plan.locate');
     Route::post('/len-ke-hoach/{id}/dat-cho/{externalId}', [TravelController::class, 'planStatus'])->whereNumber(['id', 'externalId'])->middleware('throttle:30,1,travel-plan-w')->name('travel.plan.status');
     Route::post('/len-ke-hoach/{id}/xac-nhan', [TravelController::class, 'addConfirmation'])->whereNumber('id')->middleware('throttle:20,1,travel-confirm')->name('travel.confirm');
     Route::get('/len-ke-hoach/{id}/xac-nhan/{externalId}/tep', [TravelController::class, 'confirmationFile'])->whereNumber(['id', 'externalId'])->name('travel.confirm.file');

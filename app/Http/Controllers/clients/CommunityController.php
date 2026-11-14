@@ -48,7 +48,8 @@ class CommunityController extends Controller
             'title' => $trip->title,
             'metaDescription' => $trip->summary ?: ('Lịch trình ' . $trip->days . ' ngày' . ($trip->destName ? ' ở ' . $trip->destName : '') . ' do thành viên Travela chia sẻ.'),
             'trip' => $trip,
-            'payload' => $planner->payload($trip),
+            // Cộng đồng: không bao giờ hiện mục của đặt chỗ (khách sạn đang ở, số hiệu chuyến bay của người chia sẻ)
+            'payload' => \App\Services\Planner\TripLogistics::stripBookingItems($planner->payload($trip), (int) $trip->tripId),
             'liked' => $uid ? $c->liked($uid, $id) : false,
             'isOwner' => $uid === (int) $trip->userId,
             'related' => $c->related($trip),

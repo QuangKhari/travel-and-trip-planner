@@ -29,10 +29,12 @@ class ChatLogController extends Controller
         if ($s = trim((string) $r->query('q', ''))) {
             $q->where('question', 'like', '%' . str_replace(['%', '_'], ['\\%', '\\_'], $s) . '%');
         }
-        if ($from = $r->query('from')) {
+        // ngày sai định dạng (sửa tay trên URL) thì bỏ qua bộ lọc, không để trang lỗi
+        $ymd = fn($v) => is_string($v) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) ? $v : null;
+        if ($from = $ymd($r->query('from'))) {
             $q->where('createdAt', '>=', $from);
         }
-        if ($to = $r->query('to')) {
+        if ($to = $ymd($r->query('to'))) {
             $q->where('createdAt', '<', date('Y-m-d', strtotime($to . ' +1 day')));
         }
 
@@ -90,10 +92,11 @@ class ChatLogController extends Controller
         if (in_array($e = (string) $r->query('engine'), ['llm', 'rules', 'template', 'cache'], true)) {
             $q->where('engine', $e);
         }
-        if ($from = $r->query('from')) {
+        $ymd = fn($v) => is_string($v) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) ? $v : null;
+        if ($from = $ymd($r->query('from'))) {
             $q->where('createdAt', '>=', $from);
         }
-        if ($to = $r->query('to')) {
+        if ($to = $ymd($r->query('to'))) {
             $q->where('createdAt', '<', date('Y-m-d', strtotime($to . ' +1 day')));
         }
 
@@ -125,8 +128,9 @@ class ChatLogController extends Controller
         // A-25: chip "Kết quả có đúng ý bạn không?" — tỷ lệ đúng ý, lý do chưa đúng, ghi chú gần đây
         $fb = ['has' => Schema::hasTable('tbl_ai_feedback'), 'rows' => [], 'reasons' => [], 'recent' => collect()];
         if ($fb['has']) {
-            $fq = DB::table('tbl_ai_feedback')->when($request->query('from'), fn($q, $v) => $q->where('createdAt', '>=', $v))
-                ->when($request->query('to'), fn($q, $v) => $q->where('createdAt', '<', \Carbon\Carbon::parse($v)->addDay()));
+            $ymd = fn($v) => is_string($v) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) ? $v : null;
+            $fq = DB::table('tbl_ai_feedback')->when($ymd($request->query('from')), fn($q, $v) => $q->where('createdAt', '>=', $v))
+                ->when($ymd($request->query('to')), fn($q, $v) => $q->where('createdAt', '<', \Carbon\Carbon::parse($v)->addDay()));
             $fb['rows'] = (clone $fq)->selectRaw('feature, COUNT(*) n, SUM(helpful = 1) yes')->groupBy('feature')->get()->keyBy('feature');
             $fb['reasons'] = (clone $fq)->where('helpful', 0)->whereNotNull('reason')->selectRaw('feature, reason, COUNT(*) n')->groupBy('feature', 'reason')->orderByDesc('n')->get()->groupBy('feature');
             $fb['recent'] = (clone $fq)->where('helpful', 0)->orderByDesc('feedbackId')->limit(10)->get();

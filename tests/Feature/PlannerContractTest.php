@@ -140,6 +140,81 @@ class PlannerContractTest extends TestCase
         $this->assertSame(0, $d6['mealMin']);                                 // quán ăn trong kho là bữa ăn: không chừa thêm
     }
 
+    /** Chỗ ở + vé đi / về: ngữ cảnh từng ngày và lịch có chặng từ / về khách sạn, giờ tới nơi, giờ phải rời đi — hai bên như nhau. */
+    public function test_stay_and_transfer_context_is_identical_on_client_and_server(): void
+    {
+        $rules = PlannerRules::fromConfig();
+        $route = RouteService::fromRules($rules->route() + []);
+        $hotel = ['name' => 'Khách sạn Sen', 'lat' => 21.0300, 'lng' => 105.8500];
+        $raw = [
+            'stays' => [
+                ['id' => 1, 'name' => 'Khách sạn Sen', 'lat' => 21.0300, 'lng' => 105.8500, 'in' => '2027-05-03', 'out' => '2027-05-05', 'status' => 'booked'],
+                ['id' => 2, 'name' => 'Chưa có vị trí', 'lat' => null, 'lng' => null, 'in' => '2027-05-05', 'out' => '2027-05-06', 'status' => 'planned'],
+            ],
+            'moves' => [
+                ['id' => 3, 'kind' => 'flight', 'name' => 'VN123', 'dep' => '2027-05-03 11:00', 'arr' => '2027-05-03 13:10', 'status' => 'booked'],
+                ['id' => 4, 'kind' => 'train', 'name' => 'SE3', 'dep' => '2027-05-06 16:00', 'arr' => null, 'status' => 'planned'],
+            ],
+        ];
+        $probe = ['raw' => $raw, 'start' => '2027-05-03', 'days' => 4];
+        $items = [
+            ['key' => 'place:1', 'type' => 'place', 'name' => 'Văn Miếu', 'lat' => 21.0277, 'lng' => 105.8355, 'defDur' => 90],
+            ['key' => 'place:2', 'type' => 'place', 'name' => 'Hồ Tây', 'lat' => 21.0560, 'lng' => 105.8190, 'startMin' => 600, 'durationMin' => 60],
+            ['key' => 'place:3', 'type' => 'place', 'name' => 'Bảo tàng', 'lat' => 21.0405, 'lng' => 105.7985, 'defDur' => 300],
+            ['key' => 'transport:9', 'type' => 'transport', 'name' => 'Tàu SE3', 'startMin' => 960],
+        ];
+        $ctxs = [];
+        $days = [];
+        for ($d = 1; $d <= 4; $d++) {
+            $ctxs[$d] = \App\Services\Planner\TripLogistics::dayContext($raw, '2027-05-03', $d, 4, $rules);
+            $days[$d] = $items;
+        }
+        $js = $this->node(['rules' => $rules->client(), 'days' => $days, 'ctxs' => $ctxs, 'ctxProbe' => $probe]);
+        foreach ($ctxs as $d => $c) {
+            $this->assertEquals($c, $js['_ctx'][(string) $d], "ngữ cảnh ngày $d");
+        }
+        foreach ($days as $d => $list) {
+            $server = (new DaySchedule($d, $list, $route, $rules, null, $ctxs[$d]))->contract();
+            $client = $js[(string) $d];
+            foreach ($server['rows'] as $i => $row) {
+                foreach (['key', 'start', 'end', 'conflict', 'travelMin'] as $k) {
+                    $this->assertSame($row[$k], $client['rows'][$i][$k], "ngày $d, dòng " . ($i + 1) . ": $k");
+                }
+            }
+            foreach (['travelMin', 'occupiedMin', 'loadPct', 'start', 'end'] as $k) {
+                $this->assertSame($server[$k], $client[$k], "ngày $d: $k");
+            }
+            $this->assertSame($server['startLeg']['min'] ?? null, $client['startLeg']['min'] ?? null, "ngày $d: chặng từ khách sạn");
+            $this->assertSame($server['endLeg']['min'] ?? null, $client['endLeg']['min'] ?? null, "ngày $d: chặng về khách sạn");
+        }
+
+        // ngày 1: bay tới 13:10 + 45' -> không gì bắt đầu trước 13:55; Hồ Tây đặt 10:00 là xung đột "chưa tới nơi"; không có chặng từ khách sạn
+        $this->assertSame(835, $ctxs[1]['arrive']);
+        $this->assertNull($ctxs[1]['from']);
+        $this->assertSame($hotel, $ctxs[1]['to']);
+        $d1 = (new DaySchedule(1, $items, $route, $rules, null, $ctxs[1]))->contract();
+        $this->assertSame(835, $d1['rows'][0]['start']);
+        $this->assertSame('arrival', $d1['rows'][1]['conflict']);
+        $this->assertNotContains($d1['rows'][3]['conflict'], ['arrival', 'departure'], 'chính chuyến tàu không bị ràng buộc giờ tới / giờ đi');
+        $this->assertNull($d1['startLeg']);
+        $this->assertNotNull($d1['endLeg']);
+        // ngày 2: ngủ đêm 1 và đêm 2 ở Sen -> đi từ Sen, về Sen; giờ bắt đầu dời theo chặng đi
+        $this->assertSame($hotel, $ctxs[2]['from']);
+        $d2 = (new DaySchedule(2, $items, $route, $rules, null, $ctxs[2]))->contract();
+        $this->assertGreaterThan(480, $d2['rows'][0]['start']);
+        $this->assertSame($d2['startLeg']['min'] + $d2['endLeg']['min'] + array_sum(array_column($d2['rows'], 'travelMin')), $d2['travelMin']);
+        // ngày 3: đêm 3 ở chỗ chưa có vị trí -> không có chặng về
+        $this->assertSame($hotel, $ctxs[3]['from']);
+        $this->assertNull($ctxs[3]['to']);
+        // ngày 4: tàu 16:00, có mặt trước 40' -> 15:20; vé chưa có giờ đến không chặn ngày đầu
+        $this->assertSame(920, $ctxs[4]['leave']);
+        $d4 = (new DaySchedule(4, $items, $route, $rules, null, $ctxs[4]))->contract();
+        $this->assertContains('departure', array_column($d4['rows'], 'conflict'));
+        // chưa có ngày đi: không có ngữ cảnh
+        $this->assertSame(['from' => null, 'to' => null, 'arrive' => null, 'arriveText' => null, 'leave' => null, 'leaveText' => null],
+            \App\Services\Planner\TripLogistics::dayContext($raw, null, 1, 4));
+    }
+
     public function test_slot_boundaries_and_kind_patterns_are_shared(): void
     {
         $rules = PlannerRules::fromConfig();

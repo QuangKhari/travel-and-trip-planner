@@ -567,7 +567,9 @@ class TripPlanner
         $valid = $this->resolve($refs);
         $prevExternal = DB::table('tbl_trip_items')->where('tripId', $tripId)->where('source', 'search')->pluck('label')->map(fn($l) => mb_strtolower((string) $l))->all();
 
-        DB::transaction(function () use ($tripId, $f, $items, $days, $valid, $userId) {
+        $oldStart = !empty($acc['trip']->startDate) ? substr((string) $acc['trip']->startDate, 0, 10) : null;
+        $newStart = !empty($f['startDate']) ? substr((string) $f['startDate'], 0, 10) : null;
+        DB::transaction(function () use ($tripId, $f, $items, $days, $valid, $userId, $oldStart, $newStart) {
             // BẮT BUỘC đọc revision sau khi khóa row: tránh hai request cùng vượt qua check cũ.
             $current = DB::table('tbl_trips')->where('tripId', $tripId)->lockForUpdate()->first(['rev']);
             if (!$current) {
@@ -609,7 +611,12 @@ class TripPlanner
                     }
                     $seen[$k] = true;
                 }
-                $day = isset($it['day']) && $it['day'] !== null && $it['day'] !== '' ? min($days, max(1, (int) $it['day'])) : null;
+                // ngày ngoài số ngày của chuyến (vừa bớt ngày): vào "Đã lưu", không dồn vào ngày cuối
+                $day = isset($it['day']) && $it['day'] !== null && $it['day'] !== '' ? max(1, (int) $it['day']) : null;
+                if ($day !== null && $day > $days) {
+                    $day = null;
+                    $it['startMin'] = null;
+                }
                 $ck = $day === null ? 'x' : (string) $day;
                 $counter[$ck] = ($counter[$ck] ?? -1) + 1;
                 // (0,0) / ngoài phạm vi = vị trí hỏng: lưu như "chưa có vị trí", không lưu thành một điểm giữa biển
@@ -630,6 +637,10 @@ class TripPlanner
                     'slot' => isset($it['slot']) && in_array($it['slot'], self::SLOTS, true) ? $it['slot'] : null,
                     'reasons' => !empty($it['reasons']) && is_array($it['reasons']) ? json_encode(array_values(array_map('strval', array_slice($it['reasons'], 0, 8))), JSON_UNESCAPED_UNICODE) : null,
                 ] + self::timeColumns($it);
+            }
+            // đổi ngày đi: mục nhận phòng / chuyến bay / tàu đã đặt đi theo NGÀY THẬT của đặt chỗ (không đứng yên ở số ngày cũ)
+            if ($oldStart !== $newStart) {
+                $rows = BookingPlan::realignRows($tripId, $rows, $newStart, $days);
             }
             if ($rows) {
                 DB::table('tbl_trip_items')->insert($rows);
@@ -678,7 +689,8 @@ class TripPlanner
             $row['updatedAt'] = now();
             $row = self::freshCopyRow($row);
             $newId = (int) DB::table('tbl_trips')->insertGetId($row);
-            $items = DB::table('tbl_trip_items')->where('tripId', $tripId)->orderBy('dayNo')->orderBy('orderNo')->get()
+            // đặt chỗ không chép sang chuyến mới, nên mục "Nhận phòng / Bay …" của chuyến cũ cũng không chép
+            $items = collect(TripLogistics::withoutBookingRows(DB::table('tbl_trip_items')->where('tripId', $tripId)->orderBy('dayNo')->orderBy('orderNo')->get(), $tripId))
                 ->map(fn($r) => self::freshCopyItem((array) $r, $newId, false))->all();
             foreach (array_chunk($items, 50) as $chunk) {
                 DB::table('tbl_trip_items')->insert($chunk);
@@ -720,7 +732,8 @@ class TripPlanner
                 'sourceTripId' => $src->tripId, 'sourceType' => 'SHARED', 'createdAt' => now(), 'updatedAt' => now()]);
             $newId = (int) DB::table('tbl_trips')->insertGetId($row);
             $hideNotes = !($src->shareNotes ?? 1);
-            $items = DB::table('tbl_trip_items')->where('tripId', $src->tripId)->orderBy('dayNo')->orderBy('orderNo')->get()
+            $rows = DB::table('tbl_trip_items')->where('tripId', $src->tripId)->orderBy('dayNo')->orderBy('orderNo')->get();
+            $items = collect(TripLogistics::withoutBookingRows($rows, (int) $src->tripId))
                 ->map(function ($r) use ($newId, $hideNotes) {
                     $a = self::freshCopyItem((array) $r, $newId, true);
                     if ($hideNotes) {

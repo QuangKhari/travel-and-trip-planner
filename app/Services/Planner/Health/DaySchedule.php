@@ -5,6 +5,7 @@ namespace App\Services\Planner\Health;
 use App\Services\Planner\OpeningHours;
 use App\Services\Planner\PlannerRules;
 use App\Services\Planner\Route\RouteService;
+use App\Services\Planner\TripLogistics;
 use App\Services\Planner\TripPlanner;
 
 /**
@@ -38,10 +39,22 @@ final class DaySchedule
     public int $outdoor = 0;
     public int $noPos = 0;
 
-    /** @param ?int $dow thứ ISO (1-7) của ngày này; null = chuyến chưa có ngày đi (không kiểm tra giờ mở cửa) */
-    public function __construct(public readonly int $day, array $items, RouteService $route, ?PlannerRules $rules = null, public readonly ?int $dow = null)
+    /** Chặng từ chỗ ở tới điểm đầu tiên / từ điểm cuối về chỗ ở (null = không có chỗ ở có vị trí, hoặc cùng khu). */
+    public ?array $startLeg = null;
+    public ?array $endLeg = null;
+    /** Ngữ cảnh ngày (TripLogistics::dayContext): from / to (chỗ ở), arrive / leave (giờ tới nơi / giờ phải rời đi). */
+    public array $ctx = [];
+
+    /**
+     * @param ?int $dow thứ ISO (1-7) của ngày này; null = chuyến chưa có ngày đi (không kiểm tra giờ mở cửa)
+     * @param ?array $ctx TripLogistics::dayContext() của ngày này
+     */
+    public function __construct(public readonly int $day, array $items, RouteService $route, ?PlannerRules $rules = null, public readonly ?int $dow = null, ?array $ctx = null)
     {
         $this->rules = $rules ?? PlannerRules::fromConfig();
+        $this->ctx = $ctx ?? [];
+        $arrive = isset($this->ctx['arrive']) ? (int) $this->ctx['arrive'] : null;
+        $leave = isset($this->ctx['leave']) ? (int) $this->ctx['leave'] : null;
         $this->availableMin = $this->rules->availableMin();
         $clock = $this->rules->dayStart();
         $this->start = $clock;
@@ -72,6 +85,16 @@ final class DaySchedule
         }
         $tt['min'] = $tt['legs'] ? $travelSum : $tt['min'];
 
+        // chỗ ở: đi từ nơi ngủ đêm trước tới mục đầu tiên (khi mục đầu có vị trí), từ mục có vị trí cuối cùng về nơi ngủ đêm nay.
+        // Ngày tới nơi (có giờ tới) không tính chặng xuất phát: đi thẳng từ ga / sân bay.
+        $bl = TripLogistics::baseLegs($items, $this->ctx, $route);
+        $this->startLeg = $bl['start'];
+        $this->endLeg = $bl['end'];
+        $first = $items ? array_values($items)[0] : null;
+        if ($this->startLeg && $first !== null && (!isset($first['startMin']) || $first['startMin'] === null)) {
+            $clock += $this->startLeg['min'];
+        }
+
         $hasMeal = false;
         $prevEnd = null;
         foreach (array_values($items) as $i => $it) {
@@ -79,13 +102,19 @@ final class DaySchedule
             $conflict = null;
             if ($fixed) {
                 $start = (int) $it['startMin'];
-                if ($prevEnd !== null && $start < $prevEnd - 5) {
+                if ($arrive !== null && $start < $arrive - 5 && !TripLogistics::exempt($it, $this->rules)) {
+                    $conflict = 'arrival';     // đặt giờ trước lúc tới nơi (nguyên nhân gốc, báo trước trùng giờ)
+                } elseif ($prevEnd !== null && $start < $prevEnd - 5) {
                     $conflict = 'overlap';
                 } elseif ($prevEnd !== null && $start < $clock - 5) {
                     $conflict = 'travel';
                 }
             } else {
                 $start = (int) (ceil($clock / 5) * 5);
+                // ngày tới nơi: hoạt động không bắt đầu trước giờ tới + ra khỏi ga / sân bay
+                if ($arrive !== null && $start < $arrive && !TripLogistics::exempt($it, $this->rules)) {
+                    $start = (int) (ceil($arrive / 5) * 5);
+                }
                 $ss = $this->rules->slotStart($it['slot'] ?? null);
                 if ($ss !== null && $ss > $start) {
                     $start = $ss;
@@ -101,6 +130,11 @@ final class DaySchedule
                 $this->freeMin += $wait;
             }
             $dur = $this->durationOf($it);
+            if ($conflict === null && !TripLogistics::exempt($it, $this->rules)) {
+                if ($leave !== null && $start + $dur > $leave + 5) {
+                    $conflict = 'departure';   // chưa xong đã tới giờ phải ra ga / sân bay
+                }
+            }
             $leg = $legAfter[$i] ?? null;
             $this->rows[] = ['item' => $it, 'start' => $start, 'end' => $start + $dur, 'dur' => $dur, 'fixed' => $fixed,
                 'travelMin' => $leg['min'] ?? 0, 'travelKm' => $leg['km'] ?? 0.0, 'routeStatus' => $leg['status'] ?? null, 'waitMin' => $wait, 'conflict' => $conflict,
@@ -116,8 +150,8 @@ final class DaySchedule
             $prevEnd = $start + $dur;
             $clock = $prevEnd + ($leg['min'] ?? 0);
         }
-        $this->travelMin = $tt['min'];
-        $this->travelKm = $tt['km'];
+        $this->travelMin = $tt['min'] + ($this->startLeg['min'] ?? 0) + ($this->endLeg['min'] ?? 0);
+        $this->travelKm = $tt['km'] + ($this->startLeg['km'] ?? 0.0) + ($this->endLeg['km'] ?? 0.0);
         $this->routeQuality = $tt['quality'] ?? [];
         $this->routeConfidence = $tt['confidence'] ?? 'verified';
         if ($this->rows) {
@@ -188,6 +222,8 @@ final class DaySchedule
             'loadPct' => (int) round($this->load() * 100), 'level' => $this->count() ? $this->level() : 'ok',
             'loadLabel' => $this->rules->loadLabel($this->count() ? $this->load() : 0.0),
             'start' => $this->start, 'end' => $this->end,
+            'startLeg' => $this->startLeg ? ['min' => $this->startLeg['min'], 'km' => round($this->startLeg['km'], 1)] : null,
+            'endLeg' => $this->endLeg ? ['min' => $this->endLeg['min'], 'km' => round($this->endLeg['km'], 1)] : null,
         ];
     }
 

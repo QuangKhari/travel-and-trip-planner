@@ -98,14 +98,28 @@
             }
             g.legs.forEach(function (l) { legOf[l.from.uid != null ? l.from.uid : list.indexOf(l.from)] = l; });
             var clock = R.dayStart, rows = [], act = 0, conflicts = [], free = 0, hasMeal = false;
+            // chỗ ở + đi / về (cùng DaySchedule): xuất phát từ nơi ngủ đêm trước, về nơi ngủ đêm nay; ngày tới nơi / ngày về có giờ chặn
+            var cx = (opts && opts.ctx) || {}, arrive = cx.arrive != null ? cx.arrive : null, leave = cx.leave != null ? cx.leave : null;
+            var startLeg = null, endLeg = null, first = list[0], posList = list.filter(geo.hasPos);
+            if (cx.from && arrive == null && first && geo.hasPos(first)) {
+                var sl = geo.legs([cx.from, first]).legs[0];
+                if (sl) { startLeg = { min: sl.min, km: sl.kmExact, name: cx.from.name }; if (first.startMin == null) clock += sl.min; }
+            }
+            if (cx.to && posList.length) {
+                var el2 = geo.legs([posList[posList.length - 1], cx.to]).legs[0];
+                if (el2) endLeg = { min: el2.min, km: el2.kmExact, name: cx.to.name };
+            }
+            function exempt(it) { var k = kindOf(it); return it.type === "transport" || k === "transport" || k === "lodging"; }
             list.forEach(function (it, i) {
                 var fixed = it.startMin != null, start, prev = rows[rows.length - 1] || null;
                 if (fixed) {
                     start = it.startMin;
-                    if (prev && start < prev.end - 5) conflicts.push({ a: prev, b: it, type: "overlap" });
+                    if (arrive != null && start < arrive - 5 && !exempt(it)) conflicts.push({ a: null, b: it, type: "arrival", at: arrive, text: cx.arriveText || null });
+                    else if (prev && start < prev.end - 5) conflicts.push({ a: prev, b: it, type: "overlap" });
                     else if (prev && start < clock - 5) conflicts.push({ a: prev, b: it, type: "travel", need: clock - prev.end });
                 } else {
                     start = Math.ceil(clock / 5) * 5;
+                    if (arrive != null && start < arrive && !exempt(it)) start = Math.ceil(arrive / 5) * 5;
                     var ss = slotStart(it.slot);
                     if (ss != null && ss > start) start = ss;
                     var fit = hoursFit(it.hours, dow, start, itemDur(it));   // tới sớm: chờ tới giờ mở cửa
@@ -114,6 +128,10 @@
                 var wait = prev ? Math.max(0, start - clock) : 0;
                 if (wait >= 15) free += wait;
                 var du = itemDur(it), leg = legOf[it.uid != null ? it.uid : i] || null;
+                var hasC = conflicts.some(function (c) { return c.b === it; });
+                if (!hasC && !exempt(it)) {
+                    if (leave != null && start + du > leave + 5) conflicts.push({ a: null, b: it, type: "departure", at: leave, text: cx.leaveText || null });
+                }
                 var row = { it: it, n: i + 1, start: start, end: start + du, dur: du, fixed: fixed, leg: leg, slot: slotOf(start), conflict: null, wait: wait, hours: hoursCheck(it.hours, dow, start, start + du) };
                 rows.push(row);
                 act += du;
@@ -122,10 +140,13 @@
             });
             conflicts.forEach(function (c) { rows.forEach(function (r) { if (r.it === c.b) r.conflict = c; }); });
             var meal = rows.length && !hasMeal ? R.mealAllowanceMin : 0;
-            var buffer = Math.round((act + g.minutes) * R.bufferRatio);
-            var occ = act + g.minutes + meal + buffer;
+            var travel = g.minutes + (startLeg ? startLeg.min : 0) + (endLeg ? endLeg.min : 0);
+            var kmEx = (g.kmExact || 0) + (startLeg ? startLeg.km : 0) + (endLeg ? endLeg.km : 0);
+            var buffer = Math.round((act + travel) * R.bufferRatio);
+            var occ = act + travel + meal + buffer;
             return {
-                rows: rows, act: act, travel: g.minutes, km: g.km, kmExact: g.kmExact, legs: g.legs, free: free, meal: meal, buffer: buffer, occ: occ,
+                rows: rows, act: act, travel: travel, km: Math.round(kmEx), kmExact: kmEx, legs: g.legs, free: free, meal: meal, buffer: buffer, occ: occ,
+                startLeg: startLeg, endLeg: endLeg, ctx: cx,
                 start: rows.length ? rows[0].start : R.dayStart, end: rows.length ? rows[rows.length - 1].end : R.dayStart,
                 load: occ / R.availableMin, conflicts: conflicts, count: list.length, dow: dow,
             };
@@ -146,10 +167,61 @@
                 activityMin: s.act, travelMin: s.travel, travelKm: Math.round((s.kmExact || 0) * 10) / 10,
                 mealMin: s.meal, bufferMin: s.buffer, freeMin: s.free, occupiedMin: s.occ, availableMin: R.availableMin,
                 loadPct: Math.round(s.load * 100), level: s.count ? level(s.load) : "ok", loadLabel: loadLabel(s.count ? s.load : 0), start: s.start, end: s.end,
+                startLeg: s.startLeg ? { min: s.startLeg.min, km: Math.round(s.startLeg.km * 10) / 10 } : null,
+                endLeg: s.endLeg ? { min: s.endLeg.min, km: Math.round(s.endLeg.km * 10) / 10 } : null,
             };
         }
 
-        return { rules: R, loadLabel: loadLabel, hoursCheck: hoursCheck, hoursFit: hoursFit, hoursText: hoursText, kindOf: kindOf, itemDur: itemDur, slotOf: slotOf, slotStart: slotStart, level: level, day: day, contract: contract };
+        /* Ngữ cảnh một ngày từ chỗ ở và vé đi / về (CÙNG quy tắc với TripLogistics::dayContext ở máy chủ).
+           raw = {stays:[{name,lat,lng,in,out}], moves:[{id,kind,name,dep:"Y-m-d H:i",arr}]}; startDate "Y-m-d" (có thể đang sửa, chưa lưu). */
+        function addDays(ymd, n) {
+            var d = new Date(Date.UTC(+ymd.slice(0, 4), +ymd.slice(5, 7) - 1, +ymd.slice(8, 10) + n));
+            return d.toISOString().slice(0, 10);
+        }
+        function minOf(dt) { return +dt.slice(11, 13) * 60 + +dt.slice(14, 16); }
+        function hm(m) { return String(Math.floor(m / 60) % 24).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); }
+        var STATION = { flight: "sân bay", train: "ga", bus: "bến xe" };
+        function dayCtx(raw, startDate, d, days) {
+            var out = { from: null, to: null, arrive: null, arriveText: null, leave: null, leaveText: null };
+            if (!raw || !startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return out;
+            var T = R.transfer || { exit: {}, before: {}, typical: {} };
+            var start = startDate, date = addDays(startDate, d - 1), prev = addDays(startDate, d - 2), last = addDays(startDate, Math.max(1, days) - 1);
+            (raw.stays || []).forEach(function (s) {
+                if (s.lat == null || s.lng == null) return;
+                var pt = { name: s.name, lat: +s.lat, lng: +s.lng };
+                if (!out.from && s.in <= prev && prev < s.out) out.from = pt;
+                if (!out.to && s.in <= date && date < s.out) out.to = pt;
+            });
+            var moves = raw.moves || [];
+            function isBackSameDay(m) {
+                var same = moves.filter(function (x) { return x.dep.slice(0, 10) === m.dep.slice(0, 10); }).sort(function (a, b) { return a.dep < b.dep ? -1 : a.dep > b.dep ? 1 : 0; });
+                return same.length > 1 && same[same.length - 1].id === m.id;
+            }
+            moves.forEach(function (m) {
+                var k = m.kind, depDate = m.dep.slice(0, 10), depMin = minOf(m.dep);
+                var isBack = depDate === last && (depDate > start || isBackSameDay(m));
+                if (!isBack && depDate <= start) {
+                    var est = m.arr == null, arrDate = est ? depDate : m.arr.slice(0, 10), arrMin = est ? depMin + (T.typical[k] || 0) : minOf(m.arr);
+                    if (arrDate === date && arrMin < 1440) {
+                        var ready = arrMin + (T.exit[k] || 0);
+                        if (out.arrive == null || ready > out.arrive) {
+                            out.arrive = ready;
+                            out.arriveText = m.name + (est ? " tới khoảng " : " tới ") + hm(arrMin) + ", cộng " + (T.exit[k] || 0) + " phút ra khỏi " + (STATION[k] || "bến");
+                        }
+                    }
+                }
+                if (isBack && depDate === date) {
+                    var need = depMin - (T.before[k] || 0);
+                    if (out.leave == null || need < out.leave) {
+                        out.leave = Math.max(0, need);
+                        out.leaveText = m.name + " khởi hành " + hm(depMin) + ", cần có mặt ở " + (STATION[k] || "bến") + " trước " + (T.before[k] || 0) + " phút";
+                    }
+                }
+            });
+            return out;
+        }
+
+        return { rules: R, loadLabel: loadLabel, hoursCheck: hoursCheck, hoursFit: hoursFit, hoursText: hoursText, kindOf: kindOf, itemDur: itemDur, slotOf: slotOf, slotStart: slotStart, level: level, day: day, contract: contract, dayCtx: dayCtx };
     }
 
     var api = { create: create };

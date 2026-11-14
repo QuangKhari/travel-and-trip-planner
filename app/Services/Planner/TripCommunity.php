@@ -244,7 +244,8 @@ class TripCommunity
             $newId = (int) DB::table('tbl_trips')->insertGetId($row);
 
             // chép các mục; chi phí "thực tế" của người khác không có nghĩa với chuyến mới -> đưa về dự kiến
-            $items = DB::table('tbl_trip_items')->where('tripId', $src->tripId)->orderBy('dayNo')->orderBy('orderNo')->get()
+            // không chép mục của đặt chỗ (khách sạn, chuyến bay của người chia sẻ)
+            $items = collect(TripLogistics::withoutBookingRows(DB::table('tbl_trip_items')->where('tripId', $src->tripId)->orderBy('dayNo')->orderBy('orderNo')->get(), (int) $src->tripId))
                 ->map(fn($r) => TripPlanner::freshCopyItem((array) $r, $newId, true))->all();
             foreach (array_chunk($items, 50) as $chunk) {
                 DB::table('tbl_trip_items')->insert($chunk);
