@@ -98,6 +98,71 @@ class CommunityController extends Controller
             ->with('success', 'Đã tạo chuyến đi của bạn từ hành trình cộng đồng' . ($changes ? ', La bàn đã điều chỉnh ' . count($changes) . ' mục theo sở thích của bạn' : '') . '. Bạn có thể sửa thoải mái, bản gốc không bị ảnh hưởng.');
     }
 
+    /**
+     * POST /cong-dong/{id}/lam-cua-toi {text}: "Làm thành chuyến của bạn" bằng một câu ("2 người, đầu tháng 12, 4 ngày, 5 triệu, thích ăn uống").
+     * Đọc câu bằng CÙNG BriefService của trợ lý (luật trước, LLM nếu bật), rồi chép chuyến + chỉnh ngày đi, số người, ngân sách, số ngày,
+     * sở thích. Không bịa: phần câu không nói thì giữ như bản gốc; tháng mà không có ngày thì tạm lấy thứ bảy đầu tiên và nói rõ.
+     */
+    public function remix(Request $request, int $id, TripCommunity $c, \App\Services\Ai\Brief\BriefService $brief)
+    {
+        $v = $request->validate(['text' => ['required', 'string', 'min:3', 'max:500']], ['text.required' => 'Kể vài ý cho chuyến của bạn, ví dụ: 2 người, đầu tháng 12, 4 ngày.']);
+        $src = $c->find($id) ?? abort(404);
+        $r = $brief->understand($v['text'], $this->uid() ?: null);
+        if (!$r['ok']) {
+            return back()->withErrors(['remix' => $r['refused'] ?? 'Chưa hiểu yêu cầu. Thử kể số người, thời gian đi, số ngày.'])->withInput();
+        }
+        $p = $r['prefill'];
+        $said = [];
+        $opts = ['groupSize' => (int) $src->groupSize ?: 1];
+        if (!empty($p['adults']) || !empty($p['children'])) {
+            $opts['groupSize'] = max(1, min(50, (int) ($p['adults'] ?? 0) + (int) ($p['children'] ?? 0)));
+            $said[] = $opts['groupSize'] . ' người';
+        }
+        $start = null;
+        if (!empty($p['startDate']) && \Carbon\Carbon::parse($p['startDate'])->gte(today())) {
+            $start = \Carbon\Carbon::parse($p['startDate']);
+            $said[] = 'từ ' . $start->format('d/m/Y');
+        } elseif (!empty($p['month'])) {
+            $y = (int) now()->year + ((int) $p['month'] < (int) now()->month ? 1 : 0);
+            $start = \Carbon\Carbon::create($y, (int) $p['month'], 1)->startOfDay();
+            while ($start->dayOfWeek !== \Carbon\Carbon::SATURDAY || $start->lt(today())) {
+                $start->addDay();
+            }
+            $said[] = 'tạm đi từ ' . $start->format('d/m/Y') . ((int) $start->month === (int) $p['month']
+                ? ' (thứ bảy đầu tiên còn kịp của tháng ' . (int) $p['month'] . ', đổi được)'
+                : ' (tháng ' . (int) $p['month'] . ' không còn thứ bảy nào phía trước nên lấy thứ bảy gần nhất, đổi được)');
+        }
+        $opts['startDate'] = $start?->toDateString();
+        if (!empty($p['budget'])) {
+            $opts['budget'] = (int) $p['budget'];
+            $said[] = 'ngân sách ' . number_format((int) $p['budget'], 0, ',', '.') . 'đ';
+        }
+        try {
+            $newId = $c->cloneTrip($this->uid(), $id, $opts);
+        } catch (\DomainException $e) {
+            return back()->withErrors(['remix' => $e->getMessage()])->withInput();
+        }
+        if (!$newId) {
+            return redirect()->route('community.index')->with('error', 'Hành trình này không còn được chia sẻ.');
+        }
+        if (!empty($p['days']) && (int) $p['days'] !== (int) $src->days) {
+            $moved = app(TripPlanner::class)->resizeDays($newId, (int) $p['days']);
+            $said[] = (int) $p['days'] . ' ngày' . ($moved ? ' (' . $moved . ' mục của các ngày bị bớt chuyển vào “Đã lưu”)' : '');
+        }
+        // câu nhắc tới điểm đến khác: không tự đổi (lịch trình gắn với nơi này), chỉ nói rõ
+        $other = $p['destinationSlug'] ?? null;
+        $srcSlug = $src->destSlug ?? null;
+        $otherNote = $other && $srcSlug && $other !== $srcSlug ? ' Lưu ý: lịch trình này ở ' . ($src->destName ?? 'điểm đến gốc') . '; muốn đi nơi khác hãy tạo chuyến mới.' : '';
+        $changes = [];
+        if (!empty($p['interests']) || !empty($p['dislikes'])) {
+            $changes = app(\App\Services\Planner\TripPersonalizer::class)->apply($newId, (array) ($p['interests'] ?? []), (array) ($p['dislikes'] ?? []));
+            $said[] = 'theo sở thích của bạn';
+        }
+
+        return redirect()->route('planner.edit', $newId)->with('personalized', $changes ?: null)
+            ->with('planner_notice', 'Đã làm chuyến của bạn từ "' . $src->title . '"' . ($said ? ': ' . implode(', ', $said) : '') . '. Bản gốc không bị ảnh hưởng. Hỏi La bàn nếu muốn chỉnh thêm.' . $otherNote);
+    }
+
     /** Chủ chuyến bật / tắt chia sẻ lên cộng đồng (từ trang sửa chuyến). */
     public function publish(Request $request, int $id, TripCommunity $c)
     {

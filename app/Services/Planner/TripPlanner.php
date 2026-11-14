@@ -78,6 +78,8 @@ class TripPlanner
             'items.*.legMode' => ['nullable', 'in:' . implode(',', array_keys((array) config('planner.route.leg_modes', [])))],
             // đã ghé (khi đang đi): thời điểm đánh dấu, null = chưa
             'items.*.visitedAt' => ['nullable', 'date'],
+            // bỏ qua khi đang đi (khác "đã ghé"): giữ mục trong lịch nhưng không tính là việc còn lại của ngày
+            'items.*.skippedAt' => ['nullable', 'date'],
         ];
     }
 
@@ -347,6 +349,7 @@ class TripPlanner
                     'locked' => !empty($r->isLocked),
                     'legMode' => $r->legMode ?? null,
                     'visitedAt' => $r->visitedAt ?? null,
+                'skippedAt' => $r->skippedAt ?? null,
                 ];
                 continue;
             }
@@ -367,6 +370,7 @@ class TripPlanner
                 'locked' => !empty($r->isLocked),
                 'legMode' => $r->legMode ?? null,
                 'visitedAt' => $r->visitedAt ?? null,
+                'skippedAt' => $r->skippedAt ?? null,
             ]);
         }
 
@@ -672,20 +676,56 @@ class TripPlanner
             $row['source'] = 'copy';
             $row['createdAt'] = now();
             $row['updatedAt'] = now();
-            foreach (['shareToken', 'lastEditorId'] as $c) {
-                if (array_key_exists($c, $row)) {
-                    $row[$c] = null;
-                }
-            }
-            if (array_key_exists('rev', $row)) {
-                $row['rev'] = 0;
-            }
+            $row = self::freshCopyRow($row);
             $newId = (int) DB::table('tbl_trips')->insertGetId($row);
             $items = DB::table('tbl_trip_items')->where('tripId', $tripId)->orderBy('dayNo')->orderBy('orderNo')->get()
-                ->map(function ($r) use ($newId) {
-                    $a = (array) $r;
-                    unset($a['itemId']);
-                    $a['tripId'] = $newId;
+                ->map(fn($r) => self::freshCopyItem((array) $r, $newId, false))->all();
+            foreach (array_chunk($items, 50) as $chunk) {
+                DB::table('tbl_trip_items')->insert($chunk);
+            }
+
+            return $newId;
+        });
+    }
+
+    /**
+     * Đổi số ngày của chuyến (chép từ mẫu với số ngày khác): mục ở các ngày bị bớt chuyển vào "Đã lưu" (chưa xếp ngày), không xóa.
+     * @return int số mục đã chuyển
+     */
+    public function resizeDays(int $tripId, int $days): int
+    {
+        $days = max(1, min(self::MAX_DAYS, $days));
+
+        return DB::transaction(function () use ($tripId, $days) {
+            $moved = DB::table('tbl_trip_items')->where('tripId', $tripId)->where('dayNo', '>', $days)->update(['dayNo' => null, 'startMin' => null]);
+            DB::table('tbl_trips')->where('tripId', $tripId)->update(['days' => $days, 'updatedAt' => now()]);
+
+            return $moved;
+        });
+    }
+
+    /** Lưu bản sao một chuyến được chia sẻ bằng liên kết chỉ xem (người chép không cần là thành viên). */
+    public function copyShared(int $userId, int $tripId): int
+    {
+        $src = DB::table('tbl_trips')->where('tripId', $tripId)->where('kind', 'trip')->whereNotNull('shareToken')->first();
+        if (!$src) {
+            throw new \DomainException('Liên kết chia sẻ đã tắt.');
+        }
+        self::assertCanCreate($userId);
+
+        return DB::transaction(function () use ($src, $userId) {
+            $row = self::freshCopyRow((array) $src);
+            unset($row['tripId']);
+            $row = array_merge($row, ['userId' => $userId, 'status' => 'draft', 'source' => 'copy', 'notes' => ($src->shareNotes ?? 1) ? $src->notes : null,
+                'sourceTripId' => $src->tripId, 'sourceType' => 'SHARED', 'createdAt' => now(), 'updatedAt' => now()]);
+            $newId = (int) DB::table('tbl_trips')->insertGetId($row);
+            $hideNotes = !($src->shareNotes ?? 1);
+            $items = DB::table('tbl_trip_items')->where('tripId', $src->tripId)->orderBy('dayNo')->orderBy('orderNo')->get()
+                ->map(function ($r) use ($newId, $hideNotes) {
+                    $a = self::freshCopyItem((array) $r, $newId, true);
+                    if ($hideNotes) {
+                        $a['note'] = null;   // chủ chuyến đã ẩn ghi chú khi chia sẻ thì bản sao cũng không có
+                    }
 
                     return $a;
                 })->all();
@@ -695,6 +735,42 @@ class TripPlanner
 
             return $newId;
         });
+    }
+
+    /**
+     * Một chuyến SAO CHÉP (nhân bản, dùng lại từ Cộng đồng, lưu bản sao từ liên kết) là chuyến mới hoàn toàn của người chép:
+     * không mang theo liên kết chia sẻ / liên kết mời (cột joinToken là UNIQUE), trạng thái công khai, lượt xem / thích / dùng lại,
+     * quyền riêng tư đã chỉnh, nhắc đặt chỗ đã bỏ qua.
+     */
+    public static function freshCopyRow(array $row): array
+    {
+        $reset = ['shareToken' => null, 'joinToken' => null, 'lastEditorId' => null, 'rev' => 0, 'isPublic' => 0, 'publishedAt' => null,
+            'viewCount' => 0, 'likeCount' => 0, 'cloneCount' => 0, 'bookingSkip' => null, 'joinRole' => 'edit',
+            'shareNotes' => 1, 'shareBookings' => 0, 'shareCosts' => 0];
+        foreach ($reset as $k => $v) {
+            if (array_key_exists($k, $row)) {
+                $row[$k] = $v;
+            }
+        }
+
+        return $row;
+    }
+
+    /** Mục của bản sao: bỏ "đã ghé" / "bỏ qua" của chuyến gốc; chép cho người KHÁC thì chi phí thực tế đưa về dự kiến. */
+    public static function freshCopyItem(array $a, int $newTripId, bool $forOther): array
+    {
+        unset($a['itemId']);
+        $a['tripId'] = $newTripId;
+        foreach (['visitedAt', 'skippedAt'] as $k) {
+            if (array_key_exists($k, $a)) {
+                $a[$k] = null;
+            }
+        }
+        if ($forOther && ($a['costType'] ?? null) === 'actual') {
+            $a['costType'] = 'estimate';
+        }
+
+        return $a;
     }
 
     /** Đổi trạng thái chuyến (draft|planned|done). false nếu không phải chuyến của người dùng hoặc trạng thái không hợp lệ. */
@@ -945,7 +1021,7 @@ class TripPlanner
             'image' => $it['image'] ?? null, 'address' => $it['address'] ?? null, 'website' => $it['website'] ?? null, 'blurb' => $it['blurb'] ?? null,
             'startMin' => $it['startMin'] ?? null, 'durationMin' => $it['durationMin'] ?? null, 'defDur' => self::defaultDuration($it),
             'costType' => $it['costType'] ?? null, 'locked' => !empty($it['locked']),
-            'legMode' => $it['legMode'] ?? null, 'visitedAt' => $it['visitedAt'] ?? null,
+            'legMode' => $it['legMode'] ?? null, 'visitedAt' => $it['visitedAt'] ?? null, 'skippedAt' => $it['skippedAt'] ?? null,
             'hours' => $it['hours'] ?? null,   // giờ mở cửa theo thứ (OpeningHours); null = chưa biết
         ];
     }
@@ -986,7 +1062,8 @@ class TripPlanner
         if ($has === null) {
             $has = ['startMin' => Schema::hasColumn('tbl_trip_items', 'startMin'), 'durationMin' => Schema::hasColumn('tbl_trip_items', 'durationMin'),
                 'costType' => Schema::hasColumn('tbl_trip_items', 'costType'), 'isLocked' => Schema::hasColumn('tbl_trip_items', 'isLocked'),
-                'legMode' => Schema::hasColumn('tbl_trip_items', 'legMode'), 'visitedAt' => Schema::hasColumn('tbl_trip_items', 'visitedAt')];
+                'legMode' => Schema::hasColumn('tbl_trip_items', 'legMode'), 'visitedAt' => Schema::hasColumn('tbl_trip_items', 'visitedAt'),
+                'skippedAt' => Schema::hasColumn('tbl_trip_items', 'skippedAt')];
         }
         $out = [];
         if ($has['legMode']) {
@@ -996,6 +1073,10 @@ class TripPlanner
         if ($has['visitedAt']) {
             $v = $it['visitedAt'] ?? null;
             $out['visitedAt'] = $v ? \Carbon\Carbon::parse((string) $v)->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s') : null;
+        }
+        if ($has['skippedAt']) {
+            $v = $it['skippedAt'] ?? null;
+            $out['skippedAt'] = $v ? \Carbon\Carbon::parse((string) $v)->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s') : null;
         }
         if ($has['isLocked']) {
             $out['isLocked'] = !empty($it['locked']) ? 1 : 0;

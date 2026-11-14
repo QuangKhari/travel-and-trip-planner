@@ -67,7 +67,7 @@ class CommunityTripsTest extends TestCase
 
         $this->get('/cong-dong')->assertOk()->assertSee('Đà Lạt 3 ngày')->assertSee('Đi chậm, nhiều quán cà phê')
             ->assertSee('N. An')->assertDontSee('Nguyễn Văn An');   // chỉ tên rút gọn
-        $this->get("/cong-dong/$id")->assertOk()->assertSee('Điểm 1')->assertSee('Dùng hành trình này');
+        $this->get("/cong-dong/$id")->assertOk()->assertSee('Điểm 1')->assertSee('Chuyến đi trong một cái nhìn');
     }
 
     public function test_cannot_publish_empty_trip_or_someone_elses_trip(): void

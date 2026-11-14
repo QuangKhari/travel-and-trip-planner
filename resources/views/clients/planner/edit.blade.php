@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ux.css') }}?v=1">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/nature-luxury-planner.css') }}?v=bl20261104">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-group.css') }}?v=1">
 
 {{-- /len-ke-hoach/{id}. Biến: $payload (TripPlanner::payload), $client (dữ liệu cho planner.js), $role, $members, $tourFit.
      Bố cục "Timeline + Bản đồ" (tham khảo Wanderlog: lịch theo ngày cạnh bản đồ; Roadtrippers: bản đồ lớn, tuyến nối các điểm, thêm điểm dừng theo danh mục).
@@ -130,6 +131,9 @@
                     <div><h2>Lịch trình từng ngày</h2><p>Chạm vào địa điểm để xem chi tiết; dùng “Sửa” để đổi giờ hoặc thời lượng.</p></div>
                     <button type="button" id="tpuxJumpToday" class="tpux-softbtn">Đến ngày đang xem</button>
                 </div>
+                {{-- Chế độ đang đi (planner.js renderToday): checklist hôm nay khi chuyến đang diễn ra; sắp đi / đã về thì nhắc việc tương ứng --}}
+                <section class="tgt" id="tpToday" aria-label="Hôm nay" hidden
+                         @if ($role === 'owner' && ($t['status'] ?? '') !== 'done') data-done-url="{{ route('planner.status', ['id' => $t['id']]) }}" @endif></section>
                 <nav class="tpx-days" aria-label="Các ngày">
                     <ol class="tpx-days__list" id="tpDayNav"></ol>
                 </nav>
@@ -253,6 +257,18 @@
             {{-- ---------------- Chi phí ---------------- --}}
             <div class="tp-panel" id="tpPanelCost" role="tabpanel" aria-labelledby="tpTabCost" hidden>
                 <div id="tpCostBox"></div>
+                @if (\App\Services\Planner\TripExpenses::ready())
+                    {{-- Chia chi phí nhóm: planner-expenses.js vẽ từ GET {data-url} --}}
+                    <section class="tp-card tge" id="tpExp" data-url="{{ route('planner.expenses', $t['id']) }}" data-guest="{{ route('planner.guests.store', $t['id']) }}"
+                             data-start="{{ $t['startDate'] }}" aria-labelledby="tpExpH">
+                        <div class="tge__head">
+                            <div><h2 id="tpExpH">Chi tiêu nhóm</h2>
+                                <p class="tp-muted tp-small">Ghi khoản đã chi, ai trả và chia cho ai. Travela tính ai còn nợ ai và cách chuyển ít lần nhất.</p></div>
+                            <button type="button" class="tp-btn tge__add" id="tpExpAdd" hidden><i class="fas fa-plus" aria-hidden="true"></i> Thêm khoản chi</button>
+                        </div>
+                        <div class="tge__body" aria-live="polite"><p class="tp-muted tp-small">Đang tải…</p></div>
+                    </section>
+                @endif
             </div>
 
             {{-- ---------------- Thông tin & chia sẻ ---------------- --}}
@@ -288,9 +304,18 @@
                     <div id="tpSummary"></div>
                 </section>
 
+                @if (\App\Services\Planner\BookingPlan::ready())
+                    {{-- Đặt chỗ ngoài: còn thiếu gì + nơi đặt (ngày, số khách điền sẵn), việc cần đặt có hạn, đánh dấu đã đặt / đã hủy. planner-bookings.js --}}
+                    <section class="tp-card tgb" id="tpBook" data-url="{{ route('travel.plan', $t['id']) }}" aria-labelledby="tpBookH">
+                        <h2 id="tpBookH">Đặt chỗ cho chuyến</h2>
+                        <p class="tp-muted tp-small">Travela không bán vé tàu, vé máy bay hay đặt phòng khách sạn. Danh sách dưới đây nhắc bạn còn thiếu gì, mở sẵn trang đặt với ngày và số khách, giữ hạn cần đặt; đặt xong thì lưu mã xác nhận để giờ nhận phòng, giờ đi tự vào lịch.</p>
+                        <div class="tgb__body" aria-live="polite"><p class="tp-muted tp-small">Đang tải…</p></div>
+                    </section>
+                @endif
+
                 <section class="tp-card tp-travel" id="tpTravel" data-flights="{{ route('travel.flights', $t['id']) }}" data-hotels="{{ route('travel.hotels', $t['id']) }}"
                          data-status="{{ route('travel.status', $t['id']) }}" data-remove="{{ url('/len-ke-hoach/' . $t['id'] . '/ngoai') }}" data-csrf="{{ csrf_token() }}" data-edit="{{ $role !== 'view' ? 1 : 0 }}">
-                    <h2>Chuyến bay và khách sạn</h2>
+                    <h2>Đã đặt và tìm giá</h2>
                     <p class="tp-muted tp-small">Tham khảo giá vé và chỗ ở để tính ngân sách; Travela không bán vé hay đặt phòng. Mục bạn thêm vào lịch trình có chi phí ước tính.
                         @if ($travel['simulateOnly'])<span class="tp-sim">Dữ liệu thử nghiệm</span>@endif</p>
 
@@ -298,7 +323,7 @@
                         <ul class="tp-ext" id="tpExtList">
                             @foreach ($externals as $x)
                                 <li data-id="{{ $x->externalId }}">
-                                    <i class="fas {{ $x->kind === 'flight' ? 'fa-plane' : ($x->kind === 'ticket' ? 'fa-ticket-alt' : 'fa-hotel') }}" aria-hidden="true"></i>
+                                    <i class="fas {{ ['flight' => 'fa-plane', 'train' => 'fa-train', 'bus' => 'fa-bus', 'ticket' => 'fa-ticket-alt'][$x->kind] ?? 'fa-hotel' }}" aria-hidden="true"></i>
                                     <span><b>{{ $x->title }}</b><small>{{ \Carbon\Carbon::parse($x->startAt)->format('H:i d/m/Y') }}{{ $x->price ? ' · ' . number_format((float) $x->price, 0, ',', '.') . ' đ' : '' }}{{ $x->simulated ? ' · Dữ liệu thử nghiệm' : '' }}{{ !empty($x->confirmationCode) ? ' · mã ' . $x->confirmationCode : '' }}</small>
                                         @if (!empty($x->attachPath))<a class="tp-small" href="{{ route('travel.confirm.file', [$t['id'], $x->externalId]) }}" target="_blank" rel="noopener"><i class="fas fa-paperclip" aria-hidden="true"></i> {{ $x->attachName ?: 'Tệp xác nhận' }}</a>@endif</span>
                                     <span class="tp-ext__st" data-status-for="{{ $x->externalId }}"></span>
@@ -314,13 +339,14 @@
                             <summary><i class="fas fa-file-invoice" aria-hidden="true"></i> Lưu xác nhận đặt chỗ đã có</summary>
                             <form id="tpConfirmForm" data-url="{{ route('travel.confirm', $t['id']) }}" enctype="multipart/form-data">
                                 <div class="tp-travel__row">
-                                    <label>Loại<select name="kind" class="no-nice"><option value="hotel">Khách sạn</option><option value="flight">Vé máy bay / xe</option><option value="ticket">Vé tham quan</option></select></label>
+                                    <label>Loại<select name="kind" class="no-nice"><option value="hotel">Khách sạn</option><option value="flight">Vé máy bay</option><option value="train">Vé tàu</option><option value="bus">Vé xe khách</option><option value="ticket">Vé tham quan</option></select></label>
                                     <label>Tên<input type="text" name="title" maxlength="120" required placeholder="Ví dụ: Dalat Palace 2 đêm"></label>
                                     <label>Nơi đặt<input type="text" name="provider" maxlength="20" placeholder="Booking, Agoda, VNA…"></label>
                                 </div>
                                 <div class="tp-travel__row">
                                     <label>Mã xác nhận<input type="text" name="code" maxlength="40" placeholder="ABC123"></label>
-                                    <label>Ngày giờ<input type="datetime-local" name="startAt" required value="{{ $travel['date'] }}T14:00"></label>
+                                    <label>Ngày giờ (nhận phòng / khởi hành)<input type="datetime-local" name="startAt" required value="{{ $travel['date'] }}T14:00"></label>
+                                    <label>Trả phòng / đến nơi<input type="datetime-local" name="endAt"></label>
                                     <label>Đã trả (đ)<input type="number" name="price" min="0" step="1000"></label>
                                 </div>
                                 <label class="tp-small">Tệp xác nhận (PDF, JPG, PNG, WebP, tối đa 5 MB)<input type="file" name="file" accept=".pdf,image/jpeg,image/png,image/webp"></label>
@@ -373,16 +399,9 @@
 
                 <section class="tp-card">
                     <h2>Chia sẻ</h2>
-                    <p class="tp-muted tp-small">Mời bạn đồng hành bằng email tài khoản Travela, chọn quyền “Có thể chỉnh sửa” hoặc “Chỉ xem”.</p>
-                    <button type="button" class="tp-btn tp-btn--ghost js-invite"><i class="fas fa-user-plus" aria-hidden="true"></i> {{ $role === 'owner' ? 'Mời bạn đồng hành' : 'Xem người trong chuyến' }}</button>
+                    <p class="tp-muted tp-small">Mời bạn bè cùng lên kế hoạch bằng liên kết mời hoặc email, hoặc gửi liên kết chỉ xem; chọn bản chỉ xem có hiện ghi chú, đặt chỗ, chi phí hay không.</p>
+                    <button type="button" class="tp-btn tp-btn--ghost js-invite"><i class="fas fa-share-alt" aria-hidden="true"></i> {{ $role === 'owner' ? 'Mở hộp chia sẻ' : 'Xem người trong chuyến' }}</button>
                     @if ($role === 'owner')
-                        <h3>Liên kết chỉ xem</h3>
-                        <p class="tp-muted tp-small">Ai có liên kết đều xem được bản chỉ đọc (không cần tài khoản). Tắt liên kết thì liên kết cũ hết hiệu lực.</p>
-                        <div class="tp-share">
-                            <input type="text" id="tpShareUrl" readonly aria-label="Liên kết chia sẻ" value="{{ $t['shared'] ? route('planner.shared', ['token' => $t['shareToken']]) : '' }}" @if (!$t['shared']) hidden @endif>
-                            <button type="button" id="tpShareBtn" class="tp-btn tp-btn--ghost">{{ $t['shared'] ? 'Tắt liên kết' : 'Bật liên kết chỉ xem' }}</button>
-                        </div>
-
                         <h3 id="cong-dong">Chia sẻ lên Cộng đồng</h3>
                         @if ($t['isPublic'])
                             <p class="tp-muted tp-small">Đang hiển thị trên <a href="{{ route('community.show', $t['id']) }}">trang Cộng đồng</a> · {{ $t['likeCount'] }} lượt thích · {{ $t['cloneCount'] }} lượt dùng lại. Người khác chỉ xem được lịch trình và tên rút gọn của bạn; ghi chú chi phí thực tế, thành viên và đơn đặt tour không hiển thị.</p>
@@ -515,21 +534,73 @@
     </nav>
 </main>
 
-<div id="tpMembers" class="tp-modal" role="dialog" aria-modal="true" aria-labelledby="tpMembersH" hidden>
-    <div class="tp-modal__box">
+{{-- Hộp CHIA SẺ hợp nhất (planner-share.js + phần thành viên của planner.js):
+     tab "Cùng lên kế hoạch" = liên kết mời + mời bằng email (quyền sửa); tab "Chỉ xem" = liên kết xem, gửi qua mạng xã hội, quyền riêng tư --}}
+@php
+    $tripRow = \Illuminate\Support\Facades\DB::table('tbl_trips')->where('tripId', $t['id'])->first();
+    $joinUrl = $role === 'owner' && !empty($tripRow->joinToken) ? route('planner.join', ['token' => $tripRow->joinToken]) : '';
+    $shareLink = $t['shared'] ? route('planner.shared', ['token' => $t['shareToken']]) : '';
+@endphp
+<div id="tpMembers" class="tp-modal tps" role="dialog" aria-modal="true" aria-labelledby="tpMembersH" hidden
+     data-join="{{ $client['joinLinkUrl'] ?? '' }}" data-privacy="{{ $client['privacyUrl'] ?? '' }}" data-title="{{ $t['title'] }}">
+    <div class="tp-modal__box tps__box">
         <div class="tp-modal__head">
-            <h2 id="tpMembersH">{{ $role === 'owner' ? 'Mời bạn đồng hành' : 'Người trong chuyến' }}</h2>
+            <h2 id="tpMembersH">{{ $role === 'owner' ? 'Chia sẻ chuyến đi' : 'Người trong chuyến' }}</h2>
             <button type="button" id="tpMembersClose" class="tp-mini" aria-label="Đóng">✕</button>
         </div>
         @if ($role === 'owner')
-            <form id="tpInvForm" class="tp-inv">
-                <input type="email" id="tpInvEmail" maxlength="190" placeholder="Email tài khoản Travela của bạn bè" aria-label="Email người được mời" required>
-                <select class="no-nice" id="tpInvRole" aria-label="Quyền"><option value="edit">Có thể chỉnh sửa</option><option value="view">Chỉ xem</option></select>
-                <button type="submit" class="tp-btn">Mời</button>
+            <div class="tps__tabs" role="tablist" aria-label="Cách chia sẻ">
+                <button type="button" role="tab" class="tps__tab is-on" aria-selected="true" aria-controls="tpsEdit" id="tpsTabEdit" data-tab="edit"><i class="fas fa-user-friends" aria-hidden="true"></i> Cùng lên kế hoạch</button>
+                <button type="button" role="tab" class="tps__tab" aria-selected="false" aria-controls="tpsView" id="tpsTabView" data-tab="view" tabindex="-1"><i class="fas fa-eye" aria-hidden="true"></i> Chỉ xem</button>
+            </div>
+
+            <section class="tps__panel" id="tpsEdit" role="tabpanel" aria-labelledby="tpsTabEdit">
+                <p class="tps__lead">Bạn bè vào nhóm được thêm, sửa lịch và ghi khoản chi chung. Mọi thay đổi đều lưu thành phiên bản, khôi phục được.</p>
+                <div class="tps__row">
+                    <div class="tps__link{{ $joinUrl ? '' : ' is-off' }}" id="tpsJoinBox">
+                        <input type="text" id="tpsJoinUrl" readonly value="{{ $joinUrl }}" placeholder="Liên kết mời đang tắt" aria-label="Liên kết mời cùng lên kế hoạch">
+                        <button type="button" class="tps__copy" data-copy="tpsJoinUrl" @disabled(!$joinUrl)>Sao chép</button>
+                    </div>
+                    <label class="tps__switch"><input type="checkbox" id="tpsJoinOn" @checked($joinUrl)> <span>Liên kết mời</span></label>
+                </div>
+                <p class="tps__hint">Người mở liên kết cần đăng nhập rồi bấm “Tham gia”. <button type="button" class="tps__textbtn" id="tpsJoinRegen" @disabled(!$joinUrl)>Tạo liên kết mới</button> để liên kết cũ hết hiệu lực.</p>
+            </section>
+
+            <section class="tps__panel" id="tpsView" role="tabpanel" aria-labelledby="tpsTabView" hidden>
+                <p class="tps__lead">Ai có liên kết đều xem được bản chỉ đọc, không cần tài khoản; không ai sửa được chuyến của bạn.</p>
+                <div class="tps__row">
+                    <div class="tps__link{{ $shareLink ? '' : ' is-off' }}" id="tpsViewBox">
+                        <input type="text" id="tpShareUrl" readonly value="{{ $shareLink }}" placeholder="Liên kết xem đang tắt" aria-label="Liên kết chỉ xem">
+                        <button type="button" class="tps__copy" data-copy="tpShareUrl" @disabled(!$shareLink)>Sao chép</button>
+                    </div>
+                    <button type="button" id="tpShareBtn" class="tps__toggle">{{ $t['shared'] ? 'Tắt liên kết' : 'Bật liên kết chỉ xem' }}</button>
+                </div>
+                <div class="tps__social" id="tpsSocial" @if (!$shareLink) hidden @endif>
+                    <button type="button" class="tps__soc" data-soc="native" hidden><i class="fas fa-share-square" aria-hidden="true"></i><span>Ứng dụng khác</span></button>
+                    <a class="tps__soc" data-soc="facebook" target="_blank" rel="noopener"><i class="fab fa-facebook-f" aria-hidden="true"></i><span>Facebook</span></a>
+                    <a class="tps__soc" data-soc="x" target="_blank" rel="noopener"><i class="fab fa-twitter" aria-hidden="true"></i><span>X</span></a>
+                    <a class="tps__soc" data-soc="email"><i class="fas fa-envelope" aria-hidden="true"></i><span>Email</span></a>
+                    <button type="button" class="tps__soc" data-soc="pdf"><i class="fas fa-file-pdf" aria-hidden="true"></i><span>Tải PDF</span></button>
+                </div>
+                <fieldset class="tps__privacy">
+                    <legend>Bản chỉ xem hiện gì</legend>
+                    <label class="tps__switch"><input type="checkbox" data-privacy="shareNotes" @checked($tripRow->shareNotes ?? true)> <span>Ghi chú và việc cần làm</span></label>
+                    <label class="tps__switch"><input type="checkbox" data-privacy="shareBookings" @checked($tripRow->shareBookings ?? false)> <span>Đặt chỗ (khách sạn, vé) <small>— không bao giờ hiện mã xác nhận, tệp đính kèm</small></span></label>
+                    <label class="tps__switch"><input type="checkbox" data-privacy="shareCosts" @checked($tripRow->shareCosts ?? false)> <span>Chi phí dự kiến <small>— không hiện ai trả, ai nợ</small></span></label>
+                </fieldset>
+            </section>
+
+            <form id="tpInvForm" class="tps__inv">
+                <label for="tpInvEmail" class="tps__invlabel" id="tpsInvLabel">Mời bằng email (quyền chỉnh sửa)</label>
+                <div class="tps__invrow">
+                    <input type="email" id="tpInvEmail" maxlength="190" placeholder="Email tài khoản Travela của bạn bè" required>
+                    <select class="no-nice" id="tpInvRole" aria-label="Quyền" hidden><option value="edit">Có thể chỉnh sửa</option><option value="view">Chỉ xem</option></select>
+                    <button type="submit" class="tp-btn">Mời</button>
+                </div>
             </form>
-            <p class="tp-muted tp-small">Người được mời cần có tài khoản Travela. Họ sẽ thấy chuyến đi trong “Chuyến đi của tôi”. Bạn đổi quyền hoặc gỡ họ bất cứ lúc nào.</p>
         @endif
         <p id="tpInvMsg" class="tp-msg" role="status" aria-live="polite"></p>
+        <h3 class="tps__h">Người trong chuyến</h3>
         <ul id="tpMemList" class="tp-memlist"></ul>
     </div>
 </div>
@@ -560,9 +631,12 @@
 <script src="{{ asset('clients/assets/js/planner-save.js') }}?v=3"></script>
 <script src="{{ asset('clients/assets/js/planner-resolve.js') }}?v=2"></script>
 <script src="{{ asset('clients/assets/js/planner-map.js') }}?v=5"></script>
-<script src="{{ asset('clients/assets/js/planner.js') }}?v=26" defer></script>
+<script src="{{ asset('clients/assets/js/planner.js') }}?v=27" defer></script>
 <script src="{{ asset('clients/assets/js/planner-extras.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-travel.js') }}?v=2" defer></script>
+<script src="{{ asset('clients/assets/js/planner-share.js') }}?v=1" defer></script>
+<script src="{{ asset('clients/assets/js/planner-expenses.js') }}?v=1" defer></script>
+<script src="{{ asset('clients/assets/js/planner-bookings.js') }}?v=2" defer></script>
 @if (!empty($client['historyUrl']))<script src="{{ asset('clients/assets/js/planner-history.js') }}?v=1" defer></script>@endif
 @if ($role !== 'view')<script src="{{ asset('clients/assets/js/ai-feedback.js') }}?v=2" data-url="{{ route('planner.ai.rate') }}" data-csrf="{{ csrf_token() }}" data-trip="{{ $client['trip']['id'] ?? '' }}" defer></script>@endif
 <script type="application/json" id="aiData">{!! json_encode(['explainUrl' => route('planner.ai.explain', ['id' => $t['id']]), 'csrf' => csrf_token(), 'on' => $aiExplainOn,

@@ -3,6 +3,8 @@
 namespace App\Services\Planner;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 /**
  * Chia sẻ chuyến đi theo tài khoản: chủ chuyến mời bạn bằng email, mỗi người một quyền (chỉ xem / chỉnh sửa).
@@ -109,7 +111,48 @@ final class TripSharing
             return false;
         }
 
-        return DB::table('tbl_trip_members')->where(['tripId' => $tripId, 'userId' => $userId])->delete() > 0;
+        return DB::transaction(function () use ($tripId, $userId, $actorId, $isOwner) {
+            if (DB::table('tbl_trip_members')->where(['tripId' => $tripId, 'userId' => $userId])->delete() === 0) {
+                return false;
+            }
+            $this->keepExpensesOf($tripId, $userId);
+            // chủ chuyến mời ra: đổi liên kết mời để người đó không tự vào lại bằng liên kết cũ
+            if ($isOwner && $actorId !== $userId && Schema::hasColumn('tbl_trips', 'joinToken')) {
+                DB::table('tbl_trips')->where('tripId', $tripId)->whereNotNull('joinToken')->update(['joinToken' => Str::random(32)]);
+            }
+
+            return true;
+        });
+    }
+
+    /**
+     * Người rời nhóm mà đã có khoản chi: chuyển họ thành "người đi cùng" (giữ tên) để sổ chi tiêu vẫn cân và
+     * vẫn biết ai nợ ai, thay vì để các khoản treo ở một khóa không còn tên.
+     */
+    private function keepExpensesOf(int $tripId, int $userId): void
+    {
+        if (!Schema::hasTable('tbl_trip_expenses')) {
+            return;
+        }
+        $key = 'u:' . $userId;
+        $ids = DB::table('tbl_trip_expenses')->where('tripId', $tripId)->pluck('expenseId');
+        if ($ids->isEmpty()) {
+            return;
+        }
+        $used = DB::table('tbl_trip_expenses')->whereIn('expenseId', $ids)->where('paidBy', $key)->exists()
+            || DB::table('tbl_trip_expense_shares')->whereIn('expenseId', $ids)->where('who', $key)->exists();
+        if (!$used) {
+            return;
+        }
+        $name = trim((string) DB::table('tbl_users')->where('userId', $userId)->value('fullName')) ?: 'Thành viên cũ';
+        $base = mb_substr($name, 0, 50);
+        $name = $base;
+        for ($i = 2; DB::table('tbl_trip_guests')->where(['tripId' => $tripId, 'name' => $name])->exists(); $i++) {
+            $name = $base . ' (' . $i . ')';
+        }
+        $gid = DB::table('tbl_trip_guests')->insertGetId(['tripId' => $tripId, 'name' => $name, 'createdAt' => now()]);
+        DB::table('tbl_trip_expenses')->whereIn('expenseId', $ids)->where('paidBy', $key)->update(['paidBy' => 'g:' . $gid]);
+        DB::table('tbl_trip_expense_shares')->whereIn('expenseId', $ids)->where('who', $key)->update(['who' => 'g:' . $gid]);
     }
 
     /** Chuyến người khác mời tôi vào, kèm quyền và tên chủ chuyến. */
@@ -125,6 +168,74 @@ final class TripSharing
             ->orderByDesc(DB::raw('COALESCE(t.updatedAt, t.createdAt)'))->get()->all();
 
         return array_map([TripPlanner::class, 'cardInfo'], $rows);
+    }
+
+    // ------------------------------------------------------------------ liên kết mời cùng lên kế hoạch + quyền riêng tư
+
+    /**
+     * Bật / tắt / tạo lại liên kết MỜI (khác liên kết chỉ xem): ai đăng nhập và mở liên kết sẽ vào nhóm với quyền $role.
+     * Tạo lại = liên kết cũ hết hiệu lực ngay. Chỉ chủ chuyến.
+     *
+     * @return array{token:?string,role:string}|false
+     */
+    public function joinLink(int $ownerId, int $tripId, bool $on, string $role = 'edit', bool $regenerate = false): array|false
+    {
+        $trip = DB::table('tbl_trips')->where(['tripId' => $tripId, 'userId' => $ownerId])->where('kind', 'trip')->first();
+        if (!$trip || !in_array($role, self::ROLES, true)) {
+            return false;
+        }
+        $token = $on ? (($regenerate || empty($trip->joinToken)) ? \Illuminate\Support\Str::random(32) : $trip->joinToken) : null;
+        DB::table('tbl_trips')->where('tripId', $tripId)->update(['joinToken' => $token, 'joinRole' => $role]);
+
+        return ['token' => $token, 'role' => $role];
+    }
+
+    /** Chuyến ứng với liên kết mời (null nếu sai / đã tắt). */
+    public function byJoinToken(string $token): ?object
+    {
+        if (!preg_match('/^[A-Za-z0-9]{32}$/', $token)) {
+            return null;
+        }
+
+        return DB::table('tbl_trips')->where('joinToken', $token)->where('kind', 'trip')->first();
+    }
+
+    /**
+     * Người dùng bấm "Tham gia" từ liên kết mời. Đã là chủ / thành viên thì giữ quyền hiện có
+     * (không hạ quyền, không nâng quyền "chỉ xem" lên "sửa" qua liên kết).
+     *
+     * @return array{ok:bool,message:string,tripId?:int}
+     */
+    public function join(int $userId, string $token): array
+    {
+        $trip = $this->byJoinToken($token);
+        if (!$trip) {
+            return ['ok' => false, 'message' => 'Liên kết mời không còn hiệu lực. Hãy xin chủ chuyến liên kết mới.'];
+        }
+        if ((int) $trip->userId === $userId || DB::table('tbl_trip_members')->where(['tripId' => $trip->tripId, 'userId' => $userId])->exists()) {
+            return ['ok' => true, 'message' => 'Bạn đã ở trong chuyến đi này.', 'tripId' => (int) $trip->tripId];
+        }
+        if (DB::table('tbl_trip_members')->where('tripId', $trip->tripId)->count() >= self::MAX_MEMBERS) {
+            return ['ok' => false, 'message' => 'Chuyến đi đã đủ ' . self::MAX_MEMBERS . ' người được mời.'];
+        }
+        $role = in_array($trip->joinRole ?? 'edit', self::ROLES, true) ? $trip->joinRole : 'edit';
+        DB::table('tbl_trip_members')->insert(['tripId' => $trip->tripId, 'userId' => $userId, 'role' => $role, 'invitedBy' => $trip->userId, 'createdAt' => now()]);
+
+        return ['ok' => true, 'message' => 'Bạn đã tham gia chuyến đi với quyền ' . ($role === 'edit' ? 'chỉnh sửa' : 'chỉ xem') . '.', 'tripId' => (int) $trip->tripId];
+    }
+
+    /** Bản chia sẻ chỉ xem hiện gì: ghi chú, đặt chỗ (không bao giờ hiện mã xác nhận / tệp), chi phí. Chỉ chủ chuyến. */
+    public function privacy(int $ownerId, int $tripId, array $flags): bool
+    {
+        $set = [];
+        foreach (['shareNotes', 'shareBookings', 'shareCosts'] as $k) {
+            if (array_key_exists($k, $flags)) {
+                $set[$k] = (bool) $flags[$k];
+            }
+        }
+
+        return $set && DB::table('tbl_trips')->where(['tripId' => $tripId, 'userId' => $ownerId])->where('kind', 'trip')->update($set) >= 0
+            && DB::table('tbl_trips')->where(['tripId' => $tripId, 'userId' => $ownerId])->exists();
     }
 
     /** @return array{rev:int,by:?string} */

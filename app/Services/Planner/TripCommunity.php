@@ -221,7 +221,7 @@ class TripCommunity
         TripPlanner::assertCanCreate($userId);
 
         return DB::transaction(function () use ($src, $userId, $o) {
-            $row = (array) $src;
+            $row = TripPlanner::freshCopyRow((array) $src);
             unset($row['tripId']);
             $row = array_merge($row, [
                 'userId' => $userId,
@@ -245,16 +245,7 @@ class TripCommunity
 
             // chép các mục; chi phí "thực tế" của người khác không có nghĩa với chuyến mới -> đưa về dự kiến
             $items = DB::table('tbl_trip_items')->where('tripId', $src->tripId)->orderBy('dayNo')->orderBy('orderNo')->get()
-                ->map(function ($r) use ($newId) {
-                    $a = (array) $r;
-                    unset($a['itemId']);
-                    $a['tripId'] = $newId;
-                    if (($a['costType'] ?? null) === 'actual') {
-                        $a['costType'] = 'estimate';
-                    }
-
-                    return $a;
-                })->all();
+                ->map(fn($r) => TripPlanner::freshCopyItem((array) $r, $newId, true))->all();
             foreach (array_chunk($items, 50) as $chunk) {
                 DB::table('tbl_trip_items')->insert($chunk);
             }

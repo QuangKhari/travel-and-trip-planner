@@ -109,6 +109,7 @@
         x.locked = !!x.locked;
         x.legMode = x.legMode || null;
         x.visitedAt = x.visitedAt || null;
+        x.skippedAt = x.skippedAt || null;
         return x;
     });
     var sugg = cfg.suggestions || {};
@@ -736,7 +737,7 @@
     /** Một điểm dừng trên timeline. row = kết quả schedule() (null với danh sách chờ). */
     function itemRow(it, row) {
         var color = dayColor(it.day);
-        var li = el("li", "tpx-stop" + (CUSTOM[it.type] ? " is-custom" : "") + (row && (row.conflict || row.hours === "closed") ? " is-conflict" : "") + (ui.sel[it.uid] ? " is-sel" : "") + (it.visitedAt ? " is-visited" : ""));
+        var li = el("li", "tpx-stop" + (CUSTOM[it.type] ? " is-custom" : "") + (row && (row.conflict || row.hours === "closed") ? " is-conflict" : "") + (ui.sel[it.uid] ? " is-sel" : "") + (it.visitedAt ? " is-visited" : "") + (it.skippedAt ? " is-skipped" : ""));
         li.setAttribute("data-uid", String(it.uid));
         li.style.setProperty("--c", color);
 
@@ -1195,6 +1196,129 @@
         wrap.appendChild(ol);
         return wrap;
     }
+    /* ---------------- Chế độ đang đi: checklist hôm nay ----------------
+     * Dựa trên ngày đi + giờ máy người dùng. "Xong" = visitedAt, "Bỏ qua" = skippedAt (hai trạng thái loại trừ nhau),
+     * mục trễ giờ có nút "Để ngày mai". Mọi thay đổi đi qua commit() -> tự lưu, hoàn tác được, có kiểm tra rev như sửa thường. */
+    function tripPhase() {
+        var s = $("tpStart").value;
+        if (!s) return { state: "nodate" };
+        var st = new Date(s + "T00:00:00"), now = new Date(), t0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        var diff = Math.round((t0 - st) / 864e5), n = daysCount();
+        if (diff < 0) return { state: "before", inDays: -diff };
+        if (diff >= n) return { state: "after", ago: diff - n + 1 };
+        return { state: "during", day: diff + 1, nowMin: now.getHours() * 60 + now.getMinutes() };
+    }
+    function setDone(it, on) { it.visitedAt = on ? new Date().toISOString() : null; if (on) it.skippedAt = null; commit(); }
+    function setSkip(it, on) { it.skippedAt = on ? new Date().toISOString() : null; if (on) it.visitedAt = null; commit(); }
+    function dirLink(it, cls) {
+        var a = el("a", cls || "tgt__dir", "Chỉ đường");
+        a.href = "https://www.google.com/maps/dir/?api=1&destination=" + it.lat + "," + it.lng; a.target = "_blank"; a.rel = "noopener";
+        return a;
+    }
+    function renderToday() {
+        var box = $("tpToday");
+        if (!box) return;
+        var ph = tripPhase();
+        box.textContent = "";
+        box.className = "tgt tgt--" + ph.state;
+        if (ph.state === "nodate" || (ph.state === "before" && ph.inDays > 14) || (ph.state === "after" && (!box.dataset.doneUrl || ph.ago > 30))) { box.hidden = true; return; }
+        box.hidden = false;
+        var placed = items.filter(function (x) { return x.day != null; });
+        if (ph.state === "before") {
+            box.appendChild(el("p", "tgt__eyebrow", "Sắp đi"));
+            box.appendChild(el("h3", "tgt__h", ph.inDays === 1 ? "Ngày mai khởi hành" : "Còn " + ph.inDays + " ngày nữa khởi hành"));
+            var ul = el("ul", "tgt__todo");
+            [["Kiểm tra đặt chỗ: chỗ ở, vé đi và về", "#tpBook"], ["Xem dự báo và cảnh báo của La bàn", "#la-ban"], ["Chuẩn bị đồ mang theo", "#tpPack"]].forEach(function (x) {
+                var li = el("li"); var a = el("a", null, x[0]); a.href = x[1];
+                a.addEventListener("click", function (e) {
+                    if (x[1] === "#la-ban") { e.preventDefault(); var o = $("aiCoOpen") || $("aiCoOpen2"); if (o) o.click(); return; }
+                    e.preventDefault(); switchTab("info"); setTimeout(function () { var t = document.querySelector(x[1]); if (t) t.scrollIntoView({ behavior: "smooth", block: "start" }); }, 60);
+                });
+                li.appendChild(a); ul.appendChild(li);
+            });
+            box.appendChild(ul);
+            box.appendChild(el("p", "tgt__hint", "Khi tới ngày đi, phần này thành danh sách việc của từng ngày để bạn đánh dấu “Xong”."));
+            return;
+        }
+        if (ph.state === "after") {
+            var done = placed.filter(function (x) { return x.visitedAt; }).length;
+            box.appendChild(el("p", "tgt__eyebrow", "Chuyến đã kết thúc"));
+            box.appendChild(el("h3", "tgt__h", "Bạn đã ghé " + done + "/" + placed.length + " điểm"));
+            box.appendChild(el("p", "tgt__hint", "Đánh dấu hoàn thành để chuyến chuyển sang mục “Đã đi” (ghi chú, chi tiêu nhóm và lịch sử vẫn giữ nguyên)."));
+            var f = el("form"); f.method = "POST"; f.action = box.dataset.doneUrl;
+            var c1 = el("input"); c1.type = "hidden"; c1.name = "_token"; c1.value = cfg.csrf; f.appendChild(c1);
+            var c2 = el("input"); c2.type = "hidden"; c2.name = "status"; c2.value = "done"; f.appendChild(c2);
+            var b = el("button", "tp-btn", "Đánh dấu chuyến đã hoàn thành"); b.type = "submit"; f.appendChild(b);
+            box.appendChild(f);
+            return;
+        }
+        var s = schedule(ph.day), rows = s.rows, now = ph.nowMin;
+        var nDone = rows.filter(function (r) { return r.it.visitedAt; }).length, nSkip = rows.filter(function (r) { return r.it.skippedAt; }).length;
+        var head = el("div", "tgt__head");
+        var ht = el("div");
+        ht.appendChild(el("p", "tgt__eyebrow", "Hôm nay · " + dayDate(ph.day)));
+        ht.appendChild(el("h3", "tgt__h", "Ngày " + ph.day + "/" + daysCount() + (rows.length ? " · xong " + nDone + "/" + (rows.length - nSkip) : "")));
+        head.appendChild(ht);
+        var bar = el("span", "tgt__bar"); var fill = el("span"); fill.style.width = (rows.length - nSkip ? Math.round(nDone * 100 / (rows.length - nSkip)) : 0) + "%"; bar.appendChild(fill);
+        bar.setAttribute("role", "progressbar"); bar.setAttribute("aria-valuemin", "0"); bar.setAttribute("aria-valuemax", String(rows.length - nSkip)); bar.setAttribute("aria-valuenow", String(nDone));
+        bar.setAttribute("aria-label", "Đã xong " + nDone + " trên " + (rows.length - nSkip) + " việc hôm nay");
+        head.appendChild(bar);
+        box.appendChild(head);
+        if (!rows.length) { box.appendChild(el("p", "tgt__hint", "Hôm nay chưa có điểm nào trong lịch. Thêm điểm hoặc hỏi La bàn gợi ý.")); return; }
+        var next = rows.filter(function (r) { return !r.it.visitedAt && !r.it.skippedAt; })[0];
+        if (next) {
+            var nb = el("div", "tgt__next" + (next.end < now ? " is-late" : ""));
+            var lab = next.start > now ? "Tiếp theo · " + hhmm(next.start) + " (còn " + fmtMin(next.start - now) + ")"
+                : next.end >= now ? "Đang diễn ra · " + hhmm(next.start) + "–" + hhmm(next.end) : "Đã trễ " + fmtMin(now - next.end) + " so với lịch";
+            nb.appendChild(el("small", null, lab));
+            nb.appendChild(el("b", null, next.it.name));
+            var na = el("div", "tgt__nacts");
+            if (!RO) { var db = el("button", "tp-btn tgt__donebtn", "Xong"); db.type = "button"; db.addEventListener("click", function () { setDone(next.it, true); }); na.appendChild(db); }
+            if (G.hasPos(next.it)) na.appendChild(dirLink(next.it, "tp-btn tp-btn--ghost"));
+            nb.appendChild(na);
+            box.appendChild(nb);
+        } else {
+            var nxt = ph.day < daysCount() ? schedule(ph.day + 1) : null;
+            box.appendChild(el("p", "tgt__alldone", "Đã xong lịch hôm nay." + (nxt && nxt.rows.length ? " Ngày mai " + nxt.rows.length + " điểm, bắt đầu " + hhmm(nxt.rows[0].start) + "." : "")));
+        }
+        var ol = el("ol", "tgt__list");
+        rows.forEach(function (r) {
+            var it = r.it, late = !it.visitedAt && !it.skippedAt && r.end < now;
+            var li = el("li", "tgt__it" + (it.visitedAt ? " is-done" : "") + (it.skippedAt ? " is-skip" : "") + (late ? " is-late" : ""));
+            var lab = el("label", "tgt__chk");
+            var c = el("input"); c.type = "checkbox"; c.checked = !!it.visitedAt; c.disabled = RO || !!it.skippedAt;
+            c.setAttribute("aria-label", "Đã xong: " + it.name);
+            c.addEventListener("change", function () { setDone(it, c.checked); });
+            lab.appendChild(c);
+            li.appendChild(lab);
+            li.appendChild(el("span", "tgt__time", hhmm(r.start)));
+            var m = el("span", "tgt__name"); m.appendChild(el("b", null, it.name));
+            if (it.visitedAt) m.appendChild(el("small", null, "Xong lúc " + new Date(it.visitedAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })));
+            else if (it.skippedAt) m.appendChild(el("small", null, "Đã bỏ qua"));
+            else if (late) m.appendChild(el("small", "tgt__lateh", "Quá giờ dự kiến (" + hhmm(r.end) + ")"));
+            li.appendChild(m);
+            var acts = el("span", "tgt__acts");
+            if (G.hasPos(it) && !it.visitedAt) acts.appendChild(dirLink(it));
+            if (!RO && !it.visitedAt) {
+                var sk = el("button", "tp-mini", it.skippedAt ? "Khôi phục" : "Bỏ qua"); sk.type = "button";
+                sk.setAttribute("aria-label", (it.skippedAt ? "Khôi phục " : "Bỏ qua ") + it.name);
+                sk.addEventListener("click", function () { setSkip(it, !it.skippedAt); });
+                acts.appendChild(sk);
+                if (late && ph.day < daysCount() && !it.locked) {
+                    var mv = el("button", "tp-mini", "Để ngày mai"); mv.type = "button";
+                    mv.setAttribute("aria-label", "Chuyển " + it.name + " sang ngày " + (ph.day + 1));
+                    mv.addEventListener("click", function () { it.startMin = null; moveItem(it, ph.day + 1, null); commit(); checkPlaced(it); say("Đã chuyển " + it.name + " sang ngày " + (ph.day + 1) + ". Bấm Hoàn tác nếu nhầm."); });
+                    acts.appendChild(mv);
+                }
+            }
+            li.appendChild(acts);
+            ol.appendChild(li);
+        });
+        box.appendChild(ol);
+    }
+    function fmtMin(m) { m = Math.max(0, Math.round(m)); return m >= 60 ? Math.floor(m / 60) + " giờ" + (m % 60 ? " " + (m % 60) + " phút" : "") : m + " phút"; }
+    setInterval(function () { if ($("tpToday") && !$("tpToday").hidden && !document.hidden) renderToday(); }, 60000);
+
     /* ---------------- T-03: lấp khoảng trống ---------------- */
     function hasPos(it) { return it && it.lat != null && it.lng != null; }
     function toggleGap(key, d, a, b, r) {
@@ -3740,6 +3864,7 @@
         renderMapDays();
         renderMap();
         renderCostSummary();
+        renderToday();
         syncButtons();
     }
 
@@ -3801,13 +3926,14 @@
     }
     function share() {
         var b = $("tpShareBtn"), inp = $("tpShareUrl");
-        var on = inp.hidden;
+        var on = !inp.value;   // ô luôn hiện trong hộp chia sẻ: trống = liên kết đang tắt
         b.disabled = true;
         post(cfg.shareUrl, { on: on ? 1 : 0 })
             .then(function (r) { return r.json(); })
             .then(function (j) {
-                if (j.url) { inp.value = j.url; inp.hidden = false; b.textContent = "Tắt liên kết"; inp.select(); say("Đã bật liên kết chỉ xem."); }
-                else { inp.value = ""; inp.hidden = true; b.textContent = "Bật liên kết chỉ xem"; say("Đã tắt liên kết chỉ xem."); }
+                if (j.url) { inp.value = j.url; b.textContent = "Tắt liên kết"; inp.select(); say("Đã bật liên kết chỉ xem."); }
+                else { inp.value = ""; b.textContent = "Bật liên kết chỉ xem"; say("Đã tắt liên kết chỉ xem."); }
+                document.dispatchEvent(new CustomEvent("tp:share", { detail: { url: j.url || "" } }));
             })
             .catch(function () { /* giữ trạng thái cũ */ })
             .then(function () { b.disabled = false; });

@@ -137,6 +137,10 @@ class BookingManagementController extends Controller
     public function departures(Request $request, \App\Services\DepartureService $deps)
     {
         $id = (int) $request->query('tour');
+        // tour cũ / nhập thẳng vào CSDL chưa có dòng lịch khởi hành: tạo từ ngày đi của tour (như khi khách đặt) để form không trống
+        if ($id > 0 && \App\Services\DepartureService::enabled() && !DB::table('tbl_tour_availability')->where('tourId', $id)->exists()) {
+            $deps->ensureForTour($id);
+        }
 
         return response()->json(collect($deps->forTour($id, true))->filter(fn($d) => $d->remaining > 0)->map(fn($d) => [
             'id' => $d->availabilityId, 'date' => Carbon::parse($d->departureDate)->format('d/m/Y'), 'end' => Carbon::parse($d->endDate)->format('d/m/Y'), 'left' => $d->remaining,

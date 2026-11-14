@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
+use App\Services\Planner\BookingPlan;
 use App\Services\Planner\TripSharing;
 use App\Services\Travel\FlightSearchService;
 use App\Services\Travel\FlightStatusService;
@@ -150,10 +151,10 @@ class TravelController extends Controller
             if (!empty($x->attachPath)) {
                 \Illuminate\Support\Facades\Storage::disk('proofs')->delete($x->attachPath);
             }
-            // bỏ luôn mục lịch trình đã tạo kèm (nếu người dùng chưa đổi tên)
-            $manual = !empty($x->confirmationCode) || !empty($x->attachPath) || str_contains((string) $x->payload, '"manual":true');
-            $label = mb_substr(($manual ? ['hotel' => 'Nhận phòng ', 'flight' => 'Khởi hành ', 'ticket' => 'Vé '][$x->kind] ?? '' : ($x->kind === 'flight' ? 'Bay ' : 'Nhận phòng ')) . $x->title, 0, 120);
-            DB::table('tbl_trip_items')->where('tripId', $id)->where('label', $label)->limit(1)->delete();
+            // bỏ luôn mục lịch trình đã tạo kèm (nếu người dùng chưa đổi tên); "cần đặt" chưa có mục lịch
+            if (($x->status ?? 'booked') === 'booked') {
+                DB::table('tbl_trip_items')->where('tripId', $id)->where('label', self::itemLabel($x))->limit(1)->delete();
+            }
             DB::table('tbl_trips')->where('tripId', $id)->update(['rev' => DB::raw('rev + 1'), 'lastEditorId' => $this->uid(), 'updatedAt' => now()]);
             app(\App\Services\Planner\TripRevisions::class)->recordCurrent($id, $this->uid(), 'external');
         });
@@ -170,24 +171,137 @@ class TravelController extends Controller
                 'tripId' => $trip->tripId, 'kind' => $kind, 'provider' => $provider, 'simulated' => $sim, 'title' => mb_substr($title, 0, 160),
                 'payload' => json_encode($payload, JSON_UNESCAPED_UNICODE), 'startAt' => $at, 'price' => $price, 'createdAt' => now(),
             ] + $extra);
-            $day = null;
-            if ($trip->startDate) {
-                $n = (int) Carbon::parse($trip->startDate)->startOfDay()->diffInDays($at->copy()->startOfDay(), false) + 1;
-                $day = ($n >= 1 && $n <= (int) $trip->days) ? $n : null;
-            }
-            $order = (int) DB::table('tbl_trip_items')->where('tripId', $trip->tripId)->where('dayNo', $day)->max('orderNo') + 1;
-            DB::table('tbl_trip_items')->insert([
-                'tripId' => $trip->tripId, 'refType' => $itemType, 'refId' => null, 'label' => mb_substr($label, 0, 120), 'note' => mb_substr($note, 0, 255),
-                'dayNo' => $day, 'orderNo' => $order, 'cost' => $price, 'costType' => 'estimate',
-                'startMin' => $day ? $startMin : null, 'durationMin' => max(5, min(720, $duration)),
-                'latitude' => $lat, 'longitude' => $lng, 'source' => $lat !== null ? 'search' : null,
-            ]);
-            // báo cho người đang mở chuyến ở tab khác: có thay đổi (cơ chế rev sẵn có)
-            DB::table('tbl_trips')->where('tripId', $trip->tripId)->update(['rev' => DB::raw('rev + 1'), 'lastEditorId' => $this->uid(), 'updatedAt' => now()]);
-            app(\App\Services\Planner\TripRevisions::class)->recordCurrent((int) $trip->tripId, $this->uid(), 'external');
+            $this->placeItem($trip, $itemType, $label, $note, $at, $price, $startMin, $duration, $lat, $lng);
 
             return $xid;
         });
+    }
+
+    /** Một mục lịch cho đặt chỗ (ngày tính theo ngày đi của chuyến; ngoài khoảng thì để "chưa xếp ngày"), rồi tăng rev + ghi phiên bản. */
+    private function placeItem(object $trip, string $itemType, string $label, string $note, Carbon $at, int $price, int $startMin, int $duration, ?float $lat = null, ?float $lng = null): void
+    {
+        $day = null;
+        if ($trip->startDate) {
+            $n = (int) Carbon::parse($trip->startDate)->startOfDay()->diffInDays($at->copy()->startOfDay(), false) + 1;
+            $day = ($n >= 1 && $n <= (int) $trip->days) ? $n : null;
+        }
+        $order = (int) DB::table('tbl_trip_items')->where('tripId', $trip->tripId)->where('dayNo', $day)->max('orderNo') + 1;
+        DB::table('tbl_trip_items')->insert([
+            'tripId' => $trip->tripId, 'refType' => $itemType, 'refId' => null, 'label' => mb_substr($label, 0, 120), 'note' => mb_substr($note, 0, 255),
+            'dayNo' => $day, 'orderNo' => $order, 'cost' => $price, 'costType' => 'estimate',
+            'startMin' => $day ? $startMin : null, 'durationMin' => max(5, min(720, $duration)),
+            'latitude' => $lat, 'longitude' => $lng, 'source' => $lat !== null ? 'search' : null,
+        ]);
+        $this->touch($trip);
+    }
+
+    /** báo cho người đang mở chuyến ở tab khác: có thay đổi (cơ chế rev sẵn có) */
+    private function touch(object $trip): void
+    {
+        DB::table('tbl_trips')->where('tripId', $trip->tripId)->update(['rev' => DB::raw('rev + 1'), 'lastEditorId' => $this->uid(), 'updatedAt' => now()]);
+        app(\App\Services\Planner\TripRevisions::class)->recordCurrent((int) $trip->tripId, $this->uid(), 'external');
+    }
+
+    /** Tên mục lịch tạo kèm một đặt chỗ (dùng để tìm lại khi hủy / xóa). */
+    public static function itemLabel(object $x): string
+    {
+        $manual = !empty($x->confirmationCode) || !empty($x->attachPath) || str_contains((string) $x->payload, '"manual":true');
+        $prefix = $manual ? (['hotel' => 'Nhận phòng ', 'flight' => 'Khởi hành ', 'train' => 'Tàu ', 'bus' => 'Xe ', 'ticket' => 'Vé '][$x->kind] ?? '')
+            : ($x->kind === 'flight' ? 'Bay ' : 'Nhận phòng ');
+
+        return mb_substr($prefix . $x->title, 0, 120);
+    }
+
+    // ------------------------------------------------------------------ Kế hoạch đặt chỗ (BookingPlan)
+
+    /** GET /len-ke-hoach/{id}/dat-cho : còn thiếu gì, cần đặt gì (có hạn), đã đặt gì. */
+    public function plan(int $id, BookingPlan $bp): JsonResponse
+    {
+        $trip = $this->trip($id);
+        abort_unless(BookingPlan::ready(), 503, 'Cần chạy php artisan migrate.');
+        $acc = app(TripSharing::class)->access($this->uid(), $id);
+
+        return response()->json($bp->forTrip($trip) + ['canEdit' => TripSharing::canEdit($acc['role'] ?? null)]);
+    }
+
+    /** POST /len-ke-hoach/{id}/dat-cho : thêm việc "cần đặt" (chưa đặt) có hạn đặt, nơi định đặt. */
+    public function planAdd(Request $r, int $id, BookingPlan $bp): JsonResponse
+    {
+        $trip = $this->trip($id, true);
+        $v = $r->validate([
+            'kind' => ['required', 'in:' . implode(',', array_keys(BookingPlan::KINDS))],
+            'title' => ['required', 'string', 'max:120'],
+            'startAt' => ['nullable', 'date'],
+            'endAt' => ['nullable', 'date', 'after:startAt'],
+            'needBy' => ['nullable', 'date'],
+            'bookUrl' => ['nullable', 'url:http,https', 'max:500'],
+            'note' => ['nullable', 'string', 'max:255'],
+        ], ['bookUrl.url' => 'Nơi đặt phải là đường dẫn http(s).', 'endAt.after' => 'Ngày kết thúc phải sau ngày bắt đầu.']);
+        if (DB::table('tbl_trip_external')->where('tripId', $id)->count() >= 60) {
+            return response()->json(['message' => 'Mỗi chuyến tối đa 60 mục đặt chỗ.'], 422);
+        }
+        DB::table('tbl_trip_external')->insert([
+            'tripId' => $id, 'kind' => $v['kind'], 'provider' => 'manual', 'simulated' => false, 'title' => mb_substr($v['title'], 0, 160),
+            'payload' => json_encode(['manual' => true]), 'startAt' => isset($v['startAt']) ? Carbon::parse($v['startAt']) : ($trip->startDate ? Carbon::parse($trip->startDate)->setTime(12, 0) : now()),
+            'endAt' => isset($v['endAt']) ? Carbon::parse($v['endAt']) : null, 'price' => 0, 'createdAt' => now(),
+            'status' => 'planned', 'needBy' => $v['needBy'] ?? null, 'bookUrl' => $v['bookUrl'] ?? null, 'note' => $v['note'] ?? null,
+        ]);
+
+        return response()->json(['ok' => true, 'message' => 'Đã thêm vào danh sách cần đặt.'] + $bp->forTrip($trip) + ['canEdit' => true]);
+    }
+
+    /**
+     * POST /len-ke-hoach/{id}/dat-cho/{externalId} {status: booked|cancelled|planned, code?, startAt?, price?}
+     * planned -> booked: đưa vào lịch (giờ nhận phòng / giờ đi); booked -> cancelled: gỡ khỏi lịch, giữ bản ghi để đối chiếu.
+     */
+    public function planStatus(Request $r, int $id, int $externalId, BookingPlan $bp): JsonResponse
+    {
+        $trip = $this->trip($id, true);
+        $v = $r->validate([
+            'status' => ['required', 'in:planned,booked,cancelled'],
+            'code' => ['nullable', 'string', 'max:40', 'regex:/^[A-Za-z0-9\-_. ]+$/'],
+            'startAt' => ['nullable', 'date'],
+            'price' => ['nullable', 'integer', 'between:0,1000000000'],
+        ], ['code.regex' => 'Mã xác nhận chỉ gồm chữ, số, dấu gạch và dấu chấm.']);
+        $x = DB::table('tbl_trip_external')->where(['tripId' => $id, 'externalId' => $externalId])->first() ?? abort(404);
+        $from = $x->status ?? 'booked';
+        DB::transaction(function () use ($x, $v, $trip, $from) {
+            $set = ['status' => $v['status']];
+            if (isset($v['code'])) {
+                $set['confirmationCode'] = trim($v['code']);
+            }
+            if (isset($v['startAt'])) {
+                $set['startAt'] = Carbon::parse($v['startAt']);
+            }
+            if (isset($v['price'])) {
+                $set['price'] = (int) $v['price'];
+            }
+            DB::table('tbl_trip_external')->where('externalId', $x->externalId)->update($set);
+            $x2 = DB::table('tbl_trip_external')->where('externalId', $x->externalId)->first();
+            $label = self::itemLabel($x2);
+            if ($v['status'] === 'booked' && $from !== 'booked') {
+                $at = Carbon::parse($x2->startAt);
+                $isMove = in_array($x2->kind, BookingPlan::TRANSPORT, true);
+                $this->placeItem($trip, $isMove ? 'transport' : 'note', $label, 'Đã đặt ngoài Travela', $at, (int) $x2->price,
+                    $x2->kind === 'hotel' ? 14 * 60 : (int) $at->format('H') * 60 + (int) $at->format('i'), $x2->kind === 'hotel' ? 30 : 60);
+            } elseif ($v['status'] !== 'booked' && $from === 'booked') {
+                DB::table('tbl_trip_items')->where('tripId', $trip->tripId)->where('label', self::itemLabel($x))->limit(1)->delete();
+                $this->touch($trip);
+            }
+        });
+        $msg = ['booked' => 'Đã đánh dấu đã đặt và đưa vào lịch.', 'cancelled' => 'Đã đánh dấu đã hủy và gỡ khỏi lịch (bản ghi vẫn giữ để đối chiếu).', 'planned' => 'Đã chuyển về "cần đặt".'][$v['status']];
+
+        return response()->json(['ok' => true, 'message' => $msg] + $bp->forTrip(DB::table('tbl_trips')->where('tripId', $id)->first()) + ['canEdit' => true]);
+    }
+
+    /** POST /len-ke-hoach/{id}/dat-cho/bo-qua {key: stay|go|back, skip} */
+    public function planSkip(Request $r, int $id, BookingPlan $bp): JsonResponse
+    {
+        $trip = $this->trip($id, true);
+        $v = $r->validate(['key' => ['required', 'in:stay,go,back'], 'skip' => ['required', 'boolean']]);
+        $bp->setSkip($trip, $v['key'], (bool) $v['skip']);
+
+        return response()->json(['ok' => true] + $bp->forTrip(DB::table('tbl_trips')->where('tripId', $id)->first()) + ['canEdit' => true]);
     }
 
     /**
@@ -198,7 +312,8 @@ class TravelController extends Controller
     {
         $trip = $this->trip($id, true);
         $v = $r->validate([
-            'kind' => ['required', 'in:hotel,flight,ticket'],
+            'kind' => ['required', 'in:hotel,flight,train,bus,ticket'],
+            'endAt' => ['nullable', 'date', 'after:startAt'],
             'title' => ['required', 'string', 'max:120'],
             'provider' => ['nullable', 'string', 'max:20'],
             'code' => ['nullable', 'string', 'max:40', 'regex:/^[A-Za-z0-9\-_. ]+$/'],
@@ -210,6 +325,9 @@ class TravelController extends Controller
             return response()->json(['message' => 'Cần chạy php artisan migrate trước.'], 503);
         }
         $extra = ['confirmationCode' => isset($v['code']) ? trim($v['code']) : null];
+        if (BookingPlan::ready()) {
+            $extra += ['status' => 'booked', 'endAt' => isset($v['endAt']) ? Carbon::parse($v['endAt']) : null];
+        }
         if ($r->hasFile('file')) {
             $f = $r->file('file');
             $path = 'trips/' . $trip->tripId . '/' . \Illuminate\Support\Str::random(32) . '.' . strtolower($f->getClientOriginalExtension() ?: $f->extension());
@@ -217,10 +335,11 @@ class TravelController extends Controller
             $extra += ['attachPath' => $path, 'attachName' => mb_substr(preg_replace('/[^\pL\pN._ -]+/u', '_', $f->getClientOriginalName()), 0, 120), 'attachMime' => $f->getMimeType()];
         }
         $at = Carbon::parse($v['startAt']);
-        $kindLabel = ['hotel' => 'Nhận phòng', 'flight' => 'Khởi hành', 'ticket' => 'Vé'][$v['kind']];
-        $xid = $this->attach($trip, $v['kind'] === 'flight' ? 'flight' : ($v['kind'] === 'hotel' ? 'hotel' : 'ticket'), mb_substr((string) ($v['provider'] ?? 'manual'), 0, 20) ?: 'manual', false,
-            $v['title'], ['manual' => true], $at, (int) ($v['price'] ?? 0), $v['kind'] === 'flight' ? 'transport' : 'note', $kindLabel . ' ' . $v['title'],
-            'Đã đặt ngoài Travela' . (!empty($extra['confirmationCode']) ? ' · mã ' . $extra['confirmationCode'] : ''), (int) $at->format('H') * 60 + (int) $at->format('i'),
+        $kindLabel = ['hotel' => 'Nhận phòng', 'flight' => 'Khởi hành', 'train' => 'Tàu', 'bus' => 'Xe', 'ticket' => 'Vé'][$v['kind']];
+        $xid = $this->attach($trip, $v['kind'], mb_substr((string) ($v['provider'] ?? 'manual'), 0, 20) ?: 'manual', false,
+            $v['title'], ['manual' => true], $at, (int) ($v['price'] ?? 0), in_array($v['kind'], BookingPlan::TRANSPORT, true) ? 'transport' : 'note', $kindLabel . ' ' . $v['title'],
+            // mã xác nhận chỉ nằm ở tbl_trip_external: ghi chú của mục có thể hiện ở bản chia sẻ / Cộng đồng
+            'Đã đặt ngoài Travela', (int) $at->format('H') * 60 + (int) $at->format('i'),
             $v['kind'] === 'hotel' ? 30 : 60, null, null, $extra);
 
         return response()->json(['ok' => true, 'externalId' => $xid, 'message' => 'Đã lưu xác nhận "' . $v['title'] . '" vào chuyến đi.']);

@@ -473,6 +473,8 @@ class PlannerController extends Controller
             'suggestions' => $sugg,
             'saveUrl' => route('planner.save', ['id' => $id]),
             'shareUrl' => route('planner.share', ['id' => $id]),
+            'joinLinkUrl' => $role === 'owner' ? route('planner.joinLink', ['id' => $id]) : null,
+            'privacyUrl' => $role === 'owner' ? route('planner.privacy', ['id' => $id]) : null,
             'sharedBase' => url('/chuyen-di') . '/',
             'csrf' => csrf_token(),
             // đường vẽ trên bản đồ theo đường bộ thật: chỉ khi máy chủ cũng dùng OSRM (cùng một nguồn, cùng khóa cấu hình planner.route.*)
@@ -532,7 +534,9 @@ class PlannerController extends Controller
             'payload' => $payload,
             'client' => $client,
             'travel' => TravelController::defaults($trip),
-            'externals' => DB::table('tbl_trip_external')->where('tripId', $id)->orderBy('startAt')->get(),
+            // đã đặt (cần đặt / đã hủy hiện ở thẻ "Đặt chỗ cho chuyến")
+            'externals' => DB::table('tbl_trip_external')->where('tripId', $id)
+                ->when(\App\Services\Planner\BookingPlan::ready(), fn($q) => $q->where('status', 'booked'))->orderBy('startAt')->get(),
         ]);
     }
 
@@ -828,6 +832,61 @@ class PlannerController extends Controller
         return response()->json(['token' => $token, 'url' => $token ? route('planner.shared', ['token' => $token]) : null]);
     }
 
+    /** POST /len-ke-hoach/{id}/lien-ket-moi {on, role, regen}: liên kết mời cùng lên kế hoạch (chỉ chủ chuyến). */
+    public function joinLink(Request $request, int $id): JsonResponse
+    {
+        $v = $request->validate(['on' => ['required', 'boolean'], 'role' => ['nullable', 'in:' . implode(',', TripSharing::ROLES)], 'regen' => ['nullable', 'boolean']]);
+        $r = app(TripSharing::class)->joinLink($this->uid(), $id, (bool) $v['on'], $v['role'] ?? 'edit', (bool) ($v['regen'] ?? false));
+        if ($r === false) {
+            return response()->json(['message' => 'Chỉ chủ chuyến đi mới đổi được liên kết mời.'], 403);
+        }
+
+        return response()->json(['ok' => true, 'role' => $r['role'], 'url' => $r['token'] ? route('planner.join', ['token' => $r['token']]) : null]);
+    }
+
+    /** POST /len-ke-hoach/{id}/rieng-tu {shareNotes?, shareBookings?, shareCosts?}: bản chia sẻ chỉ xem hiện gì. */
+    public function privacy(Request $request, int $id): JsonResponse
+    {
+        $v = $request->validate(['shareNotes' => ['nullable', 'boolean'], 'shareBookings' => ['nullable', 'boolean'], 'shareCosts' => ['nullable', 'boolean']]);
+        $ok = app(TripSharing::class)->privacy($this->uid(), $id, array_filter($v, fn($x) => $x !== null));
+
+        return $ok ? response()->json(['ok' => true]) : response()->json(['message' => 'Chỉ chủ chuyến đi mới đổi được.'], 403);
+    }
+
+    /** GET /chuyen-di/tham-gia/{token}: trang xác nhận tham gia chuyến đi từ liên kết mời. */
+    public function joinShow(string $token)
+    {
+        $trip = app(TripSharing::class)->byJoinToken($token);
+        $owner = $trip ? DB::table('tbl_users')->where('userId', $trip->userId)->value('fullName') : null;
+
+        return view('clients.planner.join', ['title' => 'Tham gia chuyến đi', 'noindex' => true, 'trip' => $trip, 'owner' => $owner, 'token' => $token,
+            'already' => $trip ? (app(TripSharing::class)->access($this->uid(), (int) $trip->tripId) !== null) : false]);
+    }
+
+    /** POST /chuyen-di/tham-gia/{token} */
+    public function joinStore(string $token)
+    {
+        $r = app(TripSharing::class)->join($this->uid(), $token);
+        if (!$r['ok']) {
+            return redirect()->route('planner')->with('planner_notice', $r['message']);
+        }
+
+        return redirect()->route('planner.edit', ['id' => $r['tripId']])->with('planner_notice', $r['message']);
+    }
+
+    /** POST /chuyen-di/{token}/luu-ban-sao: người xem liên kết chỉ xem lưu một bản sao về tài khoản mình (chuyến gốc không đổi). */
+    public function sharedCopy(string $token, TripPlanner $planner)
+    {
+        $trip = $planner->bySharedToken($token) ?? abort(404);
+        try {
+            $new = $planner->copyShared($this->uid(), (int) $trip->tripId);
+        } catch (\DomainException $e) {
+            return back()->with('planner_notice', $e->getMessage());
+        }
+
+        return redirect()->route('planner.edit', ['id' => $new])->with('planner_notice', 'Đã lưu bản sao vào Chuyến đi của tôi. Chuyến gốc của người chia sẻ giữ nguyên.');
+    }
+
     /** GET /len-ke-hoach/{id}/phien-ban -> {rev, by, role}: giao diện hỏi định kỳ để biết có người khác vừa sửa. */
     public function revision(int $id): JsonResponse
     {
@@ -930,12 +989,32 @@ class PlannerController extends Controller
     {
         $trip = $planner->bySharedToken($token) ?? abort(404);
         $payload = $planner->payload($trip);
+        $show = ['notes' => (bool) ($trip->shareNotes ?? true), 'bookings' => (bool) ($trip->shareBookings ?? false), 'costs' => (bool) ($trip->shareCosts ?? false)];
+        if (!$show['notes']) {
+            // chủ chuyến ẩn ghi chú: bỏ phần ghi chú của từng mục (mục tự thêm — type 'note' — vẫn hiện tên và vị trí)
+            foreach ($payload['days'] as &$d) {
+                $d['items'] = array_map(fn($it) => ['note' => null] + $it, $d['items']);
+            }
+            unset($d);
+            $payload['unassigned'] = array_map(fn($it) => ['note' => null] + $it, $payload['unassigned']);
+        }
+        // đặt chỗ: chỉ tên, loại, thời gian; KHÔNG mã xác nhận, tệp, giá
+        $bookings = $show['bookings'] ? DB::table('tbl_trip_external')->where('tripId', $trip->tripId)
+            ->when(\Illuminate\Support\Facades\Schema::hasColumn('tbl_trip_external', 'status'), fn($q) => $q->where('status', '!=', 'cancelled'))
+            ->orderBy('startAt')->get(['kind', 'title', 'startAt'])->all() : [];
+        $cover = $trip->destinationId ? DB::table('tbl_destinations')->where('destinationId', $trip->destinationId)->value('coverImage') : null;
+        $nItems = array_sum(array_map(fn($d) => count($d['items']), $payload['days']));
 
         return view('clients.planner.shared', [
             'title' => $trip->title,
-            'metaDescription' => 'Chuyến đi được chia sẻ.',
+            'metaDescription' => mb_substr($trip->title . ': lịch trình ' . (int) $trip->days . ' ngày, ' . $nItems . ' điểm, lên kế hoạch trên Travela.', 0, 160),
+            'metaImage' => $cover ?: null,
             'noindex' => true,
             'payload' => $payload,
+            'show' => $show,
+            'bookings' => $bookings,
+            'token' => $token,
+            'cover' => $cover,
         ]);
     }
 

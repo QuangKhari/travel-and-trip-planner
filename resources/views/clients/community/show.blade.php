@@ -1,5 +1,6 @@
 @include('clients.blocks.header')
-<link rel="stylesheet" href="{{ asset('clients/assets/css/community.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/community.css') }}?v=2">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 @php
     $money = fn($n) => number_format((float) $n, 0, ',', '.') . 'đ';
     $start = $trip->startDate ? \Carbon\Carbon::parse($trip->startDate) : null;
@@ -7,46 +8,82 @@
     $typeLabel = ['destination' => 'Điểm đến', 'place' => 'Địa điểm', 'food' => 'Món ăn', 'event' => 'Lễ hội', 'experience' => 'Trải nghiệm', 'tour' => 'Tour', 'note' => 'Ghi chú', 'transport' => 'Di chuyển'];
     $slotLabel = ['morning' => 'Buổi sáng', 'noon' => 'Buổi trưa', 'afternoon' => 'Buổi chiều', 'evening' => 'Buổi tối'];
     $loggedIn = (bool) session('userId');
+    $allItems = array_merge(...array_map(fn($d) => $d['items'], $payload['days']));
+    $gallery = array_values(array_unique(array_filter(array_map(fn($it) => $it['image'] ?? null, $allItems))));
+    $count = array_count_values(array_map(fn($it) => $it['type'] === 'note' ? 'place' : $it['type'], $allItems));
+    $incl = array_filter([
+        ($count['place'] ?? 0) + ($count['destination'] ?? 0) ? (($count['place'] ?? 0) + ($count['destination'] ?? 0)) . ' địa điểm tham quan' : null,
+        ($count['food'] ?? 0) ? $count['food'] . ' món nên thử' : null,
+        ($count['experience'] ?? 0) ? $count['experience'] . ' trải nghiệm' : null,
+        ($count['event'] ?? 0) ? $count['event'] . ' lễ hội' : null,
+        ($count['tour'] ?? 0) ? $count['tour'] . ' tour Travela' : null,
+        !empty($payload['rain']['plan']) ? 'Phương án khi mưa cho ' . count($payload['rain']['plan']) . ' ngày' : null,
+        'La bàn kiểm tra giờ mở cửa, quãng đường khi bạn sửa',
+    ]);
+    $mapPts = [];
+    foreach ($payload['days'] as $d) {
+        foreach ($d['items'] as $i => $it) {
+            if ($it['lat'] !== null && $it['lng'] !== null) {
+                $mapPts[] = ['d' => $d['day'], 'n' => $i + 1, 'name' => $it['name'], 'lat' => (float) $it['lat'], 'lng' => (float) $it['lng']];
+            }
+        }
+    }
 @endphp
 <main class="cm">
     <div class="cm-wrap">
         <a class="cm-back" href="{{ route('community.index') }}"><i class="fas fa-arrow-left" aria-hidden="true"></i> Cộng đồng hành trình</a>
         <div class="cm-detail">
             <div>
-                <section class="cm-hero">
-                    <div class="cm-hero__ph" @if ($cover) style="background-image:url('{{ $cover }}')" @endif></div>
-                    <div class="cm-hero__b">
-                        <h1>{{ $trip->title }}</h1>
-                        @if ($trip->summary)<p class="cm-muted" style="margin:0">{{ $trip->summary }}</p>@endif
-                        <div class="cm-facts">
-                            <span><i class="far fa-calendar" aria-hidden="true"></i> {{ $trip->days }} ngày</span>
-                            <span><i class="fas fa-user-friends" aria-hidden="true"></i> {{ $trip->groupSize }} người</span>
-                            @if ($trip->destName)<span><i class="fas fa-map-marker-alt" aria-hidden="true"></i> {{ $trip->destName }}</span>@endif
-                            @if ($trip->perPerson)<span><i class="fas fa-wallet" aria-hidden="true"></i> ≈ {{ $money($trip->perPerson) }}/người</span>@endif
-                            @foreach ($trip->interestList as $i)<span class="cm-tag">{{ $interests[$i]['label'] ?? $i }}</span>@endforeach
-                        </div>
+                <header class="cmx-head">
+                    <p class="cmx-eyebrow">{{ $trip->destName ?: 'Hành trình' }}@if ($trip->interestList) · {{ implode(' · ', array_map(fn($i) => $interests[$i]['label'] ?? $i, array_slice($trip->interestList, 0, 2))) }}@endif</p>
+                    <h1>{{ $trip->title }}</h1>
+                    <p class="cmx-by"><img src="{{ \App\Support\Avatar::url($trip->avatar) }}" alt="" width="26" height="26"> Chia sẻ bởi <b>{{ $trip->author }}</b> · {{ $trip->cloneCount }} lượt dùng lại</p>
+                    @if ($trip->summary)<p class="cmx-sum">{{ $trip->summary }}</p>@endif
+                </header>
+                @php $pics = array_slice(array_values(array_filter(array_merge([$cover], $gallery))), 0, 5); @endphp
+                @if ($pics)
+                    <div class="cmx-gal cmx-gal--{{ min(5, count($pics)) }}">
+                        @foreach ($pics as $i => $src)<div class="cmx-gal__i" style="background-image:url('{{ $src }}')" role="img" aria-label="Ảnh {{ $i + 1 }} của lịch trình"></div>@endforeach
                     </div>
+                @endif
+
+                <section class="cmx-glance" aria-labelledby="cmxGlanceH">
+                    <h2 id="cmxGlanceH">Chuyến đi trong một cái nhìn</h2>
+                    <ul class="cmx-chips">
+                        <li><i class="far fa-calendar" aria-hidden="true"></i> {{ $trip->days }} ngày</li>
+                        <li><i class="fas fa-map-marker-alt" aria-hidden="true"></i> {{ count($allItems) }} điểm dừng</li>
+                        <li><i class="fas fa-user-friends" aria-hidden="true"></i> cho {{ $trip->groupSize }} người</li>
+                        @if ($trip->perPerson)<li><i class="fas fa-wallet" aria-hidden="true"></i> ≈ {{ $money($trip->perPerson) }}/người</li>@endif
+                    </ul>
+                    <p class="cmx-note"><i class="fas fa-magic" aria-hidden="true"></i> Mọi thứ ở đây là gợi ý: đổi ngày, số người, ngân sách hoặc sở thích, Travela dựng lại chuyến cho bạn.</p>
                 </section>
 
+                <ol class="cmx-tl">
                 @foreach ($payload['days'] as $d)
                     @if ($d['items'])
-                        <section class="cm-day">
-                            <h2>Ngày {{ $d['day'] }}@if ($start)<small>{{ $start->copy()->addDays($d['day'] - 1)->format('d/m') }}</small>@endif</h2>
-                            <ol class="cm-items">
+                        <li class="cmx-day">
+                            <span class="cmx-day__n" aria-hidden="true">{{ $d['day'] }}</span>
+                            <h2>Ngày {{ $d['day'] }}@if ($start)<small>{{ $start->copy()->addDays($d['day'] - 1)->format('d/m') }}</small>@endif
+                                @if ($d['legs'])<small>· khoảng {{ $d['km'] }} km di chuyển</small>@endif</h2>
+                            <ol class="cmx-items">
                                 @foreach ($d['items'] as $it)
-                                    <li>
-                                        @php $tl = trim(implode(' · ', array_filter([$it['type'] === 'note' ? null : ($typeLabel[$it['type']] ?? null), $slotLabel[$it['slot'] ?? ''] ?? null]))); @endphp
-                                        @if ($tl !== '')<span class="cm-type">{{ $tl }}</span>@endif
-                                        @if (!empty($it['url']))<a href="{{ $it['url'] }}">{{ $it['name'] }}</a>@else<span class="cm-name">{{ $it['name'] }}</span>@endif
-                                        @if ($it['sub'])<small>{{ $it['sub'] }}</small>@endif
-                                        @if ($it['note'])<p class="cm-note">{{ $it['note'] }}</p>@endif
+                                    @php $tl = trim(implode(' · ', array_filter([$it['type'] === 'note' ? null : ($typeLabel[$it['type']] ?? null), $slotLabel[$it['slot'] ?? ''] ?? null]))); @endphp
+                                    <li class="cmx-it">
+                                        @if (!empty($it['image']))<span class="cmx-it__img" style="background-image:url('{{ $it['image'] }}')" aria-hidden="true"></span>
+                                        @else<span class="cmx-it__img cmx-it__img--ph" aria-hidden="true"><i class="fas {{ ['food' => 'fa-utensils', 'event' => 'fa-calendar-alt', 'experience' => 'fa-hiking', 'tour' => 'fa-flag', 'transport' => 'fa-route'][$it['type']] ?? 'fa-map-marker-alt' }}"></i></span>@endif
+                                        <span class="cmx-it__b">
+                                            @if ($tl !== '')<small class="cmx-it__t">{{ $tl }}</small>@endif
+                                            @if (!empty($it['url']))<a href="{{ $it['url'] }}">{{ $it['name'] }}</a>@else<b>{{ $it['name'] }}</b>@endif
+                                            @if ($it['sub'])<small>{{ $it['sub'] }}</small>@endif
+                                            @if ($it['note'])<span class="cm-note">{{ $it['note'] }}</span>@endif
+                                        </span>
                                     </li>
                                 @endforeach
                             </ol>
-                            @if ($d['legs'])<p class="cm-muted" style="font-size:13px;margin:8px 0 0">Di chuyển khoảng {{ $d['km'] }} km (ước tính).</p>@endif
-                        </section>
+                        </li>
                     @endif
                 @endforeach
+                </ol>
 
                 @if (!empty($payload['rain']['plan']))
                     <section class="cm-day">
@@ -61,6 +98,31 @@
             </div>
 
             <aside class="cm-side">
+                @if ($mapPts)
+                    <section class="cm-box cmx-mapbox"><div id="cmxMap" class="cmx-map" role="img" aria-label="Bản đồ các điểm dừng theo ngày"></div></section>
+                @endif
+                @if (!$isOwner)
+                    <section class="cm-box cmx-remix" id="lam-cua-toi">
+                        <p class="cmx-remix__k"><i class="fas fa-magic" aria-hidden="true"></i> Dựng lại theo bạn</p>
+                        <h2>Ngân sách? Số người? Ngày đi?</h2>
+                        @if ($loggedIn)
+                            @if ($errors->has('remix'))<div class="cm-err" role="alert">{{ $errors->first('remix') }}</div>@endif
+                            <form method="POST" action="{{ route('community.remix', $trip->tripId) }}">
+                                @csrf
+                                <label for="cmxText" class="sr-only">Kể yêu cầu cho chuyến của bạn</label>
+                                <textarea id="cmxText" name="text" rows="3" maxlength="500" required placeholder="Ví dụ: 2 người, đầu tháng 12, 4 ngày, khoảng 6 triệu, thích ăn uống, không leo núi">{{ old('text') }}</textarea>
+                                <button type="submit" class="cmx-remix__go">Làm thành chuyến của tôi <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
+                            </form>
+                            <p class="cmx-remix__hint">Phần không nói thì giữ như bản gốc. Ngày bớt đi thì các điểm thừa chuyển vào “Đã lưu”, không mất.</p>
+                        @else
+                            <a class="cmx-remix__go" href="{{ route('login') }}">Đăng nhập để làm chuyến của bạn</a>
+                        @endif
+                    </section>
+                @endif
+                <section class="cm-box cmx-incl">
+                    <h2>Có trong lịch trình</h2>
+                    <ul>@foreach ($incl as $x)<li><i class="fas fa-check" aria-hidden="true"></i> {{ $x }}</li>@endforeach</ul>
+                </section>
                 <section class="cm-box">
                     <div class="cm-stats">
                         <div><b id="cmLikes">{{ $trip->likeCount }}</b><small>lượt thích</small></div>
@@ -84,13 +146,13 @@
                 </section>
 
                 <section class="cm-box" id="dung-lai">
-                    <h2>Dùng hành trình này</h2>
+                    <h2>{{ $isOwner ? 'Chuyến của bạn' : 'Hoặc điền từng mục' }}</h2>
                     @if ($isOwner)
                         <p class="cm-muted" style="font-size:13.5px;margin:0 0 10px">Đây là chuyến của bạn.</p>
                         <a class="cm-btn" href="{{ route('planner.edit', $trip->tripId) }}">Mở để chỉnh sửa</a>
                     @elseif ($loggedIn)
                         <p class="cm-muted" style="font-size:13.5px;margin:0 0 10px">Tạo một chuyến đi riêng của bạn với cùng lịch trình. Bạn sửa thoải mái, bản gốc không bị ảnh hưởng.</p>
-                        @if ($errors->any())<div class="cm-err" role="alert" style="margin-bottom:10px">{{ $errors->first() }}</div>@endif
+                        @if ($errors->any() && !$errors->has('remix'))<div class="cm-err" role="alert" style="margin-bottom:10px">{{ $errors->first() }}</div>@endif
                         <form method="POST" action="{{ route('community.use', $trip->tripId) }}" class="cm-form">
                             @csrf
                             <label>Tên chuyến của bạn
@@ -171,4 +233,27 @@
         });
     })();
 </script>
+@if ($mapPts)
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+<script type="application/json" id="cmxPts">{!! json_encode($mapPts, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) !!}</script>
+<script>
+    window.addEventListener('load', function () {
+        var box = document.getElementById('cmxMap');
+        if (!box || !window.L) { if (box) box.closest('.cmx-mapbox').hidden = true; return; }
+        var pts = JSON.parse(document.getElementById('cmxPts').textContent);
+        var C = ['#167A85', '#c2410c', '#7c3aed', '#0369a1', '#b45309', '#be185d', '#15803d'];
+        var m = L.map(box, { scrollWheelZoom: false, attributionControl: true });
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(m);
+        var byDay = {}, all = [];
+        pts.forEach(function (p) {
+            var c = C[(p.d - 1) % C.length];
+            L.marker([p.lat, p.lng], { icon: L.divIcon({ className: 'cmx-pin', html: '<span style="background:' + c + '">' + p.d + '</span>', iconSize: [24, 24] }) })
+                .bindTooltip('Ngày ' + p.d + ': ' + p.name).addTo(m);
+            (byDay[p.d] = byDay[p.d] || []).push([p.lat, p.lng]); all.push([p.lat, p.lng]);
+        });
+        Object.keys(byDay).forEach(function (d) { if (byDay[d].length > 1) L.polyline(byDay[d], { color: C[(d - 1) % C.length], weight: 3, opacity: .7 }).addTo(m); });
+        m.fitBounds(all, { padding: [24, 24], maxZoom: 13 });
+    });
+</script>
+@endif
 @include('clients.blocks.footer')

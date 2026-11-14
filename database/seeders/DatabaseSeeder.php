@@ -19,6 +19,8 @@ class DatabaseSeeder extends Seeder
             DestinationMonthSeeder::class,
             ContentSeeder::class,
             ItineraryDraftSeeder::class,
+            // Cộng đồng hành trình: 8 chuyến mẫu công khai để trang không trống khi mới cài.
+            CommunityDemoSeeder::class,
         ]);
     }
 }

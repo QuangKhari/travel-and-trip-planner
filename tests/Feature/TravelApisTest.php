@@ -173,6 +173,6 @@ class TravelApisTest extends TestCase
         DB::table('tbl_trip_members')->insert(['tripId' => $id, 'userId' => $viewer, 'role' => 'view', 'createdAt' => now()]);
         $q = ['from' => 'SGN', 'to' => 'DAD', 'date' => now()->addDays(10)->toDateString(), 'adults' => 1];
         $this->withSession(['userId' => $viewer])->postJson("/len-ke-hoach/$id/chuyen-bay", $q + ['offerId' => 'x'])->assertForbidden();
-        $this->withSession(['userId' => $this->uid])->get("/len-ke-hoach/$id")->assertOk()->assertSee('Chuyến bay và khách sạn');
+        $this->withSession(['userId' => $this->uid])->get("/len-ke-hoach/$id")->assertOk()->assertSee('Đã đặt và tìm giá');
     }
 }

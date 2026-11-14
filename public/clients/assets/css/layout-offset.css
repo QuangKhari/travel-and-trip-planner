@@ -38,3 +38,13 @@ body.page-contact .ct-hero h1, body.page-contact .ct-hero .ct-title { color: #ff
 .tp .tpx-score { color: #2f6b45; }
 .tvp-badge { background-color: #11616a; }
 .gx-chip.is-on .gx-cnt { background-color: rgba(0, 0, 0, .28); }
+
+/* Tham gia chuyến đi từ liên kết mời */
+body.page-planner-join main.tv-mytours { padding-top: calc(var(--tl-head) + 32px); padding-bottom: 64px; }
+.tv-join__card { max-width: 560px; margin: 0 auto; background: #fff; border: 1px solid #dfe9e6; border-radius: 18px; padding: 32px 30px; text-align: center; }
+.tv-join__ic { font-size: 2.2rem; color: #11616a; margin-bottom: 10px; }
+.tv-join__eyebrow { text-transform: uppercase; letter-spacing: .08em; font-size: .78rem; font-weight: 700; color: #5d6b68; margin: 0 0 4px; }
+.tv-join__card h1 { font-size: 1.5rem; margin: 0 0 6px; }
+.tv-join__meta { color: #5d6b68; margin: 0 0 14px; }
+.tv-join__card form { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+.tv-join__card > a { display: inline-block; margin-top: 12px; }
