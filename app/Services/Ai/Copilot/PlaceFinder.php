@@ -54,16 +54,28 @@ final class PlaceFinder
             $kinds = (array) (config('planner.kind_groups.' . $group) ?? []);
         }
 
-        $qb = DB::table('tbl_external_places')->where('reviewStatus', 'published')
-            ->when($destIds, fn($x) => $x->whereIn('destinationId', $destIds))
-            ->when($kinds, fn($x) => $x->whereIn('kind', $kinds))
-            ->when($text !== '', fn($x) => $x->where('name', 'like', '%' . addcslashes($text, '%_\\') . '%'));
-        if ($near) {
-            $d = 4 / 111.0;
-            $qb->whereBetween('latitude', [$near['lat'] - $d, $near['lat'] + $d])
-                ->whereBetween('longitude', [$near['lng'] - $d / max(0.2, cos(deg2rad($near['lat']))), $near['lng'] + $d / max(0.2, cos(deg2rad($near['lat'])))]);
+        // Thử chặt trước rồi nới dần: chữ LLM gửi kèm thường là mô tả ("quán ăn tối", "cà phê view đẹp") chứ không phải tên nơi,
+        // nên lọc theo tên mà ra 0 thì bỏ lọc tên (giữ nhóm loại nơi); quanh mục mốc 4 km không có thì nới 12 km.
+        $query = function (bool $useText, float $radiusKm) use ($destIds, $kinds, $text, $near) {
+            $qb = DB::table('tbl_external_places')->where('reviewStatus', 'published')
+                ->when($destIds, fn($x) => $x->whereIn('destinationId', $destIds))
+                ->when($kinds, fn($x) => $x->whereIn('kind', $kinds))
+                ->when($useText && $text !== '', fn($x) => $x->where('name', 'like', '%' . addcslashes($text, '%_\\') . '%'));
+            if ($near) {
+                $d = $radiusKm / 111.0;
+                $qb->whereBetween('latitude', [$near['lat'] - $d, $near['lat'] + $d])
+                    ->whereBetween('longitude', [$near['lng'] - $d / max(0.2, cos(deg2rad($near['lat']))), $near['lng'] + $d / max(0.2, cos(deg2rad($near['lat'])))]);
+            }
+
+            return $qb->orderByDesc('isMustTry')->orderByDesc('rank')->limit(60)->get(['placeId', 'name', 'kind', 'latitude', 'longitude']);
+        };
+        $rows = $query(true, 4);
+        if ($rows->isEmpty() && $text !== '' && $kinds) {
+            $rows = $query(false, 4);
         }
-        $rows = $qb->orderByDesc('isMustTry')->orderBy('rank')->limit(60)->get(['placeId', 'name', 'kind', 'latitude', 'longitude']);
+        if ($rows->isEmpty() && $near) {
+            $rows = $query($text === '' || !$kinds, 12);
+        }
 
         $list = [];
         foreach ($rows as $r) {

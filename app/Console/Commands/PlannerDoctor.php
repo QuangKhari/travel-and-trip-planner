@@ -27,6 +27,10 @@ class PlannerDoctor extends Command
         'tbl_opening_hours' => ['refType', 'refId', 'dayOfWeek', 'openMin', 'closeMin', 'isClosed'],
         'tbl_content_requests' => ['folded', 'sample', 'kind', 'hits'],
         'tbl_osm_snapshots' => ['snapKey', 'cat', 'latitude', 'longitude', 'radiusM', 'payload', 'fetchedAt'],
+        'tbl_trip_watch' => ['tripId', 'snapshot', 'checkedAt', 'mailedAt'],
+        'tbl_trip_events' => ['eventId', 'tripId', 'kind', 'tone', 'title', 'ref'],
+        'tbl_trip_event_seen' => ['tripId', 'userId', 'lastEventId'],
+        'tbl_external_places' => ['durationMinutes', 'priceMin', 'priceMax', 'indoor'],
     ];
 
     /** @return list<string> các thiếu sót, rỗng = đủ */

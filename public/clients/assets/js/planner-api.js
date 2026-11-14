@@ -37,7 +37,7 @@
         return {
             raw: raw, getJson: getJson, post: post,
             health: function () { return cfg.healthUrl ? getJson(cfg.healthUrl) : Promise.reject(0); },
-            resolve: function (c) { return getJson(cfg.resolveUrl + "?" + qs({ code: c.code, day: c.day, index: c.index })); },
+            resolve: function (c) { return getJson(cfg.resolveUrl + "?" + qs({ code: c.code, day: c.day, index: c.index, now: c.now })); },
         };
     }
 

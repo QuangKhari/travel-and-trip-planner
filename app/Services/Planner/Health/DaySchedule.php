@@ -55,6 +55,7 @@ final class DaySchedule
         $this->ctx = $ctx ?? [];
         $arrive = isset($this->ctx['arrive']) ? (int) $this->ctx['arrive'] : null;
         $leave = isset($this->ctx['leave']) ? (int) $this->ctx['leave'] : null;
+        $blocks = array_values((array) ($this->ctx['blocks'] ?? []));
         $this->availableMin = $this->rules->availableMin();
         $clock = $this->rules->dayStart();
         $this->start = $clock;
@@ -124,6 +125,14 @@ final class DaySchedule
                 if ($fit !== null && $fit > $start) {
                     $start = $fit;
                 }
+                // chặng di chuyển giữa ngày (đổi thành phố): không xếp hoạt động chồng lên, dời sau khi tới nơi
+                if (!TripLogistics::exempt($it, $this->rules)) {
+                    foreach ($blocks as $b) {
+                        if ($start < $b['to'] && $start + $this->durationOf($it) > $b['from']) {
+                            $start = (int) (ceil($b['to'] / 5) * 5);
+                        }
+                    }
+                }
             }
             $wait = $prevEnd === null ? 0 : max(0, $start - $clock);
             if ($wait >= 15) {
@@ -131,7 +140,9 @@ final class DaySchedule
             }
             $dur = $this->durationOf($it);
             if ($conflict === null && !TripLogistics::exempt($it, $this->rules)) {
-                if ($leave !== null && $start + $dur > $leave + 5) {
+                if ($fixed && array_filter($blocks, fn($b) => $start < $b['to'] - 5 && $start + $dur > $b['from'] + 5)) {
+                    $conflict = 'transfer';    // đặt giờ trùng lúc đang di chuyển sang thành phố khác
+                } elseif ($leave !== null && $start + $dur > $leave + 5) {
                     $conflict = 'departure';   // chưa xong đã tới giờ phải ra ga / sân bay
                 }
             }

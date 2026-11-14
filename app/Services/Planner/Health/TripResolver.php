@@ -2,6 +2,8 @@
 
 namespace App\Services\Planner\Health;
 
+use App\Services\Planner\TripLogistics;
+
 use App\Services\Planner\OpeningHours;
 use App\Services\Planner\PlannerRules;
 use App\Services\Planner\Route\HaversineProvider;
@@ -62,6 +64,13 @@ final class TripResolver
         $this->unassigned = $this->payload['unassigned'];
         $this->before = $this->healthOf($this->days, $this->unassigned);
 
+        if ($code === 'today.replan' && $day !== null && isset($this->days[$day])) {
+            $target = ['code' => $code, 'day' => $day, 'index' => null, 'severity' => 'soft', 'level' => 'warn', 'text' => 'Xếp lại phần còn lại của ngày ' . $day . ' từ bây giờ'];
+            $options = $this->replanOptions($day, $target);
+
+            return ['code' => $code, 'day' => $day, 'index' => null, 'problem' => $options ? $target['text'] : 'Ngày ' . $day . ' vẫn kịp như đã xếp, không cần đổi.',
+                'severity' => 'soft', 'before' => ['score' => $this->before['score'], 'level' => $this->before['level']], 'options' => $options];
+        }
         $target = null;
         foreach ($this->before['checks'] as $c) {
             if ($c['code'] === $code && ($day === null || $c['day'] === $day) && ($index === null || $c['index'] === $index)) {
@@ -76,7 +85,7 @@ final class TripResolver
             in_array($code, ['capacity.overload', 'capacity.tight', 'time.late'], true) && $day !== null => $this->balanceOptions($day, $target),
             in_array($code, ['time.overlap', 'time.travel'], true) && $day !== null && $index !== null => $this->timeOptions($day, $index, $target),
             str_starts_with($code, 'hours.') && $day !== null && $index !== null => $this->hoursOptions($day, $index, $target),
-            in_array($code, ['time.arrival', 'time.departure'], true) && $day !== null && $index !== null => $this->transferOptions($day, $index, $target),
+            in_array($code, ['time.arrival', 'time.departure', 'time.transfer'], true) && $day !== null && $index !== null => $this->transferOptions($day, $index, $target),
             $code === 'route.long_day' && $day !== null => $this->routeOptions($day, $target),
             in_array($code, ['context.rain', 'weather.rain', 'weather.storm'], true) && $day !== null => $this->rainOptions($day, $target),
             default => [],
@@ -375,6 +384,96 @@ final class TripResolver
         return $opts;
     }
 
+    /** Giờ hiện tại (phút từ 00:00) cho "xếp lại hôm nay"; null = dùng giờ máy chủ. */
+    public ?int $nowMin = null;
+
+    /**
+     * Xếp lại phần còn lại của một ngày khi kế hoạch vỡ (trễ giờ, lỡ một điểm, nơi đóng cửa...).
+     * Giữ mục đã xong / bỏ qua; mục còn lại xếp từ BÂY GIỜ (giữ giờ tới nơi / giờ phải đi của ngày) bằng chính DaySchedule.
+     * Lần lượt bỏ mục không còn làm được (lỡ giờ cố định, đóng cửa, quá giờ đi, quá cuối ngày) — ưu tiên bỏ mục cuối ngày —
+     * sang ngày sau còn chỗ, hoặc vào "Đã lưu". Mục giữ lại được ghim giờ mới để lịch trên trang khớp với thực tế.
+     */
+    private function replanOptions(int $day, array $target): array
+    {
+        $now = $this->nowMin ?? ((int) now()->format('H') * 60 + (int) now()->format('i'));
+        $now = (int) (ceil(($now + 5) / 5) * 5);   // 5 phút để chuẩn bị đi
+        $list = $this->days[$day];
+        $keep = [];   // chỉ số gốc -> mục còn phải làm
+        foreach ($list as $i => $it) {
+            if (empty($it['visitedAt']) && empty($it['skippedAt'])) {
+                $keep[$i] = $it;
+            }
+        }
+        if (!$keep) {
+            return [];
+        }
+        $ctx = $this->ctxs[$day] ?? [];
+        $ctx['arrive'] = max((int) ($ctx['arrive'] ?? 0), $now);
+        $ctx['from'] = null;   // đang ở giữa ngày: không tính chặng từ khách sạn
+        $end = $this->rules->softEnd();
+        $moves = [];
+        $why = [];
+        for ($guard = 0; $guard < 30 && $keep; $guard++) {
+            $s = new DaySchedule($day, array_values($keep), $this->route, $this->rules, $this->dows[$day] ?? null, $ctx);
+            $idx = array_keys($keep);
+            $fail = null;
+            foreach ($s->rows as $k => $r) {
+                $exempt = TripLogistics::exempt($r['item'], $this->rules);
+                // mục người dùng tự cố định giờ tối (vd. 19:00 xem múa rối) không bị dời chỉ vì quá "giờ kết thúc mềm"; chỉ giờ phải rời đi mới chặn
+                $limit = $r['fixed'] ? ($ctx['leave'] ?? 24 * 60) : ($ctx['leave'] ?? $end);
+                $bad = !$exempt && ($r['conflict'] !== null || in_array($r['hours'], ['closed', 'late'], true) || $r['end'] > $limit + 5
+                    || ($r['fixed'] && $r['start'] < $now));
+                if ($bad) {
+                    $fail = [$idx[$k], $r];   // giữ lại mục hỏng cuối cùng: bỏ mục cuối ngày trước
+                }
+            }
+            if ($fail === null) {
+                break;
+            }
+            [$i, $r] = $fail;
+            $it = $keep[$i];
+            unset($keep[$i]);
+            $to = null;
+            if ($day < count($this->days) && empty($this->ctxs[$day + 1]['leave'])) {
+                $it2 = $it;
+                $it2['startMin'] = null;
+                if ($this->schedule($day + 1, array_merge($this->days[$day + 1], [$it2]))->load() < 1) {
+                    $to = $day + 1;
+                }
+            }
+            $moves[] = ['op' => 'move', 'day' => $day, 'index' => $i, 'toDay' => $to];
+            $why[] = '“' . $it['name'] . '” ' . ($r['fixed'] && $r['start'] < $now ? 'đã lỡ giờ ' . DaySchedule::hhmm($r['start']) : ($r['hours'] === 'closed' ? 'đóng cửa hôm nay' : 'không còn kịp'))
+                . ' → ' . ($to ? 'ngày ' . $to : '“Đã lưu”');
+        }
+        $times = [];
+        $first = null;
+        $last = null;
+        if ($keep) {
+            $s = new DaySchedule($day, array_values($keep), $this->route, $this->rules, $this->dows[$day] ?? null, $ctx);
+            $idx = array_keys($keep);
+            foreach ($s->rows as $k => $r) {
+                if (!$r['fixed'] && !TripLogistics::exempt($r['item'], $this->rules)) {
+                    $times[] = ['op' => 'time', 'day' => $day, 'index' => $idx[$k], 'startMin' => $r['start']];
+                }
+            }
+            $first = $s->rows[0]['start'] ?? null;
+            $last = $s->end;
+        }
+        $changed = array_filter($times, fn($t) => ($list[$t['index']]['startMin'] ?? null) !== $t['startMin']);
+        if (!$moves && !$changed) {
+            return [];
+        }
+        $reasons = ['Bây giờ khoảng ' . DaySchedule::hhmm($now) . '.'];
+        if ($keep) {
+            $reasons[] = count($keep) . ' mục còn lại xếp từ ' . DaySchedule::hhmm((int) $first) . ', xong khoảng ' . DaySchedule::hhmm((int) $last) . '.';
+        }
+        if ($why) {
+            $reasons[] = implode('; ', $why) . '.';
+        }
+
+        return [$this->option('replan', 'Xếp lại từ bây giờ', $reasons, array_merge($times, $moves), $target)];
+    }
+
     /** Ngày tới nơi / ngày về: hoạt động rơi vào trước giờ tới hoặc sau lúc phải ra ga / sân bay. */
     private function transferOptions(int $day, int $index, array $target): array
     {
@@ -386,8 +485,8 @@ final class TripResolver
         $it = $r['item'];
         $why = $target['text'];
         $opts = [];
-        if ($r['fixed'] && $r['conflict'] === 'arrival') {
-            $opts[] = $this->option('unfix', 'Bỏ giờ cố định của “' . $it['name'] . '”', [$why, 'Planner tự xếp sau giờ tới nơi.'],
+        if ($r['fixed'] && in_array($r['conflict'], ['arrival', 'transfer'], true)) {
+            $opts[] = $this->option('unfix', 'Bỏ giờ cố định của “' . $it['name'] . '”', [$why, $r['conflict'] === 'transfer' ? 'Planner tự xếp sau khi tới thành phố mới.' : 'Planner tự xếp sau giờ tới nơi.'],
                 [['op' => 'time', 'day' => $day, 'index' => $index, 'startMin' => null]], $target);
         }
         // ngày khác còn chỗ: ngày giữa chuyến (không phải ngày tới / ngày về) nhẹ nhất
@@ -546,11 +645,46 @@ final class TripResolver
         $all = array_merge($this->unassigned, ...array_values($this->days));
         $destIds = array_merge([(int) ($this->trip->destinationId ?? 0)], array_map(fn($x) => (int) ($x['destinationId'] ?? 0), $all));
         $sugg = app(\App\Services\Planner\RainPlan::class)->suggest($destIds, $all, $list);
-        if (!$sugg) {
-            return [];
-        }
         $outdoor = array_keys(array_filter($list, fn($x) => ($x['outdoor'] ?? null) === true));
         $opts = [];
+        // cả ngày xấu trời mà không đủ nơi trong nhà để thay: đổi chỗ cả ngày với ngày khô ráo nhất (mục cố định giờ, vé, chỗ ở giữ nguyên)
+        $wDays = $this->payload['weather']['days'] ?? [];
+        $warn = (int) config('planner.weather.rain_warn', 60);
+        $dry = null;
+        foreach ($wDays as $n => $wd) {
+            $n = (int) $n;
+            $r = \App\Services\Planner\TripWeather::dayRain($wd);
+            $storm = (int) ($wd['code'] ?? 0) >= 95;
+            if ($n !== $day && isset($this->days[$n]) && $r < $warn && !$storm && ($dry === null || $r < $dry[1])) {
+                $dry = [$n, $r];
+            }
+        }
+        if ($dry && $outdoor) {
+            [$to, $rain] = $dry;
+            $free = fn(array $it) => empty($it['startMin']) && !TripLogistics::exempt($it, $this->rules);
+            $swap = [];
+            foreach ($list as $i => $it) {
+                if ($free($it)) {
+                    $swap[] = ['op' => 'move', 'day' => $day, 'index' => $i, 'toDay' => $to];
+                }
+            }
+            foreach ($this->days[$to] as $i => $it) {
+                if ($free($it)) {
+                    $swap[] = ['op' => 'move', 'day' => $to, 'index' => $i, 'toDay' => $day];
+                }
+            }
+            if ($swap) {
+                $opts[] = $this->option('rain-swapday', 'Đổi lịch ngày ' . $day . ' với ngày ' . $to . ' (khô ráo hơn)', [
+                    'Ngày ' . $to . ' dự báo khả năng mưa ' . $rain . '%, không có dông.',
+                    'Các hoạt động ngoài trời sang ngày ' . $to . ', các hoạt động của ngày ' . $to . ' về ngày ' . $day . '.',
+                    'Mục đã cố định giờ, vé và chỗ ở giữ nguyên ngày.',
+                ], $swap, $target);
+            }
+        }
+
+        if (!$sugg) {
+            return $opts;
+        }
         $backup = array_map(fn($x) => ['type' => $x['type'], 'refId' => $x['refId'], 'name' => $x['name'], 'sub' => $x['sub'], 'url' => $x['url'], 'lat' => $x['lat'], 'lng' => $x['lng']],
             array_slice($sugg, 0, min(3, (int) config('planner.rain_plan.max_per_day', 4))));
         $opts[] = $this->option('rain-backup', 'Giữ lịch, lưu ' . count($backup) . ' nơi trong nhà làm dự phòng', [

@@ -82,6 +82,10 @@ Schedule::command('departures:check-shortfall')->dailyAt('07:00')->withoutOverla
 Schedule::command('bookings:remind-departure')->dailyAt('08:00')->withoutOverlapping();
 // Chuyến tự lên kế hoạch: nhắc việc đặt khách sạn / vé tới hạn hoặc còn thiếu (Travela không đặt hộ)
 Schedule::command('trips:booking-reminders')->dailyAt('08:20')->withoutOverlapping();
+// theo dõi chuyến sắp đi / đang đi: dự báo, cảnh báo điểm đến, giờ mở cửa, giờ tới / giờ đi -> chuông trong trang + email khi có thay đổi
+Schedule::command('trips:watch')->cron('15 */3 * * *')->withoutOverlapping();
+// bản tin chuyến đi: trước 7 ngày, trước 1 ngày, sáng mỗi ngày đi
+Schedule::command('trips:digest')->dailyAt('06:30')->withoutOverlapping();
 
 // Lịch khởi hành: qua ngày thì "chuyến gần nhất" của từng tour đổi -> ghi lại bản tóm tắt trên tbl_tours
 Artisan::command('departures:sync', function () {

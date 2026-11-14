@@ -599,6 +599,16 @@
     }
     renderTopics();
     setTimeout(checkAlerts, 1500);
+    /* mở La bàn ở một chủ đề từ nơi khác (chuông thông báo, chip trên lịch) */
+    window.TpLaBan = {
+        ask: function (intent, day) {
+            if (!cfg.suggestUrl) return false;
+            var t = TOPICS.filter(function (x) { return x[0] === intent; })[0];
+            setOpen(true); askSuggest(intent, t ? t[1] : "Gợi ý", day || null);
+            return true;
+        },
+        prompt: function (text) { setOpen(true); var i = document.getElementById("aiCoQ"); if (i) { i.value = text; i.focus(); } return !!i; },
+    };
     // ?la-ban=food|places|festival|alerts (từ trang trò chuyện tạo chuyến): mở ngăn và hỏi ngay chủ đề đó
     (function () {
         var m = /[?&]la-ban=(food|places|festival|alerts)\b/.exec(location.search);

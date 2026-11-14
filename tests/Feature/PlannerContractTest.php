@@ -154,6 +154,7 @@ class PlannerContractTest extends TestCase
             'moves' => [
                 ['id' => 3, 'kind' => 'flight', 'name' => 'VN123', 'dep' => '2027-05-03 11:00', 'arr' => '2027-05-03 13:10', 'status' => 'booked'],
                 ['id' => 4, 'kind' => 'train', 'name' => 'SE3', 'dep' => '2027-05-06 16:00', 'arr' => null, 'status' => 'planned'],
+                ['id' => 5, 'kind' => 'bus', 'name' => 'Xe Ninh Bình', 'dep' => '2027-05-04 13:00', 'arr' => '2027-05-04 15:30', 'status' => 'booked'],
             ],
         ];
         $probe = ['raw' => $raw, 'start' => '2027-05-03', 'days' => 4];
@@ -203,6 +204,16 @@ class PlannerContractTest extends TestCase
         $d2 = (new DaySchedule(2, $items, $route, $rules, null, $ctxs[2]))->contract();
         $this->assertGreaterThan(480, $d2['rows'][0]['start']);
         $this->assertSame($d2['startLeg']['min'] + $d2['endLeg']['min'] + array_sum(array_column($d2['rows'], 'travelMin')), $d2['travelMin']);
+        // ngày 2 có chặng xe giữa chuyến 13:00–15:30: chặn 12:30–15:45, mục không cố định dời ra sau, mục cố định trùng là lỗi cứng
+        $this->assertSame([['from' => 750, 'to' => 945]], array_map(fn($b) => ['from' => $b['from'], 'to' => $b['to']], $ctxs[2]['blocks']));
+        foreach ($d2['rows'] as $r) {
+            if ($r['key'] !== 'transport:9') {
+                $this->assertFalse($r['start'] < 945 && $r['end'] > 750, 'không mục nào chồng lên lúc đang di chuyển: ' . $r['key']);
+            }
+        }
+        $fixedInBus = $items;
+        $fixedInBus[1]['startMin'] = 840;
+        $this->assertSame('transfer', (new DaySchedule(2, $fixedInBus, $route, $rules, null, $ctxs[2]))->contract()['rows'][1]['conflict']);
         // ngày 3: đêm 3 ở chỗ chưa có vị trí -> không có chặng về
         $this->assertSame($hotel, $ctxs[3]['from']);
         $this->assertNull($ctxs[3]['to']);
@@ -211,7 +222,7 @@ class PlannerContractTest extends TestCase
         $d4 = (new DaySchedule(4, $items, $route, $rules, null, $ctxs[4]))->contract();
         $this->assertContains('departure', array_column($d4['rows'], 'conflict'));
         // chưa có ngày đi: không có ngữ cảnh
-        $this->assertSame(['from' => null, 'to' => null, 'arrive' => null, 'arriveText' => null, 'leave' => null, 'leaveText' => null],
+        $this->assertSame(['from' => null, 'to' => null, 'arrive' => null, 'arriveText' => null, 'leave' => null, 'leaveText' => null, 'blocks' => []],
             \App\Services\Planner\TripLogistics::dayContext($raw, null, 1, 4));
     }
 

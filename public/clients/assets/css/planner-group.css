@@ -261,3 +261,51 @@ a.tgs-it__name:hover { color: var(--tg-brand-d); }
 .tp .tgb__pick { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 1px; padding: 6px 10px; border: 1px solid #e1eaea; border-radius: 8px; background: #fff; cursor: pointer; }
 .tp .tgb__pick:hover, .tp .tgb__pick:focus-visible { border-color: #2a7f84; background: #f3f8f8; }
 .tp .tgb__pick small { color: #5b6f71; font-size: .76rem; }
+
+/* ---- Chuông thông báo của chuyến (TripWatch) ---- */
+.tgw { position: relative; }
+.tgw__bell { position: relative; }
+.tgw__bell.has-new .fa-bell { color: #b7791f; animation: tgw-ring 1.6s ease-in-out 1; }
+@keyframes tgw-ring { 0%, 100% { transform: rotate(0); } 15% { transform: rotate(14deg); } 30% { transform: rotate(-12deg); } 45% { transform: rotate(8deg); } 60% { transform: rotate(-4deg); } }
+@media (prefers-reduced-motion: reduce) { .tgw__bell.has-new .fa-bell { animation: none; } }
+.tgw__n { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #c2410c; color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
+.tgw__box { position: absolute; right: 0; top: calc(100% + 8px); z-index: 60; width: min(380px, calc(100vw - 32px)); max-height: 70vh; overflow: auto; background: #fff; border: 1px solid #dfe8e8; border-radius: 14px; box-shadow: 0 18px 40px rgba(16, 42, 45, .16); padding: 14px; text-align: left; }
+.tgw__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tgw__head b { font-size: .95rem; color: #1f3b3d; }
+.tgw__sub { margin: 6px 0 10px; font-size: .78rem; color: #5b6f71; line-height: 1.5; }
+.tgw__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.tgw__it { display: flex; gap: 10px; padding: 10px; border-radius: 10px; background: #f6f9f9; }
+.tgw__it .fas { margin-top: 3px; width: 16px; text-align: center; color: #2a7f84; }
+.tgw__it.is-bad .fas { color: #b42318; } .tgw__it.is-warn .fas { color: #b7791f; } .tgw__it.is-ok .fas { color: #2e7d55; }
+.tgw__it.is-unread { background: #fff7e8; box-shadow: inset 3px 0 0 #e9a23b; }
+.tgw__m { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.tgw__m b { font-size: .86rem; color: #1f3b3d; }
+.tgw__m p { margin: 0; font-size: .8rem; color: #3d5557; line-height: 1.45; }
+.tgw__m small { font-size: .72rem; color: #7a8b8d; }
+.tgw__go { align-self: flex-start; margin-top: 4px; }
+.tgw__empty, .tgw__note { list-style: none; font-size: .8rem; color: #5b6f71; padding: 8px 10px; border-radius: 8px; background: #f3f8f8; }
+.tgw__note.is-bad { color: #b42318; background: #fef3f2; }
+
+/* ---- Chất lượng chuyến (TripHealth::quality) ---- */
+.tgq { margin: 12px 0 4px; padding: 12px 14px; border: 1px solid #e1eaea; border-radius: 14px; background: #fbfdfd; }
+.tgq__h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.tgq__h b { font-size: .9rem; color: #1f3b3d; }
+.tgq__h small { font-size: .74rem; color: #7a8b8d; }
+.tgq__row { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; }
+.tgq__c { position: relative; display: flex; flex-direction: column; gap: 1px; padding: 8px 10px 12px; border-radius: 10px; background: #fff; border: 1px solid #edf2f2; overflow: hidden; }
+.tgq__c b { font-size: 1.15rem; line-height: 1.2; color: #1f3b3d; }
+.tgq__c span { font-size: .78rem; font-weight: 600; color: #3d5557; }
+.tgq__c small { font-size: .7rem; color: #7a8b8d; line-height: 1.35; }
+.tgq__bar { position: absolute; left: 0; bottom: 0; height: 3px; width: var(--p, 0%); background: #2e7d55; }
+.tgq__c.is-warn .tgq__bar { background: #d69e2e; } .tgq__c.is-bad .tgq__bar { background: #c2410c; }
+.tgq__c.is-ok b { color: #2e7d55; } .tgq__c.is-warn b { color: #9a6700; } .tgq__c.is-bad b { color: #b42318; } .tgq__c.is-na b { color: #94a3b8; }
+
+/* ---- Chip cảnh báo trên từng mục của lịch ---- */
+.tp .tpx-chipwarn { display: inline-flex; align-items: center; gap: 5px; margin: 6px 6px 0 0; padding: 3px 9px; border-radius: 999px; border: 1px solid #f3d9a4; background: #fff7e8; color: #8a5a00; font-size: .74rem; font-weight: 600; cursor: pointer; }
+.tp .tpx-chipwarn.is-bad { border-color: #f5c2bd; background: #fef3f2; color: #b42318; }
+.tp .tpx-chipwarn:hover, .tp .tpx-chipwarn:focus-visible { filter: brightness(.97); outline: 2px solid currentColor; outline-offset: 1px; }
+.tgt__todo--auto li { display: flex; align-items: center; gap: 8px; }
+.tgt__todo--auto li .fas { width: 16px; text-align: center; color: #7a8b8d; }
+.tgt__todo--auto li.is-done .fas { color: #2e7d55; }
+.tgt__todo--auto li.is-todo .fas { color: #b7791f; }
+.tgt__todo--auto li.is-done a { color: #3d5557; }

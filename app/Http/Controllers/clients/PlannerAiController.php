@@ -267,6 +267,18 @@ class PlannerAiController extends Controller
             $data['month'] = (int) date('n', strtotime($data['startDate']));
         }
         $data['groupSize'] = $data['adults'] + $data['children'];
+        // "bay tới 14h, về chuyến 17h": ngày đầu / ngày cuối chỉ xếp trong giờ còn lại, vé ghi vào "Cần đặt" (luật, không cần AI)
+        $tx = \App\Services\Planner\TransferParser::parse(implode('. ', $said));
+        if (!empty($tx['arriveAt']) || !empty($tx['leaveAt'])) {
+            $data = \App\Services\Planner\TransferParser::minutes($data + $tx + ['moveKind' => $tx['moveKind'] ?? 'flight']);
+            $kindLabel = ['flight' => 'máy bay', 'train' => 'tàu', 'bus' => 'xe khách', 'self' => 'tự lái'][$data['moveKind']];
+            if (!empty($tx['arriveAt'])) {
+                $filled[] = 'Tới nơi ' . $tx['arriveAt'] . ' (' . $kindLabel . ')';
+            }
+            if (!empty($tx['leaveAt'])) {
+                $filled[] = 'Về ' . $tx['leaveAt'] . ' ngày cuối (' . $kindLabel . ')';
+            }
+        }
 
         // Lần đầu chỉ xem trước. Chỉ lần xác nhận thứ hai mới chạy engine và ghi DB.
         // Frontend gửi lại toàn bộ câu người dùng; cache BriefService giữ kết quả AI ổn định trong 10 phút.
@@ -280,6 +292,7 @@ class PlannerAiController extends Controller
                     'adults' => $data['adults'], 'children' => $data['children'],
                     'date' => $data['startDate'], 'month' => $data['month'],
                     'budget' => $data['budget'],
+                    'arriveAt' => $data['arriveAt'] ?? null, 'leaveAt' => $data['leaveAt'] ?? null, 'moveKind' => $data['moveKind'] ?? null,
                 ],
                 'filled' => array_values(array_unique($filled)),
             ]);
@@ -297,6 +310,7 @@ class PlannerAiController extends Controller
         } catch (\DomainException $e) {
             return response()->json(['ok' => false, 'message' => $e->getMessage()]);
         }
+        PlannerController::recordTransfers($id, $data);
         if ($notes && \Illuminate\Support\Facades\Schema::hasColumn('tbl_trips', 'notes')) {
             DB::table('tbl_trips')->where('tripId', $id)->update(['notes' => mb_substr(strip_tags(implode('; ', $notes)), 0, 500)]);
         }

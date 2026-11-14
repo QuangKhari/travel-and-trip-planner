@@ -99,7 +99,7 @@
             g.legs.forEach(function (l) { legOf[l.from.uid != null ? l.from.uid : list.indexOf(l.from)] = l; });
             var clock = R.dayStart, rows = [], act = 0, conflicts = [], free = 0, hasMeal = false;
             // chỗ ở + đi / về (cùng DaySchedule): xuất phát từ nơi ngủ đêm trước, về nơi ngủ đêm nay; ngày tới nơi / ngày về có giờ chặn
-            var cx = (opts && opts.ctx) || {}, arrive = cx.arrive != null ? cx.arrive : null, leave = cx.leave != null ? cx.leave : null;
+            var cx = (opts && opts.ctx) || {}, arrive = cx.arrive != null ? cx.arrive : null, leave = cx.leave != null ? cx.leave : null, blocks = cx.blocks || [];
             var startLeg = null, endLeg = null, first = list[0], posList = list.filter(geo.hasPos);
             if (cx.from && arrive == null && first && geo.hasPos(first)) {
                 var sl = geo.legs([cx.from, first]).legs[0];
@@ -124,13 +124,16 @@
                     if (ss != null && ss > start) start = ss;
                     var fit = hoursFit(it.hours, dow, start, itemDur(it));   // tới sớm: chờ tới giờ mở cửa
                     if (fit != null && fit > start) start = fit;
+                    // chặng di chuyển giữa ngày (đổi thành phố): không xếp hoạt động chồng lên, dời sau khi tới nơi
+                    if (!exempt(it)) blocks.forEach(function (b) { if (start < b.to && start + itemDur(it) > b.from) start = Math.ceil(b.to / 5) * 5; });
                 }
                 var wait = prev ? Math.max(0, start - clock) : 0;
                 if (wait >= 15) free += wait;
                 var du = itemDur(it), leg = legOf[it.uid != null ? it.uid : i] || null;
                 var hasC = conflicts.some(function (c) { return c.b === it; });
                 if (!hasC && !exempt(it)) {
-                    if (leave != null && start + du > leave + 5) conflicts.push({ a: null, b: it, type: "departure", at: leave, text: cx.leaveText || null });
+                    if (fixed && blocks.some(function (b) { return start < b.to - 5 && start + du > b.from + 5; })) conflicts.push({ a: null, b: it, type: "transfer", at: null, text: blocks.map(function (b) { return b.text; }).join("; ") });
+                    else if (leave != null && start + du > leave + 5) conflicts.push({ a: null, b: it, type: "departure", at: leave, text: cx.leaveText || null });
                 }
                 var row = { it: it, n: i + 1, start: start, end: start + du, dur: du, fixed: fixed, leg: leg, slot: slotOf(start), conflict: null, wait: wait, hours: hoursCheck(it.hours, dow, start, start + du) };
                 rows.push(row);
@@ -182,7 +185,7 @@
         function hm(m) { return String(Math.floor(m / 60) % 24).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); }
         var STATION = { flight: "sân bay", train: "ga", bus: "bến xe" };
         function dayCtx(raw, startDate, d, days) {
-            var out = { from: null, to: null, arrive: null, arriveText: null, leave: null, leaveText: null };
+            var out = { from: null, to: null, arrive: null, arriveText: null, leave: null, leaveText: null, blocks: [] };
             if (!raw || !startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return out;
             var T = R.transfer || { exit: {}, before: {}, typical: {} };
             var start = startDate, date = addDays(startDate, d - 1), prev = addDays(startDate, d - 2), last = addDays(startDate, Math.max(1, days) - 1);
@@ -207,6 +210,25 @@
                         if (out.arrive == null || ready > out.arrive) {
                             out.arrive = ready;
                             out.arriveText = m.name + (est ? " tới khoảng " : " tới ") + hm(arrMin) + ", cộng " + (T.exit[k] || 0) + " phút ra khỏi " + (STATION[k] || "bến");
+                        }
+                    }
+                }
+                // chặng giữa chuyến (cùng TripLogistics::dayContext)
+                if (!isBack && depDate > start) {
+                    var est2 = m.arr == null, aD = est2 ? depDate : m.arr.slice(0, 10), aM = est2 ? depMin + (T.typical[k] || 0) : minOf(m.arr);
+                    if (est2 && aM >= 1440) { aD = addDays(depDate, 1); aM -= 1440; }
+                    var from = Math.max(0, depMin - (T.before[k] || 0)), rdy = aM + (T.exit[k] || 0);
+                    if (depDate === date && aD === date) {
+                        out.blocks.push({ from: from, to: Math.min(1439, rdy), text: m.name + " " + hm(depMin) + "–" + (est2 ? "khoảng " : "") + hm(aM) + " (gồm thời gian ra " + (STATION[k] || "bến") + ")" });
+                    } else if (depDate === date) {
+                        if (out.leave == null || from < out.leave) {
+                            out.leave = from;
+                            out.leaveText = m.name + " khởi hành " + hm(depMin) + ", cần có mặt ở " + (STATION[k] || "bến") + " trước " + (T.before[k] || 0) + " phút";
+                        }
+                    } else if (aD === date && depDate < date) {
+                        if (out.arrive == null || rdy > out.arrive) {
+                            out.arrive = Math.min(1439, rdy);
+                            out.arriveText = m.name + (est2 ? " tới khoảng " : " tới ") + hm(aM) + ", cộng " + (T.exit[k] || 0) + " phút ra khỏi " + (STATION[k] || "bến");
                         }
                     }
                 }

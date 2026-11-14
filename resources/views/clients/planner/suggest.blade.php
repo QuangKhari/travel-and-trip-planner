@@ -1,6 +1,6 @@
 @include('clients.blocks.header')
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=21">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-flow.css') }}?v=4">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-flow.css') }}?v=6">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai.css') }}?v=1">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/nature-luxury-planner.css') }}?v=bl20261104">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
@@ -261,6 +261,12 @@
                         <li><i class="fas fa-walking" aria-hidden="true"></i> <span id="sgSumStyle">Nhịp vừa phải</span></li>
                     </ul>
                     <button type="submit" class="tp-btn tpf-cta">Xem trước lịch trình <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
+                    @if (session('userId'))
+                        {{-- Hai phương án cùng yêu cầu, đặt cạnh nhau với số đo: chọn bằng dữ liệu, không phải đoán --}}
+                        <button type="button" class="tp-btn tp-btn--ghost tpf-cmpbtn" id="sgCompare" data-url="{{ route('planner.compare') }}" data-csrf="{{ csrf_token() }}">
+                            <i class="fas fa-columns" aria-hidden="true"></i> So sánh đi chậm / đi nhiều</button>
+                        <div class="tpf-cmp" id="sgCmp" hidden aria-live="polite"></div>
+                    @endif
                     <p class="tpf-small tp-muted">Chưa lưu gì cho tới khi bạn bấm “Lưu thành chuyến” ở bước sau. Bạn sẽ thấy vì sao mỗi mục được chọn và mục nào bị loại.</p>
                 </div>
                 <p class="tpf-small tpf-alt">Chưa biết đi đâu? <a href="{{ route('planner.discover') }}">Chọn theo tháng và cảm hứng</a><br>Muốn tự chọn từng nơi? <a href="{{ route('planner') }}">Tạo chuyến đi trống</a></p>
@@ -276,6 +282,7 @@
 <script type="application/json" id="aiData">{!! json_encode($aiData, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
 <script src="{{ asset('clients/assets/js/planner-suggest.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-ai-brief.js') }}?v=1" defer></script>
+<script src="{{ asset('clients/assets/js/planner-compare.js') }}?v=1" defer></script>
 @if (session('userId'))<script src="{{ asset('clients/assets/js/ai-feedback.js') }}?v=2" data-url="{{ route('planner.ai.rate') }}" data-csrf="{{ csrf_token() }}" defer></script>@endif
 
 @include('clients.blocks.footer')

@@ -289,15 +289,7 @@ class PlannerController extends Controller
             $data['groupSize'] = (int) $data['adults'] + $data['children'];
         }
         // giờ tới / giờ về -> phút chơi được: + thời gian ra khỏi ga / sân bay, - thời gian có mặt sớm (PlannerRules::transfer)
-        $tr = PlannerRules::fromConfig()->transfer();
-        $kind = $data['moveKind'] ?? 'self';
-        $min = fn(string $hm) => (int) substr($hm, 0, 2) * 60 + (int) substr($hm, 3, 2);
-        if (!empty($data['arriveAt'])) {
-            $data['arriveMin'] = min(1439, $min($data['arriveAt']) + ($tr['exit'][$kind] ?? 0));
-        }
-        if (!empty($data['leaveAt'])) {
-            $data['leaveMin'] = max(0, $min($data['leaveAt']) - ($tr['before'][$kind] ?? 0));
-        }
+        $data = \App\Services\Planner\TransferParser::minutes($data);
 
         return $data;
     }
@@ -399,6 +391,66 @@ class PlannerController extends Controller
         ]);
     }
 
+    /**
+     * POST /len-ke-hoach/so-sanh : cùng yêu cầu, hai phương án "đi chậm" và "đi nhiều" đặt cạnh nhau với số đo
+     * (số điểm, giờ kết thúc trung bình, quãng đường, thời gian đi lại, chi phí đã biết, ngày dày nhất). Không ghi gì.
+     */
+    public function compare(Request $request, PlannerService $service): JsonResponse
+    {
+        $data = $this->generateInput($request->validate($this->generateRules()));
+        $out = [];
+        foreach (['relaxed' => 'Đi chậm', 'packed' => 'Đi nhiều'] as $pace => $label) {
+            $r = $service->generate(['pace' => $pace] + $data);
+            if (empty($r['ok'])) {
+                return response()->json(['ok' => false, 'message' => $r['message'] ?? 'Chưa tạo được phương án.'], 422);
+            }
+            $acts = 0;
+            $km = 0.0;
+            $travel = 0;
+            $ends = [];
+            $busiest = 0;
+            foreach ($r['plan']['days'] as $d) {
+                $n = 0;
+                $end = null;
+                foreach ($d['items'] as $it) {
+                    $km += (float) ($it['travelKm'] ?? 0);
+                    $travel += (int) ($it['travelMin'] ?? 0);
+                    if (empty($it['isMeal'])) {
+                        $n++;
+                    }
+                    $end = max($end ?? 0, (int) ($it['startMin'] ?? 0) + (int) ($it['durationMin'] ?? 0));
+                }
+                $acts += $n;
+                $busiest = max($busiest, $n);
+                if ($end) {
+                    $ends[] = $end;
+                }
+            }
+            $avgEnd = $ends ? (int) round(array_sum($ends) / count($ends)) : null;
+            $out[] = ['pace' => $pace, 'label' => $label, 'activities' => $acts, 'perDay' => round($acts / max(1, count($r['plan']['days'])), 1), 'busiest' => $busiest,
+                'km' => round($km, 1), 'travelMin' => $travel, 'avgEnd' => $avgEnd !== null ? sprintf('%02d:%02d', intdiv($avgEnd, 60), $avgEnd % 60) : null,
+                'cost' => (int) round($r['plan']['budget']['knownMin'] ?? 0), 'costStatus' => $r['plan']['budget']['status'] ?? null, 'unplaced' => count($r['plan']['unplaced'] ?? []),
+                'sample' => array_values(array_slice(array_map(fn($it) => $it['name'], array_filter($r['plan']['days'][0]['items'] ?? [], fn($it) => empty($it['isMeal']))), 0, 5))];
+        }
+        [$a, $b] = $out;
+        $why = [];
+        if ($b['activities'] <= $a['activities'] && !$a['unplaced'] && !$b['unplaced']) {
+            // Hai nhịp ra cùng số điểm: không phải bộ xếp lịch "không khác", mà kho chỉ có chừng ấy nơi hợp điều kiện
+            $why[] = 'Cả hai nhịp đều xếp hết ' . $a['activities'] . ' điểm hợp điều kiện mà kho có ở nơi này, nên chỉ khác cách dàn trong ngày. Nới ngân sách, bỏ bớt điều không thích hoặc thêm ngày nghỉ để thấy khác biệt rõ hơn.';
+        } else {
+            $why[] = 'Đi nhiều có thêm ' . max(0, $b['activities'] - $a['activities']) . ' điểm (' . $b['perDay'] . ' so với ' . $a['perDay'] . ' điểm / ngày).';
+        }
+        if ($a['avgEnd'] && $b['avgEnd']) {
+            $why[] = 'Đi chậm kết thúc ngày trung bình lúc ' . $a['avgEnd'] . ', đi nhiều lúc ' . $b['avgEnd'] . '.';
+        }
+        $why[] = 'Đi lại: ' . $a['km'] . ' km so với ' . $b['km'] . ' km cả chuyến.';
+        if (($data['children'] ?? 0) > 0) {
+            $why[] = 'Có trẻ em: nên chọn đi chậm để có giờ nghỉ trưa.';
+        }
+
+        return response()->json(['ok' => true, 'options' => $out, 'why' => $why]);
+    }
+
     /** POST /len-ke-hoach/tao-tu-dong : lưu lịch vừa xem trước thành chuyến (tạo lại từ cùng yêu cầu). */
     public function generate(Request $request, PlannerService $service)
     {
@@ -421,7 +473,7 @@ class PlannerController extends Controller
         if (!empty($data['notes']) && \Illuminate\Support\Facades\Schema::hasColumn('tbl_trips', 'notes')) {
             DB::table('tbl_trips')->where('tripId', $id)->update(['notes' => mb_substr(strip_tags((string) $data['notes']), 0, 500)]);
         }
-        $this->recordTransfers($id, $data);
+        self::recordTransfers($id, $data);
         $spare = count(array_filter($result['plan']['unplaced'] ?? [], fn($u) => !empty($u['refId']) || !empty($u['osm'])));
         $how = $result['mode'] === 'open'
             ? ' bằng đề xuất mở rộng: các mục ghi "Ngoài dữ liệu Travela" lấy từ bản đồ OpenStreetMap, nên kiểm tra lại giờ mở cửa và giá trước khi đi. '
@@ -436,7 +488,7 @@ class PlannerController extends Controller
      * Có ngày đi + giờ tới / giờ về + đi bằng máy bay / tàu / xe khách: ghi hai việc "cần đặt" (vé đi, vé về) để lịch ngày đầu / ngày cuối
      * giữ đúng giờ khi sửa sau này, mục Đặt chỗ nhắc đặt vé, email nhắc khi tới hạn. Tự lái thì không ghi gì.
      */
-    private function recordTransfers(int $tripId, array $data): void
+    public static function recordTransfers(int $tripId, array $data): void
     {
         $kind = $data['moveKind'] ?? 'self';
         if (empty($data['startDate']) || !in_array($kind, \App\Services\Planner\BookingPlan::TRANSPORT, true) || !\App\Services\Planner\BookingPlan::ready()) {
@@ -688,7 +740,9 @@ class PlannerController extends Controller
             'code' => ['required', 'string', 'max:40', 'regex:/^[a-z]+\.[a-z_]+$/'],
             'day' => ['nullable', 'integer', 'min:1', 'max:' . TripPlanner::MAX_DAYS],
             'index' => ['nullable', 'integer', 'min:0', 'max:' . TripPlanner::MAX_ITEMS],
+            'now' => ['nullable', 'integer', 'min:0', 'max:1439'],   // xếp lại hôm nay: giờ hiện tại (phút) theo máy người dùng
         ]);
+        $resolver->nowMin = isset($v['now']) ? (int) $v['now'] : null;
 
         return response()->json($resolver->forTrip($trip, $v['code'], isset($v['day']) ? (int) $v['day'] : null, isset($v['index']) ? (int) $v['index'] : null));
     }

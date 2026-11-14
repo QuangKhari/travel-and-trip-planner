@@ -56,7 +56,7 @@ class TripHealth
     }
 
     /** Mã vấn đề là ràng buộc cứng (lịch không thực hiện được như đã đặt). */
-    public const HARD = ['time.overlap', 'time.travel', 'time.arrival', 'time.departure', 'hours.closed', 'hours.early', 'hours.late', 'route.unreachable'];
+    public const HARD = ['time.overlap', 'time.travel', 'time.arrival', 'time.departure', 'time.transfer', 'hours.closed', 'hours.early', 'hours.late', 'route.unreachable'];
 
     public static function severity(string $code): string
     {
@@ -123,7 +123,74 @@ class TripHealth
                     'estimatedDuration' => empty($r['item']['durationMin'])], $d->rows),
             ], $ctx->days)),
             'checks' => $checks,
-            'weather' => WeatherConstraint::summary($ctx),
+            'weather' => $wx = WeatherConstraint::summary($ctx),
+            'quality' => self::quality($ctx, $checks, $wx),
+        ];
+    }
+
+    /** Từ khóa nhận ra mục hợp từng sở thích (config/interests.php), trên tên / loại mục. */
+    private const INTEREST_PATTERNS = [
+        'nature' => '/đồi|thác|hồ |hồ$|núi|biển|bãi |vườn|rừng|đèo|thung lũng|vịnh|suối|đảo|ruộng|đồng|hang|sông|cánh đồng|langbiang|fansipan/u',
+        'culture' => '/chùa|đền|đình|bảo tàng|nhà thờ|di tích|phố cổ|văn miếu|lăng|thành cổ|cung|nhà cổ|hội quán|thiền viện|làng|tháp|dinh|nhà hát|bảo tàng/u',
+        'food' => '/quán|chợ|ăn|phở|bún|bánh|lẩu|cơm|cà phê|cafe|nhà hàng|ẩm thực|hải sản|đặc sản|mì|nem|chè/u',
+        'adventure' => '/trek|leo|zipline|lặn|chèo|kayak|dù lượn|cáp treo|mạo hiểm|vượt|đạp xe|xe đạp|cano|thuyền/u',
+        'relax' => '/spa|tắm|biển|bãi|resort|cà phê|cafe|hồ|massage|suối khoáng|ngắm hoàng hôn|vườn/u',
+        'family' => '/công viên|vườn thú|khu vui chơi|thủy cung|vườn dâu|thung lũng|quảng trường|khu du lịch|trẻ|dã ngoại/u',
+    ];
+
+    /**
+     * Chỉ số chất lượng của chuyến (hiển thị đầu trang): hệ thống ĐÁNH GIÁ được kế hoạch, không chỉ lưu nó.
+     *  - feasible: % mục xếp được đúng như đặt (không xung đột giờ, không đóng cửa, không trước giờ tới / sau giờ đi);
+     *  - weather: % phút ngoài trời rơi vào giờ thời tiết tốt (WeatherFit, chỉ khi có dự báo);
+     *  - interest: % sở thích của chuyến có ít nhất một mục phù hợp;
+     *  - budget: chi phí dự kiến / ngân sách (≤ 100% là trong ngân sách);
+     *  - travel: % thời gian trong ngày dành cho đi lại.
+     * Thiếu dữ liệu thì để null và nói lý do, không đoán.
+     */
+    public static function quality(TripContext $ctx, array $checks, ?array $wx): array
+    {
+        $rows = 0;
+        $bad = 0;
+        $act = 0;
+        $travel = 0;
+        $cost = 0.0;
+        $names = [];
+        foreach ($ctx->days as $d) {
+            foreach ($d->rows as $r) {
+                $rows++;
+                if ($r['conflict'] || in_array($r['hours'], ['closed', 'late'], true)) {
+                    $bad++;
+                }
+                $names[] = mb_strtolower(($r['item']['name'] ?? '') . ' ' . ($r['item']['type'] ?? '') . ' ' . ($r['item']['kind'] ?? ''));
+            }
+            $act += $d->activityMin;
+            $travel += $d->travelMin;
+            $cost += $d->cost;
+        }
+        $interests = array_values(array_filter((array) json_decode((string) ($ctx->trip->interests ?? ''), true), fn($k) => isset(self::INTEREST_PATTERNS[$k])));
+        $hit = [];
+        foreach ($interests as $k) {
+            foreach ($names as $n) {
+                if (preg_match(self::INTEREST_PATTERNS[$k], $n)) {
+                    $hit[] = $k;
+                    break;
+                }
+            }
+        }
+        $cost += array_sum(array_map(fn($x) => (float) ($x['cost'] ?? 0), $ctx->unassigned));   // cùng cách tính với BudgetConstraint
+        $budget = (int) ($ctx->budget() ?? 0);
+        $labels = (array) config('interests', []);
+
+        return [
+            'feasible' => $rows ? ['pct' => (int) round(($rows - $bad) / $rows * 100), 'note' => $bad ? $bad . ' mục chưa thực hiện được như đặt' : 'mọi mục làm được đúng giờ'] : null,
+            'weather' => isset($wx['fitPct']) && $wx['fitPct'] !== null ? ['pct' => (int) $wx['fitPct'], 'note' => 'theo dự báo theo giờ'] : ['pct' => null, 'note' => match ($wx['reason'] ?? null) {
+                'out_of_range' => 'chưa tới tầm dự báo (16 ngày)', 'no_date' => 'chuyến chưa có ngày đi', 'off' => 'dự báo đang tắt',
+                default => isset($wx['days']) && $wx['days'] && !array_filter(array_column($wx['days'], 'fitPct'), fn($v) => $v !== null) ? 'không có hoạt động ngoài trời' : 'chưa lấy được dự báo'}],
+            'interest' => $interests ? ['pct' => (int) round(count($hit) / count($interests) * 100),
+                'note' => 'có ' . implode(', ', array_map(fn($k) => mb_strtolower($labels[$k]['label'] ?? $k), $hit ?: [])) . (array_diff($interests, $hit) ? ($hit ? '; ' : '') . 'thiếu ' . implode(', ', array_map(fn($k) => mb_strtolower($labels[$k]['label'] ?? $k), array_diff($interests, $hit))) : '')]
+                : ['pct' => null, 'note' => 'chuyến chưa chọn sở thích'],
+            'budget' => $budget > 0 && $cost > 0 ? ['pct' => (int) round($cost / $budget * 100), 'note' => $cost <= $budget ? 'trong ngân sách' : 'vượt ngân sách'] : ['pct' => null, 'note' => $budget ? 'chưa có chi phí dự kiến' : 'chưa đặt ngân sách'],
+            'travel' => $act + $travel > 0 ? ['pct' => (int) round($travel / ($act + $travel) * 100), 'note' => 'thời gian đi lại / (đi lại + tham quan)'] : null,
         ];
     }
 

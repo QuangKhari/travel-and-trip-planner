@@ -41,7 +41,9 @@ final class ItemInsights
             }
         } elseif ($type === 'place') {
             $kind = (string) ($f['kind'] ?? '');
-            if (in_array($kind, (array) ($ctx['indoorKinds'] ?? []), true)) {
+            if (array_key_exists('indoor', $f) && $f['indoor'] !== null) {
+                $outdoor = !$f['indoor'];
+            } elseif (in_array($kind, (array) ($ctx['indoorKinds'] ?? []), true)) {
                 $outdoor = false;
             } elseif (in_array($kind, (array) ($ctx['outdoorKinds'] ?? []), true)) {
                 $outdoor = true;
@@ -179,8 +181,11 @@ final class ItemInsights
             }
         }
         if (!empty($by['place'])) {
-            foreach (DB::table('tbl_external_places')->whereIn('placeId', array_keys($by['place']))->get(['placeId', 'kind', 'destinationId']) as $p) {
-                $mk('place', (int) $p->placeId, ['kind' => $p->kind], (int) $p->destinationId);
+            $hasIndoor = \Illuminate\Support\Facades\Schema::hasColumn('tbl_external_places', 'indoor');
+            foreach (DB::table('tbl_external_places')->whereIn('placeId', array_keys($by['place']))->get($hasIndoor ? ['placeId', 'kind', 'destinationId', 'indoor'] : ['placeId', 'kind', 'destinationId']) as $p) {
+                // trong nhà / ngoài trời đã nhập cho địa điểm thắng phán đoán theo loại nơi (vd. di tích khảo cổ: ngoài trời)
+                $f = ['kind' => $p->kind] + ($hasIndoor && $p->indoor !== null ? ['indoor' => (bool) $p->indoor] : []);
+                $mk('place', (int) $p->placeId, $f, (int) $p->destinationId);
             }
         }
         if (!empty($by['food'])) {

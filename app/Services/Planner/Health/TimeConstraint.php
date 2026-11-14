@@ -28,6 +28,10 @@ final class TimeConstraint implements Constraint
                     $out[] = ['level' => 'bad', 'code' => 'time.arrival', 'day' => $d->day, 'index' => $i, 'action' => 'unfix',
                         'text' => 'Ngày ' . $d->day . ': “' . $r['item']['name'] . '” đặt lúc ' . DaySchedule::hhmm($r['start']) . ' nhưng khoảng ' . DaySchedule::hhmm((int) $d->ctx['arrive'])
                             . ' bạn mới tới nơi' . (!empty($d->ctx['arriveText']) ? ' (' . $d->ctx['arriveText'] . ')' : '') . '.'];
+                } elseif ($r['conflict'] === 'transfer') {
+                    $out[] = ['level' => 'bad', 'code' => 'time.transfer', 'day' => $d->day, 'index' => $i, 'action' => 'unfix',
+                        'text' => 'Ngày ' . $d->day . ': “' . $r['item']['name'] . '” lúc ' . DaySchedule::hhmm($r['start']) . ' trùng lúc đang di chuyển: '
+                            . implode('; ', array_column((array) ($d->ctx['blocks'] ?? []), 'text')) . '.'];
                 } elseif ($r['conflict'] === 'departure') {
                     $out[] = ['level' => 'bad', 'code' => 'time.departure', 'day' => $d->day, 'index' => $i, 'action' => 'move',
                         'text' => 'Ngày ' . $d->day . ': “' . $r['item']['name'] . '” (' . DaySchedule::hhmm($r['start']) . '–' . DaySchedule::hhmm($r['end']) . ') chưa xong thì đã tới lúc phải rời đi '

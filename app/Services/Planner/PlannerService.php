@@ -294,7 +294,12 @@ final class PlannerService
             $out[] = ['key' => 'place:' . $p->placeId, 'type' => 'place', 'refId' => (int) $p->placeId, 'name' => $p->name, 'kind' => $p->kind,
                 'group' => $kindGroup[$p->kind] ?? 'see', 'lat' => $p->latitude !== null ? (float) $p->latitude : null, 'lng' => $p->longitude !== null ? (float) $p->longitude : null,
                 'rank' => (int) $p->rank, 'mustTry' => !empty($p->isMustTry),
-                'indoor' => in_array($p->kind, $inKinds, true) ? true : (in_array($p->kind, $outKinds, true) ? false : null)];
+                'indoor' => isset($p->indoor) && $p->indoor !== null ? (bool) $p->indoor
+                    : (in_array($p->kind, $inKinds, true) ? true : (in_array($p->kind, $outKinds, true) ? false : null))]
+                // thời lượng / giá vé đã nhập cho địa điểm (gói dữ liệu điểm đến): dùng thay cho ước lượng theo loại nơi
+                + array_filter(['durationMin' => !empty($p->durationMinutes) ? (int) $p->durationMinutes : null,
+                    'priceMin' => isset($p->priceMin) && $p->priceMin !== null ? (float) $p->priceMin : null,
+                    'priceMax' => isset($p->priceMax) && $p->priceMax !== null ? (float) $p->priceMax : null], fn($v) => $v !== null);
         }
 
         foreach (DB::table('tbl_experiences')->where('destinationId', $id)->where('reviewStatus', 'published')->get() as $x) {

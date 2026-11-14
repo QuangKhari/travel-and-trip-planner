@@ -123,7 +123,7 @@ final class TripLogistics
      */
     public static function dayContext(array $raw, ?string $startDate, int $day, int $days, ?PlannerRules $rules = null): array
     {
-        $out = ['from' => null, 'to' => null, 'arrive' => null, 'arriveText' => null, 'leave' => null, 'leaveText' => null];
+        $out = ['from' => null, 'to' => null, 'arrive' => null, 'arriveText' => null, 'leave' => null, 'leaveText' => null, 'blocks' => []];
         if (!$startDate || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
             return $out;
         }
@@ -165,6 +165,33 @@ final class TripLogistics
                     $ready = $arrMin + ($tr['exit'][$kind] ?? 0);
                     if ($out['arrive'] === null || $ready > $out['arrive']) {
                         $out['arrive'] = $ready;
+                        $out['arriveText'] = $m['name'] . ($est ? ' tới khoảng ' : ' tới ') . self::hhmm($arrMin) . ', cộng ' . ($tr['exit'][$kind] ?? 0) . ' phút ra khỏi ' . self::station($kind);
+                    }
+                }
+            }
+            // chặng giữa chuyến (đi nhiều thành phố): ngày khởi hành chặn từ lúc phải có mặt; tới nơi cùng ngày thì chỉ chặn khoảng giữa,
+            // tới ngày sau (xe đêm) thì phần còn lại của ngày khởi hành bị chặn và ngày tới bắt đầu sau giờ tới
+            if (!$isBack && $depDate > $start) {
+                $est = $m['arr'] === null;
+                $arrDate = $est ? $depDate : substr($m['arr'], 0, 10);
+                $arrMin = $est ? $depMin + ($tr['typical'][$kind] ?? 0) : self::minOf($m['arr']);
+                if ($est && $arrMin >= 1440) {
+                    $arrDate = self::addDays($depDate, 1);
+                    $arrMin -= 1440;
+                }
+                $from = max(0, $depMin - ($tr['before'][$kind] ?? 0));
+                $ready = $arrMin + ($tr['exit'][$kind] ?? 0);
+                if ($depDate === $date && $arrDate === $date) {
+                    $out['blocks'][] = ['from' => $from, 'to' => min(1439, $ready),
+                        'text' => $m['name'] . ' ' . self::hhmm($depMin) . '–' . ($est ? 'khoảng ' : '') . self::hhmm($arrMin) . ' (gồm thời gian ra ' . self::station($kind) . ')'];
+                } elseif ($depDate === $date) {
+                    if ($out['leave'] === null || $from < $out['leave']) {
+                        $out['leave'] = $from;
+                        $out['leaveText'] = $m['name'] . ' khởi hành ' . self::hhmm($depMin) . ', cần có mặt ở ' . self::station($kind) . ' trước ' . ($tr['before'][$kind] ?? 0) . ' phút';
+                    }
+                } elseif ($arrDate === $date && $depDate < $date) {
+                    if ($out['arrive'] === null || $ready > $out['arrive']) {
+                        $out['arrive'] = min(1439, $ready);
                         $out['arriveText'] = $m['name'] . ($est ? ' tới khoảng ' : ' tới ') . self::hhmm($arrMin) . ', cộng ' . ($tr['exit'][$kind] ?? 0) . ' phút ra khỏi ' . self::station($kind);
                     }
                 }

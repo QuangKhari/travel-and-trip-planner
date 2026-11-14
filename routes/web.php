@@ -242,6 +242,7 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::get('/len-ke-hoach/chon-diem-den', [PlannerController::class, 'discover'])->middleware('throttle:30,1,planner-discover')->name('planner.discover');
     Route::get('/len-ke-hoach/tim-noi', [PlannerController::class, 'placeSearch'])->middleware('throttle:60,1,planner-place')->name('planner.placeSearch');
     Route::get('/len-ke-hoach/de-xuat/xem-truoc', [PlannerController::class, 'preview'])->middleware('throttle:30,1,planner-preview')->name('planner.preview');
+    Route::post('/len-ke-hoach/so-sanh', [PlannerController::class, 'compare'])->middleware('throttle:10,1,planner-generate')->name('planner.compare');
     Route::post('/len-ke-hoach/tao-tu-dong', [PlannerController::class, 'generate'])->middleware('throttle:10,1,planner-generate')->name('planner.generate');
     // La bàn (AI): F1 đọc câu mô tả -> vé hành trình; F2 tóm tắt lịch. Không ghi vào chuyến đi.
     Route::post('/len-ke-hoach/hieu-yeu-cau', [PlannerAiController::class, 'brief'])->middleware('throttle:10,1,planner-ai-brief')->name('planner.ai.brief');
@@ -274,6 +275,10 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::get('/len-ke-hoach/{id}/dat-cho', [TravelController::class, 'plan'])->whereNumber('id')->middleware('throttle:60,1,travel-plan')->name('travel.plan');
     Route::post('/len-ke-hoach/{id}/dat-cho', [TravelController::class, 'planAdd'])->whereNumber('id')->middleware('throttle:30,1,travel-plan-w')->name('travel.plan.add');
     Route::post('/len-ke-hoach/{id}/dat-cho/bo-qua', [TravelController::class, 'planSkip'])->whereNumber('id')->middleware('throttle:30,1,travel-plan-w')->name('travel.plan.skip');
+    // chuông thông báo: theo dõi chuyến (thời tiết, cảnh báo điểm đến, giờ mở cửa) + bản tin
+    Route::get('/len-ke-hoach/{id}/thong-bao', [\App\Http\Controllers\clients\TripWatchController::class, 'feed'])->whereNumber('id')->middleware('throttle:60,1')->name('planner.events');
+    Route::post('/len-ke-hoach/{id}/thong-bao/da-xem', [\App\Http\Controllers\clients\TripWatchController::class, 'seen'])->whereNumber('id')->middleware('throttle:60,1')->name('planner.events.seen');
+    Route::post('/len-ke-hoach/{id}/kiem-tra', [\App\Http\Controllers\clients\TripWatchController::class, 'check'])->whereNumber('id')->middleware('throttle:6,1')->name('planner.watch.check');
     Route::post('/len-ke-hoach/{id}/dat-cho/{externalId}/vi-tri', [TravelController::class, 'planLocate'])->whereNumber(['id', 'externalId'])->middleware('throttle:30,1,travel-plan-w')->name('travel.plan.locate');
     Route::post('/len-ke-hoach/{id}/dat-cho/{externalId}', [TravelController::class, 'planStatus'])->whereNumber(['id', 'externalId'])->middleware('throttle:30,1,travel-plan-w')->name('travel.plan.status');
     Route::post('/len-ke-hoach/{id}/xac-nhan', [TravelController::class, 'addConfirmation'])->whereNumber('id')->middleware('throttle:20,1,travel-confirm')->name('travel.confirm');

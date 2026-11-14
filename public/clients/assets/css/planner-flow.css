@@ -201,3 +201,14 @@
 .tpf-hint > span { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .tpf-more .tpf-row { margin-top: 10px; } .tpf-more > small { display: block; margin-top: 8px; }
 .tpf-field select, .tpf-field input[type="time"] { min-height: 46px; width: 100%; }
+.tpf-cmpbtn { width: 100%; margin-top: 8px; }
+.tpf-cmp { margin-top: 12px; }
+.tpf-cmp__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tpf-cmp__c { border: 1px solid #dfe8e8; border-radius: 12px; padding: 10px; background: #fff; display: flex; flex-direction: column; gap: 6px; }
+.tpf-cmp__c h4 { margin: 0; font-size: .95rem; }
+.tpf-cmp__c dl { margin: 0; display: flex; flex-direction: column; gap: 3px; }
+.tpf-cmp__c dl div { font-size: .76rem; line-height: 1.3; }
+.tpf-cmp__c dt { color: #5b6f71; font-weight: 400; } .tpf-cmp__c dd { margin: 0; font-weight: 600; white-space: nowrap; }
+.tpf-cmp__pick { font-size: .82rem; padding: 6px 8px; }
+.tpf-cmp__pick { margin-top: auto; }
+.tpf-cmp__why { margin: 8px 0 0; padding-left: 18px; font-size: .78rem; color: #3d5557; }
