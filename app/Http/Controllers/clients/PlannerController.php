@@ -556,6 +556,7 @@ class PlannerController extends Controller
             'rev' => (int) ($trip->rev ?? 0),
             'revUrl' => route('planner.revision', ['id' => $id]),
             'historyUrl' => \App\Services\Planner\TripRevisions::ready() ? route('planner.history', ['id' => $id]) : null,
+            'reportUrl' => \App\Services\Planner\PlaceReports::ready() ? route('places.report') : null,
             'lockUrl' => route('planner.lock', ['id' => $id]),
             'membersUrl' => route('planner.members', ['id' => $id]),
             'me' => $uid,

@@ -25,7 +25,7 @@ final class KeyedChangeCompiler
      * @param list<string> $explicit khóa mục người dùng đã nêu đích danh (được phép đụng dù cố định / khóa)
      * @return array{ok:bool,errors:list<string>,changes:list<array>,human:list<array{op:string,text:string}>,ghost:list<array>}
      */
-    public function compile(array $keyed, array $keys, array $cands, int $tripDays, array $explicit = []): array
+    public function compile(array $keyed, array $keys, array $cands, int $tripDays, array $explicit = [], int $maxOps = self::MAX_OPS): array
     {
         $err = [];
         $out = [];
@@ -40,8 +40,8 @@ final class KeyedChangeCompiler
                 $have[$k['type'] . ':' . $k['refId']] = true;
             }
         }
-        if (count($keyed) > self::MAX_OPS) {
-            return ['ok' => false, 'errors' => ['Tối đa ' . self::MAX_OPS . ' thao tác trong một đề xuất.'], 'changes' => [], 'human' => [], 'ghost' => []];
+        if (count($keyed) > $maxOps) {
+            return ['ok' => false, 'errors' => ['Tối đa ' . $maxOps . ' thao tác trong một đề xuất.'], 'changes' => [], 'human' => [], 'ghost' => []];
         }
         $item = function (mixed $k, string $op) use ($keys, &$err): ?array {
             if (!is_string($k) || !isset($keys[$k])) {

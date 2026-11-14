@@ -87,3 +87,19 @@
     load();
     setInterval(function () { if (!document.hidden) load(); }, 5 * 60 * 1000);
 })();
+
+/* Chép đường dẫn lịch (.ics) tự cập nhật: dán vào Google Calendar → "Từ URL", hoặc Apple Calendar → "Đăng ký lịch". */
+(function () {
+    "use strict";
+    var b = document.getElementById("tpIcsCopy");
+    if (!b) return;
+    b.addEventListener("click", function () {
+        var url = b.dataset.feed, span = b.querySelector("span"), old = span.textContent;
+        var done = function (ok) {
+            span.textContent = ok ? "Đã chép. Dán vào Google Calendar → Thêm lịch → Từ URL" : url;
+            setTimeout(function () { span.textContent = old; }, 6000);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(function () { done(true); }, function () { done(false); });
+        else done(false);
+    });
+})();

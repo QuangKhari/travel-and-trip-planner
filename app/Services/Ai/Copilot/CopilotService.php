@@ -54,6 +54,13 @@ final class CopilotService
         if ($message === '') {
             return $base + ['ok' => false, 'kind' => 'reply', 'say' => [['t' => 'Bạn muốn sửa gì trong chuyến này?']]];
         }
+        // Lệnh cấp ngày / chuyến (bỏ ngày, đổi chỗ hai ngày, dời chuyến, đổi số ngày): luật, không gọi LLM, chạy cả khi AI tắt
+        if (!empty($opt['commands']) || !array_key_exists('commands', $opt)) {
+            $cmd = TripCommands::parse($message, $ctx['days'], $trip->startDate ? substr((string) $trip->startDate, 0, 10) : null);
+            if ($cmd) {
+                return $base + $this->command($trip, $userId, $cmd, $ctx, $message, $t0);
+            }
+        }
         if ($why = $this->gateway->blocked('copilot', $userId)) {
             return $base + ['ok' => false, 'kind' => 'fallback', 'notice' => AiGateway::reasonText($why),
                 'say' => [['t' => 'La bàn chưa trò chuyện được lúc này. Bạn vẫn có thể dùng nút “Sửa” ở phần Sức khỏe chuyến đi.']]];
@@ -136,6 +143,107 @@ final class CopilotService
     }
 
     /**
+     * Lệnh cấp ngày / chuyến đã nhận ra bằng TripCommands. Bỏ ngày / đổi chỗ hai ngày đi qua CÙNG bước biên dịch + mô phỏng như đề xuất LLM
+     * (vé, chỗ ở giữ nguyên ngày). Dời chuyến / đổi số ngày là thay đổi cấp chuyến: mô phỏng bằng TripHealth trên bản sao chuyến với ngày mới,
+     * trả kind "tripedit" để trang áp dụng qua ô Ngày đi / Số ngày (cùng đường lưu, cùng kiểm tra phiên bản).
+     */
+    private function command(object $trip, ?int $userId, array $cmd, array $ctx, string $message, float $t0): array
+    {
+        $rules = \App\Services\Planner\PlannerRules::fromConfig();
+        $free = fn(array $k) => !\App\Services\Planner\TripLogistics::exempt(['type' => $k['type'], 'kind' => $k['kind'], 'name' => $k['name']], $rules);
+        $result = null;
+        if (in_array($cmd['cmd'], ['clear_day', 'swap'], true)) {
+            $keyed = [];
+            $explicit = [];
+            foreach ($ctx['keys'] as $k => $x) {
+                if ($x['day'] === null || !$free($x)) {
+                    continue;
+                }
+                if ($cmd['cmd'] === 'clear_day' && $x['day'] === $cmd['day']) {
+                    $keyed[] = ['op' => 'move', 'item' => $k, 'toDay' => null];
+                    $explicit[] = $k;
+                } elseif ($cmd['cmd'] === 'swap' && in_array($x['day'], [$cmd['a'], $cmd['b']], true)) {
+                    $keyed[] = ['op' => 'move', 'item' => $k, 'toDay' => $x['day'] === $cmd['a'] ? $cmd['b'] : $cmd['a']];
+                    $explicit[] = $k;
+                }
+            }
+            $say = $cmd['cmd'] === 'clear_day'
+                ? 'Đưa mọi hoạt động ngày ' . $cmd['day'] . ' về Đã lưu (vé và chỗ ở giữ nguyên). Muốn bớt hẳn một ngày thì nói "rút còn ' . max(1, $ctx['days'] - 1) . ' ngày".'
+                : 'Đổi lịch ngày ' . $cmd['a'] . ' với ngày ' . $cmd['b'] . ' (vé và chỗ ở giữ nguyên ngày).';
+            if (!$keyed) {
+                $result = ['kind' => 'reply', 'say' => [['t' => $cmd['cmd'] === 'clear_day' ? 'Ngày ' . $cmd['day'] . ' chưa có hoạt động nào để bỏ.' : 'Hai ngày này chưa có hoạt động nào để đổi.']]];
+            } else {
+                // KHÔNG chặn khi có lỗi cứng mới: người dùng ra lệnh đích danh; phiếu kiểm chứng nêu rõ vấn đề mới (vd. nơi đóng cửa ngày mới)
+                $p = $this->propose($trip, $ctx, $keyed, [], $explicit, $say, false, 200);
+                $result = $p['ok'] ? $p['body'] : ['kind' => 'reply', 'say' => [['t' => 'Chưa làm được: ' . $p['errors'][0]]]];
+            }
+        } else {
+            $result = $this->tripEdit($trip, $cmd, $ctx);
+        }
+        $ms = (int) round((microtime(true) - $t0) * 1000);
+        $runId = $this->gateway->log(['feature' => 'copilot', 'userId' => $userId, 'tripId' => (int) $trip->tripId, 'engine' => 'rules',
+            'outcome' => in_array($result['kind'], ['proposal', 'tripedit'], true) ? 'proposed' : 'reply', 'inputChars' => mb_strlen($message), 'ms' => $ms,
+            'flags' => ['command' => $cmd['cmd']], 'text' => $message]);
+        if ($result['kind'] === 'proposal' && $runId) {
+            $this->remember($result['id'], ['runId' => $runId]);
+        }
+
+        return ['ok' => true] + $result + ['ms' => $ms, 'steps' => 0, 'remaining' => $this->gateway->remaining($userId)];
+    }
+
+    /** Dời chuyến / đổi số ngày: mô phỏng trên bản sao chuyến, nêu rõ cái được và cái mất. */
+    private function tripEdit(object $trip, array $cmd, array $ctx): array
+    {
+        $max = (int) \App\Services\Planner\TripPlanner::MAX_DAYS;
+        $clone = clone $trip;
+        $lines = [];
+        if ($cmd['cmd'] === 'days') {
+            $n = max(1, min($max, (int) $cmd['n']));
+            if ($n !== (int) $cmd['n']) {
+                $lines[] = 'Chuyến tối đa ' . $max . ' ngày.';
+            }
+            $clone->days = $n;
+            $lost = array_values(array_filter($ctx['keys'], fn($k) => $k['day'] !== null && $k['day'] > $n));
+            $title = 'Đổi chuyến thành ' . $n . ' ngày';
+            if ($lost) {
+                $lines[] = count($lost) . ' mục của ' . ($n + 1 === (int) $trip->days ? 'ngày ' . (int) $trip->days : 'ngày ' . ($n + 1) . '–' . (int) $trip->days) . ' sẽ về Đã lưu: '
+                    . implode(', ', array_map(fn($k) => $k['name'], array_slice($lost, 0, 4))) . (count($lost) > 4 ? '…' : '') . '.';
+            } elseif ($n > (int) $trip->days) {
+                $lines[] = 'Thêm ' . ($n - (int) $trip->days) . ' ngày trống ở cuối chuyến để bạn (hoặc La bàn) xếp thêm.';
+            }
+            $patch = ['days' => $n];
+        } else {
+            if (!$trip->startDate) {
+                return ['kind' => 'reply', 'say' => [['t' => 'Chuyến chưa có ngày đi. Bạn đặt ngày đi ở phần Thông tin chuyến trước nhé.']]];
+            }
+            $to = \Carbon\Carbon::parse($cmd['to']);
+            if ($to->lt(now()->startOfDay())) {
+                return ['kind' => 'reply', 'say' => [['t' => 'Ngày ' . $to->format('d/m/Y') . ' đã qua, La bàn không dời chuyến về quá khứ được.']]];
+            }
+            $clone->startDate = $to->toDateString();
+            $title = 'Dời chuyến sang ' . $to->format('d/m/Y') . ' (' . ['', 'thứ Hai', 'thứ Ba', 'thứ Tư', 'thứ Năm', 'thứ Sáu', 'thứ Bảy', 'Chủ nhật'][$to->dayOfWeekIso] . ')';
+            $books = array_values(array_filter($ctx['keys'], fn($k) => in_array($k['kind'] ?? null, ['lodging', 'transport'], true) || $k['type'] === 'transport'));
+            if ($books) {
+                $lines[] = 'Vé và chỗ ở đã có giữ ngày thật của đặt chỗ; mục nào ra ngoài ngày đi mới sẽ về Đã lưu và được nhắc ở phần Đặt chỗ.';
+            }
+            $patch = ['startDate' => $to->toDateString()];
+        }
+        $before = $this->health->forTrip($trip);
+        $after = $this->health->forTrip($clone);
+        $hardKey = fn(array $h) => array_values(array_map(fn($c) => $c['code'] . ':' . ($c['day'] ?? 0) . ':' . ($c['index'] ?? 0),
+            array_filter($h['checks'], fn($c) => in_array($c['code'], \App\Services\Planner\Health\TripHealth::HARD, true))));
+        $newHard = array_values(array_filter($after['checks'], fn($c) => in_array($c['code'], \App\Services\Planner\Health\TripHealth::HARD, true)
+            && !in_array($c['code'] . ':' . ($c['day'] ?? 0) . ':' . ($c['index'] ?? 0), $hardKey($before), true)));
+        $pick = fn($x) => ['day' => $x['day'] ?? null, 'text' => $x['text'], 'level' => $x['level'], 'code' => $x['code']];
+
+        return ['kind' => 'tripedit', 'baseRev' => (int) ($trip->rev ?? 0), 'trip' => $patch,
+            'say' => [['t' => $title . '.' . ($lines ? ' ' . implode(' ', $lines) : '')]],
+            'receipt' => ['before' => ['score' => $before['score'], 'level' => $before['level']], 'after' => ['score' => $after['score'], 'level' => $after['level']],
+                'warnings' => array_map($pick, array_slice($newHard, 0, 4)), 'newHard' => count($newHard), 'resolved' => [], 'effects' => [],
+                'newWarn' => 0, 'checked' => ['giờ mở cửa theo thứ mới', 'thời tiết ngày mới', 'vé và chỗ ở']]];
+    }
+
+    /**
      * "Kiểm tra lại": lịch đã đổi sau khi La bàn đề xuất. Ánh xạ khóa cũ sang bản đã lưu MỚI theo danh tính mục, biên dịch và mô phỏng lại.
      * Không gọi LLM (miễn phí, tức thì).
      */
@@ -184,7 +292,7 @@ final class CopilotService
                 'say' => [['t' => 'Không áp dụng lại được: ' . implode(', ', array_unique($missing)) . ' không còn trong lịch. Bạn hỏi lại La bàn nhé.']]];
         }
         $explicit = array_values(array_filter(array_map($map, $saved['explicit'])));
-        $p = $this->propose($trip, $ctx, $keyed, $saved['cands'], $explicit, $saved['say']);
+        $p = $this->propose($trip, $ctx, $keyed, $saved['cands'], $explicit, $saved['say'], true, (int) ($saved['maxOps'] ?? KeyedChangeCompiler::MAX_OPS));
         if (!$p['ok']) {
             return ['ok' => false, 'kind' => 'reply', 'rev' => (int) ($trip->rev ?? 0), 'say' => [['t' => 'Lịch đã đổi nên đề xuất cũ không còn hợp: ' . $p['errors'][0]]]];
         }
@@ -249,9 +357,9 @@ final class CopilotService
      * Biên dịch + mô phỏng một đề xuất. ok=false kèm lỗi viết cho LLM (để sửa) / người dùng.
      * @return array{ok:bool,errors?:list<string>,body?:array}
      */
-    private function propose(object $trip, array $ctx, array $keyed, array $cands, array $explicit, string $say, bool $verify = true): array
+    private function propose(object $trip, array $ctx, array $keyed, array $cands, array $explicit, string $say, bool $verify = true, int $maxOps = KeyedChangeCompiler::MAX_OPS): array
     {
-        $c = $this->compiler->compile($keyed, $ctx['keys'], $cands, $ctx['days'], $explicit);
+        $c = $this->compiler->compile($keyed, $ctx['keys'], $cands, $ctx['days'], $explicit, $maxOps);
         if (!$c['ok']) {
             return ['ok' => false, 'errors' => $c['errors']];
         }
@@ -289,7 +397,7 @@ final class CopilotService
             array_column($keyed, 'with'), ...array_map(fn($x) => (array) ($x['items'] ?? []), $keyed)
         ), 'is_string')));
         Cache::put('ai:cp:' . $id, ['tripId' => (int) $trip->tripId, 'rev' => (int) ($trip->rev ?? 0), 'keyed' => $keyed, 'ids' => $ids, 'names' => $names,
-            'cands' => $used, 'explicit' => $explicit, 'say' => $say], 3600);
+            'cands' => $used, 'explicit' => $explicit, 'say' => $say, 'maxOps' => $maxOps], 3600);
 
         // NumberGuard: số trong lời La bàn phải có trong bảng dữ kiện hoặc trong chính các bước đề xuất (vd giờ mới 08:30)
         $human = implode('; ', array_column($c['human'], 'text'));

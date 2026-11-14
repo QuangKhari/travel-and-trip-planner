@@ -128,6 +128,8 @@ Route::middleware('throttle:60,1,guide-pages')->group(function () {
     Route::get('/nguon-du-lieu', [DataSourcesController::class, 'index'])->name('data.sources');
 });
 // C4: sitemap.xml và robots.txt động (xóa public/robots.txt vì tệp tĩnh sẽ che route này)
+Route::get('/lich-chuyen-di/{id}/{user}/{sig}.ics', [\App\Http\Controllers\clients\TripCalendarController::class, 'feed'])
+    ->whereNumber(['id', 'user'])->where('sig', '[a-f0-9]{24}')->middleware('throttle:60,1,planner-ics-feed')->name('planner.ics.feed');
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->middleware('throttle:30,1,sitemap')->name('sitemap');
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('robots');
 // Lưu / đã đến / đã thử / đã dự và đồng bộ khay chuyến đi (cần đăng nhập; fetch nhận JSON 401 khi chưa đăng nhập)
@@ -264,6 +266,8 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::get('/len-ke-hoach/{id}/tim', [PlannerController::class, 'search'])->whereNumber('id')->middleware('throttle:90,1,planner-search')->name('planner.search');
     Route::post('/len-ke-hoach/{id}/luu', [PlannerController::class, 'save'])->whereNumber('id')->middleware('throttle:60,1,planner-save')->name('planner.save');
     Route::get('/len-ke-hoach/{id}/do-mang-theo', [PlannerController::class, 'packing'])->whereNumber('id')->middleware('throttle:20,1,planner-packing')->name('planner.packing');
+    Route::post('/dia-diem/bao-sai', [\App\Http\Controllers\clients\PlaceReportController::class, 'store'])->middleware('throttle:10,1,place-report')->name('places.report');
+    Route::get('/len-ke-hoach/{id}/lich.ics', [\App\Http\Controllers\clients\TripCalendarController::class, 'download'])->whereNumber('id')->middleware('throttle:20,1,planner-ics')->name('planner.ics');
     Route::get('/len-ke-hoach/{id}/xuat-pdf', [PlannerController::class, 'exportPdf'])->whereNumber('id')->middleware('throttle:20,1,planner-pdf')->name('planner.pdf');
     // T-36…T-38: chuyến bay, trạng thái chuyến bay, khách sạn (tham khảo, có nhãn khi là dữ liệu thử nghiệm)
     Route::get('/len-ke-hoach/{id}/chuyen-bay', [TravelController::class, 'flights'])->whereNumber('id')->middleware('throttle:20,1,travel-flight')->name('travel.flights');
@@ -458,6 +462,11 @@ Route::prefix('admin')->group(function () {
         Route::post('/profit/{id}/costs/{costId}/actual', [ProfitController::class, 'costStatus'])->whereNumber(['id', 'costId'])->name('admin.profit.cost.actual');
         Route::post('/profit/{id}/costs/{costId}/delete', [ProfitController::class, 'deleteCost'])->whereNumber(['id', 'costId'])->name('admin.profit.cost.delete');
         Route::post('/profit/{id}/rate', [ProfitController::class, 'rate'])->whereNumber('id')->name('admin.profit.rate');
+        Route::get('/planner-analytics', [\App\Http\Controllers\admin\PlannerAnalyticsController::class, 'index'])->name('admin.planner-analytics');
+        Route::get('/place-data', [\App\Http\Controllers\admin\PlaceDataAdminController::class, 'index'])->name('admin.place-data');
+        Route::post('/place-data/reports/{id}', [\App\Http\Controllers\admin\PlaceDataAdminController::class, 'decide'])->whereNumber('id')->name('admin.place-data.decide');
+        Route::post('/place-data/rules', [\App\Http\Controllers\admin\PlaceDataAdminController::class, 'storeRule'])->name('admin.place-data.rules.store');
+        Route::post('/place-data/rules/{id}/delete', [\App\Http\Controllers\admin\PlaceDataAdminController::class, 'deleteRule'])->whereNumber('id')->name('admin.place-data.rules.delete');
         Route::get('/travel-alerts', [\App\Http\Controllers\admin\TravelAlertAdminController::class, 'index'])->name('admin.travel-alerts');
         Route::post('/travel-alerts', [\App\Http\Controllers\admin\TravelAlertAdminController::class, 'store'])->name('admin.travel-alerts.store');
         Route::post('/travel-alerts/{id}', [\App\Http\Controllers\admin\TravelAlertAdminController::class, 'update'])->whereNumber('id')->name('admin.travel-alerts.update');

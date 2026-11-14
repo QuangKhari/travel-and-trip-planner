@@ -254,7 +254,7 @@
                     st.history.push({ role: "user", text: (mentions.length ? mentions.map(function (m) { return "@" + m.name; }).join(" ") + " " : "") + text });
                     st.history.push({ role: "ai", text: plain(r.say) });
                     st.history = st.history.slice(-6);
-                    if (r.kind === "proposal") proposal(bubble, r);
+                    if (r.kind === "proposal" || r.kind === "tripedit") proposal(bubble, r);
                     else if (r.kind === "suggest") suggestView(bubble, r);
                     else if (r.kind === "answer") answer(bubble, r);
                     else reply(bubble, r);
@@ -628,7 +628,7 @@
         bubble.body.appendChild(card);
         var p = P();
         if (p && p.state().rev !== r.baseRev) setStatus(o, "stale");   // lịch đã đổi trong lúc chờ
-        else showGhost(o);
+        else if (r.kind !== "tripedit") showGhost(o);
     }
     function drawProp(o) {
         var r = o.data, card = o.card;
@@ -676,7 +676,8 @@
         var dayed = function (x) { return (x.day && !/^Ngày \d/.test(x.text) ? "Ngày " + x.day + " · " : "") + x.text; };
         var line = function (cls, k, t) { var p = el("p", "ai-rc ai-rc--" + cls); p.appendChild(el("b", null, k)); p.appendChild(el("span", null, t)); rec.appendChild(p); };
         (rc.resolved || []).forEach(function (x) { line("ok", "✓", "Hết: " + dayed(x)); });
-        line("ok", "✓", "Không tạo lỗi cứng mới (trùng giờ, đóng cửa, không kịp di chuyển)");
+        if (!rc.newHard) line("ok", "✓", "Không tạo lỗi cứng mới (trùng giờ, đóng cửa, không kịp di chuyển)");
+        else line("warn", "!", "Sẽ có " + rc.newHard + " lỗi cứng mới (bạn ra lệnh đích danh nên La bàn vẫn cho áp dụng; sửa sau bằng nút “Sửa” ở Sức khỏe chuyến đi):");
         (rc.warnings || []).forEach(function (x) { line("warn", "!", dayed(x)); });
         if (rc.checked) line("mut", "·", "Đã kiểm tra: " + rc.checked.join(", "));
         b.appendChild(rec);
@@ -686,7 +687,8 @@
         if (o.status === "pending") {
             f.appendChild(button("tp-btn ai-apply", "Áp dụng", function () { apply(o); }));
             f.appendChild(button("tp-mini", "Bỏ qua", function () { setStatus(o, "skipped"); }));
-            if (small()) f.appendChild(button("tp-mini ai-ghosttoggle", "Xem trên lịch", function () { setOpen(false); o.scrolled = false; showGhost(o); }));
+            if (r.kind === "tripedit") { /* thay đổi cấp chuyến: không có bản nháp trên lịch */ }
+            else if (small()) f.appendChild(button("tp-mini ai-ghosttoggle", "Xem trên lịch", function () { setOpen(false); o.scrolled = false; showGhost(o); }));
             else f.appendChild(button("tp-mini ai-ghosttoggle", document.documentElement.classList.contains("ai-ghost-off") ? "Hiện trên lịch" : "Ẩn khỏi lịch", function (e) {
                 var off = document.documentElement.classList.toggle("ai-ghost-off");
                 e.target.textContent = off ? "Hiện trên lịch" : "Ẩn khỏi lịch";
@@ -707,14 +709,16 @@
         o.status = s;
         if (s !== "pending") clearGhost();
         drawProp(o);
-        if (prev === "pending" && (s === "applied" || s === "skipped")) post(cfg.feedbackUrl, { proposal: o.id, applied: s === "applied" }).catch(function () {});
+        if (prev === "pending" && o.id && (s === "applied" || s === "skipped")) post(cfg.feedbackUrl, { proposal: o.id, applied: s === "applied" }).catch(function () {});
     }
     function apply(o, retried) {
         var p = P();
         if (!p || o.status !== "pending") return;
         st.applying = true;   // applyAi -> commit -> tp:dirty: không được coi là "lịch đổi ngoài ý muốn"
         var res;
-        try { res = p.applyAi({ changes: o.data.changes, baseRev: o.data.baseRev }); } finally { st.applying = false; }
+        try {
+            res = o.data.kind === "tripedit" ? p.applyTrip({ trip: o.data.trip, baseRev: o.data.baseRev }) : p.applyAi({ changes: o.data.changes, baseRev: o.data.baseRev });
+        } finally { st.applying = false; }
         if (res.ok) { setStatus(o, "applied"); return; }
         if (res.reason === "dirty" && !retried) {
             p.saveNow();

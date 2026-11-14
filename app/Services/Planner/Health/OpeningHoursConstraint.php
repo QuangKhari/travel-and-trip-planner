@@ -31,7 +31,7 @@ final class OpeningHoursConstraint implements Constraint
                 $open = OpeningHours::describe($r['item']['hours'] ?? null, $d->dow);
                 $out[] = match ($r['hours']) {
                     'closed' => ['level' => 'bad', 'code' => 'hours.closed', 'day' => $d->day, 'index' => $i, 'action' => 'hours',
-                        'text' => 'Ngày ' . $d->day . ': ' . $name . ' đóng cửa hôm đó.'],
+                        'text' => 'Ngày ' . $d->day . ': ' . $name . ' đóng cửa hôm đó' . (!empty($r['item']['hoursNote']) ? ' (' . $r['item']['hoursNote'] . ')' : '') . '.'],
                     'early' => ['level' => 'warn', 'code' => 'hours.early', 'day' => $d->day, 'index' => $i, 'action' => 'hours',
                         'text' => 'Ngày ' . $d->day . ': tới ' . $name . ' lúc ' . DaySchedule::hhmm($r['start']) . ' nhưng giờ mở cửa ' . $open . '.'],
                     default => ['level' => 'warn', 'code' => 'hours.late', 'day' => $d->day, 'index' => $i, 'action' => 'hours',

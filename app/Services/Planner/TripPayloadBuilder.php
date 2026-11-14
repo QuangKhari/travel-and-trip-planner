@@ -51,8 +51,20 @@ class TripPayloadBuilder
                 'items' => [], 'legs' => [], 'km' => 0, 'minutes' => 0, 'cost' => 0.0];
         }
         $unassigned = [];
+        // giờ mở cửa theo NGÀY cụ thể: ngày lễ, đóng cửa tạm thời, giờ theo mùa (chỉ khi biết ngày đi)
+        $hrRules = $start ? $this->hours->rulesFor(array_map(fn($x) => ['type' => $x['type'], 'refId' => $x['refId'] ?? null,
+            'destinationId' => $x['destinationId'] ?? (!empty($trip->destinationId) ? (int) $trip->destinationId : null)], $items),
+            $start->format('Y-m-d'), $start->modify('+' . max(0, $days - 1) . ' days')->format('Y-m-d')) : [];
         foreach ($items as $it) {
             if ($it['day'] !== null && isset($byDay[$it['day']])) {
+                if ($byDay[$it['day']]['date'] !== null && in_array($it['type'], OpeningHours::TYPES, true)) {
+                    [$eff, $why] = OpeningHours::effective($it['hours'] ?? null, $it['type'], isset($it['refId']) ? (int) $it['refId'] : null,
+                        $it['destinationId'] ?? (!empty($trip->destinationId) ? (int) $trip->destinationId : null), $byDay[$it['day']]['date'], $hrRules);
+                    if ($why !== null) {
+                        $it['hours'] = $eff;
+                        $it['hoursNote'] = $why;
+                    }
+                }
                 $byDay[$it['day']]['items'][] = $it;
             } else {
                 $unassigned[] = $it;

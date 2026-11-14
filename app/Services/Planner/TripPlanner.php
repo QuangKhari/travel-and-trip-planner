@@ -1036,6 +1036,7 @@ class TripPlanner
             'costType' => $it['costType'] ?? null, 'locked' => !empty($it['locked']),
             'legMode' => $it['legMode'] ?? null, 'visitedAt' => $it['visitedAt'] ?? null, 'skippedAt' => $it['skippedAt'] ?? null,
             'hours' => $it['hours'] ?? null,   // giờ mở cửa theo thứ (OpeningHours); null = chưa biết
+            'hoursNote' => $it['hoursNote'] ?? null,   // ngày lễ / đóng tạm thời / giờ theo mùa của đúng ngày đang xếp
         ];
     }
 

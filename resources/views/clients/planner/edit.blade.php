@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ux.css') }}?v=1">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/nature-luxury-planner.css') }}?v=bl20261104">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-group.css') }}?v=4">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-group.css') }}?v=5">
 
 {{-- /len-ke-hoach/{id}. Biến: $payload (TripPlanner::payload), $client (dữ liệu cho planner.js), $role, $members, $tourFit.
      Bố cục "Timeline + Bản đồ" (tham khảo Wanderlog: lịch theo ngày cạnh bản đồ; Roadtrippers: bản đồ lớn, tuyến nối các điểm, thêm điểm dừng theo danh mục).
@@ -65,6 +65,11 @@
                     @endif
                     <a class="tpx-menu__i" role="menuitem" href="{{ route('support.index', ['trip' => $t['id']]) }}#tao-yeu-cau"><i class="fas fa-headset" aria-hidden="true"></i><span>Nhờ nhân viên tư vấn chuyến này</span></a>
                     <button type="button" class="tpx-menu__i" role="menuitem" id="tpPdf" data-url="{{ route('planner.pdf', ['id' => $t['id']]) }}" data-lib="{{ asset('admin/vendors/pdfmake/build') }}"><i class="fas fa-file-pdf" aria-hidden="true"></i><span>Tải PDF lịch trình và đơn tour</span></button>
+                    @if (!empty($t['startDate']) && session('userId'))
+                        {{-- Lịch điện thoại: tải .ics một lần, hoặc chép đường dẫn đăng ký để lịch tự cập nhật khi chuyến đổi --}}
+                        <a class="tpx-menu__i" role="menuitem" href="{{ route('planner.ics', ['id' => $t['id']]) }}"><i class="far fa-calendar-plus" aria-hidden="true"></i><span>Tải lịch (.ics) cho Google / Apple Calendar</span></a>
+                        <button type="button" class="tpx-menu__i" role="menuitem" id="tpIcsCopy" data-feed="{{ \App\Services\Planner\TripCalendar::feedUrl((int) $t['id'], (int) session('userId')) }}"><i class="fas fa-sync-alt" aria-hidden="true"></i><span>Chép đường dẫn lịch tự cập nhật</span></button>
+                    @endif
                     <button type="button" class="tpx-menu__i" role="menuitem" id="tpPrint"><i class="fas fa-print" aria-hidden="true"></i><span>In trang</span></button>
                     <form method="POST" action="{{ route('planner.duplicate', ['id' => $t['id']]) }}" id="tpDupForm">
                         @csrf
@@ -648,13 +653,13 @@
 <script src="{{ asset('clients/assets/js/planner-save.js') }}?v=3"></script>
 <script src="{{ asset('clients/assets/js/planner-resolve.js') }}?v=2"></script>
 <script src="{{ asset('clients/assets/js/planner-map.js') }}?v=5"></script>
-<script src="{{ asset('clients/assets/js/planner.js') }}?v=29" defer></script>
+<script src="{{ asset('clients/assets/js/planner.js') }}?v=30" defer></script>
 <script src="{{ asset('clients/assets/js/planner-extras.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-travel.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-share.js') }}?v=1" defer></script>
 <script src="{{ asset('clients/assets/js/planner-expenses.js') }}?v=1" defer></script>
 <script src="{{ asset('clients/assets/js/planner-bookings.js') }}?v=3" defer></script>
-<script src="{{ asset('clients/assets/js/planner-watch.js') }}?v=3" defer></script>
+<script src="{{ asset('clients/assets/js/planner-watch.js') }}?v=4" defer></script>
 @if (!empty($client['historyUrl']))<script src="{{ asset('clients/assets/js/planner-history.js') }}?v=1" defer></script>@endif
 @if ($role !== 'view')<script src="{{ asset('clients/assets/js/ai-feedback.js') }}?v=2" data-url="{{ route('planner.ai.rate') }}" data-csrf="{{ csrf_token() }}" data-trip="{{ $client['trip']['id'] ?? '' }}" defer></script>@endif
 <script type="application/json" id="aiData">{!! json_encode(['explainUrl' => route('planner.ai.explain', ['id' => $t['id']]), 'csrf' => csrf_token(), 'on' => $aiExplainOn,
@@ -665,7 +670,7 @@
 <script src="{{ asset('clients/assets/js/planner-ai-explain.js') }}?v=1" defer></script>
 <script src="{{ asset('clients/assets/js/planner-ux.js') }}?v=1" defer></script>
 @if ($aiCopilotOn)
-    <script src="{{ asset('clients/assets/js/planner-ai-copilot.js') }}?v=4" defer></script>
+    <script src="{{ asset('clients/assets/js/planner-ai-copilot.js') }}?v=5" defer></script>
 @endif
 
 @include('clients.blocks.footer')

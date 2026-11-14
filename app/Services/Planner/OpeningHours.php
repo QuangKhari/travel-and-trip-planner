@@ -63,6 +63,87 @@ final class OpeningHours
         return $out;
     }
 
+    /**
+     * Quy tắc theo ngày (đóng tạm thời, giờ theo mùa) cho các mục và điểm đến trong khoảng [from, to].
+     * @param list<array{type:string,refId:?int,destinationId?:?int}> $items
+     * @return list<object>
+     */
+    public function rulesFor(array $items, string $from, string $to): array
+    {
+        if (!Schema::hasTable('tbl_hours_rules')) {
+            return [];
+        }
+        $refs = [];
+        $dests = [];
+        foreach ($items as $it) {
+            if (in_array($it['type'] ?? '', self::TYPES, true) && !empty($it['refId'])) {
+                $refs[$it['type']][] = (int) $it['refId'];
+            }
+            if (!empty($it['destinationId'])) {
+                $dests[] = (int) $it['destinationId'];
+            }
+        }
+        if (!$refs && !$dests) {
+            return [];
+        }
+
+        return DB::table('tbl_hours_rules')->where(function ($q) use ($refs, $dests) {
+            foreach ($refs as $type => $ids) {
+                $q->orWhere(fn($w) => $w->where('refType', $type)->whereIn('refId', array_unique($ids)));
+            }
+            if ($dests) {
+                $q->orWhere(fn($w) => $w->whereNull('refType')->whereIn('destinationId', array_unique($dests)));
+            }
+        })->where(fn($q) => $q->where('yearly', 1)->orWhere(fn($w) => $w->where('dateFrom', '<=', $to)->where('dateTo', '>=', $from)))
+            ->orderBy('ruleId')->get()->all();
+    }
+
+    /**
+     * Giờ mở cửa THỰC của một mục vào một ngày cụ thể: giờ theo thứ, rồi ngày lễ (khóa "8"), rồi quy tắc của điểm đến,
+     * rồi quy tắc riêng của nơi đó (cụ thể thắng chung). Chỉ thay giờ của đúng thứ của ngày đó.
+     * @param ?array<string,list<array{0:int,1:int}>> $hours
+     * @param list<object> $rules  từ rulesFor()
+     * @return array{0:?array,1:?string} [giờ đã áp dụng, lý do khác thường (null = như mọi tuần)]
+     */
+    public static function effective(?array $hours, string $type, ?int $refId, ?int $destId, string $date, array $rules): array
+    {
+        $dow = (string) (int) date('N', strtotime($date));
+        $why = null;
+        if ($hours !== null && array_key_exists('8', $hours) && ($h = Holidays::name($date))) {
+            $hours[$dow] = $hours['8'];
+            $why = $h . ($hours['8'] ? ': giờ ngày lễ' : ': nghỉ lễ');
+        }
+        $md = substr($date, 5, 5);
+        $hit = function (object $r) use ($date, $md): bool {
+            if (!empty($r->yearly)) {
+                $a = substr((string) $r->dateFrom, 5, 5);
+                $b = substr((string) $r->dateTo, 5, 5);
+
+                return $a <= $b ? ($md >= $a && $md <= $b) : ($md >= $a || $md <= $b);   // khoảng vắt qua năm mới
+            }
+
+            return $date >= substr((string) $r->dateFrom, 0, 10) && $date <= substr((string) $r->dateTo, 0, 10);
+        };
+        $apply = function (object $r) use (&$hours, &$why, $dow): void {
+            $hours ??= [];
+            $hours[$dow] = $r->kind === 'closed' ? [] : [[(int) $r->openMin, (int) $r->closeMin]];
+            $why = ($r->kind === 'closed' ? 'Đóng cửa tạm thời' : 'Giờ theo mùa ' . sprintf('%02d:%02d–%02d:%02d', intdiv((int) $r->openMin, 60), (int) $r->openMin % 60, intdiv((int) $r->closeMin, 60), (int) $r->closeMin % 60))
+                . ($r->note ? ': ' . $r->note : '');
+        };
+        foreach ($rules as $r) {
+            if ($r->refType === null && $destId !== null && (int) $r->destinationId === $destId && $hit($r)) {
+                $apply($r);
+            }
+        }
+        foreach ($rules as $r) {
+            if ($r->refType === $type && $refId !== null && (int) $r->refId === $refId && $hit($r)) {
+                $apply($r);
+            }
+        }
+
+        return [$hours, $why];
+    }
+
     /** Ghi đè giờ mở cửa của một mục từ chuỗi kiểu OpenStreetMap. @return int số dòng đã ghi */
     public function store(string $type, int $refId, string $osm, string $source = 'manual'): int
     {
@@ -110,6 +191,10 @@ final class OpeningHours
                 $days = [1, 2, 3, 4, 5, 6, 7];
             } else {
                 foreach (preg_split('/\s*,\s*/', strtolower($spec)) as $part) {
+                    if ($part === 'ph') {   // ngày lễ: lưu ở dayOfWeek = 8, áp dụng theo Holidays khi biết ngày cụ thể
+                        $days[] = 8;
+                        continue;
+                    }
                     $ab = explode('-', $part);
                     $a = self::DAYS[$ab[0]] ?? null;
                     $b = isset($ab[1]) ? (self::DAYS[$ab[1]] ?? null) : $a;

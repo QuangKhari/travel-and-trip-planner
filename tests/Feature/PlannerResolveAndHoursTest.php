@@ -51,7 +51,7 @@ class PlannerResolveAndHoursTest extends TestCase
         $this->assertCount(7, OpeningHours::parseOsm('24/7'));
         $this->assertSame([[1080, 1440]], OpeningHours::parseOsm('Fr-Mo 18:00-02:00')['5']);   // qua nửa đêm: cắt tại 24:00, khoảng ngày vòng Fr->Mo
         $this->assertArrayHasKey('1', OpeningHours::parseOsm('Fr-Mo 18:00-02:00'));
-        $this->assertSame([], OpeningHours::parseOsm('PH off; Jan 10:00-12:00'));                  // phần không hiểu bị bỏ
+        $this->assertSame(['8' => []], OpeningHours::parseOsm('PH off; Jan 10:00-12:00'));        // PH = ngày lễ (khóa 8); phần không hiểu (Jan) bị bỏ
         $this->assertSame('closed', OpeningHours::check($h, 1, 600, 660));
         $this->assertSame('early', OpeningHours::check($h, 2, 450, 540));
         $this->assertSame('late', OpeningHours::check($h, 2, 660, 720));                         // giờ nghỉ trưa
