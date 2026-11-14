@@ -165,7 +165,11 @@ class TripPayloadBuilder
         // Tuần 12: "vì sao hợp" cho từng mục
         $ins = app(ItemInsights::class)->forTrip($trip, $items);
         $hours = $this->hours->forItems($items);
+        $facts = app(PlaceFacts::class)->forPlaces(array_map(fn($x) => (int) $x['refId'], array_filter($items, fn($x) => $x['type'] === 'place' && !empty($x['refId']))));
         foreach ($items as &$itx) {
+            if ($itx['type'] === 'place' && isset($facts[(int) ($itx['refId'] ?? 0)])) {
+                $itx['facts'] = $facts[(int) $itx['refId']];   // nguồn + ngày kiểm tra giờ / giá (quy trình dữ liệu)
+            }
             $k = $itx['type'] . ':' . ($itx['refId'] ?? 0);
             $x = $ins[$k] ?? null;
             $itx['fit'] = $x['fit'] ?? [];

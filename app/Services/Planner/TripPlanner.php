@@ -567,6 +567,7 @@ class TripPlanner
         $valid = $this->resolve($refs);
         $prevExternal = DB::table('tbl_trip_items')->where('tripId', $tripId)->where('source', 'search')->pluck('label')->map(fn($l) => mb_strtolower((string) $l))->all();
 
+        $oldRows = PlaceSignals::ready() ? DB::table('tbl_trip_items')->where('tripId', $tripId)->get()->all() : [];
         $oldStart = !empty($acc['trip']->startDate) ? substr((string) $acc['trip']->startDate, 0, 10) : null;
         $newStart = !empty($f['startDate']) ? substr((string) $f['startDate'], 0, 10) : null;
         DB::transaction(function () use ($tripId, $f, $items, $days, $valid, $userId, $oldStart, $newStart) {
@@ -648,6 +649,13 @@ class TripPlanner
             // Lịch sử phiên bản: chụp lại bản vừa lưu (cùng transaction với lần tăng rev)
             app(TripRevisions::class)->record($tripId, isset($f['rev']) ? (int) $f['rev'] : null, $userId, 'save', $rows);
         });
+
+        // Học từ hành vi: thêm / xóa / đã ghé / bỏ qua (không bao giờ làm hỏng việc lưu)
+        try {
+            app(PlaceSignals::class)->recordSave($userId, $tripId, $oldRows, $items);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         // Địa điểm người dùng thêm từ ngoài kho (tìm trên bản đồ) = nhu cầu mà kho Travela chưa có: ghi vào sổ cho biên tập viên.
         // Chỉ ghi mục MỚI của lần lưu này (lưu lại nhiều lần không đếm trùng) và không bao giờ làm hỏng việc lưu chuyến.
@@ -1036,7 +1044,8 @@ class TripPlanner
             'costType' => $it['costType'] ?? null, 'locked' => !empty($it['locked']),
             'legMode' => $it['legMode'] ?? null, 'visitedAt' => $it['visitedAt'] ?? null, 'skippedAt' => $it['skippedAt'] ?? null,
             'hours' => $it['hours'] ?? null,   // giờ mở cửa theo thứ (OpeningHours); null = chưa biết
-            'hoursNote' => $it['hoursNote'] ?? null,   // ngày lễ / đóng tạm thời / giờ theo mùa của đúng ngày đang xếp
+            'hoursNote' => $it['hoursNote'] ?? null,
+            'facts' => $it['facts'] ?? null,   // ngày lễ / đóng tạm thời / giờ theo mùa của đúng ngày đang xếp
         ];
     }
 

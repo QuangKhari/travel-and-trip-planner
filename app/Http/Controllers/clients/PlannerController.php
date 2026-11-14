@@ -375,7 +375,7 @@ class PlannerController extends Controller
      */
     public function preview(Request $request, PlannerService $service)
     {
-        $data = self::generateInput($request->validate($this->generateRules()));
+        $data = self::generateInput($request->validate($this->generateRules())) + ['userId' => $this->uid()];
         $result = $service->generate($data);   // không truyền $ignoreGate: điểm đến thiếu dữ liệu bị chặn
         if (empty($result['ok'])) {
             return redirect()->route('planner.suggest', $request->query())->withErrors(['generate' => $result['message'] ?? 'Không thể tạo lịch trình.']);
@@ -397,7 +397,7 @@ class PlannerController extends Controller
      */
     public function compare(Request $request, PlannerService $service): JsonResponse
     {
-        $data = $this->generateInput($request->validate($this->generateRules()));
+        $data = $this->generateInput($request->validate($this->generateRules())) + ['userId' => $this->uid()];
         $out = [];
         foreach (['relaxed' => 'Đi chậm', 'packed' => 'Đi nhiều'] as $pace => $label) {
             $r = $service->generate(['pace' => $pace] + $data);
@@ -454,7 +454,7 @@ class PlannerController extends Controller
     /** POST /len-ke-hoach/tao-tu-dong : lưu lịch vừa xem trước thành chuyến (tạo lại từ cùng yêu cầu). */
     public function generate(Request $request, PlannerService $service)
     {
-        $data = self::generateInput($request->validate($this->generateRules()));
+        $data = self::generateInput($request->validate($this->generateRules())) + ['userId' => $this->uid()];
         $result = $service->generate($data);
         if (empty($result['ok'])) {
             return redirect()->route('planner.suggest')->withInput()->withErrors(['generate' => $result['message'] ?? 'Không thể tạo lịch trình.']);
@@ -557,6 +557,8 @@ class PlannerController extends Controller
             'revUrl' => route('planner.revision', ['id' => $id]),
             'historyUrl' => \App\Services\Planner\TripRevisions::ready() ? route('planner.history', ['id' => $id]) : null,
             'reportUrl' => \App\Services\Planner\PlaceReports::ready() ? route('places.report') : null,
+            'socialUrl' => \Illuminate\Support\Facades\Schema::hasTable('tbl_trip_comments') ? route('planner.social', ['id' => $id]) : null,
+            'reviewUrl' => \Illuminate\Support\Facades\Schema::hasTable('tbl_place_reviews') ? route('planner.reviews', ['id' => $id]) : null,
             'lockUrl' => route('planner.lock', ['id' => $id]),
             'membersUrl' => route('planner.members', ['id' => $id]),
             'me' => $uid,

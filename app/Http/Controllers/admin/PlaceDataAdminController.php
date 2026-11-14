@@ -17,7 +17,7 @@ class PlaceDataAdminController extends Controller
     public function index(Request $request)
     {
         $ready = PlaceReports::ready() && Schema::hasTable('tbl_hours_rules');
-        $tab = in_array($request->query('tab'), ['reports', 'rules'], true) ? $request->query('tab') : 'reports';
+        $tab = in_array($request->query('tab'), ['reports', 'rules', 'verify'], true) ? $request->query('tab') : 'reports';
         $status = in_array($request->query('status'), ['open', 'accepted', 'rejected'], true) ? $request->query('status') : 'open';
         $reports = collect();
         $rules = collect();
@@ -39,7 +39,12 @@ class PlaceDataAdminController extends Controller
             }
         }
 
-        return view('admin.place-data.index', ['title' => 'Dữ liệu địa điểm', 'ready' => $ready, 'tab' => $tab, 'status' => $status,
+        $facts = app(\App\Services\Planner\PlaceFacts::class);
+        $dest = (int) $request->query('dest') ?: null;
+        $queue = $ready && $tab === 'verify' ? $facts->queue($dest) : [];
+        $counts['verify'] = $ready ? $facts->count() : 0;
+
+        return view('admin.place-data.index', ['title' => 'Dữ liệu địa điểm', 'ready' => $ready, 'tab' => $tab, 'status' => $status, 'queue' => $queue, 'dest' => $dest,
             'reports' => $reports, 'rules' => $rules, 'counts' => $counts, 'kinds' => PlaceReports::KINDS,
             'destinations' => DB::table('tbl_destinations')->where('isActive', 1)->orderBy('name')->get(['destinationId', 'name'])]);
     }
@@ -96,6 +101,24 @@ class PlaceDataAdminController extends Controller
         AuditLog::record('hours_rule.create', 'hours_rule', $id, 'Thêm giờ đặc biệt #' . $id);
 
         return redirect()->route('admin.place-data', ['tab' => 'rules'])->with('success', 'Đã thêm. Bộ xếp lịch và chuông theo dõi chuyến dùng quy tắc này ngay.');
+    }
+
+    /** "Cần kiểm tra": xác nhận dữ kiện vẫn đúng hoặc sửa giờ / giá, ghi nguồn + ngày kiểm tra */
+    public function verify(Request $request, int $id)
+    {
+        $v = $request->validate([
+            'hours' => 'nullable|string|max:255', 'priceMin' => 'nullable|integer|min:0|max:100000000', 'priceMax' => 'nullable|integer|min:0|max:100000000',
+            'source' => 'nullable|string|max:120', 'url' => 'nullable|url|max:255',
+        ], ['url.url' => 'Đường dẫn nguồn phải đầy đủ (https://...).']);
+        abort_unless(DB::table('tbl_external_places')->where('placeId', $id)->exists(), 404);
+        if (!empty($v['hours']) && !\App\Services\Planner\OpeningHours::parseOsm($v['hours'])) {
+            return back()->withErrors(['hours' => 'Giờ chưa đúng dạng, ví dụ "Mo-Su 08:00-17:00; Mo off; PH off".']);
+        }
+        app(\App\Services\Planner\PlaceFacts::class)->verify($id, $v['hours'] ?? null, isset($v['priceMin']) ? (int) $v['priceMin'] : null,
+            isset($v['priceMax']) ? (int) $v['priceMax'] : null, $v['source'] ?? null, $v['url'] ?? null, (int) session('adminId'));
+        AuditLog::record('place_facts.verify', 'place', $id, 'Kiểm tra dữ kiện địa điểm #' . $id);
+
+        return back()->with('success', 'Đã ghi ngày kiểm tra cho #' . $id . '. Nơi này rời hàng chờ trong ' . \App\Services\Planner\PlaceFacts::STALE_DAYS . ' ngày.');
     }
 
     public function deleteRule(int $id)

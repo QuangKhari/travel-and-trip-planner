@@ -432,6 +432,31 @@ final class PlannerEngine
             }
         }
 
+        // Học từ hành vi (PlaceSignals): sở thích riêng theo nhóm loại nơi + tỷ lệ người đi trước giữ / ghé nơi này
+        $grp = $c['type'] === 'place' ? ($c['group'] ?? 'see') : $c['type'];
+        $pf = $ctx['profile'][$grp] ?? null;
+        if ($pf !== null && abs($pf) >= 0.15) {
+            $score += ($w['profile'] ?? 8) * $pf;
+            if ($pf >= 0.3) {
+                $why[] = 'Bạn hay giữ và ghé những nơi kiểu này';
+            }
+        }
+        $st = $ctx['placeStats'][$c['key']] ?? null;
+        if ($st) {
+            $score += ($w['crowd_keep'] ?? 6) * (($st['keep'] - 0.5) * 2);
+            if ($st['visit'] !== null && $st['visit'] >= 0.6) {
+                $why[] = (int) round($st['visit'] * 100) . '% người đã xếp nơi này thật sự ghé';
+            }
+        }
+
+        $rv = $ctx['reviews'][$c['key']] ?? null;
+        if ($rv) {
+            $score += ($w['review'] ?? 6) * (($rv['avg'] - 3) / 2);
+            if ($rv['avg'] >= 4) {
+                $why[] = '★' . str_replace('.', ',', (string) $rv['avg']) . ' từ ' . $rv['n'] . ' người đi Travela đã ghé';
+            }
+        }
+
         // T-20: dự báo theo ngày (nếu có) thay số liệu khí hậu theo tháng
         $fc = $this->forecastRainShare($ctx, $req);
         $rainy = $fc !== null ? $fc >= $this->cfg['rainy_share']

@@ -36,7 +36,7 @@ final class PlannerAnalytics
         $ai = [];
         if (Schema::hasTable('tbl_ai_runs')) {
             foreach (DB::table('tbl_ai_runs')->where('createdAt', '>=', $since)->select('feature', 'engine',
-                DB::raw('count(*) n'), DB::raw("sum(outcome = 'proposed') proposed"), DB::raw('sum(applied = 1) applied'), DB::raw('sum(applied = 0) skipped'),
+                DB::raw('count(*) n'), DB::raw("sum(outcome in ('proposed','applied','skipped')) proposed"), DB::raw("sum(outcome = 'applied') applied"), DB::raw("sum(outcome = 'skipped') skipped"),
                 DB::raw("sum(outcome in ('error','fallback')) failed"), DB::raw('avg(latencyMs) ms'))->groupBy('feature', 'engine')->get() as $r) {
                 $ai[] = ['feature' => $r->feature, 'engine' => $r->engine, 'n' => (int) $r->n, 'proposed' => (int) $r->proposed, 'applied' => (int) $r->applied,
                     'skipped' => (int) $r->skipped, 'accept' => ($r->applied + $r->skipped) ? round(100 * $r->applied / ($r->applied + $r->skipped)) : null,

@@ -103,3 +103,44 @@
         else done(false);
     });
 })();
+
+/* PWA: đăng ký service worker (mở lại chuyến khi mất mạng) + bật / tắt thông báo đẩy trên thiết bị này. */
+(function () {
+    "use strict";
+    if (!("serviceWorker" in navigator)) return;
+    var reg = navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(function () { return null; });
+    var b = document.getElementById("tpPush");
+    if (!b || !("PushManager" in window) || !("Notification" in window)) return;
+    var cfgEl = document.getElementById("tpData"), csrf = "";
+    try { csrf = JSON.parse(cfgEl ? cfgEl.textContent : "{}").csrf || ""; } catch (e) { /* bỏ qua */ }
+    var span = b.querySelector("span");
+    function key(s) {
+        var p = "=".repeat((4 - s.length % 4) % 4), raw = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")), out = new Uint8Array(raw.length);
+        for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+        return out;
+    }
+    function post(url, body) {
+        return fetch(url, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", "Accept": "application/json", "X-CSRF-TOKEN": csrf, "X-Requested-With": "XMLHttpRequest" }, body: JSON.stringify(body) });
+    }
+    function show(on) {
+        b.hidden = false;
+        b.dataset.on = on ? "1" : "";
+        span.textContent = on ? "Đang bật thông báo trên thiết bị này · tắt" : "Báo cả khi không mở trang (thông báo trên thiết bị này)";
+    }
+    reg.then(function (r) {
+        if (!r) return;
+        if (Notification.permission === "denied") { b.hidden = false; b.disabled = true; span.textContent = "Trình duyệt đang chặn thông báo của Travela"; return; }
+        r.pushManager.getSubscription().then(function (s) { show(!!s); });
+        b.addEventListener("click", function () {
+            b.disabled = true;
+            r.pushManager.getSubscription().then(function (s) {
+                if (s) return s.unsubscribe().then(function () { return post(b.dataset.unsub, { endpoint: s.endpoint }); }).then(function () { show(false); });
+                return Notification.requestPermission().then(function (p) {
+                    if (p !== "granted") { show(false); return; }
+                    return r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key(b.dataset.key) })
+                        .then(function (n) { return post(b.dataset.sub, n.toJSON()); }).then(function () { show(true); });
+                });
+            }).catch(function () { span.textContent = "Chưa bật được thông báo trên trình duyệt này."; }).then(function () { b.disabled = false; });
+        });
+    });
+})();

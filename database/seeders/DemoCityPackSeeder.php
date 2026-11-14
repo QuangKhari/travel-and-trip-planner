@@ -31,6 +31,9 @@ class DemoCityPackSeeder extends Seeder
             foreach ($rows as $r) {
                 $x = array_combine($pack['cols'], $r);
                 $fields = $extra ? ['durationMinutes' => $x['dur'], 'priceMin' => $x['pmin'], 'priceMax' => $x['pmax'], 'indoor' => $x['indoor']] : [];
+                if (\App\Services\Planner\PlaceFacts::ready()) {
+                    $fields['factsSource'] = 'Gói dữ liệu demo (số tham khảo)';   // ngày kiểm tra để trống: admin xác minh ở "Dữ liệu địa điểm → Cần kiểm tra"
+                }
                 $row = DB::table('tbl_external_places')->where('destinationId', (int) $destId)->where('name', $x['name'])->first();
                 if ($row) {
                     // chỉ điền chỗ trống: dữ liệu admin đã nhập / đã duyệt được giữ nguyên

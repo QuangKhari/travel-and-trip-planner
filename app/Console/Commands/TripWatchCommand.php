@@ -41,6 +41,10 @@ class TripWatchCommand extends Command
             if (!$this->option('no-mail') && $watch->shouldMail($trip, $res)) {
                 $nMail += $watch->mailAlerts($trip, $res);
             }
+            // thông báo đẩy (PWA): chỉ khi có cảnh báo MỚI, chung nhịp với email (không gửi lặp mỗi 3 giờ)
+            if ($res['new'] && \App\Services\Push\WebPush::enabled() && collect($res['new'])->contains(fn($x) => ($x['tone'] ?? '') === 'bad')) {
+                app(\App\Services\Push\WebPush::class)->ping(array_column($watch->recipients($trip), 'userId'));
+            }
             if ($res['new'] || $res['resolved']) {
                 $this->line("#{$trip->tripId} {$trip->title}: +" . count($res['new']) . ' mới, ' . count($res['resolved']) . ' đã ổn');
             }

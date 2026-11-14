@@ -336,6 +336,14 @@ final class CopilotService
         }
         try {
             DB::table('tbl_ai_runs')->where('runId', (int) $saved['runId'])->update(['outcome' => $applied ? 'applied' : 'skipped']);
+            // học từ hành vi: nơi La bàn đề xuất thêm / thay vào được áp dụng hay bị bỏ qua
+            $with = [];
+            foreach (array_keys((array) ($saved['cands'] ?? [])) as $k) {
+                if (preg_match('/^c:(\w+):(\d+)$/', (string) $k, $m)) {
+                    $with[] = ['with' => ['type' => $m[1], 'refId' => (int) $m[2]]];
+                }
+            }
+            app(\App\Services\Planner\PlaceSignals::class)->recordProposal(isset($trip->userId) ? (int) session('userId') ?: (int) $trip->userId : null, (int) $trip->tripId, $with, $applied);
         } catch (Throwable) {
             // log là phụ
         }

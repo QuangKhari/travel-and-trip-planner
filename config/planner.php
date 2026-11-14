@@ -169,6 +169,9 @@ return [
         'hot_outdoor_hard' => -6,   // tháng nắng nóng: trừ mục ngoài trời khó
         'avoid_month_outdoor' => -4,
         'meal_has_place' => 3,      // bữa ăn: quán có tọa độ thật được ưu tiên hơn món chưa gắn quán (không tính được đường đi)
+        'profile' => 8,             // học từ hành vi: × điểm sở thích riêng theo nhóm loại nơi trong [-1, 1] (PlaceSignals::profile)
+        'review' => 6,              // đánh giá sau chuyến: × (sao TB − 3)/2, chỉ khi nơi đó có ≥ 3 lượt
+        'crowd_keep' => 6,          // học từ hành vi: × (tỷ lệ giữ/ghé của mọi người − 0,5)·2, chỉ khi nơi đó có ≥ 5 tín hiệu
     ],
     'hours_max_wait_min' => 90,     // tới sớm hơn giờ mở cửa quá chừng này phút thì thử xếp mục khác trước
     'rainy_share' => 0.4,           // tỷ lệ ngày mưa từ mức này là "mưa nhiều"

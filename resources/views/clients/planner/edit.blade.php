@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ux.css') }}?v=1">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/nature-luxury-planner.css') }}?v=bl20261104">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-group.css') }}?v=5">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-group.css') }}?v=7">
 
 {{-- /len-ke-hoach/{id}. Biến: $payload (TripPlanner::payload), $client (dữ liệu cho planner.js), $role, $members, $tourFit.
      Bố cục "Timeline + Bản đồ" (tham khảo Wanderlog: lịch theo ngày cạnh bản đồ; Roadtrippers: bản đồ lớn, tuyến nối các điểm, thêm điểm dừng theo danh mục).
@@ -47,6 +47,10 @@
                             <button type="button" class="tp-mini" id="tpWatchNow"><i class="fas fa-sync-alt" aria-hidden="true"></i> Kiểm tra ngay</button></div>
                         <p class="tgw__sub">Dự báo theo giờ, giờ mở cửa, cảnh báo điểm đến và giờ bay được kiểm tra lại mỗi 3 giờ khi chuyến sắp đi. Có thay đổi, Travela báo ở đây và qua email.</p>
                         <ol class="tgw__list" id="tpBellList"></ol>
+                        @if (\App\Services\Push\WebPush::enabled())
+                            <button type="button" class="tp-mini tgw__push" id="tpPush" data-key="{{ config('push.public') }}" data-sub="{{ route('push.subscribe') }}" data-unsub="{{ route('push.unsubscribe') }}" hidden>
+                                <i class="fas fa-mobile-alt" aria-hidden="true"></i> <span>Báo cả khi không mở trang (thông báo trên thiết bị này)</span></button>
+                        @endif
                     </div>
                 </div>
             @endif
@@ -653,13 +657,13 @@
 <script src="{{ asset('clients/assets/js/planner-save.js') }}?v=3"></script>
 <script src="{{ asset('clients/assets/js/planner-resolve.js') }}?v=2"></script>
 <script src="{{ asset('clients/assets/js/planner-map.js') }}?v=5"></script>
-<script src="{{ asset('clients/assets/js/planner.js') }}?v=30" defer></script>
+<script src="{{ asset('clients/assets/js/planner.js') }}?v=31" defer></script>
 <script src="{{ asset('clients/assets/js/planner-extras.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-travel.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-share.js') }}?v=1" defer></script>
 <script src="{{ asset('clients/assets/js/planner-expenses.js') }}?v=1" defer></script>
 <script src="{{ asset('clients/assets/js/planner-bookings.js') }}?v=3" defer></script>
-<script src="{{ asset('clients/assets/js/planner-watch.js') }}?v=4" defer></script>
+<script src="{{ asset('clients/assets/js/planner-watch.js') }}?v=5" defer></script>
 @if (!empty($client['historyUrl']))<script src="{{ asset('clients/assets/js/planner-history.js') }}?v=1" defer></script>@endif
 @if ($role !== 'view')<script src="{{ asset('clients/assets/js/ai-feedback.js') }}?v=2" data-url="{{ route('planner.ai.rate') }}" data-csrf="{{ csrf_token() }}" data-trip="{{ $client['trip']['id'] ?? '' }}" defer></script>@endif
 <script type="application/json" id="aiData">{!! json_encode(['explainUrl' => route('planner.ai.explain', ['id' => $t['id']]), 'csrf' => csrf_token(), 'on' => $aiExplainOn,

@@ -77,6 +77,7 @@ class OverpassProvider implements PoiProvider
                 'lng' => round((float) $lng, 6),
                 'rank' => $rank,
                 'website' => isset($t['website']) ? mb_substr($t['website'], 0, 255) : (isset($t['contact:website']) ? mb_substr($t['contact:website'], 0, 255) : null),
+                'hours' => isset($t['opening_hours']) ? mb_substr((string) $t['opening_hours'], 0, 255) : null,   // quy trình dữ liệu: giờ từ OSM, chưa xác minh
             ];
         }
 

@@ -12,11 +12,43 @@
     @else
         <nav class="ad-tabs" style="display:flex;gap:8px;margin-bottom:14px">
             <a class="ad-btn ad-btn--sm {{ $tab === 'reports' ? 'ad-btn--primary' : 'ad-btn--ghost' }}" href="{{ route('admin.place-data') }}">Báo sai <span class="ad-badge">{{ $counts['open'] }}</span></a>
+            <a class="ad-btn ad-btn--sm {{ $tab === 'verify' ? 'ad-btn--primary' : 'ad-btn--ghost' }}" href="{{ route('admin.place-data', ['tab' => 'verify']) }}">Cần kiểm tra <span class="ad-badge">{{ $counts['verify'] ?? 0 }}</span></a>
             <a class="ad-btn ad-btn--sm {{ $tab === 'rules' ? 'ad-btn--primary' : 'ad-btn--ghost' }}" href="{{ route('admin.place-data', ['tab' => 'rules']) }}">Giờ đặc biệt</a>
         </nav>
         @if ($errors->any())<div class="ad-alert ad-alert--bad">{{ $errors->first() }}</div>@endif
 
-        @if ($tab === 'reports')
+        @if ($tab === 'verify')
+            <section class="ad-card">
+                <div class="ad-card__head"><h2>Cần kiểm tra</h2>
+                    <form method="GET" style="display:flex;gap:6px"><input type="hidden" name="tab" value="verify">
+                        <select name="dest" onchange="this.form.submit()"><option value="">Mọi điểm đến</option>
+                            @foreach ($destinations as $d)<option value="{{ $d->destinationId }}" @selected($dest === (int) $d->destinationId)>{{ $d->name }}</option>@endforeach</select></form></div>
+                <p class="ad-muted" style="padding:0 16px">Thiếu giờ, chưa xác minh hoặc quá {{ \App\Services\Planner\PlaceFacts::STALE_DAYS }} ngày chưa kiểm tra. Nơi có người báo sai và nằm trong nhiều chuyến lên trước. Giờ theo cú pháp OpenStreetMap, ví dụ <code>Tu-Su 08:00-17:00; Mo off; PH off</code>.</p>
+                @if (!$queue)
+                    <div class="ad-empty"><i class="fa fa-check"></i><b>Không còn nơi nào cần kiểm tra</b></div>
+                @else
+                    <table class="ad-table"><thead><tr><th>Nơi</th><th>Vì sao</th><th>Giờ / giá / nguồn (sửa nếu sai, để trống = giữ)</th><th></th></tr></thead><tbody>
+                    @foreach ($queue as $q)
+                        <tr>
+                            <td><b>{{ $q->name }}</b><br><small class="ad-muted">#{{ $q->placeId }} · {{ $q->destName }} · {{ $q->used }} chuyến</small></td>
+                            <td>{{ $q->why }}@if ($q->reports)<br><span class="ad-badge">{{ $q->reports }} báo sai</span>@endif
+                                <br><small class="ad-muted">Giờ hiện tại: {{ $q->hours ? collect([1,2,3,4,5,6,7])->map(fn($d) => ['', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'][$d] . ' ' . (\App\Services\Planner\OpeningHours::describe($q->hours, $d) ?? '?'))->implode(' · ') : 'chưa có' }}</small></td>
+                            <td colspan="2">
+                                <form method="POST" action="{{ route('admin.place-data.verify', $q->placeId) }}" style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px">@csrf
+                                    <input name="hours" placeholder="Giờ mới (OSM)" maxlength="255">
+                                    <input name="priceMin" type="number" min="0" placeholder="Giá từ {{ $q->priceMin !== null ? number_format($q->priceMin, 0, ',', '.') : '' }}">
+                                    <input name="priceMax" type="number" min="0" placeholder="đến {{ $q->priceMax !== null ? number_format($q->priceMax, 0, ',', '.') : '' }}">
+                                    <input name="source" maxlength="120" placeholder="Nguồn: {{ $q->factsSource ?? 'website, biển ở cổng…' }}">
+                                    <input name="url" type="url" maxlength="255" placeholder="https://…" value="{{ $q->factsUrl }}">
+                                    <button class="ad-btn ad-btn--sm ad-btn--primary">Đã kiểm tra</button>
+                                </form>
+                            </td>
+                        </tr>
+                    @endforeach
+                    </tbody></table>
+                @endif
+            </section>
+        @elseif ($tab === 'reports')
             <section class="ad-card">
                 <div class="ad-card__head"><h2>Báo cáo {{ ['open' => 'chờ duyệt', 'accepted' => 'đã duyệt', 'rejected' => 'đã từ chối'][$status] }}</h2>
                     <div style="display:flex;gap:6px">@foreach (['open' => 'Chờ duyệt', 'accepted' => 'Đã duyệt', 'rejected' => 'Từ chối'] as $k => $l)

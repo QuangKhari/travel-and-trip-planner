@@ -70,6 +70,7 @@ class GeoapifyProvider implements PoiProvider
                 'lng' => round((float) $p['lon'], 6),
                 'rank' => isset($p['datasource']['raw']['wikidata']) ? 3 : 0,
                 'website' => isset($p['website']) ? mb_substr((string) $p['website'], 0, 255) : null,
+                'hours' => isset($p['opening_hours']) ? mb_substr((string) $p['opening_hours'], 0, 255) : null,
             ];
         }
 

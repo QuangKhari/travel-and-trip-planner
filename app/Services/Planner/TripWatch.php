@@ -259,6 +259,9 @@ final class TripWatch
         DB::table('tbl_trip_events')->insertOrIgnore(['tripId' => $trip->tripId, 'kind' => 'digest', 'tone' => $data['alerts'] ? 'warn' : 'info',
             'title' => $title, 'text' => implode(' · ', $lines) ?: null, 'day' => str_starts_with($m, 'day') ? (int) substr($m, 3) : null,
             'ref' => $m, 'createdAt' => now()]);
+        if ($send && \App\Services\Push\WebPush::enabled()) {
+            app(\App\Services\Push\WebPush::class)->ping(array_column($this->recipients($trip), 'userId'));
+        }
         if ($send) {
             foreach ($this->recipients($trip) as $u) {
                 Mail::to($u->email)->queue(new TemplateMail('admin.emails.trip-digest', [

@@ -89,6 +89,10 @@ class PlaceSync
             );
         }
 
+        // Quy trình dữ liệu: giờ mở cửa từ nguồn bản đồ -> nạp khi nơi đó CHƯA có giờ do người nhập / người dùng báo / gói demo.
+        // Ghi nguồn (OpenStreetMap / Geoapify), để trống ngày kiểm tra: còn nằm trong hàng chờ "cần kiểm tra" của admin.
+        app(\App\Services\Planner\PlaceFacts::class)->importHours($provider->name(), $keep);
+
         // Chỉ dọn khi lần này thực sự lấy được dữ liệu (tránh xoá sạch vì lỗi mạng trả rỗng)
         if ($prune && $ids) {
             DB::table('tbl_external_places')

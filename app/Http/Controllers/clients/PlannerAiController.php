@@ -298,7 +298,7 @@ class PlannerAiController extends Controller
             ]);
         }
 
-        $result = $service->generate($data);
+        $result = $service->generate($data + ['userId' => $this->uid()]);
         if (empty($result['ok'])) {
             return response()->json(['ok' => false, 'message' => $result['message'] ?? 'Không thể tạo lịch trình.']);
         }

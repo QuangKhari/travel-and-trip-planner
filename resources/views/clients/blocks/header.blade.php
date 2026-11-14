@@ -39,6 +39,10 @@
     <title>Travela - Travel & {{ $title ?? '' }}</title>
     <!-- Favicon Icon -->
     <link rel="shortcut icon" href="{{ asset('clients/assets/images/logos/favicon.png') }}" type="image/x-icon">
+    {{-- PWA: cài lên màn hình chính, mở lại chuyến đi khi mất mạng (public/sw.js) --}}
+    <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+    <meta name="theme-color" content="#167A85">
+    <link rel="apple-touch-icon" href="{{ asset('clients/assets/images/pwa/icon-192.png') }}">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&amp;display=swap"
         rel="stylesheet">

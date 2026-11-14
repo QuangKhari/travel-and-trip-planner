@@ -826,6 +826,8 @@
         var sub = [it.sub, it.when ? "diễn ra " + it.when : ""].filter(Boolean).join(" · ");
         if (sub) main.appendChild(el("small", "tpx-sub", sub));
         if (CUSTOM[it.type] && !G.hasPos(it)) main.appendChild(el("span", "tp-badge", "Chưa có vị trí"));
+        var sb = socialBadge(it);
+        if (sb) main.appendChild(sb);
         if (hoursNow) {
             var hb = el("span", "tpx-hours" + (row.hours ? " is-" + row.hours : ""));
             hb.appendChild(icon(row.hours === "closed" ? "fa-door-closed" : "fa-clock"));
@@ -1312,6 +1314,8 @@
             box.appendChild(el("p", "tgt__eyebrow", "Chuyến đã kết thúc"));
             box.appendChild(el("h3", "tgt__h", "Bạn đã ghé " + done + "/" + placed.length + " điểm"));
             box.appendChild(el("p", "tgt__hint", "Đánh dấu hoàn thành để chuyến chuyển sang mục “Đã đi” (ghi chú, chi tiêu nhóm và lịch sử vẫn giữ nguyên)."));
+            var rl = reviewList(placed);
+            if (rl) box.appendChild(rl);
             var f = el("form"); f.method = "POST"; f.action = box.dataset.doneUrl;
             var c1 = el("input"); c1.type = "hidden"; c1.name = "_token"; c1.value = cfg.csrf; f.appendChild(c1);
             var c2 = el("input"); c2.type = "hidden"; c2.name = "status"; c2.value = "done"; f.appendChild(c2);
@@ -1344,6 +1348,8 @@
             if (G.hasPos(next.it)) na.appendChild(dirLink(next.it, "tp-btn tp-btn--ghost"));
             nb.appendChild(na);
             box.appendChild(nb);
+            var gl = geoLine(next, now, ph);
+            if (gl) box.appendChild(gl);
         } else {
             var nxt = ph.day < daysCount() ? schedule(ph.day + 1) : null;
             box.appendChild(el("p", "tgt__alldone", "Đã xong lịch hôm nay." + (nxt && nxt.rows.length ? " Ngày mai " + nxt.rows.length + " điểm, bắt đầu " + hhmm(nxt.rows[0].start) + "." : "")));
@@ -1407,6 +1413,141 @@
             ol.appendChild(li);
         });
         box.appendChild(ol);
+    }
+    /* ---------------- Bàn bạc nhóm: bình luận + bỏ phiếu từng mục ---------------- */
+    function itemKey(it) { return CUSTOM[it.type] ? "custom:" + String(it.name || "").toLowerCase().slice(0, 70) : it.type + ":" + it.refId; }
+    ui.social = {};
+    function loadSocial() {
+        if (!cfg.socialUrl) return;
+        fetch(cfg.socialUrl, { credentials: "same-origin", headers: { Accept: "application/json" } }).then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (j) { if (j) { ui.social = j.items || {}; renderDays(); if (ui.card) renderCard(); } }).catch(function () { /* bàn bạc là phụ */ });
+    }
+    function socialPost(path, body) {
+        return fetch(cfg.socialUrl + path, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-TOKEN": cfg.csrf, "X-Requested-With": "XMLHttpRequest" }, body: JSON.stringify(body) })
+            .then(function (r) { return r.json(); }).then(function (j) { ui.social = j.items || {}; renderDays(); if (ui.card) renderCard(); });
+    }
+    function socialBadge(it) {
+        var x = cfg.socialUrl && ui.social[itemKey(it)];
+        if (!x) return null;
+        var n = (x.comments || []).length, up = (x.up || []).length, dn = (x.down || []).length;
+        if (!n && !up && !dn) return null;
+        var b = btn("tpx-social", null, "Bàn bạc về " + it.name, function () { openCard(it.uid); });
+        if (up) { b.appendChild(icon("fa-thumbs-up")); b.appendChild(el("span", null, String(up))); }
+        if (dn) { b.appendChild(icon("fa-thumbs-down")); b.appendChild(el("span", null, String(dn))); }
+        if (n) { b.appendChild(icon("fa-comment")); b.appendChild(el("span", null, String(n))); }
+        return b;
+    }
+    function socialBlock(it) {
+        if (!cfg.socialUrl) return null;
+        var k = itemKey(it), x = ui.social[k] || {};
+        var w = el("div", "tp-social");
+        w.appendChild(el("b", "tp-social__h", "Bàn bạc trong nhóm"));
+        var votes = el("div", "tp-social__votes");
+        [[1, "fa-thumbs-up", "Muốn đi", x.up || []], [-1, "fa-thumbs-down", "Không hứng thú", x.down || []]].forEach(function (v) {
+            var on = x.mine === v[0];
+            var b = btn("tp-mini" + (on ? " is-on" : ""), null, v[2] + (v[3].length ? ": " + v[3].join(", ") : ""), function () { socialPost("/phieu", { itemKey: k, vote: on ? 0 : v[0] }); });
+            b.appendChild(icon(v[1])); b.appendChild(el("span", null, v[2] + (v[3].length ? " · " + v[3].length : "")));
+            b.setAttribute("aria-pressed", on ? "true" : "false");
+            votes.appendChild(b);
+        });
+        w.appendChild(votes);
+        var ul = el("ul", "tp-social__list");
+        (x.comments || []).forEach(function (c) {
+            var li = el("li");
+            li.appendChild(el("b", null, c.by + ": "));
+            li.appendChild(el("span", null, c.text));
+            if (c.mine) li.appendChild(btn("tp-link tp-small", "Xóa", "Xóa bình luận", function () { socialPost("/binh-luan/" + c.id + "/xoa", {}); }));
+            ul.appendChild(li);
+        });
+        w.appendChild(ul);
+        var f = el("form", "tp-social__f");
+        var inp = el("input"); inp.maxLength = 500; inp.placeholder = "Viết cho cả nhóm…"; inp.setAttribute("aria-label", "Bình luận về " + it.name);
+        var sb = el("button", "tp-btn tp-btn--sm", "Gửi"); sb.type = "submit";
+        f.appendChild(inp); f.appendChild(sb);
+        f.addEventListener("submit", function (e) { e.preventDefault(); var t = inp.value.trim(); if (!t) return; sb.disabled = true; socialPost("/binh-luan", { itemKey: k, text: t }).then(function () { sb.disabled = false; }); });
+        w.appendChild(f);
+        return w;
+    }
+    /* ---------------- Đánh giá nơi đã ghé (sau chuyến): quay lại làm dữ liệu chấm điểm ---------------- */
+    ui.myReviews = null;
+    function reviewList(placed) {
+        var vis = placed.filter(function (x) { return x.visitedAt && (x.type === "place" || x.type === "experience" || x.type === "food") && x.refId; });
+        if (!cfg.reviewUrl || !vis.length) return null;
+        if (ui.myReviews === null) {
+            ui.myReviews = {};
+            fetch(cfg.reviewUrl, { credentials: "same-origin", headers: { Accept: "application/json" } }).then(function (r) { return r.json(); })
+                .then(function (j) { ui.myReviews = j.reviews || {}; renderToday(); }).catch(function () {});
+        }
+        var w = el("div", "tgt__rev");
+        w.appendChild(el("p", "tgt__hint", "Chấm nhanh những nơi đã ghé: Travela dùng để gợi ý tốt hơn cho người đi sau (và cho chính bạn)."));
+        var ul = el("ul");
+        vis.forEach(function (it) {
+            var key = it.type + ":" + it.refId, mine = ui.myReviews[key];
+            var li = el("li");
+            li.appendChild(el("span", null, it.name));
+            var stars = el("span", "tgt__stars");
+            [1, 2, 3, 4, 5].forEach(function (n) {
+                var b = btn("tgt__star" + (mine && mine.stars >= n ? " is-on" : ""), "★", n + " sao cho " + it.name, function () {
+                    fetch(cfg.reviewUrl, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-TOKEN": cfg.csrf, "X-Requested-With": "XMLHttpRequest" },
+                        body: JSON.stringify({ type: it.type, refId: it.refId, stars: n, stayMin: it.durationMin || null }) })
+                        .then(function (r) { return r.json(); }).then(function (j) { if (j.reviews) { ui.myReviews = j.reviews; renderToday(); } });
+                });
+                stars.appendChild(b);
+            });
+            li.appendChild(stars);
+            ul.appendChild(li);
+        });
+        w.appendChild(ul);
+        return w;
+    }
+    /*
+     * Chế độ "đang đi" theo vị trí (chỉ khi người dùng bật; nhớ lựa chọn trên máy này):
+     *  - cách điểm kế tiếp < 150 m  -> "Bạn đang ở X" + nút Xong (không tự đánh dấu thay người dùng)
+     *  - đã quá giờ bắt đầu mà còn cách xa -> ước lượng trễ bao nhiêu phút (quãng đường × tốc độ của bộ xếp lịch) + gợi ý "Xếp lại hôm nay"
+     * Vị trí chỉ dùng trên máy, không gửi lên máy chủ (trừ khi bấm tìm nơi gần đây).
+     */
+    var geoWatch = null;
+    function geoOn() { try { return localStorage.getItem("tpGeo") === "1"; } catch (e) { return false; } }
+    function geoSet(on) {
+        try { localStorage.setItem("tpGeo", on ? "1" : "0"); } catch (e) { /* bỏ qua */ }
+        if (geoWatch !== null && navigator.geolocation) { navigator.geolocation.clearWatch(geoWatch); geoWatch = null; }
+        if (!on) { ui.here = null; renderToday(); return; }
+        if (!navigator.geolocation) return;
+        geoWatch = navigator.geolocation.watchPosition(function (p) {
+            var moved = !ui.here || G.hav(ui.here, { lat: p.coords.latitude, lng: p.coords.longitude }) > 0.05;
+            ui.here = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy };
+            if (moved) renderToday();
+        }, function () { ui.here = null; ui.geoErr = true; renderToday(); }, { enableHighAccuracy: false, maximumAge: 60000, timeout: 15000 });
+    }
+    function geoLine(next, now, ph) {
+        if (!navigator.geolocation || !G.hasPos(next.it)) return null;
+        var w = el("div", "tgt__geo");
+        if (!geoOn()) {
+            w.appendChild(btn("tp-link tp-small", "Dùng vị trí của tôi khi đang đi", "Bật theo dõi vị trí để biết đã tới nơi hay đang trễ", function () { geoSet(true); }));
+            return w;
+        }
+        if (geoWatch === null) geoSet(true);
+        if (!ui.here) { w.appendChild(el("span", "tp-muted tp-small", ui.geoErr ? "Chưa lấy được vị trí (trình duyệt chặn hoặc không có GPS)." : "Đang lấy vị trí…")); }
+        else {
+            var km = G.hav(ui.here, next.it);
+            if (km < 0.15) {
+                w.classList.add("is-here");
+                w.appendChild(el("span", null, "Bạn đang ở “" + next.it.name + "”."));
+                if (!RO && !next.it.visitedAt) w.appendChild(btn("tp-mini", "Đánh dấu xong", "Đánh dấu đã xong " + next.it.name, function () { setDone(next.it, true); }));
+            } else {
+                var road = km * G.ROAD_FACTOR, travel = Math.max(5, Math.round(road / G.SPEED_KMH * 60));
+                var eta = now + travel, late = eta - next.start;
+                var txt = "Cách “" + next.it.name + "” ~" + String(Math.round(road * 10) / 10).replace(".", ",") + " km, đi ~" + fmtMin(travel)
+                    + (late > 15 ? ": tới nơi trễ khoảng " + fmtMin(late) + " so với lịch." : ", kịp giờ.");
+                w.classList.toggle("is-late", late > 15);
+                w.appendChild(el("span", null, txt));
+                if (late > 15 && !RO && cfg.resolveUrl) w.appendChild(btn("tp-mini", "Xếp lại từ bây giờ", "Xếp lại phần còn lại của hôm nay", function () {
+                    var rb = document.querySelector(".tgt__replanbtn"); if (rb) rb.click();
+                }));
+            }
+        }
+        w.appendChild(btn("tp-link tp-small", "Tắt vị trí", "Tắt theo dõi vị trí", function () { geoSet(false); }));
+        return w;
     }
     /*
      * Gợi ý chủ động trong ngày: từ BÂY GIỜ tới điểm kế tiếp (hoặc tới cuối ngày nếu đã xong hết) còn >= 60 phút trống
@@ -3992,6 +4133,7 @@
             if (it.src) fact("Nguồn", it.src);
             if (it.day != null && it.hours) { var ht = S.hoursText(it.hours, dayDow(it.day)); if (ht) fact("Giờ mở cửa ngày " + it.day, ht); }
             if (it.hoursNote) fact("Lưu ý ngày này", it.hoursNote);
+            if (it.facts) fact("Giờ & giá", (it.facts.src || "chưa rõ nguồn") + (it.facts.checked ? " · kiểm tra " + it.facts.checked.split("-").reverse().join("/") : " · chưa xác minh, nên kiểm tra lại trước khi đi"), it.facts.url);
             if (facts.children.length) body.appendChild(facts);
             if (cfg.reportUrl && (it.type === "place" || it.type === "experience") && it.refId) body.appendChild(reportForm(it));
             if (g && g.hours && g.hours.length) {
@@ -4005,6 +4147,8 @@
             if (g) body.appendChild(el("small", "tp-muted", "Giờ mở cửa, đánh giá và ảnh lấy trực tiếp từ Google Maps, có thể thay đổi."));
             else if (map && map.kind === "google" && !CUSTOM[it.type] && ui.card.g === undefined) body.appendChild(el("small", "tp-muted", "Đang tải thêm thông tin từ Google…"));
         }
+        var sbk = socialBlock(it);
+        if (sbk) body.appendChild(sbk);
         c.appendChild(body);
 
         var act = el("div", "tp-pcard__act");
@@ -4641,6 +4785,7 @@
     restoreDraftIfNeeded();
     initMap();
     if (items.length) loadServerHealth();
+    loadSocial();
     var startTab = (location.hash || "").replace("#", "");
     if (!/^(plan|cost|info|overview|explore)$/.test(startTab)) {
         try { startTab = sessionStorage.getItem("tpTab" + cfg.trip.id) || "plan"; } catch (e) { startTab = "plan"; }

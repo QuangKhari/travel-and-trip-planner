@@ -266,6 +266,15 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::get('/len-ke-hoach/{id}/tim', [PlannerController::class, 'search'])->whereNumber('id')->middleware('throttle:90,1,planner-search')->name('planner.search');
     Route::post('/len-ke-hoach/{id}/luu', [PlannerController::class, 'save'])->whereNumber('id')->middleware('throttle:60,1,planner-save')->name('planner.save');
     Route::get('/len-ke-hoach/{id}/do-mang-theo', [PlannerController::class, 'packing'])->whereNumber('id')->middleware('throttle:20,1,planner-packing')->name('planner.packing');
+    Route::post('/thong-bao-day/dang-ky', [\App\Http\Controllers\clients\PushController::class, 'subscribe'])->middleware('throttle:10,1,push-sub')->name('push.subscribe');
+    Route::post('/thong-bao-day/huy', [\App\Http\Controllers\clients\PushController::class, 'unsubscribe'])->middleware('throttle:10,1,push-sub')->name('push.unsubscribe');
+    Route::get('/thong-bao/moi-nhat', [\App\Http\Controllers\clients\PushController::class, 'latest'])->middleware('throttle:30,1,push-latest')->name('push.latest');
+    Route::get('/len-ke-hoach/{id}/ban-bac', [\App\Http\Controllers\clients\TripSocialController::class, 'index'])->whereNumber('id')->middleware('throttle:60,1')->name('planner.social');
+    Route::post('/len-ke-hoach/{id}/ban-bac/binh-luan', [\App\Http\Controllers\clients\TripSocialController::class, 'comment'])->whereNumber('id')->middleware('throttle:20,1,trip-comment')->name('planner.social.comment');
+    Route::post('/len-ke-hoach/{id}/ban-bac/binh-luan/{commentId}/xoa', [\App\Http\Controllers\clients\TripSocialController::class, 'deleteComment'])->whereNumber(['id', 'commentId'])->middleware('throttle:20,1')->name('planner.social.delete');
+    Route::post('/len-ke-hoach/{id}/ban-bac/phieu', [\App\Http\Controllers\clients\TripSocialController::class, 'vote'])->whereNumber('id')->middleware('throttle:60,1')->name('planner.social.vote');
+    Route::get('/len-ke-hoach/{id}/danh-gia', [\App\Http\Controllers\clients\TripSocialController::class, 'myReviews'])->whereNumber('id')->middleware('throttle:60,1')->name('planner.reviews');
+    Route::post('/len-ke-hoach/{id}/danh-gia', [\App\Http\Controllers\clients\TripSocialController::class, 'review'])->whereNumber('id')->middleware('throttle:30,1,trip-review')->name('planner.reviews.store');
     Route::post('/dia-diem/bao-sai', [\App\Http\Controllers\clients\PlaceReportController::class, 'store'])->middleware('throttle:10,1,place-report')->name('places.report');
     Route::get('/len-ke-hoach/{id}/lich.ics', [\App\Http\Controllers\clients\TripCalendarController::class, 'download'])->whereNumber('id')->middleware('throttle:20,1,planner-ics')->name('planner.ics');
     Route::get('/len-ke-hoach/{id}/xuat-pdf', [PlannerController::class, 'exportPdf'])->whereNumber('id')->middleware('throttle:20,1,planner-pdf')->name('planner.pdf');
@@ -466,6 +475,7 @@ Route::prefix('admin')->group(function () {
         Route::get('/place-data', [\App\Http\Controllers\admin\PlaceDataAdminController::class, 'index'])->name('admin.place-data');
         Route::post('/place-data/reports/{id}', [\App\Http\Controllers\admin\PlaceDataAdminController::class, 'decide'])->whereNumber('id')->name('admin.place-data.decide');
         Route::post('/place-data/rules', [\App\Http\Controllers\admin\PlaceDataAdminController::class, 'storeRule'])->name('admin.place-data.rules.store');
+        Route::post('/place-data/verify/{id}', [\App\Http\Controllers\admin\PlaceDataAdminController::class, 'verify'])->whereNumber('id')->name('admin.place-data.verify');
         Route::post('/place-data/rules/{id}/delete', [\App\Http\Controllers\admin\PlaceDataAdminController::class, 'deleteRule'])->whereNumber('id')->name('admin.place-data.rules.delete');
         Route::get('/travel-alerts', [\App\Http\Controllers\admin\TravelAlertAdminController::class, 'index'])->name('admin.travel-alerts');
         Route::post('/travel-alerts', [\App\Http\Controllers\admin\TravelAlertAdminController::class, 'store'])->name('admin.travel-alerts.store');

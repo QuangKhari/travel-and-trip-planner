@@ -97,6 +97,20 @@ final class PlannerService
             $openSources = ['ok' => $o['ok'], 'from' => $o['from'], 'count' => count($o['items'])];
             $cands = array_merge($cands, self::osmCandidates($o['items']));
         }
+        // học từ hành vi: hồ sơ sở thích của người đang tạo + thống kê giữ / ghé của mọi người (PlaceSignals)
+        if ($cands && PlaceSignals::ready()) {
+            $sig = app(PlaceSignals::class);
+            $ctx['profile'] = !empty($req['userId']) ? $sig->profile((int) $req['userId']) : [];
+            $ctx['placeStats'] = $sig->stats(array_column($cands, 'key'));
+            $ctx['reviews'] = $sig->reviews(array_column($cands, 'key'));
+            foreach ($cands as &$cd) {
+                // thời gian ở thực tế từ đánh giá sau chuyến thay cho thời lượng mặc định theo loại nơi (khi chưa có số biên tập)
+                if (empty($cd['durationMin']) && !empty($ctx['reviews'][$cd['key']]['stay'])) {
+                    $cd['durationMin'] = $ctx['reviews'][$cd['key']]['stay'];
+                }
+            }
+            unset($cd);
+        }
         $plan = $this->engine->plan($cands, $nreq, $ctx);
         $this->verifyWithSchedule($plan, $nreq);
         $plan['filterLog'] = array_merge($log, $plan['filterLog']);

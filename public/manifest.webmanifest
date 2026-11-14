@@ -1,0 +1,16 @@
+{
+  "name": "Travela – Lên kế hoạch chuyến đi",
+  "short_name": "Travela",
+  "description": "Lịch chuyến đi, hôm nay đi đâu, cảnh báo thời tiết và đóng cửa.",
+  "lang": "vi",
+  "start_url": "/len-ke-hoach?nguon=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f7f7",
+  "theme_color": "#167A85",
+  "icons": [
+    { "src": "/clients/assets/images/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/clients/assets/images/pwa/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/clients/assets/images/pwa/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
