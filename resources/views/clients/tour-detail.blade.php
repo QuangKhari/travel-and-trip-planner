@@ -18,6 +18,7 @@
     $avg = (float) ($reviewStats->averageRating ?? 0);
     $reviewCount = (int) ($reviewStats->reviewCount ?? 0);
     $timelineCount = $tourDetail->timeline->count();
+    $tourStops = app(\App\Services\TourStops::class)->forTour((int) $tourDetail->tourId);
     $holdHours = (int) config('travela.hold_hours', 48);
     $cancelDays = (int) config('booking.paid_cancel_min_days', 7);
     $departures = $departures ?? [];
@@ -247,6 +248,16 @@
                                                     <span class="px-day__title">{{ $timeline->title }}</span>
                                                     <i class="fal fa-chevron-down" aria-hidden="true"></i>
                                                 </summary>
+                                                @if (!empty($tourStops[$i + 1]))
+                                                    <ol class="td-stops">
+                                                        @foreach ($tourStops[$i + 1] as $st)
+                                                            <li class="td-stop is-{{ $st->kind }}"><span class="td-stop__t">{{ $st->startMin !== null ? sprintf('%02d:%02d', intdiv($st->startMin, 60), $st->startMin % 60) : '' }}</span>
+                                                                <i class="fas {{ \App\Services\TourStops::ICONS[$st->kind] ?? 'fa-map-marker-alt' }}" aria-hidden="true"></i>
+                                                                <span><b>{{ $st->title }}</b>@if ($st->kind === 'meet' || $st->kind === 'drop') <small>({{ \App\Services\TourStops::KINDS[$st->kind] }})</small>@endif
+                                                                    @if ($st->note)<small>{{ $st->note }}</small>@endif</span></li>
+                                                        @endforeach
+                                                    </ol>
+                                                @endif
                                                 <div class="td-prose px-prose px-day__body">{!! $timeline->description !!}
                                                 </div>
                                             </details>
@@ -417,9 +428,9 @@
                                         @endforeach
                                     </div>
                                 </fieldset>
-                                @php $soldOut = collect($departures)->filter(fn ($d) => (int) $d->remaining <= 0); @endphp
-                                @if ($soldOut->isNotEmpty() && \Illuminate\Support\Facades\Route::has('waitlist.index'))
-                                    <p style="margin:8px 0;font-size:14px">Ngày đã hết chỗ? @foreach ($soldOut as $so)<a href="{{ route('waitlist.index', ['availabilityId' => $so->availabilityId]) }}">Đăng ký chờ {{ date('d/m/Y', strtotime($so->departureDate)) }}</a>{{ $loop->last ? '' : ' · ' }}@endforeach</p>
+                                @php $fullDeps = collect($departures)->filter(fn ($d) => (int) $d->remaining <= 0); @endphp
+                                @if ($fullDeps->isNotEmpty() && \Illuminate\Support\Facades\Route::has('waitlist.index'))
+                                    <p style="margin:8px 0;font-size:14px">Ngày đã hết chỗ? @foreach ($fullDeps as $so)<a href="{{ route('waitlist.index', ['availabilityId' => $so->availabilityId]) }}">Đăng ký chờ {{ date('d/m/Y', strtotime($so->departureDate)) }}</a>{{ $loop->last ? '' : ' · ' }}@endforeach</p>
                                 @endif
                                 <style>
                                     .px-deps{border:0;margin:0 0 14px;padding:0}.px-deps legend{font-size:14px;font-weight:600;margin-bottom:8px}

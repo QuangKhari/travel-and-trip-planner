@@ -71,6 +71,10 @@
                                         <button type="button" class="ad-btn ad-btn--sm" data-toggle="modal" data-target="#dep-edit"
                                             data-id="{{ $r->availabilityId }}" data-date="{{ $r->departureDate }}" data-slots="{{ $r->totalSlots }}" data-min="{{ max(1, $r->bookedSlots + $r->heldSlots) }}"
                                             data-note="{{ $r->note }}" data-lock="{{ $r->bookings ? 1 : 0 }}" data-title="{{ $fmt($r->departureDate) }}">Sửa</button>
+                                        @if ($r->bookings && $r->endDate >= now()->toDateString())
+                                            <form method="POST" action="{{ route('admin.guide.create', $r->availabilityId) }}" class="ad-inline-form" data-guide>@csrf<input type="hidden" name="guideName">
+                                                <button class="ad-btn ad-btn--sm" title="Tạo đường dẫn cho hướng dẫn viên: danh sách khách, điểm danh, lịch theo giờ, báo sự cố"><i class="fa fa-link"></i> Link HDV</button></form>
+                                        @endif
                                         @unless ($r->isPast)
                                             <a class="ad-btn ad-btn--sm" href="{{ route('admin.resources', ['from' => $r->departureDate, 'availabilityId' => $r->availabilityId]) }}#dep-{{ $r->availabilityId }}" title="Xếp xe và hướng dẫn viên cho đoàn này"><i class="fa fa-bus"></i> Xe · HDV</a>
                                             <form method="POST" action="{{ route('admin.departures.toggle', $r->availabilityId) }}" class="ad-inline-form">@csrf
@@ -158,6 +162,13 @@
         slots.value = d.slots; slots.min = d.min;
         document.getElementById('de-min').textContent = 'Không nhỏ hơn ' + d.min + ' (số chỗ đã bán + đang giữ).';
         document.getElementById('de-note').value = d.note || '';
+    });
+    document.querySelectorAll('form[data-guide]').forEach(function (f) {
+        f.addEventListener('submit', function (e) {
+            var n = prompt('Tên hướng dẫn viên (để trống cũng được):', '');
+            if (n === null) { e.preventDefault(); return; }
+            f.querySelector('[name=guideName]').value = n;
+        });
     });
 </script>
 @endpush

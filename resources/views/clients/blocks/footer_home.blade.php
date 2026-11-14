@@ -37,7 +37,7 @@
         <script src="{{ asset('clients/assets/js/tv3.js') }}?v=1" defer></script>
         {{-- trang chủ: phải chạy trước inspiration-hub.js (defer) để nhận sự kiện đổi cảm hứng đầu tiên --}}
         <script src="{{ asset('clients/assets/js/tv-home.js') }}?v=2"></script>
-        <script src="{{ asset('clients/assets/js/tv-tours-10.js') }}?v=1" defer></script>
+        <script src="{{ asset('clients/assets/js/tv-tours-10.js') }}?v=2" defer></script>
         <script src="{{ asset('clients/assets/js/travel-chat.js') }}?v=1"></script>
 
         <script src="{{ asset('clients/assets/js/jquery.datetimepicker.full.min.js') }}"></script>

@@ -193,9 +193,11 @@
         state.timer = setTimeout(function () { quote(state.coupon, cb); }, delay || 0);
     }
 
+    function addonIds() { return Array.prototype.map.call(form.querySelectorAll("input[data-addon]:checked"), function (x) { return x.value; }); }
+    form.querySelectorAll("input[data-addon]").forEach(function (x) { x.addEventListener("change", function () { quote(state.coupon); }); });
     function quoteKey(code) {
         var d = currentDate();
-        return [inAdults.value, inChildren.value, d ? d.value : "", code === undefined ? state.coupon : code].join("|");
+        return [inAdults.value, inChildren.value, d ? d.value : "", code === undefined ? state.coupon : code, addonIds().join(",")].join("|");
     }
 
     function quote(code, cb) {
@@ -206,6 +208,7 @@
         if (d) p.set("availabilityId", d.value);
         else if (form.elements.availabilityId && form.elements.availabilityId.value) p.set("availabilityId", form.elements.availabilityId.value);
         if (code) p.set("coupon", code);
+        addonIds().forEach(function (a) { p.append("addons[]", a); });
         $("#bkQuoteNote").textContent = "Đang tính giá…";
         return fetch(quoteUrl + "?" + p.toString(), { headers: { Accept: "application/json" }, credentials: "same-origin" })
             .then(function (r) { return r.json().then(function (j) { return { status: r.status, j: j }; }); })
@@ -301,6 +304,12 @@
         $("#bkChildrenFormula").textContent = c + " × " + money(priceC);
         $("#bkChildrenSum").textContent = money(subC);
         $("#bkRowChildren").hidden = c === 0;
+        var adl = q && q.addons ? q.addons : [], adSum = adl.reduce(function (t, x) { return t + (+x.amount || 0); }, 0);
+        if ($("#bkRowAddons")) {
+            $("#bkRowAddons").hidden = !adl.length;
+            $("#bkAddonsSum").textContent = money(adSum);
+            $("#bkAddonsLabel").textContent = adl.map(function (x) { return x.name + (x.qty > 1 ? " ×" + x.qty : ""); }).join(", ");
+        }
         $("#bkRowDiscount").hidden = !(discount > 0);
         $("#bkDiscountSum").textContent = "-" + money(discount);
         $("#bkDiscountLabel").textContent = discount > 0 ? "(mã " + state.coupon + ")" : "";

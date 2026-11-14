@@ -212,3 +212,11 @@
 .tpf-cmp__pick { font-size: .82rem; padding: 6px 8px; }
 .tpf-cmp__pick { margin-top: auto; }
 .tpf-cmp__why { margin: 8px 0 0; padding-left: 18px; font-size: .78rem; color: #3d5557; }
+.tpf-multi { margin-top: 14px; border: 1px dashed #c7dcdc; border-radius: 12px; padding: 10px 12px; }
+.tpf-multi summary { cursor: pointer; font-weight: 600; }
+.tpf-legs { margin: 8px 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.tpf-leg { display: flex; gap: 6px; align-items: center; }
+.tpf-leg select { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid #d6e2e2; border-radius: 8px; font: inherit; }
+.tpf-leg input { width: 64px; padding: 6px 8px; border: 1px solid #d6e2e2; border-radius: 8px; font: inherit; }
+.tpf-legs__act { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.tpf-legs__act select { margin-left: 6px; padding: 4px 6px; border-radius: 8px; border: 1px solid #d6e2e2; }

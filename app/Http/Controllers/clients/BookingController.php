@@ -111,6 +111,8 @@ class BookingController extends Controller
             'payment'     => 'required|in:' . implode(',', array_merge(['office-payment'], \App\Services\Payments\OnlinePaymentService::methods())),
             'couponCode'  => 'nullable|string|max:50',
             'tripId'      => 'nullable|integer|min:1',
+            'addons'      => 'nullable|array|max:20',
+            'addons.*'    => 'integer|min:1',
         ], [
             'fullName.required'    => 'Vui lòng nhập họ và tên.',
             'email.required'       => 'Vui lòng nhập email.',

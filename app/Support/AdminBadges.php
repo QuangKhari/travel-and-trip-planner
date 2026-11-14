@@ -22,7 +22,7 @@ final class AdminBadges
     public static function counts(): array
     {
         return Cache::remember(self::KEY, 45, function () {
-            $c = ['booking' => 0, 'unpaid' => 0, 'contact' => 0, 'reviewed' => 0, 'draft' => 0, 'pending' => 0, 'refund' => 0, 'support' => 0, 'shortfall' => 0, 'rescue' => 0, 'refundFail' => 0, 'incident' => 0, 'reconcile' => 0, 'waitlist' => 0, 'adjust' => 0, 'complaint' => 0, 'placeReports' => 0];
+            $c = ['booking' => 0, 'unpaid' => 0, 'contact' => 0, 'reviewed' => 0, 'draft' => 0, 'pending' => 0, 'refund' => 0, 'support' => 0, 'shortfall' => 0, 'rescue' => 0, 'refundFail' => 0, 'incident' => 0, 'reconcile' => 0, 'waitlist' => 0, 'adjust' => 0, 'complaint' => 0, 'placeReports' => 0, 'quotes' => 0];
             try {
                 $c['booking'] = (int) DB::table('tbl_booking')->where('bookingStatus', 'n')->count();
                 $c['unpaid'] = (int) DB::table('tbl_booking')
@@ -55,6 +55,9 @@ final class AdminBadges
                 }
                 if (Schema::hasTable('tbl_booking_adjustments')) {
                     $c['adjust'] = (int) DB::table('tbl_booking_adjustments')->whereIn('moneyStatus', ['pending_collect', 'pending_refund'])->count();
+                }
+                if (Schema::hasTable('tbl_tour_quotes')) {
+                    $c['quotes'] = (int) DB::table('tbl_tour_quotes')->where('status', 'open')->count();
                 }
                 if (Schema::hasTable('tbl_place_reports')) {
                     $c['placeReports'] = (int) DB::table('tbl_place_reports')->where('status', 'open')->count();

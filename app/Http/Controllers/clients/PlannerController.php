@@ -451,6 +451,43 @@ class PlannerController extends Controller
         return response()->json(['ok' => true, 'options' => $out, 'why' => $why]);
     }
 
+    /**
+     * POST /len-ke-hoach/tao-nhieu-noi : chuyến nhiều thành phố. Mỗi chặng xếp bằng bộ xếp lịch một điểm đến, ngày chuyển thành phố
+     * chỉ xếp từ giờ tới; vé giữa chặng vào "Cần đặt" (MultiCityPlanner).
+     */
+    public function generateMulti(Request $request, \App\Services\Planner\MultiCityPlanner $multi, PlannerService $service)
+    {
+        $rules = $this->generateRules();
+        unset($rules['destinationId'], $rules['placeLat'], $rules['placeLng'], $rules['placeName'], $rules['days'], $rules['month']);
+        $v = $request->validate($rules + [
+            'legs' => ['required', 'array', 'min:2', 'max:' . \App\Services\Planner\MultiCityPlanner::MAX_LEGS],
+            'legs.*.destinationId' => ['required', 'integer', 'distinct', 'exists:tbl_destinations,destinationId'],
+            'legs.*.days' => ['required', 'integer', 'between:1,' . TripPlanner::MAX_DAYS],
+            'hopMode' => ['nullable', 'in:auto,bus,train,flight,self'],
+        ], ['legs.*.destinationId.distinct' => 'Mỗi thành phố chỉ chọn một lần.', 'legs.min' => 'Chọn ít nhất 2 thành phố.']);
+        if (empty($v['startDate'])) {
+            return back()->withInput()->withErrors(['generate' => 'Chuyến nhiều thành phố cần ngày đi.']);
+        }
+        $legs = array_values(array_map(fn($l) => ['destinationId' => (int) $l['destinationId'], 'days' => (int) $l['days']], $v['legs']));
+        $data = self::generateInput($v + ['days' => array_sum(array_column($legs, 'days'))]) + ['userId' => $this->uid()];
+        $r = $multi->generate($legs, $data, $v['hopMode'] ?? 'auto');
+        if (!$r['ok']) {
+            return back()->withInput()->withErrors(['generate' => $r['message']]);
+        }
+        try {
+            $id = $service->save($this->uid(), $r['result']);
+        } catch (\DomainException $e) {
+            return back()->withInput()->withErrors(['generate' => $e->getMessage()]);
+        }
+        self::recordTransfers($id, $data);
+        \App\Services\Planner\MultiCityPlanner::recordHops($id, $r['hops']);
+        $how = implode('; ', array_map(fn($h) => $h['from'] . ' → ' . $h['to'] . ' ' . ['bus' => 'xe khách', 'flight' => 'máy bay', 'train' => 'tàu', 'self' => 'tự lái'][$h['mode']]
+            . ' ~' . (int) round($h['km']) . ' km, tới khoảng ' . sprintf('%02d:%02d', intdiv($h['arr'], 60), $h['arr'] % 60), $r['hops']));
+
+        return redirect()->route('planner.edit', ['id' => $id])->with('planner_notice', 'Đã xếp chuyến ' . $r['result']['destination']['name'] . '. Ngày chuyển thành phố: ' . $how
+            . '. Vé giữa các chặng đã vào mục Đặt chỗ → Cần đặt (giờ là ước tính, sửa khi có vé).');
+    }
+
     /** POST /len-ke-hoach/tao-tu-dong : lưu lịch vừa xem trước thành chuyến (tạo lại từ cùng yêu cầu). */
     public function generate(Request $request, PlannerService $service)
     {

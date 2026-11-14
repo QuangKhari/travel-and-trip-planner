@@ -99,6 +99,9 @@ class BookingService
 
             // 3. Server tự tính giá (PricingService)
             $subtotal = $this->pricing->subtotal($tour, $adults, $children);
+            // hoạt động thêm tùy chọn: giá từ CSDL, cộng vào tạm tính (mã giảm giá tính trên tổng này)
+            $addons = $this->pricing->addons($tourId, (array) ($in['addons'] ?? []), $adults, $children);
+            $subtotal += $addons['sum'];
 
             // 4. Mã giảm giá (nếu có): mọi luật nằm ở CouponService (L-B-03)
             $discount    = 0;
@@ -136,6 +139,11 @@ class BookingService
                 // giữ chỗ 48 giờ nhưng không quá 0h ngày khởi hành: đặt sát ngày đi thì đơn chưa xác nhận không được "treo" qua ngày đi
                 'holdExpiresAt' => min($online ? now()->addMinutes(OnlinePaymentService::holdMinutes($method)) : now()->addHours((int) config('travela.hold_hours', 48)), \Carbon\Carbon::parse($departureDate)->startOfDay()),
             ]));
+
+            if ($addons['lines']) {
+                DB::table('tbl_booking_addons')->insert(array_map(fn($l) => ['bookingId' => $bookingId, 'addonId' => $l['addonId'], 'name' => $l['name'],
+                    'qty' => $l['qty'], 'unitPrice' => $l['unitPrice'], 'amount' => $l['amount']], $addons['lines']));
+            }
 
             // A-05: đơn đặt từ chuyến đi trong Planner (banner "có tour giống lịch trình này"): ghi chuyến gốc + điểm Match lúc đặt.
             // Chỉ nhận chuyến mà người đặt được xem (chủ / thành viên); chuyến lạ bị bỏ qua, không chặn việc đặt.

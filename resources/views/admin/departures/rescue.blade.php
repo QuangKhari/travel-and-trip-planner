@@ -17,6 +17,11 @@
 <td>Giống hệt: {{ $a->mergeStrict }} · Giống tiêu đề: {{ $a->mergeTitles }}</td><td><a class="ad-btn ad-btn--sm" href="{{ route('admin.departures.grouping',['availabilityId'=>$a->availabilityId,'mode'=>$a->mergeStrict>0 ? 'strict' : 'titles']) }}">Tìm tour ghép</a></td></tr>@endforeach
 </tbody></table></div></section>
 @endif
+@if($early->isNotEmpty())
+<section class="ad-card" style="margin-bottom:20px"><div class="ad-card__head"><h2>Dự báo sớm: có thể thiếu khách ({{ $early->count() }})</h2><p>Ước theo nhịp đặt chỗ của các lịch đã chạy: còn D ngày thì thường đã có bao nhiêu phần khách. Đây là dự báo, chưa phải cảnh báo; dùng để đẩy bán hoặc gợi ý ghép sớm.</p></div><div class="ad-tablewrap"><table class="ad-table"><thead><tr><th>Tour</th><th>Ngày đi</th><th>Đang có</th><th>Lúc này nên có</th><th>Dự báo cuối / tối thiểu</th><th>Căn cứ</th></tr></thead><tbody>
+@foreach($early as $e)<tr><td>{{ $e->title }}<br><small>Lịch #{{ $e->availabilityId }}</small></td><td class="nowrap">{{ \Carbon\Carbon::parse($e->departureDate)->format('d/m/Y') }}<br><small>còn {{ $e->daysLeft }} ngày</small></td><td class="num">{{ $e->bookedSlots + $e->heldSlots }}</td><td class="num">≈ {{ $e->expectedNow }}</td><td class="num">{{ $e->forecast }}/{{ $e->minParticipants }}</td><td><small>{{ $e->basis }} lịch đã chạy ({{ $e->scope === 'tour' ? 'cùng tour' : 'mọi tour' }})</small></td></tr>@endforeach
+</tbody></table></div></section>
+@endif
 @if(!empty($incident))
 <section class="ad-card" style="margin-bottom:20px;border-left:4px solid #E76F51"><div class="ad-card__body">Đang lập phương án cho <b>sự cố #{{ $incident->incidentId }}</b>: {{ $incident->confidential ? 'Sự cố bảo mật' : $incident->title }}. Phương án được gắn vào sự cố; nếu hủy khởi hành, đơn bị hủy với lý do “sự cố” và hoàn 100% (không cần khách đồng ý). <a href="{{ route('admin.incidents.show', $incident->incidentId) }}">Về sự cố</a></div></section>
 @endif

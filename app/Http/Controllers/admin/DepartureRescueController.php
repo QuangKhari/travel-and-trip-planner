@@ -25,7 +25,7 @@ class DepartureRescueController extends Controller
         if (request('incidentId') && \App\Services\IncidentService::ready()) {
             $incident=DB::table('tbl_tour_incidents')->where('incidentId',(int)request('incidentId'))->first(['incidentId','title','type','severity','confidential']);
         }
-        $departures=collect(); $plans=collect(); $resources=collect(); $alerts=collect(); $groupAlerts=collect();
+        $departures=collect(); $plans=collect(); $resources=collect(); $alerts=collect(); $groupAlerts=collect(); $early=collect();
         if ($ready) {
             $resources=DB::table('tbl_rescue_resources')->where('active',true)->orderBy('name')->get();
             $departures=DB::table('tbl_tour_availability as a')->join('tbl_tours as t','t.tourId','=','a.tourId')
@@ -50,6 +50,8 @@ class DepartureRescueController extends Controller
                     $a->mergeTitles=count($grouping->candidates((int)$a->availabilityId,'titles'));
                 }
             }
+            // Dự báo sớm theo nhịp đặt chỗ lịch sử (15–90 ngày trước khởi hành)
+            $early=app(\App\Services\Departures\ShortfallForecast::class)->atRisk()->reject(fn($d)=>$alerts->contains('availabilityId',$d->availabilityId));
             // Đoàn ghép có TỔNG khách thấp hơn mức tối thiểu của đoàn (lịch thành viên không bị gắn cờ riêng lẻ)
             if (Schema::hasColumn('tbl_departure_groups','shortfallFlaggedAt')) {
                 $groupAlerts=DB::table('tbl_departure_groups')->whereNotNull('shortfallFlaggedAt')->where('status','active')
@@ -62,7 +64,7 @@ class DepartureRescueController extends Controller
                 }
             }
         }
-        return view('admin.departures.rescue',compact('title','ready','departures','plans','resources','alerts','groupAlerts','incident'));
+        return view('admin.departures.rescue',compact('title','ready','departures','plans','resources','alerts','groupAlerts','incident','early'));
     }
 
     public function store(Request $request, DepartureRescueService $service)

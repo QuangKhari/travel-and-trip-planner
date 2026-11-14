@@ -216,6 +216,20 @@
                             </div>
                         </section>
 
+                        @php $addonList = \Illuminate\Support\Facades\Schema::hasTable('tbl_tour_addons') ? \Illuminate\Support\Facades\DB::table('tbl_tour_addons')->where('tourId', $tour->tourId)->where('isActive', 1)->orderBy('addonId')->get() : collect(); @endphp
+                        @if ($addonList->isNotEmpty())
+                            {{-- Hoạt động thêm tùy chọn: giá tính ở máy chủ (PricingService::addons), "theo người" nhân số khách --}}
+                            <section class="bk-card" aria-labelledby="bkHAddon">
+                                <h2 id="bkHAddon"><span class="bk-no">+</span> Hoạt động thêm <small class="bk-opt">không bắt buộc</small></h2>
+                                <ul class="bk-addons">
+                                    @foreach ($addonList as $a)
+                                        <li><label><input type="checkbox" name="addons[]" value="{{ $a->addonId }}" @checked(in_array((string) $a->addonId, (array) old('addons', []), true)) data-addon>
+                                            <span><b>{{ $a->name }}</b>@if ($a->description)<small>{{ $a->description }}</small>@endif</span>
+                                            <span class="bk-addons__p">{{ number_format($a->price, 0, ',', '.') }}đ / {{ $a->unit === 'group' ? 'nhóm' : 'người' }}</span></label></li>
+                                    @endforeach
+                                </ul>
+                            </section>
+                        @endif
                         <section class="bk-card" aria-labelledby="bkHCoupon">
                             <h2 id="bkHCoupon"><span class="bk-no">4</span> Mã giảm giá <small class="bk-opt">không bắt buộc</small></h2>
                             <div class="bk-coupon">
@@ -364,6 +378,10 @@
                                         {{ $money($tour->priceChild) }}</small></dt>
                                 <dd id="bkChildrenSum">{{ $money($childrenNow * (int) $tour->priceChild) }}</dd>
                             </div>
+                            <div id="bkRowAddons" hidden>
+                                <dt>Hoạt động thêm <small id="bkAddonsLabel"></small></dt>
+                                <dd id="bkAddonsSum">0đ</dd>
+                            </div>
                             <div id="bkRowDiscount" hidden>
                                 <dt>Giảm giá <small id="bkDiscountLabel"></small></dt>
                                 <dd class="is-neg" id="bkDiscountSum">-0đ</dd>
@@ -404,6 +422,6 @@
     <button type="button" class="bk-btn bk-btn--cta" data-bk-cta>Tiếp tục</button>
 </div>
 <link rel="stylesheet" href="{{ asset('clients/assets/css/booking-wizard.css') }}?v=1">
-<script src="{{ asset('clients/assets/js/booking-wizard.js') }}?v=1" defer></script>
+<script src="{{ asset('clients/assets/js/booking-wizard.js') }}?v=3" defer></script>
 
 @include('clients.blocks.footer')

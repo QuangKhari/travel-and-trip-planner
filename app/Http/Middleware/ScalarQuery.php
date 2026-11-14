@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 class ScalarQuery
 {
     /** Khóa được phép nhận mảng trên URL. */
-    public const ARRAY_KEYS = ['interests', 'dislikes', 'so-thich', 'khong-thich', 'cam-hung', 'have', 'ids', 'adjustments', 'said', 'items', 'stops', 'changes'];
+    public const ARRAY_KEYS = ['interests', 'dislikes', 'so-thich', 'khong-thich', 'cam-hung', 'have', 'ids', 'adjustments', 'said', 'items', 'stops', 'changes', 'addons'];
 
     public function handle(Request $request, Closure $next)
     {

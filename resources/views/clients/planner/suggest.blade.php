@@ -1,6 +1,6 @@
 @include('clients.blocks.header')
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=21">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-flow.css') }}?v=6">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-flow.css') }}?v=7">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai.css') }}?v=1">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/nature-luxury-planner.css') }}?v=bl20261104">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
@@ -133,6 +133,19 @@
                             </button>
                         @endforeach
                     </div>
+                    @if (session('userId'))
+                        {{-- Chuyến nhiều thành phố: thành phố đầu là nơi chọn ở trên; các chặng sau thêm ở đây (MultiCityPlanner) --}}
+                        <details class="tpf-multi" id="sgMulti" data-url="{{ route('planner.generateMulti') }}" data-csrf="{{ csrf_token() }}">
+                            <summary><i class="fas fa-route" aria-hidden="true"></i> Đi nhiều thành phố trong một chuyến?</summary>
+                            <p class="tpf-small tp-muted">Thành phố đầu là nơi bạn chọn ở trên, ở số ngày ghi ở bước 2. Thêm các chặng tiếp theo; Travela xếp từng chặng, tính giờ tới thành phố mới và ghi vé giữa các chặng vào mục Cần đặt.</p>
+                            <ol class="tpf-legs" id="sgLegs"></ol>
+                            <div class="tpf-legs__act">
+                                <button type="button" class="tp-btn tp-btn--ghost tp-btn--sm" id="sgAddLeg"><i class="fas fa-plus" aria-hidden="true"></i> Thêm thành phố</button>
+                                <label class="tpf-small">Đi giữa các thành phố
+                                    <select id="sgHop"><option value="auto">Tự chọn theo khoảng cách</option><option value="bus">Xe khách</option><option value="train">Tàu</option><option value="flight">Máy bay</option><option value="self">Tự lái</option></select></label>
+                            </div>
+                        </details>
+                    @endif
                     <p class="tpf-hint"><span><span class="tpf-dot is-ready"></span> <b>Đủ dữ liệu biên tập</b>: chỉ dùng nội dung Travela đã duyệt.</span>
                         @if ($openMode)<span><span class="tpf-dot is-open"></span> <b>Đề xuất mở rộng</b>: bổ sung từ bản đồ OpenStreetMap, có ghi rõ.</span>@endif</p>
                 </section>
@@ -282,7 +295,7 @@
 <script type="application/json" id="aiData">{!! json_encode($aiData, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
 <script src="{{ asset('clients/assets/js/planner-suggest.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-ai-brief.js') }}?v=1" defer></script>
-<script src="{{ asset('clients/assets/js/planner-compare.js') }}?v=1" defer></script>
+<script src="{{ asset('clients/assets/js/planner-compare.js') }}?v=2" defer></script>
 @if (session('userId'))<script src="{{ asset('clients/assets/js/ai-feedback.js') }}?v=2" data-url="{{ route('planner.ai.rate') }}" data-csrf="{{ csrf_token() }}" defer></script>@endif
 
 @include('clients.blocks.footer')

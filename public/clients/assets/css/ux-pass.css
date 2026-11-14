@@ -2265,3 +2265,16 @@
         animation: none !important;
     }
 }
+/* Hoạt động thêm tùy chọn (đặt tour) */
+.bk-addons { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.bk-addons label { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid #e3ecef; border-radius: 12px; cursor: pointer; }
+.bk-addons label span:nth-child(2) { flex: 1; }
+.bk-addons small { display: block; color: #6b8592; }
+.bk-addons__p { font-weight: 600; white-space: nowrap; }
+/* Lịch trình tour theo giờ */
+.td-stops { list-style: none; margin: 4px 0 12px; padding: 0 18px; display: flex; flex-direction: column; gap: 6px; }
+.td-stop { display: grid; grid-template-columns: 48px 18px 1fr; gap: 8px; align-items: baseline; font-size: .92rem; }
+.td-stop__t { font-variant-numeric: tabular-nums; color: #557080; }
+.td-stop i { color: #167A85; }
+.td-stop small { display: block; color: #6b8592; }
+.td-stop.is-meet b, .td-stop.is-drop b { color: #0f2f3a; }

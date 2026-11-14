@@ -16,7 +16,7 @@
             .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); });
     }
     function el(tag, cls, text) { var x = document.createElement(tag); if (cls) x.className = cls; if (text != null) x.textContent = text; return x; }
-    var ICON = { alert: "fa-exclamation-triangle", resolved: "fa-check-circle", digest: "fa-newspaper", replan: "fa-magic" };
+    var ICON = { alert: "fa-exclamation-triangle", resolved: "fa-check-circle", digest: "fa-newspaper", replan: "fa-magic", quote: "fa-file-invoice-dollar" };
     function ago(iso) {
         var m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
         if (m < 1) return "vừa xong";
@@ -54,6 +54,7 @@
                 b.addEventListener("click", function () { openLaBan(null); });
                 m.appendChild(b);
             }
+            if (e.kind === "quote") { var qa = el("a", "tp-mini tgw__go", "Xem báo giá"); qa.href = "/bao-gia-tour"; m.appendChild(qa); }
             li.appendChild(m);
             list.appendChild(li);
         });

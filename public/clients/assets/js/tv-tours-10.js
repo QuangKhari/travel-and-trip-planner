@@ -117,6 +117,7 @@
         // Nhiều ngày khởi hành: đổi ngày thì đổi số chỗ tối đa và kéo số khách về trong giới hạn
         form.addEventListener("change", function (e) {
             if (!e.target.matches('input[name="availabilityId"]')) return;
+            if (!fields.adults.input) return; // tour hết chỗ: không có ô chọn số khách
             max = Math.max(1, Math.min(50, Number(e.target.dataset.left) || 1));
             form.dataset.max = max;
             while (val("adults") + val("children") > max) {

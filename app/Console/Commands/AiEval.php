@@ -319,6 +319,11 @@ class AiEval extends Command
             return self::FAILURE;
         }
         $cases = json_decode((string) file_get_contents($path), true)['cases'] ?? [];
+        $unlabeled = array_filter($cases, fn($c) => ($c['expect']['kind'] ?? null) === '?');
+        if ($unlabeled) {
+            $this->warn('Bỏ ' . count($unlabeled) . ' mẫu chưa gắn nhãn (expect.kind = "?"): ' . implode(', ', array_column($unlabeled, 'id')));
+            $cases = array_values(array_filter($cases, fn($c) => ($c['expect']['kind'] ?? null) !== '?'));
+        }
         if ($cases === []) {
             return $this->emptySuite($path);
         }

@@ -67,6 +67,12 @@
                     @if (!empty($client['historyUrl']))
                         <button type="button" class="tpx-menu__i" role="menuitem" data-top="history" id="tpHistOpen" aria-haspopup="dialog" aria-controls="tpHist"><i class="fas fa-history" aria-hidden="true"></i><span>Lịch sử phiên bản</span></button>
                     @endif
+                    @if ($role !== 'view' && \App\Services\TourQuotes::ready())
+                        <form method="POST" action="{{ route('quotes.store', ['id' => $t['id']]) }}" onsubmit="var n=prompt('Ghi thêm cho Travela (khách sạn mấy sao, cần hướng dẫn viên, ăn chay…). Có thể để trống.', ''); if (n === null) return false; this.note.value = n; return true;">
+                            @csrf<input type="hidden" name="note">
+                            <button type="submit" class="tpx-menu__i" role="menuitem"><i class="fas fa-file-invoice-dollar" aria-hidden="true"></i><span>Nhờ Travela báo giá tour riêng cho nhóm</span></button>
+                        </form>
+                    @endif
                     <a class="tpx-menu__i" role="menuitem" href="{{ route('support.index', ['trip' => $t['id']]) }}#tao-yeu-cau"><i class="fas fa-headset" aria-hidden="true"></i><span>Nhờ nhân viên tư vấn chuyến này</span></a>
                     <button type="button" class="tpx-menu__i" role="menuitem" id="tpPdf" data-url="{{ route('planner.pdf', ['id' => $t['id']]) }}" data-lib="{{ asset('admin/vendors/pdfmake/build') }}"><i class="fas fa-file-pdf" aria-hidden="true"></i><span>Tải PDF lịch trình và đơn tour</span></button>
                     @if (!empty($t['startDate']) && session('userId'))
@@ -663,7 +669,7 @@
 <script src="{{ asset('clients/assets/js/planner-share.js') }}?v=1" defer></script>
 <script src="{{ asset('clients/assets/js/planner-expenses.js') }}?v=1" defer></script>
 <script src="{{ asset('clients/assets/js/planner-bookings.js') }}?v=3" defer></script>
-<script src="{{ asset('clients/assets/js/planner-watch.js') }}?v=5" defer></script>
+<script src="{{ asset('clients/assets/js/planner-watch.js') }}?v=6" defer></script>
 @if (!empty($client['historyUrl']))<script src="{{ asset('clients/assets/js/planner-history.js') }}?v=1" defer></script>@endif
 @if ($role !== 'view')<script src="{{ asset('clients/assets/js/ai-feedback.js') }}?v=2" data-url="{{ route('planner.ai.rate') }}" data-csrf="{{ csrf_token() }}" data-trip="{{ $client['trip']['id'] ?? '' }}" defer></script>@endif
 <script type="application/json" id="aiData">{!! json_encode(['explainUrl' => route('planner.ai.explain', ['id' => $t['id']]), 'csrf' => csrf_token(), 'on' => $aiExplainOn,

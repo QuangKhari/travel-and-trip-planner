@@ -38,6 +38,7 @@
         <td>
             <div class="ad-rowact">
                 <a class="ad-btn ad-btn--sm" href="{{ route('admin.departures', ['tour' => $tour->tourId]) }}" title="Lịch khởi hành"><i class="fa fa-calendar"></i> Lịch</a>
+                @if (\App\Services\TourStops::ready())<a class="ad-btn ad-btn--sm ad-btn--ghost" href="{{ route('admin.tour-stops', $tour->tourId) }}" title="Lịch trình theo giờ, điểm tập trung, hoạt động thêm"><i class="fa fa-clock-o"></i> Giờ</a>@endif
                 <button type="button" class="ad-btn ad-btn--sm edit-tour" data-toggle="modal" data-target="#edit-tour-modal"
                     data-tourId="{{ $tour->tourId }}" data-urledit="{{ route('admin.tour-edit') }}"><i class="fa fa-pencil"></i> Sửa</button>
                 <a class="ad-btn ad-btn--sm ad-btn--icon ad-btn--ghost" href="{{ route('tour-detail', ['id' => $tour->tourId]) }}" target="_blank" rel="noopener" title="Xem trang tour" aria-label="Xem trang tour"><i class="fa fa-external-link"></i></a>
