@@ -1,377 +1,304 @@
 {
- "about": "Bộ mở rộng cho thí nghiệm B (14/11): lệnh cấp ngày/chuyến (x01–x07, đi đường luật trước LLM), Đà Lạt từ gói dữ liệu demo (x08–x13), Hội An (x14–x17), ngoài phạm vi (x18). Cùng quy ước {dNiM}, {hK}, trap như eval_copilot.json. Chạy: php artisan ai:eval --suite=copilot --mode=verified --file=database/ai/eval_copilot_ext.json --out=storage/app/B2_ext.csv",
- "cases": [
-  {
-   "id": "x01",
-   "group": "lenh",
-   "source": "author",
-   "trip": {
-    "slug": "ha-noi",
-    "days": 2,
-    "startDate": "2026-12-08",
-    "pace": "normal",
-    "interests": [
-     "culture",
-     "food"
+    "about": "Bộ mở rộng cho thí nghiệm B (14/11): lệnh cấp ngày/chuyến (x01–x07, đi đường luật trước LLM), Đà Lạt từ gói dữ liệu demo (x08–x13), Hội An (x14–x17), ngoài phạm vi (x18). Cùng quy ước {dNiM}, {hK}, trap như eval_copilot.json. \"Bỏ\" được chấm là op move (chuyển về Đã lưu), như bộ chính. Chạy: php artisan ai:eval --suite=copilot --mode=verified --file=database/ai/eval_copilot_ext.json --out=storage/app/B2_ext.csv",
+    "cases": [
+        {
+            "id": "x01",
+            "group": "lenh",
+            "source": "author",
+            "trip": {
+                "slug": "ha-noi",
+                "days": 2,
+                "startDate": "2026-12-08",
+                "pace": "normal",
+                "interests": ["culture", "food"]
+            },
+            "request": "Đổi ngày 1 với ngày 2",
+            "expect": {
+                "kind": "proposal",
+                "ops": ["move"]
+            }
+        },
+        {
+            "id": "x02",
+            "group": "lenh",
+            "source": "author",
+            "trip": {
+                "slug": "da-lat",
+                "days": 3,
+                "startDate": "2026-12-15",
+                "pace": "normal",
+                "interests": ["nature", "food", "culture"]
+            },
+            "request": "đảo lịch ngày 3 và ngày 1 giúp mình",
+            "expect": {
+                "kind": "proposal",
+                "ops": ["move"]
+            }
+        },
+        {
+            "id": "x03",
+            "group": "lenh",
+            "source": "author",
+            "trip": {
+                "slug": "da-lat",
+                "days": 3,
+                "startDate": "2026-12-15",
+                "pace": "normal",
+                "interests": ["nature", "food", "culture"]
+            },
+            "request": "Bỏ ngày 2",
+            "expect": {
+                "kind": "proposal",
+                "ops": ["move"]
+            },
+            "note": "La bàn không có thao tác xóa: \"bỏ\" = chuyển mục về Đã lưu (op move)."
+        },
+        {
+            "id": "x04",
+            "group": "lenh",
+            "source": "author",
+            "trip": {
+                "slug": "ha-noi",
+                "days": 2,
+                "startDate": "2026-12-08",
+                "pace": "normal",
+                "interests": ["culture", "food"]
+            },
+            "request": "rút chuyến còn 1 ngày",
+            "expect": {
+                "kind": "tripedit"
+            }
+        },
+        {
+            "id": "x05",
+            "group": "lenh",
+            "source": "author",
+            "trip": {
+                "slug": "hoi-an",
+                "days": 2,
+                "startDate": "2026-12-12",
+                "pace": "normal",
+                "interests": ["culture", "food"]
+            },
+            "request": "kéo dài thành 3 ngày",
+            "expect": {
+                "kind": "tripedit"
+            }
+        },
+        {
+            "id": "x06",
+            "group": "lenh",
+            "source": "author",
+            "trip": {
+                "slug": "da-lat",
+                "days": 3,
+                "startDate": "2026-12-15",
+                "pace": "normal",
+                "interests": ["nature", "food", "culture"]
+            },
+            "request": "dời chuyến sang ngày 20/12",
+            "expect": {
+                "kind": "tripedit"
+            }
+        },
+        {
+            "id": "x07",
+            "group": "lenh",
+            "source": "author",
+            "trip": {
+                "slug": "ha-noi",
+                "days": 2,
+                "startDate": "2026-12-08",
+                "pace": "normal",
+                "interests": ["culture", "food"]
+            },
+            "request": "Đổi ngày 1 với ngày 5",
+            "expect": {
+                "kind": "any"
+            }
+        },
+        {
+            "id": "x08",
+            "group": "da_lat",
+            "source": "author",
+            "trip": {
+                "slug": "da-lat",
+                "days": 3,
+                "startDate": "2026-12-15",
+                "pace": "normal",
+                "interests": ["nature", "food", "culture"]
+            },
+            "request": "Ngày 2 có thể mưa, đổi sang chỗ trong nhà giúp mình",
+            "expect": {
+                "kind": "proposal"
+            }
+        },
+        {
+            "id": "x09",
+            "group": "da_lat",
+            "source": "author",
+            "trip": {
+                "slug": "da-lat",
+                "days": 3,
+                "startDate": "2026-12-15",
+                "pace": "normal",
+                "interests": ["nature", "food", "culture"]
+            },
+            "request": "Thêm một quán cà phê chiều ngày 1",
+            "expect": {
+                "kind": "proposal",
+                "ops": ["add"]
+            }
+        },
+        {
+            "id": "x10",
+            "group": "da_lat",
+            "source": "author",
+            "trip": {
+                "slug": "da-lat",
+                "days": 3,
+                "startDate": "2026-12-15",
+                "pace": "normal",
+                "interests": ["nature", "food", "culture"]
+            },
+            "request": "Ngày 3 về sớm, cho mọi thứ xong trước 14:00",
+            "expect": {
+                "kind": "proposal"
+            }
+        },
+        {
+            "id": "x11",
+            "group": "da_lat",
+            "source": "author",
+            "trip": {
+                "slug": "da-lat",
+                "days": 3,
+                "startDate": "2026-12-15",
+                "pace": "normal",
+                "interests": ["nature", "food", "culture"]
+            },
+            "request": "Bỏ {d1i2}",
+            "expect": {
+                "kind": "proposal",
+                "ops": ["move"]
+            },
+            "note": "La bàn không có thao tác xóa: \"bỏ\" = chuyển mục về Đã lưu (op move)."
+        },
+        {
+            "id": "x12",
+            "group": "da_lat",
+            "source": "author",
+            "trip": {
+                "slug": "da-lat",
+                "days": 3,
+                "startDate": "2026-12-15",
+                "pace": "normal",
+                "interests": ["nature", "food", "culture"]
+            },
+            "request": "Cho {h1} bắt đầu lúc 22:00",
+            "expect": {
+                "kind": "any"
+            },
+            "trap": true
+        },
+        {
+            "id": "x13",
+            "group": "da_lat",
+            "source": "author",
+            "trip": {
+                "slug": "da-lat",
+                "days": 3,
+                "startDate": "2026-12-15",
+                "pace": "normal",
+                "interests": ["nature", "food", "culture"]
+            },
+            "request": "Xếp {d2i1} và {d2i2} cùng lúc 9:00",
+            "expect": {
+                "kind": "any"
+            },
+            "trap": true
+        },
+        {
+            "id": "x14",
+            "group": "hoi_an",
+            "source": "author",
+            "trip": {
+                "slug": "hoi-an",
+                "days": 2,
+                "startDate": "2026-12-12",
+                "pace": "normal",
+                "interests": ["culture", "food"]
+            },
+            "request": "Thêm chỗ ăn tối gần {d1i1}",
+            "expect": {
+                "kind": "proposal",
+                "ops": ["add"]
+            }
+        },
+        {
+            "id": "x15",
+            "group": "hoi_an",
+            "source": "author",
+            "trip": {
+                "slug": "hoi-an",
+                "days": 2,
+                "startDate": "2026-12-12",
+                "pace": "normal",
+                "interests": ["culture", "food"]
+            },
+            "request": "Mình đi với người lớn tuổi, ngày 1 nhẹ nhàng thôi",
+            "expect": {
+                "kind": "proposal"
+            }
+        },
+        {
+            "id": "x16",
+            "group": "hoi_an",
+            "source": "author",
+            "trip": {
+                "slug": "hoi-an",
+                "days": 2,
+                "startDate": "2026-12-12",
+                "pace": "normal",
+                "interests": ["culture", "food"]
+            },
+            "request": "Có nên đi {d1i1} vào buổi sáng không?",
+            "expect": {
+                "kind": "reply"
+            }
+        },
+        {
+            "id": "x17",
+            "group": "hoi_an",
+            "source": "author",
+            "trip": {
+                "slug": "hoi-an",
+                "days": 2,
+                "startDate": "2026-12-12",
+                "pace": "normal",
+                "interests": ["culture", "food"]
+            },
+            "request": "Cho {h1} sang 23:30",
+            "expect": {
+                "kind": "any"
+            },
+            "trap": true
+        },
+        {
+            "id": "x18",
+            "group": "ngoai_pham_vi",
+            "source": "author",
+            "trip": {
+                "slug": "ha-noi",
+                "days": 2,
+                "startDate": "2026-12-08",
+                "pace": "normal",
+                "interests": ["culture", "food"]
+            },
+            "request": "Đặt giúp mình vé máy bay về Sài Gòn",
+            "expect": {
+                "kind": "reply"
+            }
+        }
     ]
-   },
-   "request": "Đổi ngày 1 với ngày 2",
-   "expect": {
-    "kind": "proposal",
-    "ops": [
-     "move"
-    ]
-   }
-  },
-  {
-   "id": "x02",
-   "group": "lenh",
-   "source": "author",
-   "trip": {
-    "slug": "da-lat",
-    "days": 3,
-    "startDate": "2026-12-15",
-    "pace": "normal",
-    "interests": [
-     "nature",
-     "food",
-     "culture"
-    ]
-   },
-   "request": "đảo lịch ngày 3 và ngày 1 giúp mình",
-   "expect": {
-    "kind": "proposal",
-    "ops": [
-     "move"
-    ]
-   }
-  },
-  {
-   "id": "x03",
-   "group": "lenh",
-   "source": "author",
-   "trip": {
-    "slug": "da-lat",
-    "days": 3,
-    "startDate": "2026-12-15",
-    "pace": "normal",
-    "interests": [
-     "nature",
-     "food",
-     "culture"
-    ]
-   },
-   "request": "Bỏ ngày 2",
-   "expect": {
-    "kind": "proposal",
-    "ops": [
-     "remove"
-    ]
-   }
-  },
-  {
-   "id": "x04",
-   "group": "lenh",
-   "source": "author",
-   "trip": {
-    "slug": "ha-noi",
-    "days": 2,
-    "startDate": "2026-12-08",
-    "pace": "normal",
-    "interests": [
-     "culture",
-     "food"
-    ]
-   },
-   "request": "rút chuyến còn 1 ngày",
-   "expect": {
-    "kind": "tripedit"
-   }
-  },
-  {
-   "id": "x05",
-   "group": "lenh",
-   "source": "author",
-   "trip": {
-    "slug": "hoi-an",
-    "days": 2,
-    "startDate": "2026-12-12",
-    "pace": "normal",
-    "interests": [
-     "culture",
-     "food"
-    ]
-   },
-   "request": "kéo dài thành 3 ngày",
-   "expect": {
-    "kind": "tripedit"
-   }
-  },
-  {
-   "id": "x06",
-   "group": "lenh",
-   "source": "author",
-   "trip": {
-    "slug": "da-lat",
-    "days": 3,
-    "startDate": "2026-12-15",
-    "pace": "normal",
-    "interests": [
-     "nature",
-     "food",
-     "culture"
-    ]
-   },
-   "request": "dời chuyến sang ngày 20/12",
-   "expect": {
-    "kind": "tripedit"
-   }
-  },
-  {
-   "id": "x07",
-   "group": "lenh",
-   "source": "author",
-   "trip": {
-    "slug": "ha-noi",
-    "days": 2,
-    "startDate": "2026-12-08",
-    "pace": "normal",
-    "interests": [
-     "culture",
-     "food"
-    ]
-   },
-   "request": "Đổi ngày 1 với ngày 5",
-   "expect": {
-    "kind": "any"
-   }
-  },
-  {
-   "id": "x08",
-   "group": "da_lat",
-   "source": "author",
-   "trip": {
-    "slug": "da-lat",
-    "days": 3,
-    "startDate": "2026-12-15",
-    "pace": "normal",
-    "interests": [
-     "nature",
-     "food",
-     "culture"
-    ]
-   },
-   "request": "Ngày 2 có thể mưa, đổi sang chỗ trong nhà giúp mình",
-   "expect": {
-    "kind": "proposal"
-   }
-  },
-  {
-   "id": "x09",
-   "group": "da_lat",
-   "source": "author",
-   "trip": {
-    "slug": "da-lat",
-    "days": 3,
-    "startDate": "2026-12-15",
-    "pace": "normal",
-    "interests": [
-     "nature",
-     "food",
-     "culture"
-    ]
-   },
-   "request": "Thêm một quán cà phê chiều ngày 1",
-   "expect": {
-    "kind": "proposal",
-    "ops": [
-     "add"
-    ]
-   }
-  },
-  {
-   "id": "x10",
-   "group": "da_lat",
-   "source": "author",
-   "trip": {
-    "slug": "da-lat",
-    "days": 3,
-    "startDate": "2026-12-15",
-    "pace": "normal",
-    "interests": [
-     "nature",
-     "food",
-     "culture"
-    ]
-   },
-   "request": "Ngày 3 về sớm, cho mọi thứ xong trước 14:00",
-   "expect": {
-    "kind": "proposal"
-   }
-  },
-  {
-   "id": "x11",
-   "group": "da_lat",
-   "source": "author",
-   "trip": {
-    "slug": "da-lat",
-    "days": 3,
-    "startDate": "2026-12-15",
-    "pace": "normal",
-    "interests": [
-     "nature",
-     "food",
-     "culture"
-    ]
-   },
-   "request": "Bỏ {d1i2}",
-   "expect": {
-    "kind": "proposal",
-    "ops": [
-     "remove"
-    ]
-   }
-  },
-  {
-   "id": "x12",
-   "group": "da_lat",
-   "source": "author",
-   "trip": {
-    "slug": "da-lat",
-    "days": 3,
-    "startDate": "2026-12-15",
-    "pace": "normal",
-    "interests": [
-     "nature",
-     "food",
-     "culture"
-    ]
-   },
-   "request": "Cho {h1} bắt đầu lúc 22:00",
-   "expect": {
-    "kind": "any"
-   },
-   "trap": true
-  },
-  {
-   "id": "x13",
-   "group": "da_lat",
-   "source": "author",
-   "trip": {
-    "slug": "da-lat",
-    "days": 3,
-    "startDate": "2026-12-15",
-    "pace": "normal",
-    "interests": [
-     "nature",
-     "food",
-     "culture"
-    ]
-   },
-   "request": "Xếp {d2i1} và {d2i2} cùng lúc 9:00",
-   "expect": {
-    "kind": "any"
-   },
-   "trap": true
-  },
-  {
-   "id": "x14",
-   "group": "hoi_an",
-   "source": "author",
-   "trip": {
-    "slug": "hoi-an",
-    "days": 2,
-    "startDate": "2026-12-12",
-    "pace": "normal",
-    "interests": [
-     "culture",
-     "food"
-    ]
-   },
-   "request": "Thêm chỗ ăn tối gần {d1i1}",
-   "expect": {
-    "kind": "proposal",
-    "ops": [
-     "add"
-    ]
-   }
-  },
-  {
-   "id": "x15",
-   "group": "hoi_an",
-   "source": "author",
-   "trip": {
-    "slug": "hoi-an",
-    "days": 2,
-    "startDate": "2026-12-12",
-    "pace": "normal",
-    "interests": [
-     "culture",
-     "food"
-    ]
-   },
-   "request": "Mình đi với người lớn tuổi, ngày 1 nhẹ nhàng thôi",
-   "expect": {
-    "kind": "proposal"
-   }
-  },
-  {
-   "id": "x16",
-   "group": "hoi_an",
-   "source": "author",
-   "trip": {
-    "slug": "hoi-an",
-    "days": 2,
-    "startDate": "2026-12-12",
-    "pace": "normal",
-    "interests": [
-     "culture",
-     "food"
-    ]
-   },
-   "request": "Có nên đi {d1i1} vào buổi sáng không?",
-   "expect": {
-    "kind": "reply"
-   }
-  },
-  {
-   "id": "x17",
-   "group": "hoi_an",
-   "source": "author",
-   "trip": {
-    "slug": "hoi-an",
-    "days": 2,
-    "startDate": "2026-12-12",
-    "pace": "normal",
-    "interests": [
-     "culture",
-     "food"
-    ]
-   },
-   "request": "Cho {h1} sang 23:30",
-   "expect": {
-    "kind": "any"
-   },
-   "trap": true
-  },
-  {
-   "id": "x18",
-   "group": "ngoai_pham_vi",
-   "source": "author",
-   "trip": {
-    "slug": "ha-noi",
-    "days": 2,
-    "startDate": "2026-12-08",
-    "pace": "normal",
-    "interests": [
-     "culture",
-     "food"
-    ]
-   },
-   "request": "Đặt giúp mình vé máy bay về Sài Gòn",
-   "expect": {
-    "kind": "reply"
-   }
-  }
- ]
 }
