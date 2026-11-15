@@ -63,6 +63,14 @@
             </div>
             <span class="tv-status-pill {{ $statusClass }}">{{ $statusLabel }}</span>
         </header>
+        @if (\App\Support\TourTicket::eligible($b) && $end->endOfDay()->isFuture())
+            {{-- Vé điện tử: mã QR ký số, mở được khi mất mạng (sw.js lưu bản sao), hướng dẫn viên quét để điểm danh --}}
+            <a class="bk-ticket" href="{{ route('tour.ticket', ['bookingId' => $b->bookingId]) }}">
+                <i class="fal fa-qrcode" aria-hidden="true"></i>
+                <span><b>Vé điện tử</b><small>Đưa mã QR cho hướng dẫn viên khi tập trung · mở được cả khi mất mạng sau lần mở đầu</small></span>
+                <i class="fal fa-chevron-right" aria-hidden="true"></i>
+            </a>
+        @endif
 
         {{-- Tiến trình đơn (đơn đã hủy thì hiện thông báo thay vì tiến trình) --}}
         @if ($noShow)

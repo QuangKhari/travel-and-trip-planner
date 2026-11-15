@@ -130,6 +130,88 @@ class PlannerBatchThreeTest extends TestCase
         $this->artisan('tours:check-itinerary', ['--tour' => $t])->assertSuccessful();
     }
 
+    /** Vé điện tử: mã ký số chỉ chủ đơn xem; HDV quét đúng đoàn thì điểm danh đủ khách; mã sửa tay / đoàn khác / đơn hủy bị từ chối. */
+    public function test_ticket_qr_signed_and_guide_scan_checks_in(): void
+    {
+        $t = $this->tour(2, 1);
+        app(\App\Services\DepartureService::class)->ensureForTour($t);
+        $aid = (int) DB::table('tbl_tour_availability')->where('tourId', $t)->value('availabilityId');
+        $mk = fn(string $status, string $code) => DB::table('tbl_booking')->insertGetId(BookingPii::encrypt(['tourId' => $t, 'userId' => $this->uid, 'availabilityId' => $aid,
+            'departureDate' => now()->addDay()->toDateString(), 'fullName' => 'Trần Thị Vé', 'email' => 'v@example.com', 'phoneNumber' => '0912000000', 'address' => 'HN',
+            'numAdults' => 2, 'numChildren' => 1, 'totalPrice' => 1, 'bookingStatus' => $status, 'bookingCode' => $code]));
+        $bid = $mk('y', 'V1');
+        $held = $mk('n', 'V2');
+        $b = DB::table('tbl_booking')->where('bookingId', $bid)->first();
+        $code = \App\Support\TourTicket::code($b);
+        $this->assertMatchesRegularExpression('/^TV' . $bid . '-[0-9A-F]{8}$/', $code);
+
+        // chỉ chủ đơn mở được vé; đơn chưa xác nhận chưa có mã
+        $this->withSession(['userId' => $this->uid, 'username' => 'u'])->get('/ve-tour/' . $bid)->assertOk()->assertSee($code)->assertSee('Cách tham gia');
+        $this->withSession(['userId' => $this->uid, 'username' => 'u'])->get('/ve-tour/' . $held)->assertOk()->assertSee('chưa có vé')->assertDontSee('TV' . $held . '-');
+        $other = DB::table('tbl_users')->insertGetId(['username' => 'o' . uniqid(), 'email' => uniqid() . '@example.com', 'password' => 'x', 'fullName' => 'O', 'isActive' => 'y']);
+        $this->withSession(['userId' => $other, 'username' => 'o'])->get('/ve-tour/' . $bid)->assertNotFound();
+
+        $this->withSession(['adminId' => $this->admin()])->post("/admin/departures/$aid/hdv", ['guideName' => 'Anh Tùng'])->assertRedirect();
+        $tok = DB::table('tbl_guide_links')->value('token');
+        $this->get('/hdv/' . $tok)->assertOk()->assertSee('Quét vé điện tử');
+        $this->postJson("/hdv/$tok/quet-ve", ['code' => strtolower($code), 'dayNo' => 1])->assertOk()->assertJson(['ok' => true, 'present' => 3, 'again' => false]);
+        $this->assertSame(3, (int) DB::table('tbl_departure_checkins')->where('bookingId', $bid)->value('present'));
+        $this->postJson("/hdv/$tok/quet-ve", ['code' => $code, 'dayNo' => 1])->assertOk()->assertJson(['again' => true]);
+        // sửa chữ ký / sai dạng / đơn đã hủy
+        $this->postJson("/hdv/$tok/quet-ve", ['code' => 'TV' . $bid . '-00000000', 'dayNo' => 1])->assertStatus(422)->assertJsonPath('ok', false);
+        $this->postJson("/hdv/$tok/quet-ve", ['code' => 'xin chao', 'dayNo' => 1])->assertStatus(422);
+        DB::table('tbl_booking')->where('bookingId', $bid)->update(['bookingStatus' => 'c']);
+        $this->postJson("/hdv/$tok/quet-ve", ['code' => $code, 'dayNo' => 2])->assertStatus(422)->assertJsonPath('message', 'Đơn đã hủy, vé không còn hiệu lực.');
+        // vé đoàn khác
+        $t2 = $this->tour(2, 1);
+        app(\App\Services\DepartureService::class)->ensureForTour($t2);
+        $aid2 = (int) DB::table('tbl_tour_availability')->where('tourId', $t2)->value('availabilityId');
+        $b2 = DB::table('tbl_booking')->insertGetId(BookingPii::encrypt(['tourId' => $t2, 'userId' => $this->uid, 'availabilityId' => $aid2, 'departureDate' => now()->addDay()->toDateString(),
+            'fullName' => 'Khác', 'email' => 'x@example.com', 'phoneNumber' => '0900', 'address' => 'HN', 'numAdults' => 1, 'numChildren' => 0, 'totalPrice' => 1, 'bookingStatus' => 'y', 'bookingCode' => 'V3']));
+        $this->postJson("/hdv/$tok/quet-ve", ['code' => \App\Support\TourTicket::code(DB::table('tbl_booking')->where('bookingId', $b2)->first()), 'dayNo' => 1])
+            ->assertStatus(422)->assertJsonPath('message', 'Vé này thuộc ngày khởi hành / tour khác, không phải đoàn của bạn.');
+    }
+
+    /** "Tự đi theo gợi ý của tour": chỉ chép địa điểm tour gắn vào Đã lưu, không chép giờ / điểm đón / tour. */
+    public function test_self_guided_copies_only_tour_places_into_saved(): void
+    {
+        $t = $this->tour(2, 1);
+        $dest = (int) DB::table('tbl_tours')->where('tourId', $t)->value('destinationId');
+        if (!$dest) {
+            $dest = DB::table('tbl_destinations')->insertGetId(['slug' => 'x' . uniqid(), 'name' => 'Nơi đến', 'province' => 'P', 'domain' => 'b', 'description' => 'x', 'latitude' => 21, 'longitude' => 105, 'isActive' => 1]);
+            DB::table('tbl_tours')->where('tourId', $t)->update(['destinationId' => $dest]);
+        }
+        $mk = fn($n) => DB::table('tbl_external_places')->insertGetId(['destinationId' => $dest, 'source' => 'manual', 'externalId' => $n, 'name' => $n, 'category' => 'sight',
+            'kind' => 'museum', 'latitude' => 21, 'longitude' => 105, 'rank' => 1, 'reviewStatus' => 'published', 'syncedAt' => now(), 'isMustTry' => 0]);
+        [$p1, $p2] = [$mk('Bảo tàng A'), $mk('Chùa B')];
+        app(\App\Services\TourStops::class)->save($t, [
+            ['dayNo' => 1, 'start' => '07:30', 'kind' => 'meet', 'title' => 'Đón khách ở khách sạn'],
+            ['dayNo' => 1, 'start' => '09:00', 'kind' => 'visit', 'title' => 'Bảo tàng A', 'refType' => 'place', 'refId' => $p1],
+            ['dayNo' => 2, 'start' => '08:00', 'kind' => 'visit', 'title' => 'Chùa B', 'refType' => 'place', 'refId' => $p2],
+            ['dayNo' => 2, 'start' => '10:00', 'kind' => 'visit', 'title' => 'Bảo tàng A lần nữa', 'refType' => 'place', 'refId' => $p1],
+        ]);
+        $this->withSession(['userId' => $this->uid, 'username' => 'u'])->get('/tour-detail/' . $t)->assertOk()->assertSee('Tự đi theo gợi ý của tour');
+        $r = $this->withSession(['userId' => $this->uid, 'username' => 'u'])->post("/tour/$t/tu-di")->assertRedirect();
+        $trip = DB::table('tbl_trips')->where('userId', $this->uid)->orderByDesc('tripId')->first();
+        $this->assertStringStartsWith('Tự đi:', $trip->title);
+        $this->assertNull($trip->startDate, 'không chép ngày khởi hành của tour');
+        $items = DB::table('tbl_trip_items')->where('tripId', $trip->tripId)->orderBy('orderNo')->get();
+        $this->assertSame([$p1, $p2], $items->pluck('refId')->map(fn($x) => (int) $x)->all(), 'không trùng, không có điểm đón');
+        $this->assertSame([null, null], $items->pluck('dayNo')->all(), 'tất cả vào Đã lưu');
+        $this->assertSame(0, DB::table('tbl_trip_items')->where('tripId', $trip->tripId)->where('refType', 'tour')->count(), 'không gắn tour vào chuyến');
+    }
+
+    /** "Hủy miễn phí tới ngày X" lấy từ bậc hoàn tiền thật. */
+    public function test_free_cancel_line_follows_refund_tiers(): void
+    {
+        Carbon::setTestNow('2027-03-01 10:00:00');
+        $this->assertSame('Hủy miễn phí tới 06/03/2027', \App\Support\CancelPolicy::freeUntil('2027-03-20')['text']);
+        $this->assertSame('Hoàn 50% nếu hủy tới 03/03/2027', \App\Support\CancelPolicy::freeUntil('2027-03-10')['text']);
+        $this->assertSame(0, \App\Support\CancelPolicy::freeUntil('2027-03-04')['percent']);
+        $this->assertNull(\App\Support\CancelPolicy::freeUntil(null));
+        Carbon::setTestNow();
+    }
+
     public function test_addons_priced_on_server_and_kept_on_booking(): void
     {
         $t = $this->tour();

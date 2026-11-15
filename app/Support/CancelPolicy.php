@@ -80,4 +80,32 @@ class CancelPolicy
     {
         return self::forCustomer($bookingStatus, $startDate, $paid)['allowed'];
     }
+
+    /**
+     * Một dòng chính sách cho thẻ / trang tour (học GetYourGuide: "Hủy miễn phí tới …"), tính từ bậc hoàn tiền thật của config.
+     * Mốc = ngày khởi hành − số ngày của bậc 100%; qua mốc đó thì nêu bậc kế tiếp còn kịp. null = không có ngày khởi hành.
+     * @return array{date:string,text:string,tone:string,percent:int}|null
+     */
+    public static function freeUntil(?string $startDate): ?array
+    {
+        if (!$startDate) {
+            return null;
+        }
+        $start = Carbon::parse($startDate)->startOfDay();
+        $today = now()->startOfDay();
+        $tiers = (array) config('booking.refund_tiers', [14 => 100, 7 => 50]);
+        krsort($tiers);
+        foreach ($tiers as $min => $pct) {
+            $until = $start->copy()->subDays((int) $min);
+            if ($until->gte($today) && (int) $pct > 0) {
+                $d = $until->format('d/m/Y');
+
+                return (int) $pct >= 100
+                    ? ['date' => $until->toDateString(), 'text' => 'Hủy miễn phí tới ' . $d, 'tone' => 'ok', 'percent' => 100]
+                    : ['date' => $until->toDateString(), 'text' => 'Hoàn ' . (int) $pct . '% nếu hủy tới ' . $d, 'tone' => 'info', 'percent' => (int) $pct];
+            }
+        }
+
+        return $start->gte($today) ? ['date' => $start->toDateString(), 'text' => 'Sát ngày đi: hủy không được hoàn tiền', 'tone' => 'warn', 'percent' => 0] : null;
+    }
 }

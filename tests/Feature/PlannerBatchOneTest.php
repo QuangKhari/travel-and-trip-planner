@@ -108,6 +108,37 @@ class PlannerBatchOneTest extends TestCase
         $this->assertSame('rules', DB::table('tbl_ai_runs')->orderByDesc('runId')->value('engine'));
     }
 
+    /** "Giảm xuống 1,5 triệu": La bàn thay mục đắt nhất bằng nơi cùng nhóm, gần, rẻ hơn (đã biết giá), có phiếu kiểm chứng; không ghi chuyến. */
+    public function test_copilot_budget_command_replaces_most_expensive_first(): void
+    {
+        $a = $this->place('Show đắt');
+        $b = $this->place('Bảo tàng nhỏ', 'museum', 0.001);
+        $c = $this->place('Bảo tàng vừa', 'museum', 0.002);
+        $d = $this->place('Bảo tàng miễn phí gần đó', 'museum', 0.0015);
+        DB::table('tbl_external_places')->where('placeId', $d)->update(['priceMin' => 0]);
+        $id = app(TripPlanner::class)->create($this->uid, ['title' => 'Hà Nội', 'days' => 3, 'groupSize' => 2, 'startDate' => '2027-03-03', 'destinationId' => $this->dest]);
+        $this->withSession($this->s)->postJson("/len-ke-hoach/$id/luu", ['title' => 'Hà Nội', 'days' => 3, 'groupSize' => 2, 'startDate' => '2027-03-03', 'rev' => 0,
+            'items' => [['type' => 'place', 'refId' => $a, 'day' => 1, 'cost' => 1200000], ['type' => 'place', 'refId' => $b, 'day' => 1, 'cost' => 300000],
+                ['type' => 'place', 'refId' => $c, 'day' => 2, 'cost' => 900000]]])->assertOk();
+        $rev = (int) DB::table('tbl_trips')->where('tripId', $id)->value('rev');
+        $ask = fn(string $t) => $this->withSession($this->s)->postJson("/len-ke-hoach/$id/la-ban", ['text' => $t])->assertOk()->json();
+
+        $r = $ask('giảm xuống 1,5 triệu');
+        $this->assertSame('proposal', $r['kind']);
+        $this->assertSame(2400000, $r['budget']['from']);
+        $this->assertTrue($r['budget']['reached']);
+        $this->assertLessThanOrEqual(1500000, $r['budget']['to']);
+        $this->assertCount(1, $r['changes'], 'chỉ đổi đủ để xuống dưới mục tiêu');
+        $this->assertSame('replace', $r['changes'][0]['op']);
+        $this->assertSame($d, (int) $r['changes'][0]['with']['refId'], 'thay bằng nơi cùng nhóm, gần, đã biết giá');
+        $this->assertStringContainsString('Show đắt', $r['say'][0]['t']);
+        $this->assertSame($rev, (int) DB::table('tbl_trips')->where('tripId', $id)->value('rev'), 'La bàn không ghi vào chuyến');
+
+        $r = $ask('ngân sách chỉ còn 5 triệu');
+        $this->assertSame('reply', $r['kind']);
+        $this->assertStringContainsString('đã dưới', $r['say'][0]['t']);
+    }
+
     public function test_holiday_temporary_closure_and_seasonal_hours(): void
     {
         $this->assertSame('Mùng 1 Tết', Holidays::name('2027-02-06'));

@@ -124,6 +124,59 @@ class WikipediaClient
         return false;
     }
 
+    /**
+     * Tệp ảnh trên Commons chụp gần một tọa độ (Commons lưu vị trí chụp của ảnh). Cách tìm này ít nhầm hơn tìm theo tên
+     * vì "Chùa Cầu" chỉ khớp ảnh chụp trong bán kính vài trăm mét.
+     * @return list<array{file:string,dist:int}>
+     */
+    public function geoFiles(float $lat, float $lng, int $radius = 250, int $limit = 8): array
+    {
+        $res = $this->http()->get('https://commons.wikimedia.org/w/api.php', [
+            'action' => 'query', 'format' => 'json', 'formatversion' => 2, 'list' => 'geosearch',
+            'gscoord' => $lat . '|' . $lng, 'gsradius' => max(10, min(10000, $radius)), 'gsnamespace' => 6, 'gslimit' => max(1, min(50, $limit)),
+        ]);
+
+        return $res->ok() ? self::parseGeoFiles($res->json() ?? []) : [];
+    }
+
+    /** @internal */
+    public static function parseGeoFiles(array $j): array
+    {
+        $out = [];
+        foreach ((array) ($j['query']['geosearch'] ?? []) as $g) {
+            $t = (string) ($g['title'] ?? '');
+            if (str_starts_with($t, 'File:') && preg_match('/\.(jpe?g|png|webp)$/i', $t)) {
+                $out[] = ['file' => substr($t, 5), 'dist' => (int) round((float) ($g['dist'] ?? 0))];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Tìm tệp ảnh trên Commons theo tên (dùng khi địa điểm không có ảnh gắn vị trí).
+     * @return list<string>
+     */
+    public function searchFiles(string $query, int $limit = 5): array
+    {
+        $res = $this->http()->get('https://commons.wikimedia.org/w/api.php', [
+            'action' => 'query', 'format' => 'json', 'formatversion' => 2, 'list' => 'search',
+            'srsearch' => $query . ' filetype:bitmap', 'srnamespace' => 6, 'srlimit' => max(1, min(20, $limit)),
+        ]);
+        if (!$res->ok()) {
+            return [];
+        }
+        $out = [];
+        foreach ((array) (($res->json() ?? [])['query']['search'] ?? []) as $r) {
+            $t = (string) ($r['title'] ?? '');
+            if (str_starts_with($t, 'File:') && preg_match('/\.(jpe?g|png|webp)$/i', $t)) {
+                $out[] = substr($t, 5);
+            }
+        }
+
+        return $out;
+    }
+
     /** Tải ảnh -> nhị phân (null nếu lỗi). Chỉ gọi tới máy chủ ảnh của Wikimedia. */
     public function download(string $url): ?string
     {

@@ -245,6 +245,19 @@ class PlannerController extends Controller
             ->with('planner_notice', 'Đã tạo chuyến đi quanh tour. Thêm món ăn, lễ hội và trải nghiệm quanh nơi đến ở ô tìm kiếm, rồi quay lại đặt tour khi đã vừa ý.');
     }
 
+    /** POST /tour/{id}/tu-di: chép ĐỊA ĐIỂM của tour vào "Đã lưu" của một chuyến tự đi mới (không chép giờ, điểm đón). */
+    public function selfGuided(Request $request, int $id, TripPlanner $planner)
+    {
+        try {
+            $r = $planner->createSelfGuidedFromTour($this->uid(), $id, (int) $request->input('groupSize', 2));
+        } catch (\DomainException $e) {
+            return redirect()->route('tour-detail', ['id' => $id])->with('planner_error', $e->getMessage());
+        }
+
+        return redirect()->route('planner.edit', ['id' => $r['tripId']])
+            ->with('planner_notice', 'Đã chép ' . $r['count'] . ' địa điểm của tour vào “Đã lưu”. Giờ, điểm đón và xe của tour không được chép: bạn tự xếp ngày, hoặc bấm “Để Travela xếp ngày này”.');
+    }
+
     /** Quy tắc kiểm tra yêu cầu tự đề xuất (dùng chung cho xem trước và lưu). */
     private function generateRules(): array
     {
@@ -630,7 +643,7 @@ class PlannerController extends Controller
             'rain' => $payload['rain'],
             // chỗ ở (vị trí, đêm) + vé đi / về: trình duyệt tự tính ngữ cảnh từng ngày theo ngày đi đang sửa (TpSchedule.dayCtx)
             'logistics' => $payload['logistics'] ?? ['stays' => [], 'moves' => []],
-            'rainSuggestUrl' => route('planner.rainSuggest', ['id' => $id]),
+            'rainSuggestUrl' => route('planner.rainSuggest', ['id' => $id]), 'notesUrl' => route('planner.notes', ['id' => $id]),
             'rainMax' => (int) config('planner.rain_plan.max_per_day', 4),
             'limits' => ['maxDays' => TripPlanner::MAX_DAYS, 'maxItems' => TripPlanner::MAX_ITEMS],
             // Quy tắc nghiệp vụ (giờ trong ngày, buổi, độ dày, tuyến): MỘT nguồn PlannerRules, planner-schedule.js / planner-geo.js chỉ đọc từ đây

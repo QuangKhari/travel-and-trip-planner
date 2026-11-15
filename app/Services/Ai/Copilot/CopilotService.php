@@ -177,6 +177,8 @@ final class CopilotService
                 $p = $this->propose($trip, $ctx, $keyed, [], $explicit, $say, false, 200);
                 $result = $p['ok'] ? $p['body'] : ['kind' => 'reply', 'say' => [['t' => 'Chưa làm được: ' . $p['errors'][0]]]];
             }
+        } elseif ($cmd['cmd'] === 'budget') {
+            $result = $this->budget($trip, (int) $cmd['amount'], $ctx, $free);
         } else {
             $result = $this->tripEdit($trip, $cmd, $ctx);
         }
@@ -189,6 +191,96 @@ final class CopilotService
         }
 
         return ['ok' => true] + $result + ['ms' => $ms, 'steps' => 0, 'remaining' => $this->gateway->remaining($userId)];
+    }
+
+    /**
+     * "Giảm xuống 3 triệu": đề xuất bớt / thay các mục ĐẮT NHẤT cho tới khi chi phí đã biết của lịch xuống dưới mục tiêu.
+     * Luật tham lam (không LLM): mục tự do (không khóa, không phải vé / chỗ ở, chưa đặt) xếp theo chi phí giảm dần;
+     * mỗi mục thử thay bằng nơi CÙNG NHÓM, gần đó, rẻ hơn ít nhất một nửa (miễn phí càng tốt); không có thì chuyển về Đã lưu.
+     * Đi qua đúng bước biên dịch + mô phỏng như mọi đề xuất La bàn: có phiếu kiểm chứng, xem trước, Áp dụng / Hoàn tác.
+     */
+    private function budget(object $trip, int $target, array $ctx, callable $free): array
+    {
+        $fmt = fn(float $v) => number_format((int) round($v / 1000) * 1000, 0, ',', '.') . 'đ';
+        $group = max(1, (int) ($trip->groupSize ?? 1));
+        $priceOf = [];
+        $placeIds = array_values(array_filter(array_map(fn($k) => $k['type'] === 'place' ? $k['refId'] : null, $ctx['keys'])));
+        if ($placeIds && \Illuminate\Support\Facades\Schema::hasColumn('tbl_external_places', 'priceMin')) {
+            $priceOf = DB::table('tbl_external_places')->whereIn('placeId', $placeIds)->whereNotNull('priceMin')->pluck('priceMin', 'placeId')->map(fn($v) => (float) $v)->all();
+        }
+        // chi phí của mục: người dùng / bộ xếp lịch đã ghi; chưa ghi thì giá vé đã biết × số người
+        $cost = fn(array $k) => $k['cost'] ?? ($k['type'] === 'place' && isset($priceOf[$k['refId']]) ? $priceOf[$k['refId']] * $group : 0.0);
+        $total = 0.0;
+        foreach ($ctx['keys'] as $k) {
+            if ($k['day'] !== null) {
+                $total += $cost($k);
+            }
+        }
+        if ($total <= $target) {
+            return ['kind' => 'reply', 'say' => [['t' => 'Chi phí đã biết của lịch hiện khoảng ' . $fmt($total) . ', đã dưới ' . $fmt($target) . '. Không cần bớt mục nào. '
+                . 'Lưu ý: chỉ tính các mục đã biết giá, chưa gồm ăn uống tự chọn và đi lại.']]];
+        }
+        $pool = [];
+        foreach ($ctx['keys'] as $k => $x) {
+            if ($x['day'] !== null && !$x['locked'] && !$x['booked'] && $free($x) && $cost($x) > 0) {
+                $pool[$k] = $cost($x);
+            }
+        }
+        arsort($pool);
+        if (!$pool) {
+            return ['kind' => 'reply', 'say' => [['t' => 'Chi phí đã biết khoảng ' . $fmt($total) . ' nhưng các mục có giá đều là vé, chỗ ở, mục đã khóa hoặc đã đặt, La bàn không tự bỏ. '
+                . 'Bạn mở khóa hoặc nêu tên mục muốn bớt nhé.']]];
+        }
+
+        $keyed = $explicit = $cands = $lines = [];
+        $left = $total;
+        foreach ($pool as $k => $c) {
+            if ($left <= $target || count($keyed) >= 4) {
+                break;
+            }
+            $x = $ctx['keys'][$k];
+            $alt = null;
+            if ($x['type'] === 'place' && $x['lat'] !== null) {
+                $g = \App\Services\Planner\PlaceMedia::groupOfKind($x['kind']);
+                $found = $this->finder->search($trip, ['group' => in_array($g, PlaceFinder::GROUPS, true) ? $g : null, 'nearItem' => $k, 'day' => $x['day']], $ctx);
+                $ids = array_map(fn($c2) => (int) $c2['refId'], array_filter($found['cands'], fn($c2) => $c2['type'] === 'place' && empty($c2['closed'])));
+                $prices = $ids ? DB::table('tbl_external_places')->whereIn('placeId', $ids)->whereNotNull('priceMin')->pluck('priceMin', 'placeId')->map(fn($v) => (float) $v)->all() : [];
+                foreach ($found['cands'] as $ck => $c2) {
+                    if ($c2['type'] !== 'place' || !empty($c2['closed']) || isset($cands[$ck]) || !array_key_exists((int) $c2['refId'], $prices)) {
+                        continue;   // chỉ thay bằng nơi ĐÃ BIẾT GIÁ: không đổi một mục có giá lấy một mục "chưa rõ giá"
+                    }
+                    $nc = $prices[(int) $c2['refId']] * $group;
+                    if ($nc <= $c * 0.5) {
+                        $alt = [$ck, $c2, $nc];
+                        break;
+                    }
+                }
+            }
+            if ($alt) {
+                [$ck, $c2, $nc] = $alt;
+                $cands[$ck] = $c2;
+                $keyed[] = ['op' => 'replace', 'item' => $k, 'with' => $ck];
+                $left -= $c - $nc;
+                $lines[] = $x['name'] . ' (' . $fmt($c) . ') → ' . $c2['name'] . ' (' . ($nc > 0 ? $fmt($nc) : 'miễn phí') . ')';
+            } else {
+                $keyed[] = ['op' => 'move', 'item' => $k, 'toDay' => null];
+                $left -= $c;
+                $lines[] = 'Bỏ ' . $x['name'] . ' về Đã lưu (−' . $fmt($c) . ')';
+            }
+            $explicit[] = $k;
+        }
+        $reach = $left <= $target;
+        $say = 'Chi phí đã biết ' . $fmt($total) . ' → khoảng ' . $fmt(max(0, $left)) . ($reach ? ', dưới mục tiêu ' . $fmt($target) . '.' : ', vẫn trên ' . $fmt($target) . ' (La bàn chỉ đổi tối đa 4 mục mỗi lần).')
+            . ' Đổi các mục đắt nhất: ' . implode('; ', $lines) . '. Chưa gồm ăn uống tự chọn và đi lại.';
+        $p = $this->propose($trip, $ctx, $keyed, $cands, $explicit, $say, true, 200);
+        if (!$p['ok'] && array_filter($keyed, fn($o) => $o['op'] === 'replace')) {
+            // thay thế gây vấn đề mới (giờ mở cửa, không kịp đường): lùi về chỉ chuyển các mục đó vào Đã lưu
+            $moves = array_map(fn($o) => ['op' => 'move', 'item' => $o['item'], 'toDay' => null], $keyed);
+            $p = $this->propose($trip, $ctx, $moves, [], $explicit, $say . ' (Nơi thay thế không vừa giờ trong ngày nên La bàn chỉ đề xuất bớt.)', true, 200);
+        }
+
+        return $p['ok'] ? $p['body'] + ['budget' => ['from' => (int) round($total), 'to' => (int) round(max(0, $left)), 'target' => $target, 'reached' => $reach]]
+            : ['kind' => 'reply', 'say' => [['t' => 'Chưa tìm được cách bớt chi phí mà không làm lịch lỗi: ' . $p['errors'][0]]]];
     }
 
     /** Dời chuyến / đổi số ngày: mô phỏng trên bản sao chuyến, nêu rõ cái được và cái mất. */

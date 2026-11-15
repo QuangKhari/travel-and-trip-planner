@@ -38,6 +38,18 @@
     @if (session('success'))<p class="ok" role="status">{{ session('success') }}</p>@endif
     <nav class="days" aria-label="Chọn ngày">@for ($d = 1; $d <= $days; $d++)<a href="?ngay={{ $d }}" class="{{ $d === $day ? 'on' : '' }}">Ngày {{ $d }}</a>@endfor</nav>
 
+    <section class="card" id="gScan">
+        <h2 style="font-size:1rem;margin:0 0 4px">Quét vé điện tử</h2>
+        <p class="mut" style="margin:0">Khách mở vé trong “Tour đã đặt”. Quét mã QR bằng camera, hoặc gõ mã in dưới QR (vd TV123-1A2B3C4D). Quét đúng thì đơn được điểm danh đủ số khách của ngày {{ $day }}.</p>
+        <div style="display:flex;gap:6px;margin-top:8px">
+            <input id="gCode" placeholder="Mã vé" autocomplete="off" autocapitalize="characters" maxlength="40" aria-label="Mã vé">
+            <button type="button" class="btn" id="gCheck" style="margin:0">Điểm danh</button>
+            <button type="button" class="btn" id="gCam" style="margin:0;background:#0f5d66" hidden>Mở camera</button>
+        </div>
+        <video id="gVideo" playsinline muted style="display:none;width:100%;max-height:260px;margin-top:8px;border-radius:10px;background:#000"></video>
+        <p id="gScanMsg" role="status" aria-live="polite" class="mut" style="margin:6px 0 0"></p>
+    </section>
+
     @php $total = $bookings->sum(fn($b) => $b->numAdults + $b->numChildren); $here = array_sum($checks); @endphp
     <section class="card">
         <h2 style="font-size:1rem;margin:0 0 4px">Điểm danh ngày {{ $day }}: <span id="gHere">{{ $here }}</span>/{{ $total }} khách</h2>
@@ -86,6 +98,45 @@
                 });
             });
         });
+    })();
+    /* Quét vé: BarcodeDetector (Chrome / Android) đọc QR từ camera; trình duyệt không hỗ trợ thì gõ mã. Máy chủ kiểm chữ ký vé. */
+    (function () {
+        var token = document.querySelector('meta[name=csrf-token]').content, url = @json(route('guide.scan', $l->token)), day = {{ $day }};
+        var inp = document.getElementById("gCode"), msg = document.getElementById("gScanMsg"), cam = document.getElementById("gCam"), video = document.getElementById("gVideo");
+        var busy = false, stream = null, last = "";
+        function send(code) {
+            code = (code || "").trim().toUpperCase(); if (!code || busy) return; busy = true; msg.textContent = "Đang kiểm tra " + code + "…";
+            fetch(url, { method: "POST", headers: { "Content-Type": "application/json", "Accept": "application/json", "X-CSRF-TOKEN": token }, body: JSON.stringify({ code: code, dayNo: day }) })
+                .then(function (r) { return r.json(); }).then(function (j) {
+                    busy = false; msg.textContent = (j.ok ? "✓ " : "✕ ") + (j.message || ""); msg.style.color = j.ok ? "#135D65" : "#B42318";
+                    if (j.ok) {
+                        inp.value = "";
+                        var li = document.querySelector('.bk li[data-id="' + j.bookingId + '"]');
+                        if (li) { li.querySelector("output").textContent = j.present + "/" + j.max; li.className = "is-full"; }
+                        var sum = 0; document.querySelectorAll(".bk output").forEach(function (o) { var n = parseInt(o.textContent, 10); if (!isNaN(n)) sum += n; });
+                        document.getElementById("gHere").textContent = sum;
+                        if (navigator.vibrate) navigator.vibrate(80);
+                    }
+                }).catch(function () { busy = false; msg.textContent = "Mất kết nối, thử lại."; });
+        }
+        document.getElementById("gCheck").onclick = function () { send(inp.value); };
+        inp.addEventListener("keydown", function (e) { if (e.key === "Enter") send(inp.value); });
+        if (!("BarcodeDetector" in window) || !navigator.mediaDevices) return;
+        cam.hidden = false;
+        cam.onclick = function () {
+            if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; video.style.display = "none"; cam.textContent = "Mở camera"; return; }
+            var det = new BarcodeDetector({ formats: ["qr_code"] });
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (s) {
+                stream = s; video.srcObject = s; video.style.display = "block"; video.play(); cam.textContent = "Tắt camera";
+                (function tick() {
+                    if (!stream) return;
+                    det.detect(video).then(function (codes) {
+                        var c = codes && codes[0] && codes[0].rawValue;
+                        if (c && c !== last) { last = c; send(c); setTimeout(function () { last = ""; }, 3000); }
+                    }).catch(function () {}).then(function () { setTimeout(tick, 350); });
+                })();
+            }).catch(function () { msg.textContent = "Không mở được camera. Gõ mã vé ở ô bên trên."; });
+        };
     })();
 </script>
 </body></html>

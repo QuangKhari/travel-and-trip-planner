@@ -79,7 +79,7 @@ final class ExplainFacts
         }
 
         return ['dest' => $dest, 'days' => $days, 'keys' => $keys, 'issues' => $issues, 'month' => $monthText, 'notes' => $notes,
-            'group' => $group, 'table' => $table, 'guard' => $guard];
+            'group' => $group, 'table' => $table, 'guard' => $guard, 'budget' => isset($payload['trip']['budget']) && $payload['trip']['budget'] !== null ? (float) $payload['trip']['budget'] : null];
     }
 
     private static function item(array $it, ?int $day, ?array $r): array

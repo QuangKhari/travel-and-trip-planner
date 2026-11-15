@@ -17,7 +17,7 @@ class PlaceDataAdminController extends Controller
     public function index(Request $request)
     {
         $ready = PlaceReports::ready() && Schema::hasTable('tbl_hours_rules');
-        $tab = in_array($request->query('tab'), ['reports', 'rules', 'verify'], true) ? $request->query('tab') : 'reports';
+        $tab = in_array($request->query('tab'), ['reports', 'rules', 'verify', 'media'], true) ? $request->query('tab') : 'reports';
         $status = in_array($request->query('status'), ['open', 'accepted', 'rejected'], true) ? $request->query('status') : 'open';
         $reports = collect();
         $rules = collect();
@@ -44,7 +44,12 @@ class PlaceDataAdminController extends Controller
         $queue = $ready && $tab === 'verify' ? $facts->queue($dest) : [];
         $counts['verify'] = $ready ? $facts->count() : 0;
 
+        $media = $tab === 'media' && \App\Services\Planner\PlaceMedia::imageReady() ? $this->mediaList($dest, (string) $request->query('show', 'missing')) : null;
+        $counts['media'] = \App\Services\Planner\PlaceMedia::imageReady()
+            ? DB::table('tbl_external_places')->where('reviewStatus', 'published')->where(fn($q) => $q->whereNull('coverImage')->orWhereNull('description')->orWhere('description', ''))->count() : 0;
+
         return view('admin.place-data.index', ['title' => 'Dữ liệu địa điểm', 'ready' => $ready, 'tab' => $tab, 'status' => $status, 'queue' => $queue, 'dest' => $dest,
+            'media' => $media, 'show' => (string) $request->query('show', 'missing'),
             'reports' => $reports, 'rules' => $rules, 'counts' => $counts, 'kinds' => PlaceReports::KINDS,
             'destinations' => DB::table('tbl_destinations')->where('isActive', 1)->orderBy('name')->get(['destinationId', 'name'])]);
     }
@@ -127,5 +132,84 @@ class PlaceDataAdminController extends Controller
         AuditLog::record('hours_rule.delete', 'hours_rule', $id, 'Xóa giờ đặc biệt #' . $id);
 
         return back()->with('success', 'Đã xóa quy tắc #' . $id . '.');
+    }
+
+    // ===================== Ảnh & mô tả (làm giàu địa điểm) =====================
+
+    /** Danh sách nơi đã xuất bản + ảnh đề xuất đang chờ duyệt. show = missing (thiếu ảnh hoặc mô tả) | all */
+    private function mediaList(?int $dest, string $show): array
+    {
+        $rows = DB::table('tbl_external_places as p')->join('tbl_destinations as d', 'd.destinationId', '=', 'p.destinationId')
+            ->where('p.reviewStatus', 'published')->when($dest, fn($q) => $q->where('p.destinationId', $dest))
+            ->when($show !== 'all', fn($q) => $q->where(fn($w) => $w->whereNull('p.coverImage')->orWhereNull('p.description')->orWhere('p.description', '')))
+            ->orderBy('d.name')->orderByDesc('p.rank')->limit(80)
+            ->get(['p.placeId', 'p.name', 'p.kind', 'p.description', 'p.descriptionSource', 'p.website', 'p.coverImage', 'p.imageCredit', 'p.imageLicense', 'p.imageSourceUrl', 'd.name as destName']);
+        $cands = Schema::hasTable('tbl_place_media_candidates') && $rows->isNotEmpty()
+            ? DB::table('tbl_place_media_candidates')->whereIn('placeId', $rows->pluck('placeId'))->where('status', 'new')->orderByRaw('distanceM IS NULL')->orderBy('distanceM')->get()->groupBy('placeId') : collect();
+        foreach ($rows as $r) {
+            $r->image = $r->coverImage ? \App\Support\DiscoverImage::url($r->coverImage) : null;
+            $r->tile = \App\Services\Planner\PlaceMedia::tile('place', \App\Services\Planner\PlaceMedia::groupOfKind($r->kind));
+            $r->candidates = $cands->get($r->placeId, collect())->take(6)->values();
+        }
+        $all = DB::table('tbl_external_places')->where('reviewStatus', 'published')->when($dest, fn($q) => $q->where('destinationId', $dest));
+
+        return ['rows' => $rows, 'total' => (clone $all)->count(), 'withImage' => (clone $all)->whereNotNull('coverImage')->count(),
+            'withDesc' => (clone $all)->whereNotNull('description')->where('description', '<>', '')->count()];
+    }
+
+    /** Lưu mô tả, nguồn mô tả, website; tải ảnh tự chụp / có giấy phép riêng (bắt buộc ghi nguồn). */
+    public function saveMedia(Request $request, int $id)
+    {
+        $place = DB::table('tbl_external_places')->where('placeId', $id)->first() ?? abort(404);
+        $v = $request->validate([
+            'description' => 'nullable|string|max:400', 'descriptionSource' => 'nullable|string|max:120', 'website' => 'nullable|url|max:255',
+            'image' => 'nullable|file|image|max:8192', 'imageCredit' => 'required_with:image|nullable|string|max:255', 'imageLicense' => 'required_with:image|nullable|string|max:60',
+            'removeImage' => 'nullable|boolean',
+        ], ['website.url' => 'Website phải đầy đủ (https://...).', 'imageCredit.required_with' => 'Ảnh tải lên phải ghi nguồn (tác giả / “Ảnh tự chụp”).',
+            'imageLicense.required_with' => 'Ghi giấy phép của ảnh (vd “Ảnh tự chụp”, “CC BY-SA 4.0”).']);
+        $patch = ['description' => isset($v['description']) ? trim(strip_tags($v['description'])) ?: null : null,
+            'descriptionSource' => $v['descriptionSource'] ?? null, 'website' => $v['website'] ?? null];
+        $up = app(\App\Services\Content\CoverUploader::class);
+        if (!empty($v['removeImage']) && $place->coverImage) {
+            $up->delete($place->coverImage);
+            $patch += ['coverImage' => null, 'imageCredit' => null, 'imageLicense' => null, 'imageSourceUrl' => null];
+        }
+        if ($request->hasFile('image')) {
+            try {
+                $path = $up->store($request->file('image'), 'discover/places', (string) $id);
+            } catch (\RuntimeException $e) {
+                return back()->withErrors(['image' => $e->getMessage()]);
+            }
+            $patch += ['coverImage' => $path, 'imageCredit' => strip_tags($v['imageCredit']), 'imageLicense' => strip_tags($v['imageLicense']), 'imageSourceUrl' => null];
+        }
+        DB::table('tbl_external_places')->where('placeId', $id)->update($patch);
+        AuditLog::record('place_media.save', 'place', $id, 'Cập nhật ảnh / mô tả địa điểm #' . $id);
+
+        return back()->with('success', 'Đã lưu ' . $place->name . '.');
+    }
+
+    /** Dùng một ảnh Commons đã đề xuất: tải về, đổi WebP, ghi tác giả + giấy phép + trang nguồn. */
+    public function useCandidate(int $cid, \App\Services\Content\ImageImporter $img)
+    {
+        $c = DB::table('tbl_place_media_candidates')->where('candidateId', $cid)->where('status', 'new')->first() ?? abort(404);
+        $path = 'discover/places/' . $c->placeId . '.webp';
+        $res = $img->store($c->file, $path, 160, true, false);
+        if (!$res['ok']) {
+            return back()->withErrors(['image' => 'Không dùng được ảnh này: ' . $res['note']]);
+        }
+        DB::table('tbl_external_places')->where('placeId', $c->placeId)->update(['coverImage' => $path,
+            'imageCredit' => mb_substr($c->artist . ' / Wikimedia Commons', 0, 255), 'imageLicense' => $c->license, 'imageSourceUrl' => $c->pageUrl]);
+        DB::table('tbl_place_media_candidates')->where('candidateId', $cid)->update(['status' => 'used']);
+        DB::table('tbl_place_media_candidates')->where('placeId', $c->placeId)->where('status', 'new')->update(['status' => 'rejected']);
+        AuditLog::record('place_media.commons', 'place', (int) $c->placeId, 'Dùng ảnh Commons ' . $c->file);
+
+        return back()->with('success', 'Đã gắn ảnh (' . $c->license . ', ' . $c->artist . ').');
+    }
+
+    public function rejectCandidate(int $cid)
+    {
+        DB::table('tbl_place_media_candidates')->where('candidateId', $cid)->update(['status' => 'rejected']);
+
+        return back()->with('success', 'Đã bỏ ảnh đề xuất.');
     }
 }

@@ -77,6 +77,32 @@ class GuideController extends Controller
         return $request->expectsJson() ? response()->json(['ok' => true, 'present' => $present]) : back();
     }
 
+    /**
+     * POST /hdv/{token}/quet-ve {code, dayNo}: quét QR vé điện tử (hoặc gõ mã) -> kiểm chữ ký -> đúng đoàn -> điểm danh đủ số khách của đơn.
+     * Vé của đoàn khác, đơn đã hủy, mã sửa tay: từ chối và nói rõ lý do.
+     */
+    public function scan(Request $request, string $token)
+    {
+        $l = $this->link($token);
+        $v = $request->validate(['code' => 'required|string|max:40', 'dayNo' => 'required|integer|between:1,30']);
+        $r = \App\Support\TourTicket::verify($v['code']);
+        if (!$r['ok']) {
+            return response()->json(['ok' => false, 'message' => $r['reason']], 422);
+        }
+        $b = $r['booking'];
+        if ((int) $b->availabilityId !== (int) $l->availabilityId) {
+            return response()->json(['ok' => false, 'message' => 'Vé này thuộc ngày khởi hành / tour khác, không phải đoàn của bạn.'], 422);
+        }
+        BookingPii::decrypt($b);
+        $n = (int) $b->numAdults + (int) $b->numChildren;
+        $before = DB::table('tbl_departure_checkins')->where(['availabilityId' => $l->availabilityId, 'bookingId' => $b->bookingId, 'dayNo' => $v['dayNo']])->value('present');
+        DB::table('tbl_departure_checkins')->updateOrInsert(['availabilityId' => $l->availabilityId, 'bookingId' => $b->bookingId, 'dayNo' => $v['dayNo']],
+            ['present' => $n, 'by' => trim(($l->guideName ?: 'HDV') . ' (quét vé)'), 'checkedAt' => now()]);
+
+        return response()->json(['ok' => true, 'bookingId' => (int) $b->bookingId, 'present' => $n, 'max' => $n, 'again' => $before !== null && (int) $before >= $n,
+            'message' => ($before !== null && (int) $before >= $n ? 'Đã điểm danh trước đó: ' : 'Đã điểm danh: ') . $b->fullName . ' · ' . $n . ' khách']);
+    }
+
     public function incident(Request $request, string $token)
     {
         $l = $this->link($token);

@@ -767,8 +767,10 @@ final class PlannerEngine
                 }
                 continue;
             }
-            if ($dow !== null && isset($c['hours'][(string) $dow])) {
-                $fit = OpeningHours::fit($c['hours'], $dow, $start, $dur);
+            // chưa có ngày đi nhưng giờ giống nhau mọi ngày (chợ đêm 17:00–23:00): vẫn xếp đúng giờ mở
+            $hd = $dow ?? OpeningHours::everyDay($c['hours'] ?? null);
+            if ($hd !== null && isset($c['hours'][(string) $hd])) {
+                $fit = OpeningHours::fit($c['hours'], $hd, $start, $dur);
                 if ($fit === null || $fit - $start > $maxWait) {
                     if (empty($retried[$c['key']]) && $queue) {
                         // thử lại sau: chèn trước bữa tối (nếu còn), để mục khác đi trước
@@ -782,8 +784,8 @@ final class PlannerEngine
                         continue;
                     }
                     if ($fit === null) {
-                        $dropped[] = $c + ['dropWhy' => 'Ngày ' . $dayNo . ' (' . self::DOW[$dow] . ') không còn khoảng mở cửa đủ ' . $dur . ' phút'
-                            . (($h = OpeningHours::describe($c['hours'], $dow)) ? ' (giờ mở: ' . $h . ')' : '')];
+                        $dropped[] = $c + ['dropWhy' => 'Ngày ' . $dayNo . ($dow !== null ? ' (' . self::DOW[$dow] . ')' : '') . ' không còn khoảng mở cửa đủ ' . $dur . ' phút'
+                            . (($h = OpeningHours::describe($c['hours'], $hd)) ? ' (giờ mở: ' . $h . ')' : '')];
                         continue;
                     }
                 }

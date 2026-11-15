@@ -72,5 +72,7 @@ class DemoCityPackSeeder extends Seeder
                 $this->command?->warn('    ' . count($held) . ' nơi đã được admin duyệt nhưng chưa xuất bản, giữ nguyên (duyệt trong trang quản trị nếu muốn dùng): ' . implode(', ', $held));
             }
         }
+        // mô tả ngắn cho cùng 120 nơi (chỉ điền chỗ trống)
+        $this->call(DemoPlaceTextSeeder::class);
     }
 }

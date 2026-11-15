@@ -2291,3 +2291,10 @@
 .px-hero__cta .px-iconbtn { background: transparent; border-color: rgba(255, 255, 255, .45); opacity: .92; }
 .px-plan--inline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: -8px 0 28px; padding: 12px 16px; border: 1px dashed #c9dedb; border-radius: 14px; background: #f7fbfa; }
 .px-plan--inline .px-hint { margin: 0; flex: 1 1 260px; }
+/* Vé điện tử trên trang chi tiết đơn */
+.bk-ticket { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; padding: 12px 14px; border-radius: 14px; background: #e6f4f1; color: #0f4f56; text-decoration: none; border: 1px solid #bfe0da; }
+.bk-ticket:hover { background: #d9efea; color: #0f4f56; }
+.bk-ticket > i:first-child { font-size: 28px; }
+.bk-ticket b { display: block; }
+.bk-ticket small { display: block; color: #35575c; }
+.bk-ticket > i:last-child { margin-left: auto; }

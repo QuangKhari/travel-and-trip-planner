@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-group.css') }}?v=7">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-focus.css') }}?v=9">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-media.css') }}?v=1">
 
 {{-- /len-ke-hoach/{id}. Biến: $payload (TripPlanner::payload), $client (dữ liệu cho planner.js), $role, $members, $tourFit.
      Bố cục "Timeline + Bản đồ" (tham khảo Wanderlog: lịch theo ngày cạnh bản đồ; Roadtrippers: bản đồ lớn, tuyến nối các điểm, thêm điểm dừng theo danh mục).
@@ -661,7 +662,7 @@
 <script src="{{ asset('clients/assets/js/planner-save.js') }}?v=3"></script>
 <script src="{{ asset('clients/assets/js/planner-resolve.js') }}?v=2"></script>
 <script src="{{ asset('clients/assets/js/planner-map.js') }}?v=6"></script>
-<script src="{{ asset('clients/assets/js/planner.js') }}?v=38" defer></script>
+<script src="{{ asset('clients/assets/js/planner.js') }}?v=39" defer></script>
 <script src="{{ asset('clients/assets/js/planner-extras.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-travel.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-share.js') }}?v=1" defer></script>

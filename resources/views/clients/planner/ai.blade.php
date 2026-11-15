@@ -1,7 +1,8 @@
 @include('clients.blocks.header')
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600&family=Bricolage+Grotesque:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai-chat.css') }}?v=8">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai-chat.css') }}?v=9">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-media.css') }}?v=1">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/nature-luxury-planner.css') }}?v=bl20261104">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
 
@@ -34,5 +35,5 @@
     <section class="pai-plate" id="paiPanel" aria-label="Tóm tắt chuyến và bản nháp lịch trình"></section>
 </main>
 <script type="application/json" id="paiData">@json($cfg)</script>
-<script src="{{ asset('clients/assets/js/planner-ai-chat.js') }}?v=6" defer></script>
+<script src="{{ asset('clients/assets/js/planner-ai-chat.js') }}?v=7" defer></script>
 @include('clients.blocks.footer')

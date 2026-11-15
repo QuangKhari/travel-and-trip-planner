@@ -1,0 +1,43 @@
+/* Dùng chung cho Trip Planner, bản nháp AI, trang tour: ô màu + biểu tượng theo nhóm khi địa điểm chưa có ảnh, và nhãn mức tin cậy dữ liệu.
+ * Màu đủ tương phản cho biểu tượng trắng (>= 3:1); nhóm còn ghi bằng chữ ở thẻ, không dựa vào màu. */
+.pai-tile, .tp-tile { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 10px; color: #fff; font-size: 22px; flex: none; }
+.tp-tile { width: 64px; height: 64px; }
+.pai-tile--eat, .tp-tile--eat { background: #c2410c; }
+.pai-tile--nature, .tp-tile--nature { background: #2f7d4f; }
+.pai-tile--culture, .tp-tile--culture { background: #8a5a12; }
+.pai-tile--fun, .tp-tile--fun { background: #7c3aed; }
+.pai-tile--see, .tp-tile--see { background: #167a85; }
+.pai-tile--food, .tp-tile--food { background: #b45309; }
+.pai-tile--experience, .tp-tile--experience { background: #0e7490; }
+.pai-tile--event, .tp-tile--event { background: #be185d; }
+.pai-tile--stay, .tp-tile--stay { background: #475569; }
+.pai-tile--note, .tp-tile--note { background: #64748b; }
+.pai-trust__c, .tp-trust { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; line-height: 1.2; padding: 2px 8px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap; }
+.pai-trust__c.is-ok, .tp-trust.is-ok { background: #e7f6ec; color: #166534; border-color: #bfe3cb; }
+.pai-trust__c.is-ok::before, .tp-trust.is-ok::before { content: "✓"; }
+.pai-trust__c.is-warn, .tp-trust.is-warn { background: #fff4e5; color: #92400e; border-color: #f6d9a8; }
+.pai-trust__c.is-warn::before, .tp-trust.is-warn::before { content: "!"; font-weight: 800; }
+.pai-trust__c.is-info, .tp-trust.is-info { background: #eef4ff; color: #1e40af; border-color: #c9d8fb; }
+.pai-trust__c.is-info::before, .tp-trust.is-info::before { content: "≈"; }
+.tp-credit { font-size: 10px; color: #6b7c7a; }
+.tpx-thumb.tp-tile { width: 52px; height: 52px; font-size: 20px; border-radius: 9px; }
+.tpx-status .tp-trust { margin-left: 2px; }
+/* "Dán ghi chú" trong khu Đã lưu */
+.tpx-notes { margin: 8px 0 10px; padding: 10px 12px; border: 1px dashed #b7d3cf; border-radius: 12px; background: #f7fbfa; }
+.tpx-notes__l { display: block; font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+.tpx-notes textarea { width: 100%; border: 1px solid #c9dcd8; border-radius: 9px; padding: 8px; font: inherit; font-size: 14px; resize: vertical; }
+.tpx-notes__hint, .tpx-notes__sum, .tpx-notes__miss { font-size: 12px; color: #4d6b6e; margin: 6px 0; }
+.tpx-notes__q { font-size: 13px; font-weight: 600; margin: 8px 0 2px; }
+.tpx-notes__list { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 4px; }
+.tpx-notes__it label { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 6px; border-radius: 8px; }
+.tpx-notes__it label:hover { background: #eef6f4; }
+.tpx-notes__it b { display: block; font-size: 14px; }
+.tpx-notes__it small { display: block; font-size: 12px; color: #5c7477; }
+.tpx-notes__img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; font-size: 16px; }
+.tp-mini.tp-mini--primary { background: #167a85; color: #fff; border-color: #167a85; }
+.tp-mini.tp-mini--primary:disabled { opacity: .6; }
+/* "Đến giờ đi" trong khối Hôm nay */
+.tgt__leave { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; padding: 8px 12px; border-radius: 10px; background: #eef6f4; color: #135d65; font-size: 14px; font-weight: 600; }
+.tgt__leave.is-soon { background: #fff4e5; color: #92400e; }
+.tgt__leave.is-now { background: #fdecea; color: #b42318; }
+.tgt__leave .tp-mini { margin-left: auto; }

@@ -243,9 +243,32 @@ final class OpeningHours
         return (int) (new DateTimeImmutable($startDate))->modify('+' . ($day - 1) . ' days')->format('N');
     }
 
+    /**
+     * Giờ giống hệt nhau cả 7 ngày (vd chợ đêm "Mo-Su 17:00-23:00") thì không cần biết thứ mới kiểm được:
+     * trả thứ 1 để dùng chung; giờ khác nhau theo thứ / thiếu ngày -> null (chưa có ngày đi thì không kiểm, như trước).
+     */
+    public static function everyDay(?array $hours): ?int
+    {
+        if (!$hours) {
+            return null;
+        }
+        $first = $hours['1'] ?? ($hours[1] ?? null);
+        if ($first === null || $first === []) {
+            return null;
+        }
+        for ($d = 2; $d <= 7; $d++) {
+            if (($hours[(string) $d] ?? ($hours[$d] ?? null)) !== $first) {
+                return null;
+            }
+        }
+
+        return 1;
+    }
+
     /** closed | early | late | null. */
     public static function check(?array $hours, ?int $dow, int $start, int $end): ?string
     {
+        $dow ??= self::everyDay($hours);
         if (!$hours || $dow === null || !array_key_exists((string) $dow, $hours)) {
             return null;
         }
@@ -273,6 +296,7 @@ final class OpeningHours
     /** Giờ bắt đầu sớm nhất >= $start để ở trọn $dur phút trong một khoảng mở; null nếu không còn khoảng nào đủ. */
     public static function fit(?array $hours, ?int $dow, int $start, int $dur): ?int
     {
+        $dow ??= self::everyDay($hours);
         if (!$hours || $dow === null || empty($hours[(string) $dow])) {
             return null;
         }
@@ -289,6 +313,7 @@ final class OpeningHours
     /** Mô tả giờ trong một thứ, ví dụ "08:00–11:30, 13:30–17:00" hoặc "đóng cửa". */
     public static function describe(?array $hours, ?int $dow): ?string
     {
+        $dow ??= self::everyDay($hours);
         if (!$hours || $dow === null || !array_key_exists((string) $dow, $hours)) {
             return null;
         }

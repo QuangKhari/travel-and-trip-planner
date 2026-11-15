@@ -3346,3 +3346,6 @@ body.tv-sea .tv-auth .sign-in {
         animation: none !important;
     }
 }
+/* "Tự đi theo gợi ý của tour": nút phụ, nhẹ hơn nút chính */
+.px-btn--ghost { background: #fff; color: var(--tv-navy, #0b2b33); border: 1.5px solid #c9dcd8; box-shadow: none; margin-left: 6px; }
+.px-btn--ghost:hover { border-color: #167a85; color: #167a85; }

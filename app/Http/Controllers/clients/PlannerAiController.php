@@ -104,6 +104,45 @@ class PlannerAiController extends Controller
         return response()->json($suggest->apply($trip, $this->uid() ?: null, $v, $copilot));
     }
 
+    /**
+     * POST /len-ke-hoach/{id}/dan-ghi-chu {text}: "Dán ghi chú của bạn, Travela biến thành lịch".
+     * AI (hoặc luật khi AI tắt) chỉ TÁCH TÊN nơi có trong ghi chú; khớp với kho đã duyệt của điểm đến của chuyến bằng luật.
+     * Trả về: matched (đưa vào "Đã lưu" khi người dùng bấm), unsure (vài lựa chọn để tự chọn), missing (không có trong dữ liệu Travela).
+     * Không ghi gì: trình duyệt thêm vào "Đã lưu" và lưu như mọi thay đổi khác (có Hoàn tác).
+     */
+    public function notes(Request $request, int $id, \App\Services\Planner\NoteImport $notes): JsonResponse
+    {
+        $trip = (app(TripSharing::class)->editable($this->uid(), $id) ?? abort(404))['trip'];
+        $v = $request->validate(['text' => ['required', 'string', 'min:3', 'max:' . \App\Services\Planner\NoteImport::MAX_CHARS]]);
+        $dest = array_values(array_unique(array_filter(array_merge(
+            [!empty($trip->destinationId) ? (int) $trip->destinationId : null],
+            DB::table('tbl_trip_items as i')->join('tbl_external_places as p', fn($j) => $j->on('p.placeId', '=', 'i.refId')->where('i.refType', 'place'))
+                ->where('i.tripId', $id)->distinct()->pluck('p.destinationId')->map(fn($x) => (int) $x)->all()))));
+        $ex = $notes->extract($v['text'], $this->uid() ?: null);
+        $m = $notes->match($ex['names'], $dest);
+        $planner = app(\App\Services\Planner\TripPlanner::class);
+        $refs = array_merge($m['matched'], ...array_map(fn($u) => $u['options'], $m['unsure']));
+        $res = $refs ? $planner->resolve(array_map(fn($r) => ['type' => $r['type'], 'refId' => $r['refId']], $refs)) : [];
+        $card = function (array $r) use ($res) {
+            $x = $res[$r['type'] . ':' . $r['refId']] ?? null;
+            if (!$x) {
+                return null;
+            }
+            $group = $r['type'] === 'place' ? \App\Services\Planner\PlaceMedia::groupOfKind($x['kind'] ?? null) : null;
+
+            return ['type' => $r['type'], 'refId' => (int) $r['refId'], 'name' => (string) $x['name'], 'kind' => (string) ($x['sub'] ?? ''), 'url' => $x['url'] ?? null,
+                'lat' => $x['lat'] ?? null, 'lng' => $x['lng'] ?? null, 'image' => $x['image'] ?? null, 'durationMin' => null,
+                'tile' => \App\Services\Planner\PlaceMedia::tile($r['type'], $group), 'said' => $r['said'] ?? null];
+        };
+
+        return response()->json([
+            'ok' => true, 'engine' => $ex['engine'], 'found' => count($ex['names']),
+            'matched' => array_values(array_filter(array_map($card, $m['matched']))),
+            'unsure' => array_values(array_filter(array_map(fn($u) => ['text' => $u['text'], 'options' => array_values(array_filter(array_map($card, $u['options'])))], $m['unsure']), fn($u) => $u['options'])),
+            'missing' => $m['missing'],
+        ]);
+    }
+
     public function recheck(Request $request, int $id, CopilotService $copilot): JsonResponse
     {
         $trip = (app(TripSharing::class)->editable($this->uid(), $id) ?? abort(404))['trip'];
@@ -165,7 +204,7 @@ class PlannerAiController extends Controller
             'title' => 'Trò chuyện để lên chuyến đi',
             'metaDescription' => 'Kể cho Travela AI nghe chuyến đi bạn muốn, AI hỏi từng bước rồi xếp sẵn lịch trình.',
             'noindex' => true,
-            'cfg' => ['read' => route('planner.ai.chat.read'), 'make' => route('planner.ai.chat.make'), 'csrf' => csrf_token(),
+            'cfg' => ['read' => route('planner.ai.chat.read'), 'make' => route('planner.ai.chat.make'), 'edit' => route('planner.ai.chat.edit'), 'csrf' => csrf_token(),
                 'aiOn' => app(\App\Services\Ai\AiGateway::class)->featureOn('brief')],
         ]);
     }
@@ -287,7 +326,7 @@ class PlannerAiController extends Controller
         // Xem trước = BẢN NHÁP LỊCH THẬT, chưa lưu: AI chỉ hiểu yêu cầu; bộ xếp lịch (PlannerService, không LLM) tạo lịch;
         // người dùng xem từng ngày, giờ, đường đi rồi mới xác nhận. Bản nháp giữ 30 phút theo mã; xác nhận lưu ĐÚNG bản đã xem
         // (cùng yêu cầu thì không xếp lại, tránh "xem một đằng, lưu một nẻo"). Không ghi gì vào CSDL trước khi xác nhận.
-        $hash = md5(json_encode($data));
+        $hash = self::hashOf($data);
         if (!$request->boolean('confirmed')) {
             $destination = DB::table('tbl_destinations')->where('destinationId', $data['destinationId'])->value('name');
             $draft = null;
@@ -295,8 +334,28 @@ class PlannerAiController extends Controller
             $gen = $service->generate($data + ['userId' => $this->uid()]);
             if (!empty($gen['ok']) && array_filter($gen['plan']['days'], fn($d) => !empty($d['items']))) {
                 $token = Str::random(32);
-                Cache::put('pai-draft:' . $this->uid() . ':' . $token, ['hash' => $hash, 'result' => $gen], 1800);
+                Cache::put(self::draftKey($this->uid(), $token), ['hash' => $hash, 'result' => $gen, 'edits' => 0], self::DRAFT_TTL);
                 $draft = self::draftView($gen);
+            }
+            // So sánh nhịp ngay trong hội thoại: cùng yêu cầu, xếp thêm bản "Thong thả" và "Đi nhiều". Mỗi bản có mã nháp riêng,
+            // chọn bản nào thì lưu đúng bản đó (mã băm tính trên yêu cầu đã đổi nhịp, giống hệt khi người dùng tự chọn nhịp).
+            $compare = [];
+            if ($draft && $request->boolean('compare')) {
+                foreach (['relaxed' => 'Thong thả', 'packed' => 'Đi nhiều'] as $pace => $label) {
+                    if (($data['pace'] ?? 'normal') === $pace) {
+                        $compare[] = ['pace' => $pace, 'label' => $label, 'token' => $token, 'draft' => $draft, 'current' => true];
+                        continue;
+                    }
+                    $alt = $data;
+                    $alt['pace'] = $pace;   // giữ nguyên thứ tự khóa để mã băm khớp khi người dùng chọn bản này
+                    $g2 = $service->generate($alt + ['userId' => $this->uid()]);
+                    if (empty($g2['ok']) || !array_filter($g2['plan']['days'], fn($d) => !empty($d['items']))) {
+                        continue;
+                    }
+                    $t2 = Str::random(32);
+                    Cache::put(self::draftKey($this->uid(), $t2), ['hash' => self::hashOf($alt), 'result' => $g2, 'edits' => 0], self::DRAFT_TTL);
+                    $compare[] = ['pace' => $pace, 'label' => $label, 'token' => $t2, 'draft' => self::draftView($g2), 'current' => false];
+                }
             }
             return response()->json([
                 'ok' => true, 'review' => true,
@@ -310,22 +369,25 @@ class PlannerAiController extends Controller
                     'pace' => $data['pace'] ?? null, 'interests' => array_values((array) ($data['interests'] ?? [])), 'dislikes' => array_values((array) ($data['dislikes'] ?? [])),
                 ],
                 'filled' => array_values(array_unique($filled)),
-                'draft' => $draft, 'draftToken' => $token,
+                'draft' => $draft, 'draftToken' => $token, 'compare' => $compare,
                 'draftMessage' => $draft ? null : (!empty($gen['ok']) ? 'Chưa đủ nội dung phù hợp để xếp lịch với điều kiện này. Bạn thử đổi ngày hoặc sở thích nhé.' : ($gen['message'] ?? 'Chưa tạo được bản nháp.')),
             ]);
         }
 
-        $cached = $request->filled('draftToken') ? Cache::get('pai-draft:' . $this->uid() . ':' . preg_replace('/[^A-Za-z0-9]/', '', (string) $request->input('draftToken'))) : null;
-        $result = $cached && ($cached['hash'] ?? null) === $hash ? $cached['result'] : $service->generate($data + ['userId' => $this->uid()]);
-        if (empty($result['ok'])) {
-            return response()->json(['ok' => false, 'message' => $result['message'] ?? 'Không thể tạo lịch trình.']);
+        // Chỉ lưu ĐÚNG bản nháp người dùng vừa xem. Mã nháp hết hạn / đã dùng / yêu cầu đã đổi so với lúc xếp: KHÔNG tự xếp lịch mới rồi lưu
+        // (trước đây máy chủ lặng lẽ xếp lại, chuyến được lưu có thể khác cái vừa xem). Trả 409 để trình duyệt xếp lại và cho xem trước.
+        $token = self::cleanToken($request->input('draftToken'));
+        $cached = $token ? Cache::get(self::draftKey($this->uid(), $token)) : null;
+        if (!$cached || ($cached['hash'] ?? null) !== $hash) {
+            return response()->json(['ok' => false, 'expired' => true, 'reason' => $cached ? 'changed' : 'expired',
+                'message' => $cached ? 'Thông tin chuyến đã đổi so với bản nháp. Travela xếp lại để bạn xem trước khi lưu.'
+                    : 'Bản nháp đã hết hạn (giữ 30 phút). Travela xếp lại để bạn xem trước khi lưu; lịch mới có thể khác một chút.'], 409);
         }
-        if (!array_filter($result['plan']['days'], fn($d) => !empty($d['items']))) {
-            return response()->json(['ok' => false, 'message' => 'Chưa đủ nội dung phù hợp để xếp lịch với điều kiện này. Bạn thử đổi ngày hoặc sở thích nhé.']);
+        $result = $cached['result'];
+        if (empty($result['ok']) || !array_filter($result['plan']['days'], fn($d) => !empty($d['items']))) {
+            return response()->json(['ok' => false, 'message' => 'Bản nháp không còn mục nào trong lịch. Bạn thêm lại hoặc xếp lại bản nháp nhé.']);
         }
-        if ($cached) {
-            Cache::forget('pai-draft:' . $this->uid() . ':' . preg_replace('/[^A-Za-z0-9]/', '', (string) $request->input('draftToken')));
-        }
+        Cache::forget(self::draftKey($this->uid(), $token));
         try {
             $id = $service->save($this->uid(), $result);
         } catch (\DomainException $e) {
@@ -340,29 +402,219 @@ class PlannerAiController extends Controller
             'title' => ($result['destination']['name'] ?? 'Chuyến đi') . ' · ' . $data['days'] . ' ngày', 'filled' => array_values(array_unique($filled))]);
     }
 
+    /** Bản nháp giữ 30 phút trong cache theo người dùng + mã; không ghi gì vào CSDL trước khi bấm Lưu. */
+    public const DRAFT_TTL = 1800;
+
+    public static function draftKey(int $uid, string $token): string
+    {
+        return 'pai-draft:' . $uid . ':' . $token;
+    }
+
     /**
-     * Bản nháp gọn cho khung chat: từng ngày, từng mục (giờ, đi lại tới mục, lý do chọn tối đa 3 ý), tổng đi lại, chi phí đã biết.
+     * Mã băm của yêu cầu xếp lịch, đã chuẩn hóa kiểu (3 và "3", null và "normal" là một) để "cùng yêu cầu" so được chắc chắn:
+     * khác mã băm nghĩa là người dùng thật sự đổi điều gì đó, khi đó phải xếp lại và cho xem trước.
+     */
+    public static function hashOf(array $d): string
+    {
+        foreach (['destinationId', 'days', 'adults', 'children', 'groupSize', 'month', 'arriveMin', 'leaveMin'] as $k) {
+            if (isset($d[$k]) && $d[$k] !== '') {
+                $d[$k] = (int) $d[$k];
+            }
+        }
+        $d['budget'] = isset($d['budget']) && $d['budget'] !== '' ? (int) $d['budget'] : null;
+        $d['pace'] = !empty($d['pace']) ? (string) $d['pace'] : 'normal';
+        $d['startDate'] = !empty($d['startDate']) ? (string) $d['startDate'] : null;
+        foreach (['interests', 'dislikes'] as $k) {
+            $a = array_values(array_unique(array_map('strval', (array) ($d[$k] ?? []))));
+            sort($a);
+            $d[$k] = $a;
+        }
+        ksort($d);
+
+        return md5(json_encode($d));
+    }
+
+    private static function cleanToken($t): ?string
+    {
+        $t = preg_replace('/[^A-Za-z0-9]/', '', (string) $t);
+
+        return strlen($t) === 32 ? $t : null;
+    }
+
+    /**
+     * POST /len-ke-hoach/tro-ly/nhap/sua {draftToken, ops:[{op:remove|move, day, index, toDay?, toIndex?}]}
+     * Sửa bản nháp TRƯỚC khi lưu: bỏ điểm (chuyển vào "Đã lưu"), đổi thứ tự, chuyển ngày. Máy chủ giữ bản nháp; sau mỗi thay đổi
+     * xếp lại giờ của ngày bị đụng bằng đúng bộ xếp giờ của trang chuyến (DaySchedule), nên bản lưu = bản đang xem.
+     * Không gọi LLM, không xếp lại cả chuyến. Mã hết hạn: 409 để trình duyệt xếp lại.
+     */
+    public function draftEdit(Request $request): JsonResponse
+    {
+        $v = $request->validate([
+            'draftToken' => ['required', 'string', 'size:32', 'alpha_num'],
+            'ops' => ['required', 'array', 'min:1', 'max:30'],
+            'ops.*.op' => ['required', 'in:remove,move'],
+            'ops.*.day' => ['required', 'integer', 'min:1', 'max:60'],
+            'ops.*.index' => ['required', 'integer', 'min:0', 'max:60'],
+            'ops.*.toDay' => ['nullable', 'integer', 'min:1', 'max:60'],
+            'ops.*.toIndex' => ['nullable', 'integer', 'min:0', 'max:60'],
+        ]);
+        $key = self::draftKey($this->uid(), $v['draftToken']);
+        $cached = Cache::get($key);
+        if (!$cached) {
+            return response()->json(['ok' => false, 'expired' => true, 'message' => 'Bản nháp đã hết hạn (giữ 30 phút). Travela xếp lại để bạn xem trước khi lưu.'], 409);
+        }
+        $res = self::applyDraftOps($cached['result'], $v['ops']);
+        if (!$res['ok']) {
+            return response()->json(['ok' => false, 'message' => $res['message']], 422);
+        }
+        $cached['result'] = $res['result'];
+        $cached['edits'] = (int) ($cached['edits'] ?? 0) + count($v['ops']);
+        Cache::put($key, $cached, self::DRAFT_TTL);   // sửa thì gia hạn lại 30 phút
+
+        return response()->json(['ok' => true, 'draft' => self::draftView($cached['result']), 'said' => $res['said'], 'edits' => $cached['edits']]);
+    }
+
+    /**
+     * Áp dụng thao tác lên kết quả generate() đang giữ. Thuần dữ liệu + DaySchedule (dễ kiểm thử).
+     * @return array{ok:bool,message?:string,result?:array,said?:list<string>}
+     */
+    public static function applyDraftOps(array $result, array $ops): array
+    {
+        $days = &$result['plan']['days'];
+        $idx = [];
+        foreach ($days as $i => $d) {
+            $idx[(int) $d['day']] = $i;
+        }
+        $touched = [];
+        $said = [];
+        foreach ($ops as $op) {
+            $from = $idx[(int) $op['day']] ?? null;
+            if ($from === null || !isset($days[$from]['items'][(int) $op['index']])) {
+                return ['ok' => false, 'message' => 'Mục này không còn trong bản nháp. Tải lại bản nháp nhé.'];
+            }
+            $it = $days[$from]['items'][(int) $op['index']];
+            if ($op['op'] === 'remove') {
+                array_splice($days[$from]['items'], (int) $op['index'], 1);
+                $result['plan']['unplaced'][] = ['key' => $it['key'], 'name' => $it['name'], 'type' => $it['type'], 'refId' => (int) ($it['refId'] ?? 0), 'score' => $it['score'] ?? 0,
+                    'reasons' => $it['reasons'] ?? [], 'durationMin' => $it['durationMin'] ?? null, 'priceMin' => $it['priceMin'] ?? null, 'why' => 'Bạn bỏ khỏi bản nháp',
+                    'osm' => !empty($it['osm']), 'lat' => $it['lat'] ?? null, 'lng' => $it['lng'] ?? null];
+                $touched[(int) $op['day']] = true;
+                $said[] = 'Đã bỏ ' . $it['name'] . ' khỏi ngày ' . $op['day'] . ' (vẫn nằm trong “Đã lưu” sau khi lưu).';
+                continue;
+            }
+            $toDay = (int) ($op['toDay'] ?? $op['day']);
+            $to = $idx[$toDay] ?? null;
+            if ($to === null) {
+                return ['ok' => false, 'message' => 'Chuyến không có ngày ' . $toDay . '.'];
+            }
+            array_splice($days[$from]['items'], (int) $op['index'], 1);
+            $pos = max(0, min(count($days[$to]['items']), (int) ($op['toIndex'] ?? count($days[$to]['items']))));
+            array_splice($days[$to]['items'], $pos, 0, [$it]);
+            $touched[(int) $op['day']] = $touched[$toDay] = true;
+            $said[] = $toDay === (int) $op['day'] ? 'Đã đổi thứ tự ' . $it['name'] . ' trong ngày ' . $toDay . '.' : 'Đã chuyển ' . $it['name'] . ' sang ngày ' . $toDay . '.';
+        }
+        unset($days);
+        $result = self::retime($result, array_keys($touched));
+        foreach (array_keys($touched) as $dn) {
+            foreach ($result['plan']['days'][$idx[$dn]]['items'] as $it) {
+                if (!empty($it['warn'])) {
+                    $said[] = 'Lưu ý ngày ' . $dn . ': ' . $it['name'] . ' ' . $it['warn'] . '.';
+                }
+            }
+        }
+
+        return ['ok' => true, 'result' => $result, 'said' => $said];
+    }
+
+    /**
+     * Xếp lại giờ các ngày đã sửa bằng DaySchedule (cùng quy tắc trang chuyến): giờ bắt đầu, đi lại tới mục, tổng ngày,
+     * cảnh báo giờ mở cửa / không kịp. Chi phí biết trước tính lại theo các mục còn trong lịch.
+     */
+    private static function retime(array $result, array $dayNos): array
+    {
+        $req = $result['request'] ?? [];
+        $route = \App\Services\Planner\Route\RouteService::make();
+        foreach ($result['plan']['days'] as &$day) {
+            if (!in_array((int) $day['day'], $dayNos, true)) {
+                continue;
+            }
+            $rows = array_map(fn($it) => ['type' => $it['type'], 'refId' => $it['refId'] ?? null, 'name' => $it['name'], 'kind' => $it['kind'] ?? null,
+                'lat' => $it['lat'] ?? null, 'lng' => $it['lng'] ?? null, 'slot' => $it['slot'] ?? null, 'durationMin' => $it['durationMin'] ?? null, 'hours' => $it['hours'] ?? null], $day['items']);
+            $ctx = ['arrive' => (int) $day['day'] === 1 ? ($req['arriveMin'] ?? null) : null, 'leave' => (int) $day['day'] === (int) ($req['days'] ?? 0) ? ($req['leaveMin'] ?? null) : null];
+            $sch = new \App\Services\Planner\Health\DaySchedule((int) $day['day'], $rows, $route, null,
+                !empty($req['startDate']) ? \App\Services\Planner\OpeningHours::dowOf($req['startDate'], (int) $day['day']) : null, $ctx);
+            foreach ($day['items'] as $i => &$it) {
+                $r = $sch->rows[$i] ?? null;
+                if (!$r) {
+                    continue;
+                }
+                $prev = $i > 0 ? ($sch->rows[$i - 1] ?? null) : null;
+                $it['startMin'] = (int) $r['start'];
+                $it['durationMin'] = (int) $r['dur'];
+                $it['travelMin'] = (int) ($prev['travelMin'] ?? 0);
+                $it['travelKm'] = round((float) ($prev['travelKm'] ?? 0), 1);
+                $it['warn'] = match (true) {
+                    $r['hours'] === 'closed' => 'đóng cửa ngày này',
+                    $r['hours'] === 'late' => 'tới sau giờ đóng cửa',
+                    $r['conflict'] === 'departure' => 'không kịp trước giờ phải rời đi',
+                    in_array($r['conflict'], ['overlap', 'travel'], true) => 'không kịp đi tới',
+                    default => null,
+                };
+            }
+            unset($it);
+            $day['activityMin'] = (int) $sch->activityMin;
+            $day['travelMin'] = (int) $sch->travelMin;
+        }
+        unset($day);
+        if (!empty($result['plan']['budget']) && isset($req['adults'])) {
+            $engine = app(\App\Services\Planner\PlannerEngine::class);
+            $known = 0.0;
+            foreach ($result['plan']['days'] as $d) {
+                foreach ($d['items'] as $it) {
+                    $known += (float) ($engine->costOf($it, $req + ['children' => 0]) ?? 0);
+                }
+            }
+            $result['plan']['budget']['knownMin'] = $known;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Bản nháp gọn cho khung chat: từng ngày, từng mục (giờ, đi lại tới mục, lý do chọn tối đa 3 ý, ảnh hoặc ô màu theo nhóm,
+     * nhãn mức tin cậy), tổng đi lại, chi phí đã biết.
      * @return array<string,mixed>
      */
     public static function draftView(array $r): array
     {
+        $media = \App\Services\Planner\PlaceMedia::forItems(array_merge(...array_map(fn($d) => $d['items'], $r['plan']['days'] ?: [['items' => []]])));
         $days = [];
         foreach ($r['plan']['days'] as $d) {
             $items = [];
             foreach ($d['items'] as $it) {
-                $items[] = ['name' => (string) $it['name'], 'type' => (string) $it['type'], 'group' => $it['group'] ?? null, 'start' => (int) $it['startMin'], 'end' => (int) $it['startMin'] + (int) $it['durationMin'],
+                $m = $media[$it['key'] ?? ''] ?? [];
+                $price = isset($it['priceMin']) && $it['priceMin'] !== null ? (float) $it['priceMin'] : null;
+                $items[] = ['key' => (string) ($it['key'] ?? ''), 'name' => (string) $it['name'], 'type' => (string) $it['type'], 'group' => $it['group'] ?? null, 'start' => (int) $it['startMin'], 'end' => (int) $it['startMin'] + (int) $it['durationMin'],
                     'travelMin' => (int) ($it['travelMin'] ?? 0), 'travelKm' => (float) ($it['travelKm'] ?? 0), 'osm' => !empty($it['osm']),
-                    'price' => isset($it['priceMin']) && $it['priceMin'] !== null ? (float) $it['priceMin'] : null,
+                    'price' => $price,
                     'reasons' => array_slice(array_values((array) ($it['reasons'] ?? [])), 0, 3),
+                    'image' => $m['image'] ?? null, 'blurb' => $m['blurb'] ?? null, 'tile' => \App\Services\Planner\PlaceMedia::tile($it['type'], $it['group'] ?? null),
+                    'trust' => \App\Services\Planner\PlaceMedia::trust($it, $m),
+                    'warn' => $it['warn'] ?? null,
                     'lat' => isset($it['lat']) && empty($it['coordsApprox']) ? (float) $it['lat'] : null, 'lng' => isset($it['lng']) && empty($it['coordsApprox']) ? (float) $it['lng'] : null];
             }
             $days[] = ['day' => (int) $d['day'], 'activityMin' => (int) ($d['activityMin'] ?? 0), 'travelMin' => (int) ($d['travelMin'] ?? 0), 'items' => $items];
         }
         $b = $r['plan']['budget'] ?? [];
+        $count = array_sum(array_map(fn($d) => count($d['items']), $days));
 
         return ['destination' => $r['destination']['name'] ?? null, 'startDate' => $r['request']['startDate'] ?? null, 'days' => $days,
             'knownCost' => (int) round($b['knownMin'] ?? 0), 'costNote' => $b['message'] ?? null, 'unplaced' => count($r['plan']['unplaced'] ?? []),
-            'travelMin' => array_sum(array_column($days, 'travelMin')), 'count' => array_sum(array_map(fn($d) => count($d['items']), $days))];
+            'travelMin' => array_sum(array_column($days, 'travelMin')), 'count' => $count,
+            // số đo để so sánh hai nhịp đặt cạnh nhau
+            'activityMin' => array_sum(array_column($days, 'activityMin')),
+            'perDay' => $days ? round($count / count($days), 1) : 0,
+            'pace' => $r['request']['pace'] ?? null];
     }
 
     /** @return array{0:list<string>,1:?string} */

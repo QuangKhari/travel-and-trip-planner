@@ -24,4 +24,15 @@ class TripCommandsTest extends TestCase
             $this->assertNull($p($q), $q);
         }
     }
+
+    public function test_budget_commands_need_an_amount_and_a_lowering_verb(): void
+    {
+        $p = fn(string $t) => \App\Services\Ai\Copilot\TripCommands::parse(mb_strtolower($t), 3, null);
+        $this->assertSame(['cmd' => 'budget', 'amount' => 3000000], $p('Giảm xuống 3 triệu'));
+        $this->assertSame(['cmd' => 'budget', 'amount' => 2500000], $p('ngân sách chỉ còn 2,5tr'));
+        $this->assertSame(['cmd' => 'budget', 'amount' => 800000], $p('giảm chi phí về 800k nhé'));
+        $this->assertSame(['cmd' => 'budget', 'amount' => 3000000], $p('Giảm chi phí xuống 3.000.000đ.'));
+        $this->assertNull($p('thêm quán ăn khoảng 50k'), 'có tiền nhưng không phải yêu cầu giảm');
+        $this->assertNull($p('giảm bớt đi lại ngày 2'), 'giảm nhưng không có số tiền');
+    }
 }

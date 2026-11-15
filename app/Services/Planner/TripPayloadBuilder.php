@@ -179,7 +179,62 @@ class TripPayloadBuilder
         }
         unset($itx);
 
+        // Ảnh địa điểm (đã duyệt, có ghi nguồn), ô màu theo nhóm khi thiếu ảnh, nhãn mức tin cậy: "Đã đặt" / "Giờ chưa kiểm tra" / "Giá tham khảo"
+        $media = PlaceMedia::forItems($items);
+        $booked = $this->bookedTitles((int) $trip->tripId);
+        foreach ($items as &$itx) {
+            $k = $itx['type'] . ':' . ($itx['refId'] ?? 0);
+            $m = $media[$k] ?? [];
+            if (empty($itx['image']) && !empty($m['image'])) {
+                $itx['image'] = $m['image'];
+            }
+            $itx['imageCredit'] = !empty($itx['image']) ? ($m['credit'] ?? null) : null;
+            if (empty($itx['blurb']) && !empty($m['blurb'])) {
+                $itx['blurb'] = $m['blurb'];
+            }
+            $itx['tile'] = PlaceMedia::tile((string) $itx['type'], $itx['type'] === 'place' ? PlaceMedia::groupOfKind($itx['kind'] ?? null) : null);
+            $itx['booked'] = $booked && self::matchesBooking((string) $itx['name'], $booked);
+            $itx['trust'] = PlaceMedia::trust(['type' => $itx['type'], 'priceMin' => $itx['price'] ?? null, 'booked' => $itx['booked'],
+                'osm' => in_array($itx['type'], TripPlanner::CUSTOM_TYPES, true) && ($itx['source'] ?? null) === 'search'], $m);
+        }
+        unset($itx);
+
         return $items;
+    }
+
+    /** Tiêu đề các đặt chỗ đã xác nhận của chuyến (vé tham quan, khách sạn…), đã bỏ dấu để so khớp với tên mục. @return list<string> */
+    private function bookedTitles(int $tripId): array
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('tbl_trip_external')) {
+            return [];
+        }
+        $q = DB::table('tbl_trip_external')->where('tripId', $tripId);
+        if (\Illuminate\Support\Facades\Schema::hasColumn('tbl_trip_external', 'status')) {
+            $q->where(fn($w) => $w->whereNull('status')->orWhere('status', 'booked'));
+        }
+
+        return array_values(array_filter(array_map(fn($t) => self::fold((string) $t), $q->pluck('title')->all()), fn($t) => mb_strlen($t) >= 4));
+    }
+
+    private static function fold(string $s): string
+    {
+        return trim(preg_replace('/\s+/', ' ', str_replace('đ', 'd', mb_strtolower(\Illuminate\Support\Str::ascii($s)))) ?? '');
+    }
+
+    /** Mục "đã đặt" khi tên mục nằm trong tiêu đề đặt chỗ (hoặc ngược lại), vd "Vé VinWonders Nam Hội An" khớp mục "VinWonders Nam Hội An". */
+    public static function matchesBooking(string $name, array $bookedFolded): bool
+    {
+        $n = self::fold($name);
+        if (mb_strlen($n) < 4) {
+            return false;
+        }
+        foreach ($bookedFolded as $b) {
+            if (str_contains($b, $n) || str_contains($n, $b)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** @return array{0:?array,1:array} [ngữ cảnh mưa của tháng đi, phương án dự phòng đã lưu theo ngày] */

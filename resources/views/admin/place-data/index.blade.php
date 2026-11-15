@@ -14,6 +14,7 @@
             <a class="ad-btn ad-btn--sm {{ $tab === 'reports' ? 'ad-btn--primary' : 'ad-btn--ghost' }}" href="{{ route('admin.place-data') }}">Báo sai <span class="ad-badge">{{ $counts['open'] }}</span></a>
             <a class="ad-btn ad-btn--sm {{ $tab === 'verify' ? 'ad-btn--primary' : 'ad-btn--ghost' }}" href="{{ route('admin.place-data', ['tab' => 'verify']) }}">Cần kiểm tra <span class="ad-badge">{{ $counts['verify'] ?? 0 }}</span></a>
             <a class="ad-btn ad-btn--sm {{ $tab === 'rules' ? 'ad-btn--primary' : 'ad-btn--ghost' }}" href="{{ route('admin.place-data', ['tab' => 'rules']) }}">Giờ đặc biệt</a>
+            <a class="ad-btn ad-btn--sm {{ $tab === 'media' ? 'ad-btn--primary' : 'ad-btn--ghost' }}" href="{{ route('admin.place-data', ['tab' => 'media']) }}">Ảnh &amp; mô tả <span class="ad-badge">{{ $counts['media'] ?? 0 }}</span></a>
         </nav>
         @if ($errors->any())<div class="ad-alert ad-alert--bad">{{ $errors->first() }}</div>@endif
 
@@ -46,6 +47,59 @@
                         </tr>
                     @endforeach
                     </tbody></table>
+                @endif
+            </section>
+        @elseif ($tab === 'media')
+            <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-media.css') }}?v=1">
+            <section class="ad-card">
+                <div class="ad-card__head"><h2>Ảnh &amp; mô tả</h2>
+                    <form method="GET" style="display:flex;gap:6px"><input type="hidden" name="tab" value="media">
+                        <select name="dest" onchange="this.form.submit()"><option value="">Mọi điểm đến</option>
+                            @foreach ($destinations as $d)<option value="{{ $d->destinationId }}" @selected($dest === (int) $d->destinationId)>{{ $d->name }}</option>@endforeach</select>
+                        <select name="show" onchange="this.form.submit()"><option value="missing" @selected($show !== 'all')>Còn thiếu ảnh hoặc mô tả</option><option value="all" @selected($show === 'all')>Tất cả</option></select></form></div>
+                @if (!$media)
+                    <div class="ad-empty"><i class="fa fa-database"></i><b>Chưa chạy migration</b>Chạy <code>php artisan migrate</code> (2026_12_12_000001_place_media).</div>
+                @else
+                    <p class="ad-muted" style="padding:0 16px">Có ảnh: <b>{{ $media['withImage'] }}/{{ $media['total'] }}</b> · có mô tả: <b>{{ $media['withDesc'] }}/{{ $media['total'] }}</b>.
+                        Ảnh chỉ dùng ảnh tự chụp hoặc ảnh có giấy phép mở, luôn ghi nguồn; không lưu ảnh Google Places. Ảnh đề xuất từ Wikimedia Commons: chạy <code>php artisan places:media-suggest{{ $dest ? ' --dest=' . $dest : '' }}</code> rồi duyệt ở đây.
+                        Nơi chưa có ảnh hiện ô màu + biểu tượng theo nhóm.</p>
+                    @if ($media['rows']->isEmpty())
+                        <div class="ad-empty"><i class="fa fa-check"></i><b>Mọi nơi đã có ảnh và mô tả</b></div>
+                    @else
+                        <table class="ad-table"><thead><tr><th style="width:84px">Ảnh</th><th>Nơi · mô tả · website</th><th style="width:40%">Ảnh đề xuất (Commons, giấy phép mở)</th></tr></thead><tbody>
+                        @foreach ($media['rows'] as $r)
+                            <tr>
+                                <td>@if ($r->image)<img src="{{ $r->image }}" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:8px"><br><small class="ad-muted">{{ $r->imageCredit }}@if ($r->imageLicense) · {{ $r->imageLicense }}@endif</small>
+                                    @else<span class="tp-tile tp-tile--{{ $r->tile['g'] }}" style="font-size:11px;text-align:center;padding:4px">{{ $r->tile['label'] }}</span><br><small class="ad-muted">chưa có ảnh</small>@endif</td>
+                                <td>
+                                    <b>{{ $r->name }}</b> <small class="ad-muted">#{{ $r->placeId }} · {{ $r->destName }} · {{ $r->tile['label'] }}</small>
+                                    <form method="POST" action="{{ route('admin.place-data.media.save', $r->placeId) }}" enctype="multipart/form-data" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">@csrf
+                                        <textarea name="description" maxlength="400" rows="2" placeholder="Mô tả 1–2 câu: nơi này là gì, vì sao nên ghé" style="grid-column:1/-1">{{ $r->description }}</textarea>
+                                        <input name="descriptionSource" maxlength="120" placeholder="Nguồn mô tả (vd Travela biên tập)" value="{{ $r->descriptionSource }}">
+                                        <input name="website" type="url" maxlength="255" placeholder="https://… (website chính thức)" value="{{ $r->website }}">
+                                        <input type="file" name="image" accept="image/jpeg,image/png,image/webp">
+                                        <input name="imageCredit" maxlength="255" placeholder="Nguồn ảnh: tác giả / “Ảnh tự chụp”">
+                                        <input name="imageLicense" maxlength="60" placeholder="Giấy phép (vd CC BY-SA 4.0)">
+                                        <span style="display:flex;gap:8px;align-items:center">@if ($r->image)<label><input type="checkbox" name="removeImage" value="1"> Gỡ ảnh</label>@endif
+                                            <button class="ad-btn ad-btn--sm ad-btn--primary">Lưu</button></span>
+                                    </form>
+                                </td>
+                                <td>
+                                    @forelse ($r->candidates as $c)
+                                        <div style="display:inline-block;width:132px;vertical-align:top;margin:0 6px 8px 0">
+                                            <a href="{{ $c->pageUrl ?: '#' }}" target="_blank" rel="noopener"><img src="{{ $c->thumbUrl }}" alt="{{ $c->file }}" loading="lazy" style="width:132px;height:88px;object-fit:cover;border-radius:6px"></a>
+                                            <small class="ad-muted" style="display:block;line-height:1.25">{{ \Illuminate\Support\Str::limit($c->artist, 40) }} · {{ $c->license }}@if ($c->distanceM !== null) · cách {{ $c->distanceM }} m @else · theo tên @endif</small>
+                                            <form method="POST" action="{{ route('admin.place-data.media.use', $c->candidateId) }}" style="display:inline">@csrf<button class="ad-btn ad-btn--sm ad-btn--primary">Dùng</button></form>
+                                            <form method="POST" action="{{ route('admin.place-data.media.reject', $c->candidateId) }}" style="display:inline">@csrf<button class="ad-btn ad-btn--sm ad-btn--ghost">Bỏ</button></form>
+                                        </div>
+                                    @empty
+                                        <small class="ad-muted">Chưa có đề xuất.</small>
+                                    @endforelse
+                                </td>
+                            </tr>
+                        @endforeach
+                        </tbody></table>
+                    @endif
                 @endif
             </section>
         @elseif ($tab === 'reports')

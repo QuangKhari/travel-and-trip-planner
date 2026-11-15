@@ -10,6 +10,7 @@ use Carbon\Carbon;
  *   swap      {a, b}           "đổi ngày 1 với ngày 3", "hoán đổi ngày 2 và 4"
  *   shift     {to:Y-m-d}       "dời chuyến sang 20/12", "lùi chuyến 2 ngày", "đi sớm hơn 1 ngày"
  *   days      {n}              "rút còn 3 ngày", "thêm 1 ngày", "bớt 2 ngày", "đổi thành 5 ngày"
+ *   budget    {amount}         "giảm xuống 3 triệu", "ngân sách chỉ còn 2,5 triệu", "tiết kiệm còn 800k"
  * Hàm thuần (dễ kiểm thử). Câu không khớp mẫu nào -> null, để LLM xử lý như cũ.
  */
 final class TripCommands
@@ -20,6 +21,14 @@ final class TripCommands
         $s = mb_strtolower(trim(preg_replace('/\s+/u', ' ', $msg) ?? ''));
         if ($s === '' || mb_strlen($s) > 120) {
             return null;
+        }
+        // ngân sách: số tiền đi kèm "triệu / tr / k / nghìn / đ" và động từ giảm / còn / dưới
+        if ($amt = self::money($s)) {
+            if (preg_match('/(?:giảm|hạ|cắt|bớt|tiết kiệm|đưa|kéo)\s+(?:chi phí|ngân sách|tiền|tổng|chi tiêu)?\s*(?:chuyến\s+)?(?:đi\s+)?(?:xuống|còn|dưới|về)(?![\p{L}\d])/u', $s)
+                || preg_match('/(?:ngân sách|chi phí|tổng)\s+(?:chỉ\s+)?(?:còn|có|là|tối đa|dưới|không quá)(?![\p{L}\d])/u', $s)
+                || preg_match('/^(?:chỉ\s+)?(?:có|còn)\s+[\d.,]+\s*(?:triệu|tr|k|nghìn|ngàn)/u', $s)) {
+                return ['cmd' => 'budget', 'amount' => $amt];
+            }
         }
         $num = '(\d{1,2}|một|hai|ba|bốn|năm|sáu|bảy|tám|chín|mười)';
         $n = fn(string $x) => is_numeric($x) ? (int) $x : (['một' => 1, 'hai' => 2, 'ba' => 3, 'bốn' => 4, 'năm' => 5, 'sáu' => 6, 'bảy' => 7, 'tám' => 8, 'chín' => 9, 'mười' => 10][$x] ?? 0);
@@ -80,6 +89,22 @@ final class TripCommands
             $k = $n($m[2]);
 
             return ['cmd' => 'shift', 'to' => Carbon::parse($startDate)->addDays($m[1] === 'sớm' ? -$k : $k)->toDateString()];
+        }
+
+        return null;
+    }
+
+    /** "3 triệu" / "2,5tr" / "800k" / "1.500.000đ" -> số đồng; không có đơn vị tiền -> null. */
+    public static function money(string $s): ?int
+    {
+        if (preg_match('/(\d+(?:[.,]\d+)?)\s*(triệu|tr|trieu|củ)(?![\p{L}\d])/u', $s, $m)) {
+            return (int) round((float) str_replace(',', '.', $m[1]) * 1_000_000);
+        }
+        if (preg_match('/(\d+(?:[.,]\d+)?)\s*(k|nghìn|ngàn)(?![\p{L}\d])/u', $s, $m)) {
+            return (int) round((float) str_replace(',', '.', $m[1]) * 1000);
+        }
+        if (preg_match('/(\d{1,3}(?:[.,]\d{3})+|\d{5,})\s*(?:đ|đồng|vnd)(?![\p{L}\d])/u', $s, $m)) {
+            return (int) preg_replace('/\D/', '', $m[1]);
         }
 
         return null;

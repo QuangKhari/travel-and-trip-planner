@@ -836,7 +836,14 @@
         if (it.image) {
             var ph = el("img", "tpx-thumb");
             ph.src = it.image; ph.alt = ""; ph.loading = "lazy";
+            if (it.imageCredit) ph.title = "Ảnh: " + it.imageCredit;
             top.appendChild(ph);
+        } else if (it.tile && !CUSTOM[it.type]) {
+            // chưa có ảnh: ô màu + biểu tượng theo nhóm (ăn uống, thiên nhiên, văn hóa…), nhóm vẫn ghi bằng chữ ở dòng loại
+            var tl = el("span", "tpx-thumb tp-tile tp-tile--" + it.tile.g);
+            tl.setAttribute("aria-hidden", "true"); tl.title = it.tile.label;
+            tl.appendChild(icon(it.tile.icon));
+            top.appendChild(tl);
         }
         var main = el("div", "tpx-stop__main");
         var kind = el("span", "tpx-kind");
@@ -885,6 +892,10 @@
             rc.title = "Ngoài trời: bấm để xem phương án khi mưa";
             stRow.appendChild(rc);
         }
+        (it.trust || []).forEach(function (x) {   // nhãn mức tin cậy: Đã đặt / Giờ chưa kiểm tra / Giá tham khảo
+            if (x.code === "hours_unchecked" && hoursNow && row && row.hours) return;   // đã có cảnh báo giờ cụ thể, không nói hai lần
+            var tg = el("span", "tp-trust is-" + x.tone, x.text); tg.title = x.tip || ""; stRow.appendChild(tg);
+        });
         if (stRow.children.length) main.appendChild(stRow);
         top.appendChild(main);
 
@@ -1442,6 +1453,8 @@
             if (G.hasPos(next.it)) na.appendChild(dirLink(next.it, "tp-btn tp-btn--ghost"));
             nb.appendChild(na);
             box.appendChild(nb);
+            var lv = leaveLine(rows, now);
+            if (lv) box.appendChild(lv);
             var gl = geoLine(next, now, ph);
             if (gl) box.appendChild(gl);
         } else {
@@ -1612,6 +1625,43 @@
             ui.here = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy };
             if (moved) renderToday();
         }, function () { ui.here = null; ui.geoErr = true; renderToday(); }, { enableHighAccuracy: false, maximumAge: 60000, timeout: 15000 });
+    }
+    /**
+     * "Đến giờ đi" (học TripIt Go Now): lúc nào phải rời điểm hiện tại để kịp điểm sau.
+     *  - đang ở một điểm (đã tới giờ của nó): giờ rời = giờ bắt đầu điểm sau − thời gian đi của chặng nối hai điểm (cùng số với lịch);
+     *  - chưa tới điểm kế tiếp và có vị trí: tính từ chỗ đang đứng (ước tính đường bộ).
+     * Chỉ báo khi biết cả giờ và đường đi; còn quá xa (> 3 giờ) thì không làm phiền.
+     */
+    function leaveLine(rows, now) {
+        var left = rows.filter(function (r) { return !r.it.visitedAt && !r.it.skippedAt; });
+        if (!left.length) return null;
+        var cur = left[0], tgt, travel, fromName;
+        if (cur.start <= now) {
+            tgt = left[1];
+            if (!tgt || !G.hasPos(tgt.it) || !G.hasPos(cur.it)) return null;
+            var idx = rows.indexOf(cur);
+            if (rows[idx + 1] === tgt && cur.leg) travel = cur.leg.min;
+            else { var road = G.hav(cur.it, tgt.it) * G.ROAD_FACTOR; travel = Math.max(5, Math.round(road / G.SPEED_KMH * 60)); }
+            fromName = cur.it.name;
+        } else {
+            if (!ui.here || !G.hasPos(cur.it)) return null;
+            tgt = cur;
+            var r2 = G.hav(ui.here, cur.it) * G.ROAD_FACTOR;
+            if (r2 < 0.15) return null;
+            travel = Math.max(5, Math.round(r2 / G.SPEED_KMH * 60));
+            fromName = "chỗ bạn đang đứng";
+        }
+        var at = tgt.start - travel, inMin = at - now;
+        if (inMin > 180) return null;
+        var w = el("div", "tgt__leave" + (inMin <= 0 ? " is-now" : inMin <= 15 ? " is-soon" : ""));
+        w.setAttribute("role", "status");
+        w.appendChild(icon(inMin <= 0 ? "fa-running" : "fa-walking"));
+        var txt = inMin <= 0
+            ? "Nên đi ngay để kịp “" + tgt.it.name + "” lúc " + hhmm(tgt.start) + " (đi mất ~" + fmtMin(travel) + (inMin < -5 ? ", đang trễ khoảng " + fmtMin(-inMin) : "") + ")."
+            : "Rời " + fromName + " lúc " + hhmm(at) + " (còn " + fmtMin(inMin) + ") để kịp “" + tgt.it.name + "” lúc " + hhmm(tgt.start) + " · đi mất ~" + fmtMin(travel) + ".";
+        w.appendChild(el("span", null, txt));
+        if (G.hasPos(tgt.it)) w.appendChild(dirLink(tgt.it, "tp-mini"));
+        return w;
     }
     function geoLine(next, now, ph) {
         if (!navigator.geolocation || !G.hasPos(next.it)) return null;
@@ -1943,6 +1993,77 @@
         return li;
     }
     /** "Đã lưu": mục chưa xếp ngày (hộp chờ, giống "Places to visit" của Wanderlog). Khám phá -> Lưu -> kéo vào ngày. */
+    /**
+     * "Dán ghi chú của bạn, Travela biến thành lịch": AI chỉ tách tên nơi trong ghi chú; máy chủ khớp với kho địa điểm thật (luật).
+     * Khớp chắc: đánh dấu sẵn; chưa chắc: chọn một trong vài lựa chọn; không có trong dữ liệu: liệt kê, không tự tạo địa điểm.
+     */
+    function notesPanel(sec) {
+        var old = sec.querySelector(".tpx-notes");
+        if (old) { old.remove(); return; }
+        var box = el("div", "tpx-notes");
+        var lb = el("label", "tpx-notes__l", "Dán ghi chú, tin nhắn bạn gửi hoặc đoạn review");
+        var ta = el("textarea"); ta.rows = 4; ta.maxLength = 3000; ta.id = "tpNotesTxt"; lb.htmlFor = ta.id;
+        ta.placeholder = "Ví dụ: Đà Lạt nhớ ghé Dinh Bảo Đại, ăn bánh căn Nhà Chung, chiều lên Langbiang…";
+        box.appendChild(lb); box.appendChild(ta);
+        box.appendChild(el("p", "tpx-notes__hint", "Travela chỉ tìm các nơi có trong dữ liệu đã kiểm tra của điểm đến; nơi không có sẽ được liệt kê để bạn tự thêm."));
+        var go = btn("tp-mini tp-mini--primary", "Tìm địa điểm", "Tìm các nơi trong ghi chú", function () {
+            var t = ta.value.trim(); if (t.length < 3) { ta.focus(); return; }
+            go.disabled = true; go.textContent = "Đang đọc ghi chú…";
+            post(cfg.notesUrl, { text: t }).then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); }).then(function (j) {
+                go.disabled = false; go.textContent = "Tìm lại";
+                notesResult(box, j);
+            }).catch(function (e) { go.disabled = false; go.textContent = "Tìm địa điểm"; say(e === 429 ? "Bạn dán hơi nhanh, thử lại sau một phút nhé." : "Chưa đọc được ghi chú. Bạn thử lại nhé.", true); });
+        });
+        box.appendChild(go);
+        var res = el("div", "tpx-notes__res"); res.setAttribute("aria-live", "polite"); box.appendChild(res);
+        sec.querySelector("header").after(box);
+        ta.focus();
+    }
+    function notesResult(box, j) {
+        var res = box.querySelector(".tpx-notes__res"); res.textContent = "";
+        var have = haveMap(), picks = [];
+        function row(r, checked, name) {
+            var li = el("li", "tpx-notes__it");
+            var cb = el("input"); cb.type = name ? "radio" : "checkbox"; if (name) cb.name = name; cb.checked = !!checked;
+            var already = !!have[r.type + ":" + r.refId]; if (already) { cb.disabled = true; cb.checked = false; }
+            var lab = el("label");
+            lab.appendChild(cb);
+            if (r.image) { var im = el("img", "tpx-notes__img"); im.src = r.image; im.alt = ""; lab.appendChild(im); }
+            else if (r.tile) { var tl = el("span", "tp-tile tpx-notes__img tp-tile--" + r.tile.g); tl.setAttribute("aria-hidden", "true"); tl.appendChild(icon(r.tile.icon)); lab.appendChild(tl); }
+            var tx = el("span"); tx.appendChild(el("b", null, r.name)); tx.appendChild(el("small", null, [r.kind, already ? "đã có trong chuyến" : (r.said && r.said !== r.name ? "từ “" + r.said + "”" : "")].filter(Boolean).join(" · ")));
+            lab.appendChild(tx); li.appendChild(lab);
+            picks.push({ r: r, cb: cb });
+            return li;
+        }
+        var n = (j.matched || []).length;
+        res.appendChild(el("p", "tpx-notes__sum", "Đọc được " + (j.found || 0) + " tên nơi" + (j.engine === "llm" ? " (AI tách tên)" : " (tách bằng luật)") + ": " + n + " nơi khớp dữ liệu Travela"
+            + ((j.unsure || []).length ? ", " + j.unsure.length + " nơi cần bạn chọn" : "") + ((j.missing || []).length ? ", " + j.missing.length + " nơi chưa có" : "") + "."));
+        if (n) { var ul = el("ul", "tpx-notes__list"); j.matched.forEach(function (r) { ul.appendChild(row(r, true)); }); res.appendChild(ul); }
+        (j.unsure || []).forEach(function (u, k) {
+            res.appendChild(el("p", "tpx-notes__q", "“" + u.text + "” là nơi nào?"));
+            var ul2 = el("ul", "tpx-notes__list");
+            u.options.forEach(function (r) { ul2.appendChild(row(r, false, "tpNote" + k)); });
+            res.appendChild(ul2);
+        });
+        if ((j.missing || []).length) res.appendChild(el("p", "tpx-notes__miss", "Chưa có trong dữ liệu Travela: " + j.missing.join(", ") + ". Bạn có thể tự thêm bằng ô tìm kiếm trên bản đồ."));
+        if (!picks.length) return;
+        var add = btn("tp-mini tp-mini--primary", "Thêm vào Đã lưu", "Thêm các nơi đã chọn vào Đã lưu", function () {
+            var chosen = picks.filter(function (p) { return p.cb.checked && !p.cb.disabled; }).map(function (p) { return p.r; });
+            if (!chosen.length) { say("Chưa chọn nơi nào.", true); return; }
+            var added = 0;
+            chosen.forEach(function (r) {
+                if (items.length >= LIMITS.maxItems || haveMap()[r.type + ":" + r.refId]) return;
+                items.push(newItem({ type: r.type, refId: r.refId, name: r.name, sub: r.kind, url: r.url, lat: r.lat, lng: r.lng, day: null, defDur: r.durationMin, image: r.image }));
+                added++;
+            });
+            if (!added) { say("Các nơi này đã có trong chuyến.", true); return; }
+            ui.waitOpen = true;
+            commit();
+            say("Đã thêm " + added + " nơi từ ghi chú vào Đã lưu. Chọn ngày cho từng nơi, hoặc để Travela xếp ngày trống.", false, [["Hoàn tác", undoOnce]]);
+            renderMap();
+        });
+        res.appendChild(add);
+    }
     function waitSection(list) {
         var sec = el("section", "tpx-day tpx-day--wait" + (list.length ? "" : " is-empty"));
         sec.id = "tpDayX";
@@ -1956,6 +2077,7 @@
             ? list.length + " mục chưa xếp lịch. Kéo vào một ngày, hoặc chọn ở ô cạnh mục (có sẵn lựa chọn “ngày hợp nhất”)."
             : "Nơi cất những chỗ bạn thích nhưng chưa biết đi ngày nào: bấm 🔖 Lưu khi khám phá quanh tuyến, chọn “Đã lưu” khi thêm, hoặc kéo một mục từ ngày vào đây."));
         var act = el("div", "tpx-dayhead__act");
+        if (!RO && cfg.notesUrl) act.appendChild(btn("tp-mini", "Dán ghi chú", "Dán ghi chú hoặc bài review, Travela tìm các nơi có trong dữ liệu và đưa vào Đã lưu", function () { notesPanel(sec); }));
         if (!RO && list.length) act.appendChild(btn("tp-mini", "Chọn hết", "Chọn tất cả mục chưa xếp", function () {
             list.forEach(function (x) { ui.sel[x.uid] = true; });
             renderDays();

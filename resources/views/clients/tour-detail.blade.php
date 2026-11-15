@@ -295,7 +295,11 @@
                         @csrf
                         <input type="hidden" name="groupSize" value="2">
                         <button type="submit" class="px-btn px-btn--sand">Lên kế hoạch quanh tour này</button>
-                        <p class="px-hint">Thêm món ăn, lễ hội, phương án khi mưa quanh nơi đến. Bạn đặt tour sau khi đã vừa ý.</p>
+                        @if (count(\App\Services\Planner\TripPlanner::tourPlaces((int) $tourDetail->tourId)) > 0)
+                            <button type="submit" class="px-btn px-btn--ghost" formaction="{{ route('planner.selfGuided', ['id' => $tourDetail->tourId]) }}"
+                                title="Chỉ chép các địa điểm tour ghé vào “Đã lưu”, không chép giờ hay điểm đón">Tự đi theo gợi ý của tour</button>
+                        @endif
+                        <p class="px-hint">Thêm món ăn, lễ hội, phương án khi mưa quanh nơi đến. Bạn đặt tour sau khi đã vừa ý. “Tự đi” chỉ chép địa điểm của tour vào chuyến riêng.</p>
                         @if (session('planner_error'))<p class="px-hint" role="alert">{{ session('planner_error') }}</p>@endif
                     </form>
                 @endunless
@@ -411,6 +415,15 @@
                             </div>
                         </dl>
 
+                        @php $cancelLine = \App\Support\CancelPolicy::freeUntil($tourDetail->startDate ?? null); @endphp
+                        @if ($cancelLine)
+                            <p class="px-book__cancel is-{{ $cancelLine['tone'] }}" id="tdCancelLine"
+                               data-tiers='@json((array) config('booking.refund_tiers', [14 => 100, 7 => 50]))'>
+                                <i class="fal fa-calendar-check" aria-hidden="true"></i>
+                                <span>{{ $cancelLine['text'] }}</span>
+                                <a href="#tdPolicy" class="px-book__cancel-more">Chính sách hủy</a>
+                            </p>
+                        @endif
                         @if ($daysToGo >= 0 && $daysToGo <= 30)
                             <p class="px-book__soon">
                                 <i class="fal fa-hourglass-half" aria-hidden="true"></i>
@@ -431,7 +444,7 @@
                                     <div class="px-deps__list">
                                         @foreach ($departures as $i => $d)
                                             <label class="px-dep">
-                                                <input type="radio" name="availabilityId" value="{{ $d->availabilityId }}" data-left="{{ $d->remaining }}" @checked($d->departureDate === $tourDetail->startDate || ($i === 0 && !collect($departures)->contains('departureDate', $tourDetail->startDate)))>
+                                                <input type="radio" name="availabilityId" value="{{ $d->availabilityId }}" data-left="{{ $d->remaining }}" data-date="{{ $d->departureDate }}" @checked($d->departureDate === $tourDetail->startDate || ($i === 0 && !collect($departures)->contains('departureDate', $tourDetail->startDate)))>
                                                 <span><b>{{ \Carbon\Carbon::parse($d->departureDate)->format('d/m') }}</b>
                                                     <small>{{ $weekdays[\Carbon\Carbon::parse($d->departureDate)->dayOfWeek] }}</small>
                                                     <em class="{{ $d->remaining <= 5 ? 'is-low' : '' }}">còn {{ $d->remaining }}</em></span>
@@ -534,7 +547,7 @@
                     </div>
                 </div>
 
-                <div class="px-promise">
+                <div class="px-promise" id="tdPolicy">
                     <h3>Cam kết của chúng tôi</h3>
                     <ul>
                         <li><i class="fal fa-calendar-check" aria-hidden="true"></i>Giữ chỗ {{ $holdHours }} giờ
@@ -595,4 +608,30 @@
 <script src="{{ asset('clients/assets/js/travel-pages.js') }}?v=1"></script>
 
 @include('clients.blocks.new_letter')
+<script>
+/* "Hủy miễn phí tới ngày X" theo ngày khởi hành đang chọn: cùng bậc hoàn tiền với máy chủ (CancelPolicy::freeUntil). */
+(function () {
+    var line = document.getElementById("tdCancelLine"); if (!line) return;
+    var tiers = {}; try { tiers = JSON.parse(line.dataset.tiers || "{}"); } catch (e) { return; }
+    var keys = Object.keys(tiers).map(Number).sort(function (a, b) { return b - a; });
+    function upd(ymd) {
+        if (!ymd) return;
+        var start = new Date(ymd + "T00:00:00"), today = new Date(); today.setHours(0, 0, 0, 0);
+        var text = null, tone = "warn";
+        for (var i = 0; i < keys.length; i++) {
+            var pct = +tiers[keys[i]], u = new Date(start.getTime() - keys[i] * 864e5);
+            if (u >= today && pct > 0) {
+                var d = String(u.getDate()).padStart(2, "0") + "/" + String(u.getMonth() + 1).padStart(2, "0") + "/" + u.getFullYear();
+                text = pct >= 100 ? "Hủy miễn phí tới " + d : "Hoàn " + pct + "% nếu hủy tới " + d; tone = pct >= 100 ? "ok" : "info"; break;
+            }
+        }
+        line.className = "px-book__cancel is-" + tone;
+        line.querySelector("span").textContent = text || "Sát ngày đi: hủy không được hoàn tiền";
+    }
+    document.querySelectorAll('input[name="availabilityId"][data-date]').forEach(function (r) {
+        r.addEventListener("change", function () { if (r.checked) upd(r.dataset.date); });
+        if (r.checked) upd(r.dataset.date);
+    });
+})();
+</script>
 @include('clients.blocks.footer')

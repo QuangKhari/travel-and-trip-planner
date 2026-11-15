@@ -49,7 +49,15 @@
             return SLOT_KEYS[SLOT_KEYS.length - 1] || "evening";
         }
         /* Giờ mở cửa: cùng quy tắc với App\Services\Planner\OpeningHours (hours = {"1":[[mở,đóng],...], "2":[] = đóng cả ngày}). */
+        /* Giờ giống nhau cả 7 ngày: kiểm được cả khi chưa có ngày đi (cùng OpeningHours::everyDay phía máy chủ). */
+        function everyDay(hours) {
+            if (!hours || !hours["1"] || !hours["1"].length) return null;
+            var a = JSON.stringify(hours["1"]);
+            for (var d = 2; d <= 7; d++) if (!hours[String(d)] || JSON.stringify(hours[String(d)]) !== a) return null;
+            return 1;
+        }
         function hoursCheck(hours, dow, start, end) {
+            if (dow == null) dow = everyDay(hours);
             if (!hours || dow == null || !Object.prototype.hasOwnProperty.call(hours, String(dow))) return null;
             var r = hours[String(dow)], i;
             if (!r.length) return "closed";
@@ -58,12 +66,14 @@
             return "late";
         }
         function hoursFit(hours, dow, start, dur) {
+            if (dow == null) dow = everyDay(hours);
             if (!hours || dow == null || !(hours[String(dow)] || []).length) return null;
             var r = hours[String(dow)];
             for (var i = 0; i < r.length; i++) { var s = Math.max(start, r[i][0]); if (s + dur <= r[i][1]) return s; }
             return null;
         }
         function hoursText(hours, dow) {
+            if (dow == null) dow = everyDay(hours);
             if (!hours || dow == null || !Object.prototype.hasOwnProperty.call(hours, String(dow))) return null;
             var r = hours[String(dow)];
             if (!r.length) return "đóng cửa";

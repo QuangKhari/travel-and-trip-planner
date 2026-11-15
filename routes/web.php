@@ -132,6 +132,7 @@ Route::get('/lich-chuyen-di/{id}/{user}/{sig}.ics', [\App\Http\Controllers\clien
     ->whereNumber(['id', 'user'])->where('sig', '[a-f0-9]{24}')->middleware('throttle:60,1,planner-ics-feed')->name('planner.ics.feed');
 Route::get('/hdv/{token}', [\App\Http\Controllers\GuideController::class, 'show'])->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:60,1')->name('guide.show');
 Route::post('/hdv/{token}/diem-danh', [\App\Http\Controllers\GuideController::class, 'checkin'])->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:120,1')->name('guide.checkin');
+Route::post('/hdv/{token}/quet-ve', [\App\Http\Controllers\GuideController::class, 'scan'])->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:120,1')->name('guide.scan');
 Route::post('/hdv/{token}/su-co', [\App\Http\Controllers\GuideController::class, 'incident'])->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:10,1')->name('guide.incident');
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->middleware('throttle:30,1,sitemap')->name('sitemap');
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('robots');
@@ -234,6 +235,7 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
 
     // đơn đã đặt, đánh giá
     Route::get('/tour-booked', [TourBookedController::class, 'index'])->name('tour-booked');
+    Route::get('/ve-tour/{bookingId}', [\App\Http\Controllers\clients\TourTicketController::class, 'show'])->whereNumber('bookingId')->name('tour.ticket');
     Route::post('/cancel-booking', [TourBookedController::class, 'cancelBooking'])->name('cancel-booking');
     Route::post('/reviews', [TourDetailController::class, 'reviews'])->middleware('throttle:10,1,reviews')->name('reviews');
     Route::get('/my-tours', [MyTourController::class, 'index'])->name('my-tours');
@@ -255,11 +257,13 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::get('/len-ke-hoach/tro-ly', [PlannerAiController::class, 'chatPage'])->name('planner.ai.chat');
     Route::post('/len-ke-hoach/tro-ly/doc', [PlannerAiController::class, 'chatRead'])->middleware('throttle:30,1,planner-ai-chat')->name('planner.ai.chat.read');
     Route::post('/len-ke-hoach/tro-ly/tao', [PlannerAiController::class, 'chatCreate'])->middleware('throttle:6,1,planner-ai-make')->name('planner.ai.chat.make');
+    Route::post('/len-ke-hoach/tro-ly/nhap/sua', [PlannerAiController::class, 'draftEdit'])->middleware('throttle:40,1,planner-ai-draft-edit')->name('planner.ai.chat.edit');
     Route::post('/len-ke-hoach/{id}/tom-tat-ai', [PlannerAiController::class, 'explain'])->whereNumber('id')->middleware('throttle:10,1,planner-ai-explain')->name('planner.ai.explain');
     Route::post('/len-ke-hoach/{id}/la-ban', [PlannerAiController::class, 'copilot'])->whereNumber('id')->middleware('throttle:12,1,planner-ai-copilot')->name('planner.ai.copilot');
     Route::post('/len-ke-hoach/{id}/la-ban/goi-y', [PlannerAiController::class, 'suggest'])->whereNumber('id')->middleware('throttle:30,1,planner-ai-suggest')->name('planner.ai.suggest');
     Route::post('/len-ke-hoach/{id}/la-ban/goi-y/ap-dung', [PlannerAiController::class, 'suggestApply'])->whereNumber('id')->middleware('throttle:30,1,planner-ai-suggest-apply')->name('planner.ai.suggest.apply');
     Route::post('/len-ke-hoach/{id}/la-ban/kiem-tra-lai', [PlannerAiController::class, 'recheck'])->whereNumber('id')->middleware('throttle:30,1,planner-ai-recheck')->name('planner.ai.recheck');
+    Route::post('/len-ke-hoach/{id}/dan-ghi-chu', [PlannerAiController::class, 'notes'])->whereNumber('id')->middleware('throttle:10,1,planner-notes')->name('planner.notes');
     Route::post('/len-ke-hoach/{id}/la-ban/ket-qua', [PlannerAiController::class, 'feedback'])->whereNumber('id')->middleware('throttle:60,1,planner-ai-feedback')->name('planner.ai.feedback');
     Route::post('/la-ban/danh-gia', [PlannerAiController::class, 'rate'])->middleware('throttle:30,1,planner-ai-rate')->name('planner.ai.rate');
     Route::post('/len-ke-hoach/{id}/trang-thai', [PlannerController::class, 'status'])->whereNumber('id')->middleware('throttle:60,1,planner-status')->name('planner.status');
@@ -329,6 +333,7 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::post('/lich-trinh/{slug}/dung-lam-chuyen-di', [PlannerController::class, 'fromItinerary'])->where('slug', '[a-z0-9-]+')->middleware('throttle:10,1,itin-to-trip')->name('planner.fromItinerary');
     Route::get('/len-ke-hoach/{id}/phuong-an-mua', [PlannerController::class, 'rainSuggest'])->whereNumber('id')->middleware('throttle:60,1,planner-rain')->name('planner.rainSuggest');
     Route::post('/tour/{id}/len-ke-hoach', [PlannerController::class, 'fromTour'])->whereNumber('id')->middleware('throttle:10,1,tour-to-trip')->name('planner.fromTour');
+    Route::post('/tour/{id}/tu-di', [PlannerController::class, 'selfGuided'])->whereNumber('id')->middleware('throttle:10,1,tour-to-trip')->name('planner.selfGuided');
     Route::get('/len-ke-hoach/{id}/quanh-tuyen', [PlannerController::class, 'around'])->whereNumber('id')->middleware('throttle:60,1,planner-around')->name('planner.around');
     Route::get('/len-ke-hoach/{id}/lap-khoang-trong', [PlannerController::class, 'gapFill'])->whereNumber('id')->middleware('throttle:60,1,planner-gap')->name('planner.gapFill');
     Route::post('/len-ke-hoach/{id}/toi-uu', [PlannerController::class, 'optimize'])->whereNumber('id')->middleware('throttle:60,1,planner-opt')->name('planner.optimize');
@@ -493,6 +498,9 @@ Route::prefix('admin')->group(function () {
         Route::post('/place-data/rules', [\App\Http\Controllers\admin\PlaceDataAdminController::class, 'storeRule'])->name('admin.place-data.rules.store');
         Route::post('/place-data/verify/{id}', [\App\Http\Controllers\admin\PlaceDataAdminController::class, 'verify'])->whereNumber('id')->name('admin.place-data.verify');
         Route::post('/place-data/rules/{id}/delete', [\App\Http\Controllers\admin\PlaceDataAdminController::class, 'deleteRule'])->whereNumber('id')->name('admin.place-data.rules.delete');
+        Route::post('/place-data/media/{id}', [\App\Http\Controllers\admin\PlaceDataAdminController::class, 'saveMedia'])->whereNumber('id')->name('admin.place-data.media.save');
+        Route::post('/place-data/media/candidate/{cid}/use', [\App\Http\Controllers\admin\PlaceDataAdminController::class, 'useCandidate'])->whereNumber('cid')->name('admin.place-data.media.use');
+        Route::post('/place-data/media/candidate/{cid}/reject', [\App\Http\Controllers\admin\PlaceDataAdminController::class, 'rejectCandidate'])->whereNumber('cid')->name('admin.place-data.media.reject');
         Route::get('/travel-alerts', [\App\Http\Controllers\admin\TravelAlertAdminController::class, 'index'])->name('admin.travel-alerts');
         Route::post('/travel-alerts', [\App\Http\Controllers\admin\TravelAlertAdminController::class, 'store'])->name('admin.travel-alerts.store');
         Route::post('/travel-alerts/{id}', [\App\Http\Controllers\admin\TravelAlertAdminController::class, 'update'])->whereNumber('id')->name('admin.travel-alerts.update');

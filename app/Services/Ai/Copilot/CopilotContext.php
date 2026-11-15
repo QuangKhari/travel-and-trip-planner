@@ -71,6 +71,8 @@ final class CopilotContext
             'lng' => isset($it['lng']) && $it['lng'] !== null ? (float) $it['lng'] : null,
             'outdoor' => $it['outdoor'] ?? null,
             'destinationId' => isset($it['destinationId']) ? (int) $it['destinationId'] : null,
+            'cost' => isset($it['cost']) && $it['cost'] !== null && $it['cost'] !== '' ? (float) $it['cost'] : null,
+            'booked' => !empty($it['booked']),
         ];
     }
 
@@ -122,6 +124,13 @@ final class CopilotContext
             if ($label && $d !== null && !isset($seen[$label])) {
                 $seen[$label] = true;
                 $out[] = ['label' => $label, 'prompt' => $prompt];
+            }
+        }
+        // vượt ngân sách: gợi ý câu lệnh ngân sách (chạy bằng luật, có xem trước / hoàn tác)
+        foreach ($facts['issues'] as $c) {
+            if (($c['code'] ?? '') === 'budget.over' && !isset($seen['budget'])) {
+                $seen['budget'] = true;
+                array_unshift($out, ['label' => 'Vượt ngân sách', 'prompt' => !empty($facts['budget']) ? 'Giảm chi phí xuống ' . number_format((int) $facts['budget'], 0, ',', '.') . 'đ.' : 'Giảm chi phí chuyến xuống.']);
             }
         }
         $first = null;

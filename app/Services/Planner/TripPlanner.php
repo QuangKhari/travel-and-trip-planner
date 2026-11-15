@@ -534,6 +534,59 @@ class TripPlanner
         });
     }
 
+    /** Địa điểm / trải nghiệm có thật mà lịch trình tour gắn tới (tbl_tour_stops.refType/refId), không trùng, theo thứ tự lịch. @return list<array{type:string,refId:int}> */
+    public static function tourPlaces(int $tourId): array
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('tbl_tour_stops')) {
+            return [];
+        }
+        $out = [];
+        foreach (DB::table('tbl_tour_stops')->where('tourId', $tourId)->whereIn('refType', ['place', 'experience'])->whereNotNull('refId')
+                     ->whereNotIn('kind', ['meet', 'drop', 'transfer', 'hotel'])->orderBy('dayNo')->orderBy('orderNo')->get(['refType', 'refId']) as $r) {
+            $out[$r->refType . ':' . $r->refId] = ['type' => (string) $r->refType, 'refId' => (int) $r->refId];
+        }
+
+        return array_values($out);
+    }
+
+    /**
+     * "Tự đi theo gợi ý của tour": tạo chuyến TỰ ĐI chỉ gồm các địa điểm tour ghé, tất cả nằm trong "Đã lưu".
+     * KHÔNG chép giờ, điểm đón, xe, khách sạn của tour (tour và chuyến tự đi khác nhau về giờ, phương tiện: xem quyết định 14/11),
+     * không gắn tour vào chuyến. Người dùng tự xếp ngày (hoặc để Travela xếp ngày trống).
+     * @return array{tripId:int,title:string,count:int}
+     */
+    public function createSelfGuidedFromTour(int $userId, int $tourId, int $groupSize = 2): array
+    {
+        self::assertCanCreate($userId);
+        $t = DB::table('tbl_tours')->where('tourId', $tourId)->first();
+        if (!$t) {
+            throw new \DomainException('Không tìm thấy tour.');
+        }
+        $refs = array_values(array_filter($this->resolve(self::tourPlaces($tourId)), fn($r) => in_array($r['type'], ['place', 'experience'], true)));
+        if (!$refs) {
+            throw new \DomainException('Lịch trình tour này chưa gắn địa điểm cụ thể nên chưa chép được. Bạn thử “Lên kế hoạch quanh tour này”.');
+        }
+        $days = max(1, min(self::MAX_DAYS, TourFit::tourDays($t->time ?? null, $t->startDate, $t->endDate ?? null) ?? 1));
+        $destId = !empty($t->destinationId) ? (int) $t->destinationId : null;
+
+        return DB::transaction(function () use ($userId, $t, $refs, $days, $groupSize, $destId) {
+            $title = mb_substr('Tự đi: ' . $t->title, 0, 160);
+            $tripId = (int) DB::table('tbl_trips')->insertGetId([
+                'userId' => $userId, 'kind' => 'trip', 'destinationId' => $destId, 'title' => $title, 'startDate' => null,
+                'days' => $days, 'groupSize' => max(1, min(50, $groupSize)), 'status' => 'planned', 'source' => 'tour',
+                'notes' => mb_substr('Địa điểm lấy từ lịch trình tour "' . $t->title . '" (không gồm giờ, điểm đón, xe).', 0, 500),
+                'createdAt' => now(), 'updatedAt' => now(),
+            ]);
+            $rows = [];
+            foreach (array_values($refs) as $i => $r) {
+                $rows[] = ['tripId' => $tripId, 'refType' => $r['type'], 'refId' => (int) $r['refId'], 'dayNo' => null, 'orderNo' => $i, 'cost' => null];
+            }
+            DB::table('tbl_trip_items')->insert($rows);
+
+            return ['tripId' => $tripId, 'title' => $title, 'count' => count($rows)];
+        });
+    }
+
     /**
      * Lưu thông tin chuyến + toàn bộ danh sách mục (ghi đè). Thứ tự trong mảng $items quyết định orderNo trong từng ngày.
      * Trả false nếu chuyến không thuộc người dùng.
@@ -1046,6 +1099,7 @@ class TripPlanner
             'hours' => $it['hours'] ?? null,   // giờ mở cửa theo thứ (OpeningHours); null = chưa biết
             'hoursNote' => $it['hoursNote'] ?? null,
             'facts' => $it['facts'] ?? null,   // ngày lễ / đóng tạm thời / giờ theo mùa của đúng ngày đang xếp
+            'imageCredit' => $it['imageCredit'] ?? null, 'tile' => $it['tile'] ?? null, 'trust' => $it['trust'] ?? [], 'booked' => !empty($it['booked']),
         ];
     }
 

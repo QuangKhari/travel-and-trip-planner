@@ -18,6 +18,8 @@
     } else {
         $badge = null;
     }
+    // "Hủy miễn phí tới ngày X": tính từ bậc hoàn tiền thật (config/booking.php) và ngày khởi hành của thẻ
+    $cancelLine = \App\Support\CancelPolicy::freeUntil($tour->startDate ?? null);
 @endphp
 <article class="trc">
     <div class="trc__img">
@@ -46,6 +48,9 @@
             <li class="{{ $qty <= 10 ? 'is-low' : '' }}"><i class="fal fa-users" aria-hidden="true"></i>Còn
                 {{ $qty }} chỗ</li>
         </ul>
+        @if ($cancelLine && $cancelLine['percent'] > 0)
+            <p class="trc__cancel is-{{ $cancelLine['tone'] }}"><i class="fal fa-calendar-check" aria-hidden="true"></i>{{ $cancelLine['text'] }}</p>
+        @endif
         <div class="trc__foot">
             <div class="trc__price">
                 <small>Giá từ</small>
