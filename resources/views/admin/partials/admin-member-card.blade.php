@@ -24,7 +24,18 @@
                         <td>{{ $m->email }}</td>
                         <td>{{ $m->address ?: '—' }}</td>
                         <td class="nowrap">{{ !empty($m->createdDate) ? date('d/m/Y', strtotime($m->createdDate)) : '—' }}</td>
-                        <td class="num"><button type="button" class="ad-btn ad-btn--sm ad-btn--danger js-del-admin" data-id="{{ $m->adminId }}" data-url="{{ route($delRoute) }}" data-name="{{ $m->userName }}"><i class="fa fa-trash-o"></i> Xóa</button></td>
+                        <td class="num nowrap">
+                            @if (!empty($m->totpEnabledAt))
+                                <span class="ad-badge ad-badge--teal" title="Đã bật đăng nhập hai lớp"><i class="fa fa-shield"></i> 2 lớp</span>
+                                @if (session('adminRole') === 'admin')
+                                    <form action="{{ route('admin.2fa.disable') }}" method="POST" style="display:inline" onsubmit="return confirm('Đặt lại đăng nhập hai lớp cho {{ $m->userName }}? Dùng khi người này mất điện thoại.')">
+                                        @csrf<input type="hidden" name="adminId" value="{{ $m->adminId }}">
+                                        <button class="ad-btn ad-btn--sm" type="submit" title="Người này mất điện thoại: tắt để họ bật lại">Đặt lại</button>
+                                    </form>
+                                @endif
+                            @endif
+                            <button type="button" class="ad-btn ad-btn--sm ad-btn--danger js-del-admin" data-id="{{ $m->adminId }}" data-url="{{ route($delRoute) }}" data-name="{{ $m->userName }}"><i class="fa fa-trash-o"></i> Xóa</button>
+                        </td>
                     </tr>
                 @endforeach
                 </tbody>

@@ -42,6 +42,13 @@ final class TourQuotes
         }
         $id = (int) DB::table('tbl_tour_quotes')->insertGetId(['tripId' => $trip->tripId, 'userId' => $userId, 'groupSize' => max(1, (int) $trip->groupSize),
             'budget' => $trip->budget, 'note' => $note, 'snapshot' => json_encode($snap, JSON_UNESCAPED_UNICODE), 'status' => 'open', 'createdAt' => now()], 'quoteId');
+        if (self::chatReady()) {
+            $this->post($id, 'system', null, 'Khách gửi yêu cầu báo giá cho nhóm ' . (int) $trip->groupSize . ' người.', false);
+            if ($note) {
+                $this->post($id, 'customer', $userId, $note, false);
+            }
+            DB::table('tbl_tour_quotes')->where('quoteId', $id)->update(['staffUnread' => $note ? 1 : 0]);
+        }
         TripWatch::log((int) $trip->tripId, 'quote', 'info', 'Đã gửi yêu cầu báo giá tour riêng #' . $id, 'Nhân viên Travela sẽ báo giá trọn gói cho nhóm ' . (int) $trip->groupSize . ' người.');
 
         return $id;
@@ -56,6 +63,13 @@ final class TourQuotes
             'includes' => $v['includes'] ?? null, 'excludes' => $v['excludes'] ?? null, 'message' => $v['message'] ?? null, 'validUntil' => $v['validUntil'],
             'quotedBy' => $adminId, 'quotedAt' => now()]);
         $money = number_format((float) $v['pricePerPerson'], 0, ',', '.') . 'đ/người';
+        if (self::chatReady()) {
+            // mỗi lần báo giá (kể cả báo lại sau khi khách nhờ chỉnh) là một phiên bản trong luồng trao đổi
+            $ver = (int) ($q->version ?? 0) + 1;
+            DB::table('tbl_tour_quotes')->where('quoteId', $id)->update(['version' => $ver, 'customerUnread' => DB::raw('customerUnread + 1'), 'staffUnread' => 0]);
+            $this->post($id, 'system', $adminId, 'Báo giá lần ' . $ver . ': ' . $money . ', tổng ' . number_format($total, 0, ',', '.') . 'đ, giữ giá tới ' . date('d/m/Y', strtotime($v['validUntil'])) . '.'
+                . (!empty($v['message']) ? ' Lời nhắn: ' . $v['message'] : ''), false);
+        }
         TripWatch::log((int) $q->tripId, 'quote', 'info', 'Travela đã báo giá tour riêng: ' . $money, 'Tổng ' . number_format($total, 0, ',', '.') . 'đ cho ' . $q->groupSize . ' người, giữ giá tới ' . date('d/m/Y', strtotime($v['validUntil'])) . '.');
         $u = DB::table('tbl_users')->where('userId', $q->userId)->first(['email', 'fullName']);
         if ($u && $u->email) {
@@ -73,5 +87,62 @@ final class TourQuotes
         DB::table('tbl_tour_quotes')->where('quoteId', $id)->update(['status' => $accept ? 'accepted' : 'declined', 'decidedAt' => now()]);
         TripWatch::log((int) $q->tripId, 'quote', $accept ? 'info' : 'warn', $accept ? 'Bạn đã nhận báo giá tour riêng #' . $id : 'Bạn đã từ chối báo giá #' . $id,
             $accept ? 'Nhân viên Travela sẽ liên hệ để chốt dịch vụ và hướng dẫn thanh toán.' : null);
+    }
+
+    // ===================== Trao đổi hai chiều =====================
+
+    public static function chatReady(): bool
+    {
+        return Schema::hasTable('tbl_tour_quote_messages') && Schema::hasColumn('tbl_tour_quotes', 'version');
+    }
+
+    /**
+     * Một tin trong luồng báo giá. Khách nhắn: tăng "chưa đọc" của nhân viên; nhân viên nhắn: tăng "chưa đọc" của khách
+     * + thông báo ở chuông của chuyến. Chỉ nhắn được khi báo giá còn mở / đang chờ quyết định / đã nhận (để chốt dịch vụ).
+     */
+    public function message(int $quoteId, string $sender, int $senderId, string $body, ?int $mustBeUser = null): void
+    {
+        $q = DB::table('tbl_tour_quotes')->where('quoteId', $quoteId)->when($mustBeUser, fn($x) => $x->where('userId', $mustBeUser))->first()
+            ?? throw new \DomainException('Không tìm thấy báo giá.');
+        if (!in_array($q->status, ['open', 'quoted', 'accepted'], true)) {
+            throw new \DomainException('Báo giá đã đóng, không nhắn thêm được.');
+        }
+        $body = trim(strip_tags($body));
+        if ($body === '') {
+            throw new \DomainException('Tin nhắn trống.');
+        }
+        $this->post($quoteId, $sender, $senderId, $body, true);
+        if ($sender === 'staff') {
+            TripWatch::log((int) $q->tripId, 'quote', 'info', 'Travela nhắn về báo giá #' . $quoteId, mb_substr($body, 0, 160));
+        }
+    }
+
+    private function post(int $quoteId, string $sender, ?int $senderId, string $body, bool $count): void
+    {
+        DB::table('tbl_tour_quote_messages')->insert(['quoteId' => $quoteId, 'sender' => $sender, 'senderId' => $senderId, 'body' => mb_substr($body, 0, 1000), 'createdAt' => now()]);
+        $patch = ['lastMessageAt' => now()];
+        if ($count && $sender === 'customer') {
+            $patch['staffUnread'] = DB::raw('staffUnread + 1');
+        } elseif ($count && $sender === 'staff') {
+            $patch['customerUnread'] = DB::raw('customerUnread + 1');
+        }
+        DB::table('tbl_tour_quotes')->where('quoteId', $quoteId)->update($patch);
+    }
+
+    /** Luồng tin của một báo giá, đánh dấu đã đọc cho phía đang xem. @return list<object> */
+    public function thread(int $quoteId, string $viewer): array
+    {
+        if (!self::chatReady()) {
+            return [];
+        }
+        DB::table('tbl_tour_quotes')->where('quoteId', $quoteId)->update([$viewer === 'staff' ? 'staffUnread' : 'customerUnread' => 0]);
+        $staff = DB::table('tbl_admin')->pluck('fullName', 'adminId');
+
+        return DB::table('tbl_tour_quote_messages')->where('quoteId', $quoteId)->orderBy('messageId')->get()
+            ->map(function ($m) use ($staff) {
+                $m->who = match ($m->sender) { 'staff' => ($staff[$m->senderId] ?? null) ?: 'Nhân viên Travela', 'customer' => 'Khách', default => 'Travela' };
+
+                return $m;
+            })->all();
     }
 }

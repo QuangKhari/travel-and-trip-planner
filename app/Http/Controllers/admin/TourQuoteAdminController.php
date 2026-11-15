@@ -25,7 +25,8 @@ class TourQuoteAdminController extends Controller
         $q = DB::table('tbl_tour_quotes as q')->leftJoin('tbl_users as u', 'u.userId', '=', 'q.userId')->where('q.quoteId', $id)
             ->first(['q.*', 'u.fullName', 'u.username', 'u.email', 'u.phoneNumber']) ?? abort(404);
 
-        return view('admin.tour-quotes.show', ['title' => 'Báo giá #' . $id, 'q' => $q, 'snap' => json_decode((string) $q->snapshot, true)]);
+        return view('admin.tour-quotes.show', ['title' => 'Báo giá #' . $id, 'q' => $q, 'snap' => json_decode((string) $q->snapshot, true),
+            'thread' => app(TourQuotes::class)->thread($id, 'staff'), 'chat' => TourQuotes::chatReady()]);
     }
 
     public function quote(Request $request, int $id, TourQuotes $svc)
@@ -40,5 +41,19 @@ class TourQuoteAdminController extends Controller
         AuditLog::record('tour_quote.quote', 'tour_quote', $id, 'Báo giá tour riêng #' . $id . ': ' . $v['pricePerPerson'] . 'đ/người');
 
         return back()->with('success', 'Đã gửi báo giá cho khách (email + chuông của chuyến).');
+    }
+
+    public function message(Request $request, int $id, TourQuotes $svc)
+    {
+        abort_unless(TourQuotes::chatReady(), 404);
+        $v = $request->validate(['body' => 'required|string|max:1000']);
+        try {
+            $svc->message($id, 'staff', (int) session('adminId'), $v['body']);
+        } catch (\DomainException $e) {
+            return back()->withErrors(['body' => $e->getMessage()]);
+        }
+        AuditLog::record('tour_quote.message', 'tour_quote', $id, 'Nhắn khách về báo giá #' . $id);
+
+        return redirect(route('admin.tour-quotes.show', $id) . '#thread')->with('success', 'Đã gửi tin cho khách (thông báo ở chuông của chuyến).');
     }
 }

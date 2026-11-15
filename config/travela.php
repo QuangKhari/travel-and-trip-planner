@@ -11,4 +11,6 @@ return [
     'pii_keys' => [
         'k1' => env('DATA_ENCRYPTION_KEY'),
     ],
+    // Đăng nhập hai lớp bắt buộc cho các vai trò quản trị này (vd. "admin" hoặc "admin,manager"); trống = tự chọn bật
+    'admin_2fa_required' => env('ADMIN_2FA_REQUIRED', ''),
 ];

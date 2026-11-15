@@ -21,6 +21,8 @@ return [
         // Gợi ý để chọn trong ngăn La bàn (món ăn, điểm tham quan, lễ hội, cảnh báo dông / sự cố): chạy bằng luật, KHÔNG cần khóa LLM,
         // nên ngăn La bàn vẫn mở được khi AI_PLANNER_ENABLED=false (khi đó câu sửa lịch tự do báo chưa dùng được).
         'suggest' => (bool) env('AI_FEATURE_SUGGEST', true),
+        // Đợt C mục 20: đọc ẢNH vé / xác nhận đặt chỗ để điền sẵn biểu mẫu (chữ dán vào đọc bằng luật, không cần AI)
+        'booking_read' => (bool) env('AI_FEATURE_BOOKING_READ', true),
     ],
 
     // anthropic | openai | none. Mặc định dùng chung driver với RAG để chỉ cần một khóa API.
@@ -33,6 +35,7 @@ return [
             'explain' => env('AI_MODEL_EXPLAIN') ?: 'claude-haiku-5-5',
             'copilot' => env('AI_MODEL_COPILOT') ?: 'claude-sonnet-5-5',
             'packing' => env('AI_MODEL_PACKING') ?: 'claude-haiku-5-5',
+            'booking_read' => env('AI_MODEL_BOOKING_READ') ?: 'claude-haiku-5-5',
         ],
         // chuẩn OpenAI (OpenAI, Gemini qua cổng tương thích, Ollama...): không đặt AI_MODEL_* thì dùng chung RAG_LLM_MODEL
         'openai' => [
@@ -41,6 +44,7 @@ return [
             'explain' => env('AI_MODEL_EXPLAIN') ?: (env('RAG_LLM_MODEL') ?: 'gpt-4o-mini'),
             'copilot' => env('AI_MODEL_COPILOT') ?: (env('RAG_LLM_MODEL') ?: 'gpt-4o'),
             'packing' => env('AI_MODEL_PACKING') ?: (env('RAG_LLM_MODEL') ?: 'gpt-4o-mini'),
+            'booking_read' => env('AI_MODEL_BOOKING_READ') ?: (env('RAG_LLM_MODEL') ?: 'gpt-4o-mini'),   // cần model đọc được ảnh
         ],
     ],
 
@@ -70,6 +74,7 @@ return [
         'explain' => (int) env('AI_TIMEOUT_EXPLAIN', 25),
         'copilot' => (int) env('AI_TIMEOUT_COPILOT', 20),
         'packing' => (int) env('AI_TIMEOUT_PACKING', 20),
+        'booking_read' => (int) env('AI_TIMEOUT_BOOKING_READ', 25),
     ],
     // Model có "suy nghĩ" (Gemini 3.x, 4) tính cả token suy luận vào đây: thấy JSON bị cắt (outcome = invalid) thì tăng lên.
     'max_tokens' => [
@@ -77,6 +82,7 @@ return [
         'explain' => (int) env('AI_MAX_TOKENS_EXPLAIN', 1400),
         'copilot' => (int) env('AI_MAX_TOKENS_COPILOT', 900),
         'packing' => (int) env('AI_MAX_TOKENS_PACKING', 1200),
+        'booking_read' => (int) env('AI_MAX_TOKENS_BOOKING_READ', 600),
     ],
     'temperature' => 0.1,
 

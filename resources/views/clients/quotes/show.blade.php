@@ -39,5 +39,34 @@
             </div>
         </section>
     </div>
+    @if ($chat)
+        <section class="sp-card" id="thread" style="margin-top:16px">
+            <div class="sp-card__h"><h2>Trao đổi với Travela</h2></div>
+            <div class="sp-card__b">
+                <p class="tp-muted" style="margin-top:0">Hỏi thêm, nhờ đổi ngày, bớt điểm, đổi khách sạn… Nhân viên trả lời và gửi báo giá mới ngay tại đây.</p>
+                <ol class="qt-thread">
+                    @foreach ($thread as $m)
+                        <li class="qt-msg qt-msg--{{ $m->sender }}"><b>{{ $m->sender === 'customer' ? 'Bạn' : $m->who }}</b><span>{{ $m->body }}</span><time>{{ \Carbon\Carbon::parse($m->createdAt)->format('H:i d/m') }}</time></li>
+                    @endforeach
+                </ol>
+                @if (in_array($q->status, ['open', 'quoted', 'accepted'], true))
+                    <form method="POST" action="{{ route('quotes.message', $q->quoteId) }}" class="qt-form">@csrf
+                        <label for="qtBody" class="sr-only">Tin nhắn</label>
+                        <textarea id="qtBody" name="body" rows="3" maxlength="1000" required placeholder="Ví dụ: Ngày 2 bỏ Langbiang được không? Đổi sang khách sạn gần chợ."></textarea>
+                        <button class="theme-btn">Gửi</button>
+                    </form>
+                @endif
+            </div>
+        </section>
+        <style>
+            .qt-thread { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; }
+            .qt-msg { max-width: 80%; padding: 8px 12px; border-radius: 14px; background: #f2f7f6; display: grid; gap: 2px; }
+            .qt-msg b { font-size: 12px; color: #35575c; } .qt-msg time { font-size: 11px; color: #6b7c7a; }
+            .qt-msg--customer { justify-self: end; background: #e6f4f1; }
+            .qt-msg--system { justify-self: center; max-width: 100%; background: #fff8e8; text-align: center; font-size: 14px; }
+            .qt-form { display: grid; gap: 8px; } .qt-form textarea { width: 100%; border: 1px solid #c9dcd8; border-radius: 10px; padding: 8px; font: inherit; }
+            .qt-form .theme-btn { justify-self: end; }
+        </style>
+    @endif
 </div></main>
 @include('clients.blocks.footer')

@@ -1,0 +1,37 @@
+{
+    "site-a.css": {
+        "file": "clients/assets/build/site-a.998b170793.css",
+        "built": 1794762614,
+        "files": 10
+    },
+    "site-b.css": {
+        "file": "clients/assets/build/site-b.d2584995d3.css",
+        "built": 1794762614,
+        "files": 8
+    },
+    "site-c.css": {
+        "file": "clients/assets/build/site-c.b98a8c07d4.css",
+        "built": 1794762615,
+        "files": 19
+    },
+    "site-d.css": {
+        "file": "clients/assets/build/site-d.86302adcef.css",
+        "built": 1794762615,
+        "files": 2
+    },
+    "planner.css": {
+        "file": "clients/assets/build/planner.e8334ed543.css",
+        "built": 1794762615,
+        "files": 8
+    },
+    "site-a.js": {
+        "file": "clients/assets/build/site-a.0e32d015d6.js",
+        "built": 1794762617,
+        "files": 17
+    },
+    "site-b.js": {
+        "file": "clients/assets/build/site-b.ca979d4820.js",
+        "built": 1794762617,
+        "files": 1
+    }
+}

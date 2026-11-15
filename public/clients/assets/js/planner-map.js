@@ -76,6 +76,25 @@
         };
     }
 
+    /* ---------------- Leaflet tải khi cần (không chặn lần vẽ đầu của trang) ---------------- */
+    var LEAF = "https://unpkg.com/leaflet@1.9.4/dist/leaflet";
+    var lfLoading = null;
+    function loadLeaflet() {
+        if (window.L && window.L.map) return Promise.resolve();
+        if (lfLoading) return lfLoading;
+        lfLoading = new Promise(function (resolve, reject) {
+            var css = document.createElement("link");
+            css.rel = "stylesheet"; css.href = LEAF + ".css";
+            document.head.appendChild(css);
+            var s = document.createElement("script");
+            s.src = LEAF + ".js"; s.async = true;
+            s.onload = function () { window.L ? resolve() : reject(new Error("leaflet missing")); };
+            s.onerror = function () { lfLoading = null; reject(new Error("leaflet load failed")); };
+            document.head.appendChild(s);
+        });
+        return lfLoading;
+    }
+
     /* ---------------- MapLibre (bản đồ vector) ---------------- */
     var MLIB = "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl";
     var mlLoading = null;
@@ -324,7 +343,10 @@
      */
     function create(el, opts) {
         opts = opts || {};
-        function leaflet() { el.textContent = ""; return leafletAdapter(el); }
+        function leaflet() {
+            return loadLeaflet().then(function () { el.textContent = ""; return leafletAdapter(el); })
+                .catch(function () { return null; });   // không có mạng tới máy chủ bản đồ: planner.js vẽ sơ đồ thay thế
+        }
         function vector() {
             if (!opts.styleUrl || !hasWebGL()) return Promise.resolve(leaflet());
             return loadMapLibre()

@@ -1,13 +1,5 @@
 @include('clients.blocks.header')
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=27">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai.css') }}?v=6">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ux.css') }}?v=1">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/nature-luxury-planner.css') }}?v=bl20261104">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-group.css') }}?v=7">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-focus.css') }}?v=9">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-media.css') }}?v=1">
+{!! \App\Support\AssetBundle::tags('planner.css') !!}
 
 {{-- /len-ke-hoach/{id}. Biến: $payload (TripPlanner::payload), $client (dữ liệu cho planner.js), $role, $members, $tourFit.
      Bố cục "Timeline + Bản đồ" (tham khảo Wanderlog: lịch theo ngày cạnh bản đồ; Roadtrippers: bản đồ lớn, tuyến nối các điểm, thêm điểm dừng theo danh mục).
@@ -117,6 +109,7 @@
                 @if ($lastEdit['by'] && $lastEdit['at'])
                     <small class="tpx-lastedit" id="tpLastEdit">{{ $lastEdit['byMe'] ? 'Bạn' : $lastEdit['by'] }} cập nhật lúc {{ \Carbon\Carbon::parse($lastEdit['at'])->format('H:i d/m') }}</small>
                 @endif
+                <span class="tpx-presence" id="tpPresence" aria-live="polite" hidden></span>
             </div>
             <div class="tpx-hero__row">
                 <ul class="tpx-kpis" id="tpKpis" aria-label="Tổng quan chuyến đi"></ul>
@@ -180,6 +173,7 @@
                         <button type="button" class="tpx-view__b is-on" data-view="full" aria-pressed="true" title="Hiện ảnh, ghi chú và lý do chọn">Chi tiết</button>
                         <button type="button" class="tpx-view__b" data-view="compact" aria-pressed="false" title="Chỉ giờ và tên, hợp với chuyến nhiều ngày">Gọn</button>
                         <button type="button" class="tpx-view__b" data-view="list" aria-pressed="false" title="Danh sách phẳng mọi điểm, đánh dấu đã ghé khi đang đi">Danh sách</button>
+                        <button type="button" class="tpx-view__b" data-view="hours" aria-pressed="false" title="Lưới giờ: mỗi mục cao theo thời lượng, thấy ngay ngày nào quá dày">Theo giờ</button>
                     </div>
                 </div>
 
@@ -304,6 +298,16 @@
 
             {{-- ---------------- Thông tin & chia sẻ ---------------- --}}
             <div class="tp-panel" id="tpPanelInfo" role="tabpanel" aria-labelledby="tpTabInfo" hidden>
+                @if (\App\Services\Planner\TripDecide::ready())
+                    {{-- Đi nhóm: bỏ phiếu trước khi có lịch + ai đi (planner-decide.js, TripDecideController) --}}
+                    <section class="tp-card tpd" id="tpDecide" aria-labelledby="tpDecideH" data-me="{{ (int) session('userId') }}"
+                             data-url="{{ route('planner.decide', $t['id']) }}" data-rsvp="{{ route('planner.rsvp', $t['id']) }}" data-group="{{ route('planner.syncGroup', $t['id']) }}">
+                        <h2 id="tpDecideH">Cùng quyết định</h2>
+                        <p class="tp-muted tp-small">Chưa chốt được ngày, nơi đến hay chỗ ở? Mọi người trong chuyến đề xuất và bỏ phiếu; chốt xong Travela đưa vào chuyến.</p>
+                        <p class="tpd__msg" role="status" aria-live="polite"></p>
+                        <div class="tpd__body"><p class="tp-muted">Đang tải…</p></div>
+                    </section>
+                @endif
                 <section class="tp-card">
                     <h2>Thông tin chuyến đi</h2>
                     <div class="tp-form tp-form--grid">
@@ -369,6 +373,17 @@
                         <details class="tp-travel__f tp-confirm">
                             <summary><i class="fas fa-file-invoice" aria-hidden="true"></i> Lưu xác nhận đặt chỗ đã có</summary>
                             <form id="tpConfirmForm" data-url="{{ route('travel.confirm', $t['id']) }}" enctype="multipart/form-data">
+                                {{-- Đợt C mục 20: đọc email / PDF / ảnh vé để điền sẵn các ô bên dưới; chỉ lưu khi bấm "Lưu xác nhận" --}}
+                                <div class="tp-read" data-url="{{ route('travel.confirm.read', $t['id']) }}">
+                                    <label class="tp-small" for="tpReadText">Dán email xác nhận hoặc tin nhắn đặt chỗ để Travela điền sẵn</label>
+                                    <textarea id="tpReadText" rows="3" maxlength="20000" placeholder="Nội dung email từ hãng bay, Booking, Agoda, Vexere, Đường sắt…"></textarea>
+                                    <div class="tp-read__acts">
+                                        <button type="button" class="tp-mini" data-read="text"><i class="fas fa-magic" aria-hidden="true"></i> Đọc và điền sẵn</button>
+                                        <button type="button" class="tp-mini" data-read="file" hidden><i class="fas fa-file-import" aria-hidden="true"></i> Đọc tệp đã chọn</button>
+                                        <span class="tp-small tp-muted">Không có gì được lưu cho tới khi bạn bấm "Lưu xác nhận".</span>
+                                    </div>
+                                    <div class="tp-read__card" role="status" aria-live="polite" hidden></div>
+                                </div>
                                 <div class="tp-travel__row">
                                     <label>Loại<select name="kind" class="no-nice"><option value="hotel">Khách sạn</option><option value="flight">Vé máy bay</option><option value="train">Vé tàu</option><option value="bus">Vé xe khách</option><option value="ticket">Vé tham quan</option></select></label>
                                     <label>Tên<input type="text" name="title" maxlength="120" required placeholder="Ví dụ: Dalat Palace 2 đêm"></label>
@@ -654,17 +669,17 @@
 @endif
 
 <script type="application/json" id="tpData">{!! json_encode($client, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 {{-- planner-geo (tuyến) + planner-schedule (xếp giờ): lõi tính xem trước, tham số từ cfg.rules (PlannerRules); planner-api: gọi máy chủ; planner.js: giao diện --}}
 <script src="{{ asset('clients/assets/js/planner-geo.js') }}?v=4"></script>
 <script src="{{ asset('clients/assets/js/planner-schedule.js') }}?v=7"></script>
 <script src="{{ asset('clients/assets/js/planner-api.js') }}?v=2"></script>
 <script src="{{ asset('clients/assets/js/planner-save.js') }}?v=3"></script>
 <script src="{{ asset('clients/assets/js/planner-resolve.js') }}?v=2"></script>
-<script src="{{ asset('clients/assets/js/planner-map.js') }}?v=6"></script>
-<script src="{{ asset('clients/assets/js/planner.js') }}?v=39" defer></script>
+<script src="{{ asset('clients/assets/js/planner-map.js') }}?v=7"></script>
+<script src="{{ asset('clients/assets/js/planner.js') }}?v=43" defer></script>
+<script src="{{ asset('clients/assets/js/planner-decide.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-extras.js') }}?v=2" defer></script>
-<script src="{{ asset('clients/assets/js/planner-travel.js') }}?v=2" defer></script>
+<script src="{{ asset('clients/assets/js/planner-travel.js') }}?v=3" defer></script>
 <script src="{{ asset('clients/assets/js/planner-share.js') }}?v=1" defer></script>
 <script src="{{ asset('clients/assets/js/planner-expenses.js') }}?v=1" defer></script>
 <script src="{{ asset('clients/assets/js/planner-bookings.js') }}?v=3" defer></script>

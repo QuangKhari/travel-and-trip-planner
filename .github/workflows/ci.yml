@@ -1,0 +1,124 @@
+# Kiểm thử tự động mỗi lần đẩy mã / mở pull request (Đợt C mục 18).
+# 1) phpunit: toàn bộ kiểm thử PHP trên MySQL thật.
+# 2) browser: dựng trang với dữ liệu mẫu rồi chạy Playwright qua các luồng chính (khách, lập lịch, quản trị + đăng nhập hai lớp).
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DB_CONNECTION: mysql
+  DB_HOST: 127.0.0.1
+  DB_PORT: 3306
+  DB_USERNAME: root
+  DB_PASSWORD: root
+  PHP_EXTENSIONS: mbstring, pdo_mysql, calendar, intl, gd, zip, bcmath, openssl, fileinfo
+
+jobs:
+  phpunit:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: ai_trip_planner_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -proot" --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+      - uses: actions/setup-node@v4   # vài kiểm thử so lõi xếp giờ JS với PHP (tests/js)
+        with:
+          node-version: '22'
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ hashFiles('composer.lock') }}
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Chuẩn bị .env
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan pii:key | grep '^DATA_ENCRYPTION_KEY=' >> .env
+      - name: Gộp CSS/JS (kiểm tra lệnh chạy được)
+        run: php artisan assets:bundle
+      - name: PHPUnit
+        run: php vendor/bin/phpunit --colors=never
+
+  browser:
+    runs-on: ubuntu-latest
+    needs: phpunit
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: ai_trip_planner
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -proot" --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      DB_DATABASE: ai_trip_planner
+      APP_ENV: local
+      APP_DEBUG: 'false'
+      APP_URL: http://127.0.0.1:8000
+      SESSION_DRIVER: file
+      CACHE_STORE: file
+      QUEUE_CONNECTION: sync
+      AI_DRIVER: none
+      RAG_LLM_DRIVER: none
+      PLANNER_WEATHER: 'off'
+      PLANNER_ROUTE_PROVIDER: haversine
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Dựng ứng dụng với dữ liệu mẫu
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan pii:key | grep '^DATA_ENCRYPTION_KEY=' >> .env
+          php artisan migrate:fresh --seed --seeder=BrowserTestSeeder --force
+          php artisan storage:link || true
+          php artisan assets:bundle
+      - name: Chạy máy chủ
+        run: |
+          php artisan serve --host=127.0.0.1 --port=8000 > storage/logs/serve.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8000/ > /dev/null && break; sleep 1; done
+      - name: Playwright
+        run: npx playwright test
+        env:
+          CI: 'true'
+      - name: Lưu báo cáo khi lỗi
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+            storage/logs
+          retention-days: 7

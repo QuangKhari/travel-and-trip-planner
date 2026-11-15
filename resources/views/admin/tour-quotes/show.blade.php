@@ -30,4 +30,22 @@
             @endif
         </section>
     </div>
+    @if ($chat)
+        <section class="ad-card" id="thread" style="margin-top:16px">
+            <div class="ad-card__head"><h2>Trao đổi với khách</h2></div>
+            <ol style="list-style:none;margin:0;padding:0 16px;display:grid;gap:8px">
+                @foreach ($thread as $m)
+                    <li style="max-width:80%;padding:8px 12px;border-radius:12px;{{ $m->sender === 'staff' ? 'justify-self:end;background:#e6f4f1' : ($m->sender === 'system' ? 'justify-self:center;background:#fff8e8' : 'background:#f2f4f7') }}">
+                        <small class="ad-muted">{{ $m->sender === 'customer' ? ($q->fullName ?: 'Khách') : $m->who }} · {{ \Carbon\Carbon::parse($m->createdAt)->format('H:i d/m') }}</small><br>{{ $m->body }}</li>
+                @endforeach
+            </ol>
+            @if (in_array($q->status, ['open', 'quoted', 'accepted'], true))
+                <form method="POST" action="{{ route('admin.tour-quotes.message', $q->quoteId) }}" class="ad-form" style="padding:12px 16px 16px">@csrf
+                    <div class="ad-fld"><label>Trả lời khách</label><textarea name="body" rows="3" maxlength="1000" required></textarea></div>
+                    <button class="ad-btn ad-btn--primary" style="width:auto">Gửi</button>
+                    <small class="ad-muted">Muốn đổi giá / lịch: sửa form “Báo giá” bên trên và gửi lại, luồng ghi thành “Báo giá lần N”.</small>
+                </form>
+            @endif
+        </section>
+    @endif
 @endsection

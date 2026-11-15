@@ -35,7 +35,9 @@ class TimelineFirstUiTest extends TestCase
         }
         $this->assertLessThan($days, strpos($html, 'id="tpuxHealthBtn"'), 'nút tình trạng chuyến nằm ở thanh tiêu đề');
         $this->assertStringContainsString('Trợ lý hành trình · La bàn', $html);
-        $this->assertStringContainsString('planner-focus.css', $html);
+        // planner-focus.css nằm trong gói planner.css (config/assets.php): trang nạp gói đã gộp hoặc từng tệp lẻ
+        $this->assertContains('clients/assets/css/planner-focus.css', config('assets.bundles')['planner.css']);
+        $this->assertTrue(str_contains($html, 'planner-focus.css') || (bool) preg_match('#clients/assets/build/planner\.[0-9a-f]{10}\.css#', $html));
     }
 
     public function test_planner_index_offers_three_ways_to_start(): void

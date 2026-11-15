@@ -44,3 +44,6 @@ Thumbs.db
 *.sql
 *.zip
 *.bak
+# kiểm thử trình duyệt (Playwright)
+/playwright-report
+/test-results

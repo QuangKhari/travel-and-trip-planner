@@ -45,7 +45,7 @@ final class PlaceSignals
      */
     public function recordSave(int $userId, int $tripId, array $old, array $new): void
     {
-        if (!self::ready()) {
+        if (!self::ready() || $this->paused($userId)) {
             return;
         }
         $was = [];
@@ -91,7 +91,7 @@ final class PlaceSignals
     /** Áp dụng / bỏ qua một đề xuất La bàn: tín hiệu cho các nơi được THÊM / THAY VÀO bởi đề xuất. */
     public function recordProposal(?int $userId, int $tripId, array $changes, bool $applied): void
     {
-        if (!self::ready() || !$userId) {
+        if (!self::ready() || !$userId || $this->paused($userId)) {
             return;
         }
         $rows = [];
@@ -131,7 +131,76 @@ final class PlaceSignals
             $out[$g]['n'] = ($out[$g]['n'] ?? 0) + (int) $r->n;
         }
 
-        return array_map(fn($x) => round(max(-1, min(1, $x['s'] / ($x['n'] + 4))), 2), $out);
+        $out = array_map(fn($x) => round(max(-1, min(1, $x['s'] / ($x['n'] + 4))), 2), $out);
+        // người dùng tự sửa ở "Travela nhớ gì về bạn": thích / không thích ghi đè điểm học được; "bỏ qua" xóa nhóm khỏi hồ sơ
+        foreach ($this->overrides($userId) as $g => $v) {
+            if ($v === 0) {
+                unset($out[$g]);
+            } else {
+                $out[$g] = $v > 0 ? 0.8 : -0.8;
+            }
+        }
+
+        return $out;
+    }
+
+    /** @return array<string,int> nhóm => 1 | 0 | -1 (không gồm cờ tạm ngừng) */
+    public function overrides(int $userId): array
+    {
+        if (!Schema::hasTable('tbl_user_taste') || $userId <= 0) {
+            return [];
+        }
+
+        return DB::table('tbl_user_taste')->where('userId', $userId)->where('grp', '<>', '_pause')->pluck('value', 'grp')->map(fn($v) => (int) $v)->all();
+    }
+
+    public function paused(int $userId): bool
+    {
+        return Schema::hasTable('tbl_user_taste') && DB::table('tbl_user_taste')->where(['userId' => $userId, 'grp' => '_pause', 'value' => 1])->exists();
+    }
+
+    /**
+     * Cho người dùng xem Travela đã học gì: mỗi nhóm có điểm, số lần thêm / ghé / bỏ / bỏ qua, vài nơi ví dụ, và lựa chọn tự sửa.
+     * @return list<array{grp:string,score:?float,learned:?float,override:?int,counts:array<string,int>,examples:list<string>}>
+     */
+    public function explain(int $userId): array
+    {
+        $learned = [];
+        $counts = [];
+        $examples = [];
+        if (self::ready()) {
+            $w = ['added' => 1, 'visited' => 2, 'applied' => 1, 'removed' => -1, 'skipped' => -2, 'ignored' => -0.5];
+            $acc = [];
+            foreach (DB::table('tbl_place_signals')->where('userId', $userId)->where('createdAt', '>=', now()->subYear())
+                         ->select('grp', 'signal', DB::raw('count(*) n'))->groupBy('grp', 'signal')->get() as $r) {
+                $g = $r->grp ?? 'see';
+                $counts[$g][$r->signal] = (int) $r->n;
+                $acc[$g]['s'] = ($acc[$g]['s'] ?? 0) + $w[$r->signal] * (int) $r->n;
+                $acc[$g]['n'] = ($acc[$g]['n'] ?? 0) + (int) $r->n;
+            }
+            foreach ($acc as $g => $x) {
+                $learned[$g] = round(max(-1, min(1, $x['s'] / ($x['n'] + 4))), 2);
+            }
+            $recent = DB::table('tbl_place_signals')->where('userId', $userId)->whereIn('signal', ['added', 'visited'])->where('refType', 'place')
+                ->orderByDesc('signalId')->limit(80)->get(['grp', 'refId']);
+            $names = $recent->isEmpty() ? [] : DB::table('tbl_external_places')->whereIn('placeId', $recent->pluck('refId')->unique())->pluck('name', 'placeId')->all();
+            foreach ($recent as $r) {
+                if (isset($names[$r->refId]) && count($examples[$r->grp] ?? []) < 3 && !in_array($names[$r->refId], $examples[$r->grp] ?? [], true)) {
+                    $examples[$r->grp][] = $names[$r->refId];
+                }
+            }
+        }
+        $ov = $this->overrides($userId);
+        $final = $this->profile($userId);
+        $groups = array_unique(array_merge(array_keys((array) config('planner.kind_groups')), ['experience', 'food'], array_keys($learned), array_keys($ov)));
+        $out = [];
+        foreach ($groups as $g) {
+            $out[] = ['grp' => $g, 'score' => $final[$g] ?? null, 'learned' => $learned[$g] ?? null, 'override' => $ov[$g] ?? null,
+                'counts' => $counts[$g] ?? [], 'examples' => $examples[$g] ?? []];
+        }
+        usort($out, fn($a, $b) => (abs($b['score'] ?? 0) <=> abs($a['score'] ?? 0)) ?: strcmp($a['grp'], $b['grp']));
+
+        return $out;
     }
 
     /**

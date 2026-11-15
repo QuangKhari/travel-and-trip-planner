@@ -57,6 +57,7 @@ final class OpenAiJsonLlm implements StructuredLlm
         if ($this->jsonMode === 'object') {
             $system .= "\n\nChỉ trả về MỘT đối tượng JSON theo schema sau, không thêm chữ nào khác:\n" . json_encode($schema, JSON_UNESCAPED_UNICODE);
         }
+        $user = self::withImages($user, (array) ($opt['images'] ?? []));
         $timeout = (int) ($opt['timeout'] ?? $this->timeout);
         $maxTokens = (int) ($opt['max_tokens'] ?? $this->maxTokens);
         // Nhà cung cấp từ chối json_schema của tác vụ này (vd Gemini: "Request contains an invalid argument" vì từ khóa schema không hỗ trợ)
@@ -87,7 +88,19 @@ final class OpenAiJsonLlm implements StructuredLlm
         return ['data' => $data, 'input_tokens' => $r['usage']['prompt_tokens'] ?? null, 'output_tokens' => $r['usage']['completion_tokens'] ?? null, 'raw' => $raw];
     }
 
-    private function postObject(string $system, string $user, array $schema, int $timeout, int $maxTokens): array
+    /** Ảnh (đọc vé, Đợt C mục 20): phần image_url dạng data URI đứng trước lời nhắc. */
+    private static function withImages(string $user, array $images): string|array
+    {
+        if (!$images) {
+            return $user;
+        }
+        $c = array_map(fn($i) => ['type' => 'image_url', 'image_url' => ['url' => 'data:' . $i['mime'] . ';base64,' . $i['data']]], $images);
+        $c[] = ['type' => 'text', 'text' => $user];
+
+        return $c;
+    }
+
+    private function postObject(string $system, string|array $user, array $schema, int $timeout, int $maxTokens): array
     {
         $system .= "\n\nChỉ trả về MỘT đối tượng JSON theo schema sau, không thêm chữ nào khác:\n" . json_encode($schema, JSON_UNESCAPED_UNICODE);
 
@@ -114,7 +127,7 @@ final class OpenAiJsonLlm implements StructuredLlm
         return $s;
     }
 
-    private function post(string $system, string $user, array $extra, int $timeout, int $maxTokens): array
+    private function post(string $system, string|array $user, array $extra, int $timeout, int $maxTokens): array
     {
         if (!$this->available()) {
             throw new RuntimeException('Thiếu khóa API (RAG_LLM_KEY).');

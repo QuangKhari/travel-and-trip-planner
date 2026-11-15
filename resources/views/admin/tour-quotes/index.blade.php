@@ -15,7 +15,7 @@
                     <tr><td>{{ $r->quoteId }}<br><small class="ad-muted">{{ \Carbon\Carbon::parse($r->createdAt)->format('d/m H:i') }}</small></td>
                         <td>{{ $r->fullName ?: $r->username }}</td><td>{{ $r->title }}</td>
                         <td>{{ $r->groupSize }} người · {{ $r->budget ? number_format($r->budget, 0, ',', '.') . 'đ' : 'chưa nêu' }}</td>
-                        <td>{{ $st[$r->status] ?? $r->status }}@if ($r->pricePerPerson)<br><small>{{ number_format($r->pricePerPerson, 0, ',', '.') }}đ/người</small>@endif</td>
+                        <td>{{ $st[$r->status] ?? $r->status }}@if (!empty($r->staffUnread)) <span class="ad-badge" title="Tin khách chưa đọc">{{ $r->staffUnread }} tin mới</span> @endif @if ($r->pricePerPerson)<br><small>{{ number_format($r->pricePerPerson, 0, ',', '.') }}đ/người</small>@endif</td>
                         <td><a class="ad-btn ad-btn--sm" href="{{ route('admin.tour-quotes.show', $r->quoteId) }}">Mở</a></td></tr>
                 @endforeach
                 </tbody></table>

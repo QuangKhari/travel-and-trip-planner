@@ -30,8 +30,18 @@ final class TripExpenses
     public function people(object $trip): array
     {
         $out = [];
+        // người đã báo "Không đi" (TripDecide) không được chia khoản chi mới, trừ khi đã có trong khoản chi cũ (giữ để số dư đúng)
+        $no = Schema::hasColumn('tbl_trip_members', 'rsvp')
+            ? DB::table('tbl_trip_members')->where('tripId', $trip->tripId)->where('rsvp', 'no')->pluck('userId')->map(fn($u) => 'u:' . $u)->all() : [];
+        $involved = $no ? array_flip(array_merge(
+            DB::table('tbl_trip_expenses')->where('tripId', $trip->tripId)->pluck('paidBy')->all(),
+            DB::table('tbl_trip_expense_shares as s')->join('tbl_trip_expenses as e', 'e.expenseId', '=', 's.expenseId')->where('e.tripId', $trip->tripId)->pluck('s.who')->all())) : [];
         foreach (app(TripSharing::class)->members($trip, false) as $m) {
-            $out[] = ['who' => 'u:' . $m['userId'], 'name' => $m['name'] !== '' ? $m['name'] : 'Thành viên', 'kind' => 'member'];
+            $who = 'u:' . $m['userId'];
+            if (in_array($who, $no, true) && !isset($involved[$who])) {
+                continue;
+            }
+            $out[] = ['who' => $who, 'name' => $m['name'] !== '' ? $m['name'] : 'Thành viên', 'kind' => 'member'];
         }
         foreach (DB::table('tbl_trip_guests')->where('tripId', $trip->tripId)->orderBy('guestId')->get() as $g) {
             $out[] = ['who' => 'g:' . $g->guestId, 'name' => $g->name, 'kind' => 'guest'];

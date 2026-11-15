@@ -54,7 +54,7 @@ class PlannerBatchTwoTest extends TestCase
             'category' => 'sight', 'kind' => $kind, 'latitude' => 21.03 + $d, 'longitude' => 105.85 + $d, 'rank' => 1, 'reviewStatus' => 'published', 'syncedAt' => now()] + $x);
     }
 
-    private function save(int $id, array $items, array $s = null): void
+    private function save(int $id, array $items, ?array $s = null): void
     {
         $this->withSession($s ?? $this->s)->postJson("/len-ke-hoach/$id/luu", ['title' => 'Hà Nội', 'days' => 2, 'groupSize' => 2, 'startDate' => '2027-03-03',
             'items' => $items, 'rev' => (int) DB::table('tbl_trips')->where('tripId', $id)->value('rev')])->assertOk();

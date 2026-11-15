@@ -29,6 +29,16 @@ class CheckAdminRole
         // Đồng bộ lại session để giao diện đang đọc session('adminRole') hiện đúng menu
         session(['adminRole' => $role]);
 
+        // Vai trò bắt buộc đăng nhập hai lớp mà chưa bật: chỉ cho vào trang Tài khoản để bật (Đợt C mục 18)
+        if (\App\Services\AdminTwoFactor::requiredFor($role) && !\App\Services\AdminTwoFactor::enabled((int) $adminId)
+            && !in_array($request->route()?->getName(), ['admin.admin', 'admin.2fa.enable', 'admin.logout'], true)) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'Cần bật đăng nhập hai lớp trước khi thao tác.'], 403);
+            }
+
+            return redirect()->to(route('admin.admin') . '#bao-mat')->with('error', 'Vai trò của bạn cần bật đăng nhập hai lớp trước khi dùng trang quản trị.');
+        }
+
         if (!in_array($role, $roles, true)) {
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json(['success' => false, 'message' => 'Bạn không có quyền thực hiện thao tác này.'], 403);

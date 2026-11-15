@@ -58,6 +58,20 @@
     <main class="lg-main">
         <div class="lg-box">
             <div class="lg-brand"><i class="fa fa-compass"></i><span><b>{{ config('site.name', 'Travela') }}</b><small>Trang quản trị</small></span></div>
+            @if (($step ?? null) === '2fa')
+            <h1>Xác minh đăng nhập</h1>
+            <p class="lg-sub">Mở ứng dụng xác thực trên điện thoại và nhập mã 6 số đang hiện. Không có điện thoại thì nhập một mã dự phòng.</p>
+            <form action="{{ route('admin.login.2fa.verify') }}" method="POST" id="formTwoFactor" novalidate>
+                @csrf
+                <label for="code">Mã xác minh</label>
+                <div class="lg-fld"><i class="fa fa-shield"></i><input type="text" name="code" id="code" inputmode="numeric" autocomplete="one-time-code" required autofocus maxlength="20" placeholder="123456"></div>
+                <button class="lg-btn" type="submit" id="lg-submit">Xác minh</button>
+            </form>
+            <div class="lg-foot">
+                <a href="{{ route('admin.login') }}"><i class="fa fa-arrow-left"></i> Đăng nhập tài khoản khác</a>
+                <span style="color:#94a3b8">Mất điện thoại? Nhờ quản trị viên đặt lại.</span>
+            </div>
+            @else
             <h1>Đăng nhập</h1>
             <p class="lg-sub">Dành cho quản trị viên, quản lý và nhân viên.</p>
             <form action="{{ route('admin.login-account') }}" method="POST" id="formLoginAdmin" novalidate>
@@ -74,6 +88,7 @@
                 <a href="{{ url('/') }}"><i class="fa fa-arrow-left"></i> Về trang khách</a>
                 <span style="color:#94a3b8">Quên mật khẩu? Liên hệ quản trị viên.</span>
             </div>
+            @endif
         </div>
     </main>
 
@@ -81,6 +96,14 @@
     <script src="{{ asset('vendor/flasher/toastr.min.js') }}"></script>
     <script>
         (function () {
+            var tf = document.getElementById('formTwoFactor');
+            if (tf) {
+                tf.addEventListener('submit', function (e) {
+                    if (!document.getElementById('code').value.trim()) { e.preventDefault(); (window.toastr ? toastr.error : alert)('Nhập mã xác minh.'); return; }
+                    document.getElementById('lg-submit').disabled = true;
+                });
+                return;
+            }
             var pw = document.getElementById('password'), eye = document.getElementById('lg-eye'), caps = document.getElementById('lg-caps');
             eye.addEventListener('click', function () {
                 var show = pw.type === 'password';

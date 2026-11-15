@@ -400,6 +400,23 @@ class TravelController extends Controller
         return response()->json(['ok' => true, 'externalId' => $xid, 'message' => 'Đã lưu xác nhận "' . $v['title'] . '" vào chuyến đi.']);
     }
 
+    /**
+     * Đợt C mục 20: đọc email / PDF / ảnh vé thành các ô của biểu mẫu xác nhận. Chỉ đọc, KHÔNG lưu:
+     * người dùng xem lại các ô được điền rồi tự bấm "Lưu xác nhận" (addConfirmation).
+     */
+    public function readConfirmation(Request $r, int $id, \App\Services\Planner\BookingReader $reader): JsonResponse
+    {
+        $trip = $this->trip($id, true);
+        $r->validate([
+            'text' => ['nullable', 'string', 'max:20000', 'required_without:file'],
+            'file' => ['nullable', 'file', 'max:5120', 'mimes:pdf,jpg,jpeg,png,webp'],
+        ], ['text.required_without' => 'Dán nội dung email hoặc chọn tệp vé.', 'file.mimes' => 'Tệp phải là PDF hoặc ảnh JPG / PNG / WebP.', 'file.max' => 'Tệp tối đa 5 MB.']);
+        $hint = $trip->startDate ? Carbon::parse($trip->startDate)->toDateString() : null;
+        $res = $r->hasFile('file') ? $reader->fromFile($r->file('file'), $this->uid(), $hint) : $reader->fromText((string) $r->input('text'), $hint);
+
+        return response()->json($res);
+    }
+
     /** A-12: tải tệp xác nhận (chỉ người xem được chuyến), không có đường dẫn công khai. */
     public function confirmationFile(int $id, int $externalId)
     {

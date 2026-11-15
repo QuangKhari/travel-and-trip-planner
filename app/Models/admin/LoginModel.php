@@ -20,6 +20,11 @@ class LoginModel extends Model
             ->first();
     }
 
+    public function findById($adminId)
+    {
+        return DB::table($this->table)->where('adminId', $adminId)->first();
+    }
+
     public function updatePasswordById($adminId, $hash)
     {
         return DB::table($this->table)

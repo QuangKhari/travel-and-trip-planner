@@ -52,6 +52,56 @@
         </section>
     </div>
 
+    @if ($tfa)
+        {{-- Đăng nhập hai lớp (Đợt C mục 18): mật khẩu + mã 6 số đổi mỗi 30 giây trên điện thoại --}}
+        <section class="ad-card" id="bao-mat">
+            <div class="ad-card__head"><h2><i class="fa fa-shield"></i> Đăng nhập hai lớp</h2>
+                @if ($tfa['on'])<span class="ad-badge ad-badge--teal">Đang bật từ {{ date('d/m/Y', strtotime($tfa['since'])) }}</span>
+                @elseif ($tfa['required'])<span class="ad-badge ad-badge--bad">Bắt buộc với vai trò của bạn</span>
+                @else<span class="ad-badge ad-badge--mute">Chưa bật</span>@endif
+            </div>
+            <div class="ad-card__body">
+                @if (!empty($tfa['codes']))
+                    <div class="ad-alert" style="margin-bottom:14px;background:#fff7e6;border:1px solid #f3d19e;padding:12px 14px;border-radius:10px">
+                        <b>Mã dự phòng — chỉ hiện một lần.</b> Mỗi mã dùng được một lần khi không có điện thoại. Chép hoặc in ra, cất nơi an toàn.
+                        <pre id="tfaCodes" style="margin:10px 0 6px;padding:10px 12px;background:#fff;border:1px dashed var(--ad-line);border-radius:8px;font-size:15px;line-height:1.7;columns:2;max-width:360px">{{ implode("\n", $tfa['codes']) }}</pre>
+                        <button type="button" class="ad-btn ad-btn--sm" onclick="navigator.clipboard && navigator.clipboard.writeText(document.getElementById('tfaCodes').textContent).then(function(){toastr.success('Đã chép mã dự phòng')})"><i class="fa fa-copy"></i> Chép</button>
+                    </div>
+                @endif
+                @if ($tfa['on'])
+                    <p style="margin-top:0">Mỗi lần đăng nhập, sau mật khẩu bạn nhập mã 6 số trong ứng dụng xác thực. Còn <b>{{ $tfa['left'] }}</b> mã dự phòng.</p>
+                    <div class="ad-form ad-form--2" style="align-items:end">
+                        <form action="{{ route('admin.2fa.codes') }}" method="POST" class="ad-fld">@csrf
+                            <label for="tfaCodeNew">Tạo bộ mã dự phòng mới</label>
+                            <div style="display:flex;gap:8px"><input id="tfaCodeNew" name="code" inputmode="numeric" autocomplete="one-time-code" placeholder="Mã 6 số hiện tại" maxlength="20" required>
+                                <button class="ad-btn" type="submit">Tạo mới</button></div>
+                        </form>
+                        @unless ($tfa['required'])
+                            <form action="{{ route('admin.2fa.disable') }}" method="POST" class="ad-fld">@csrf
+                                <label for="tfaCodeOff">Tắt đăng nhập hai lớp</label>
+                                <div style="display:flex;gap:8px"><input id="tfaCodeOff" name="code" inputmode="numeric" autocomplete="one-time-code" placeholder="Mã 6 số hoặc mã dự phòng" maxlength="20" required>
+                                    <button class="ad-btn ad-btn--danger" type="submit">Tắt</button></div>
+                            </form>
+                        @endunless
+                    </div>
+                @else
+                    <div style="display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start">
+                        <div id="tfaQr" data-uri="{{ $tfa['uri'] }}" style="width:180px;height:180px;border:1px solid var(--ad-line);border-radius:10px;padding:8px;background:#fff" aria-label="Mã QR để thêm tài khoản vào ứng dụng xác thực"></div>
+                        <ol style="flex:1;min-width:260px;margin:0;padding-left:18px;line-height:1.7">
+                            <li>Mở ứng dụng xác thực trên điện thoại (Google Authenticator, Microsoft Authenticator…), chọn thêm tài khoản và quét mã QR.</li>
+                            <li>Không quét được thì nhập khóa: <code style="user-select:all;word-break:break-all">{{ trim(chunk_split($tfa['secret'], 4, ' ')) }}</code></li>
+                            <li>Nhập mã 6 số đang hiện để xác nhận:
+                                <form action="{{ route('admin.2fa.enable') }}" method="POST" style="display:flex;gap:8px;margin-top:6px;max-width:340px">@csrf
+                                    <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" placeholder="123456" required aria-label="Mã 6 số" style="flex:1">
+                                    <button class="ad-btn ad-btn--primary" type="submit"><i class="fa fa-check"></i> Bật</button>
+                                </form></li>
+                        </ol>
+                    </div>
+                @endif
+            </div>
+        </section>
+    @endif
+
     @if ($role === 'admin')
         @include('admin.partials.admin-member-card', ['rows' => $managers, 'role' => 'manager', 'label' => 'Quản lý', 'addRoute' => 'admin.add-manager', 'delRoute' => 'admin.delete-manager'])
     @endif
@@ -75,6 +125,18 @@
     </section>
 @endsection
 @push('scripts')
+@if ($tfa && !$tfa['on'])
+<script src="{{ asset('admin/vendors/qrcode/qrcode.js') }}"></script>
+<script>
+    (function () {
+        var box = document.getElementById('tfaQr');
+        if (!box || !window.qrcode) return;
+        var qr = qrcode(0, 'M'); qr.addData(box.dataset.uri); qr.make();
+        box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+        var svg = box.querySelector('svg'); if (svg) { svg.style.width = '100%'; svg.style.height = '100%'; }
+    })();
+</script>
+@endif
 <script>
     document.addEventListener('click', function (e) {
         var b = e.target.closest('.js-del-admin');

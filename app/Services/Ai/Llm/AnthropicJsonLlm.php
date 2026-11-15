@@ -54,7 +54,7 @@ final class AnthropicJsonLlm implements StructuredLlm
     public function generateJson(string $system, string $user, array $schema, array $opt = []): array
     {
         $tool = $opt['name'] ?? 'ket_qua';
-        $r = $this->post($system, $user, [
+        $r = $this->post($system, self::withImages($user, (array) ($opt['images'] ?? [])), [
             'tools' => [['name' => $tool, 'description' => 'Trả kết quả có cấu trúc.', 'input_schema' => $schema]],
             'tool_choice' => ['type' => 'tool', 'name' => $tool],
         ], (int) ($opt['timeout'] ?? $this->timeout), (int) ($opt['max_tokens'] ?? $this->maxTokens));
@@ -68,7 +68,19 @@ final class AnthropicJsonLlm implements StructuredLlm
         throw new SchemaViolation('Mô hình không trả về khối tool_use.');
     }
 
-    private function post(string $system, string $user, array $extra, int $timeout, int $maxTokens): array
+    /** Ảnh (đọc vé, Đợt C mục 20): khối image base64 đứng trước lời nhắc. */
+    private static function withImages(string $user, array $images): string|array
+    {
+        if (!$images) {
+            return $user;
+        }
+        $c = array_map(fn($i) => ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => $i['mime'], 'data' => $i['data']]], $images);
+        $c[] = ['type' => 'text', 'text' => $user];
+
+        return $c;
+    }
+
+    private function post(string $system, string|array $user, array $extra, int $timeout, int $maxTokens): array
     {
         if (!$this->available()) {
             throw new RuntimeException('Thiếu ANTHROPIC_API_KEY.');

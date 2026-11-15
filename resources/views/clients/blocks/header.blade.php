@@ -43,86 +43,23 @@
     <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
     <meta name="theme-color" content="#167A85">
     <link rel="apple-touch-icon" href="{{ asset('clients/assets/images/pwa/icon-192.png') }}">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&amp;display=swap"
-        rel="stylesheet">
-
-    <link
-        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Caveat:wght@600;700&family=Dancing+Script:wght@600;700&display=swap"
-        rel="stylesheet">
-
-    <!-- Flaticon -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/flaticon.min.css') }}">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/fontawesome-5.14.0.min.css') }}">
-    <!-- Bootstrap -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/bootstrap.min.css') }}">
-    <!-- Magnific Popup -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/magnific-popup.min.css') }}">
-    <!-- Nice Select -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/nice-select.min.css') }}">
-    <!-- Animate -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/aos.css') }}">
-    <!-- Slick -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/slick.min.css') }}">
-    <!-- Main Style -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/style.css') }}">
-    <!-- jQuery UI -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/jquery-ui.min.css') }}">
-
-    {{-- User Profile  --}}
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/user-profile.css') }}" />
-
-
-    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-
-    {{-- Login --}}
-    <!-- Font Icon -->
-    <link rel="stylesheet"
-        href="{{ asset('clients/assets/css/css-login/fonts/material-icon/css/material-design-iconic-font.min.css') }}">
-
-    <!-- Main css -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/css-login/style.css') }}">
-    <!-- Custom css -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/custom-css.css') }}">
-    <!-- Bộ thành phần lớp Khám phá + khay chuyến đi -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/explore-kit.css') }}?v=1">
-    <!-- Giai đoạn C: cẩm nang, mùa đẹp, tìm kiếm có gợi ý -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/explore-c.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/gx-discover.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/gx-guide.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/gx-pages.css') }}?v=1">
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
-
-    <!-- Travel Theme v2: phải nằm CUỐI <head> để đè được CSS cũ -->
+    {{-- Phông chữ: một yêu cầu cho mọi họ chữ, tải không chặn hiển thị (chữ hiện ngay bằng phông hệ thống, đổi khi phông về) --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Caveat:wght@600;700&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/travel-theme.css') }}?v=2">
-    {{-- SEA THEME: giao diện biển cho các trang con. Phải nằm SAU travel-theme.css --}}
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/sea-theme.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/client-ui-polish.css') }}?v=5">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/travel-pages.css') }}?v=2">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/inspiration.css') }}?v=2">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-pages.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-pages-10.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-watercolor.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-watercolor-refine.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-final.css') }}?v=1">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-tours-10.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/ux-pass.css') }}?v=7">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-decor-fix.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/ux-watercolor.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/journal.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/mobile-nav.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/site-ux.css') }}?v=1">
-    {{-- Giao diện mới (header, footer, thẻ tour, trang Tour và Giới thiệu): phải nằm CUỐI <head> --}}
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv3.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv3-pages.css') }}?v=1">
+    @php $__fonts = 'https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&family=Caveat:wght@600;700&family=Dancing+Script:wght@600;700&family=Playfair+Display:wght@600;700&display=swap'; @endphp
+    <link rel="preload" as="style" href="{{ $__fonts }}">
+    <link rel="stylesheet" href="{{ $__fonts }}" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="{{ $__fonts }}"></noscript>
+
+    {{-- CSS dùng chung: gộp theo nhóm, đúng thứ tự cũ (config/assets.php, php artisan assets:bundle). Tệp ngoài giữ đúng chỗ giữa các nhóm. --}}
+    {!! \App\Support\AssetBundle::tags('site-a.css') !!}
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    {!! \App\Support\AssetBundle::tags('site-b.css') !!}
+    {{-- toastr chỉ cần khi hiện thông báo: tải không chặn lần vẽ đầu (CSS trang không đè lớp của toastr nên thứ tự không đổi kết quả) --}}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css"></noscript>
+    {{-- Travel Theme v2 trở đi: phải nằm SAU các CSS cũ để đè được --}}
+    {!! \App\Support\AssetBundle::tags('site-c.css') !!}
     <script src="{{ asset('clients/assets/js/travel-motion.js') }}?v=1" defer></script>
     <script src="{{ asset('clients/assets/js/tv-final.js') }}?v=1" defer></script>
     <script src="{{ asset('clients/assets/js/tv-tours-10.js') }}?v=2" defer></script>
@@ -130,10 +67,8 @@
         window.GX_SEARCH = {suggest: @json(url('/api/v1/search/suggest')), page: @json(route('site.search')), tours: @json(route('tours'))};
     </script>
     <script src="{{ asset('clients/assets/js/guide-search.js') }}?v=1" defer></script>
-    {{-- Nature Luxury: final shared design layer. Keep after legacy styles. --}}
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-unified.css') }}?v=bl20261104">
-    {{-- Nature Luxury v4: final token/component stylesheet for every client page. --}}
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
+    {{-- Nature Luxury: lớp thiết kế cuối, giữ sau các CSS cũ --}}
+    {!! \App\Support\AssetBundle::tags('site-d.css') !!}
     @if (request()->is('tours') || request()->is('diem-den') || request()->is('explore'))
         <link rel="stylesheet" href="{{ asset('clients/assets/css/blue-lagoon-tour-explore.css') }}?v=4">
         <link rel="stylesheet" href="{{ asset('clients/assets/css/blue-lagoon-layout-fix.css') }}?v=1">

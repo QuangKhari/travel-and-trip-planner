@@ -100,7 +100,21 @@ class PlannerBatchThreeTest extends TestCase
         $this->assertEquals(15000000, (float) $q->totalPrice);
         Mail::assertQueued(\App\Mail\TemplateMail::class);
 
-        $this->withSession($s)->get('/bao-gia-tour/' . $q->quoteId)->assertOk()->assertSee('2.500.000');
+        $this->withSession($s)->get('/bao-gia-tour/' . $q->quoteId)->assertOk()->assertSee('2.500.000')->assertSee('Báo giá lần 1');
+        // trao đổi hai chiều: khách nhờ chỉnh -> nhân viên thấy "tin mới", trả lời, báo giá lại thành lần 2
+        $this->withSession($s)->post('/bao-gia-tour/' . $q->quoteId . '/nhan-tin', ['body' => 'Bỏ ngày 2 được không <b>ạ</b>?'])->assertRedirect();
+        $this->assertSame(1, (int) DB::table('tbl_tour_quotes')->value('staffUnread'));
+        $this->withSession(['userId' => $other])->post('/bao-gia-tour/' . $q->quoteId . '/nhan-tin', ['body' => 'x'])->assertSessionHas('error');
+        $adm = (int) DB::table('tbl_admin')->where('userName', 'ad')->value('adminId');
+        $this->withSession(['adminId' => $adm])->get('/admin/tour-quotes?status=all')->assertSee('1 tin mới');
+        $this->withSession(['adminId' => $adm])->get('/admin/tour-quotes/' . $q->quoteId)->assertOk()->assertSee('Bỏ ngày 2 được không ạ?');
+        $this->assertSame(0, (int) DB::table('tbl_tour_quotes')->value('staffUnread'), 'mở luồng là đã đọc');
+        $this->withSession(['adminId' => $adm])->post('/admin/tour-quotes/' . $q->quoteId . '/nhan-tin', ['body' => 'Được, giá giảm còn 2,2 triệu'])->assertRedirect();
+        $this->withSession(['adminId' => $adm])->post('/admin/tour-quotes/' . $q->quoteId, ['pricePerPerson' => 2200000, 'validUntil' => '2027-03-05'])->assertRedirect();
+        $this->assertSame(2, (int) DB::table('tbl_tour_quotes')->value('version'));
+        $this->assertSame(2, (int) DB::table('tbl_tour_quotes')->value('customerUnread'));
+        $this->withSession($s)->get('/bao-gia-tour/' . $q->quoteId)->assertSee('Báo giá lần 2')->assertSee('Được, giá giảm còn 2,2 triệu');
+        $this->assertSame(0, (int) DB::table('tbl_tour_quotes')->value('customerUnread'));
         Carbon::setTestNow('2027-03-06 09:00:00');                  // hết hạn giữ giá
         $this->withSession($s)->post('/bao-gia-tour/' . $q->quoteId . '/tra-loi', ['decision' => 'accept'])->assertSessionHas('error');
         Carbon::setTestNow('2027-03-04 09:00:00');

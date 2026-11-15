@@ -14,6 +14,7 @@ final class FakeLlm implements StructuredLlm
     public ?string $lastSystem = null;
     public ?string $lastUser = null;
     public int $calls = 0;
+    public array $lastOpt = [];
 
     /**
      * @param array<string,array|callable> $byTask  ['brief' => [...json...] | fn(string $user): array]
@@ -46,6 +47,7 @@ final class FakeLlm implements StructuredLlm
         $this->calls++;
         $this->lastSystem = $system;
         $this->lastUser = $user;
+        $this->lastOpt = $opt;
         if ($this->fail === 'timeout') {
             throw new RuntimeException('timeout: fake');
         }

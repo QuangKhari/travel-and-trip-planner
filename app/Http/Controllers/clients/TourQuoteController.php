@@ -38,7 +38,8 @@ class TourQuoteController extends Controller
     {
         $q = DB::table('tbl_tour_quotes')->where('quoteId', $id)->where('userId', (int) session('userId'))->first() ?? abort(404);
 
-        return view('clients.quotes.show', ['title' => 'Báo giá tour riêng #' . $id, 'q' => $q, 'snap' => json_decode((string) $q->snapshot, true)]);
+        return view('clients.quotes.show', ['title' => 'Báo giá tour riêng #' . $id, 'q' => $q, 'snap' => json_decode((string) $q->snapshot, true),
+            'thread' => app(TourQuotes::class)->thread($id, 'customer'), 'chat' => TourQuotes::chatReady()]);
     }
 
     public function decide(Request $request, int $id, TourQuotes $svc)
@@ -51,5 +52,19 @@ class TourQuoteController extends Controller
         }
 
         return back()->with('success', $v['decision'] === 'accept' ? 'Đã nhận báo giá. Nhân viên Travela sẽ liên hệ để chốt dịch vụ.' : 'Đã từ chối báo giá.');
+    }
+
+    /** POST /bao-gia-tour/{id}/nhan-tin {body}: khách hỏi / nhờ chỉnh lịch, giá ngay trên trang báo giá. */
+    public function message(Request $request, int $id, TourQuotes $svc)
+    {
+        abort_unless(TourQuotes::chatReady(), 404);
+        $v = $request->validate(['body' => 'required|string|max:1000']);
+        try {
+            $svc->message($id, 'customer', (int) session('userId'), $v['body'], (int) session('userId'));
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return redirect(route('quotes.show', ['id' => $id]) . '#thread')->with('success', 'Đã gửi. Nhân viên Travela trả lời ngay trên trang này.');
     }
 }

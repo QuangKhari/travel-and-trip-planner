@@ -30,7 +30,22 @@ class AdminManagementController extends Controller
         $managers = $this->admin->getByRole('manager');
         $staffs = $this->admin->getByRole('staff');
 
-        return view('admin.profile-admin', compact('title', 'admin', 'managers', 'staffs'));
+        $tfa = null;
+        if (\App\Services\AdminTwoFactor::ready() && $admin) {
+            $on = !empty($admin->totpEnabledAt);
+            $secret = $on ? null : \App\Services\AdminTwoFactor::pendingSecret();
+            $tfa = [
+                'on' => $on,
+                'since' => $admin->totpEnabledAt ?? null,
+                'left' => $on ? \App\Services\AdminTwoFactor::recoveryLeft((int) $admin->adminId) : 0,
+                'secret' => $secret,
+                'uri' => $secret ? \App\Services\AdminTwoFactor::uri($admin, $secret) : null,
+                'required' => \App\Services\AdminTwoFactor::requiredFor((string) $admin->role),
+                'codes' => session('admin2faCodes'),
+            ];
+        }
+
+        return view('admin.profile-admin', compact('title', 'admin', 'managers', 'staffs', 'tfa'));
     }
 
     public function updateAdmin(Request $request)

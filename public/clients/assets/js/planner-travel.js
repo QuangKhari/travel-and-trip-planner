@@ -42,6 +42,53 @@
             .catch(function (e) { btn.disabled = false; msg.textContent = errText(e); });
     });
 
+    // Đợt C mục 20: đọc email / PDF / ảnh vé -> điền sẵn biểu mẫu xác nhận (không lưu; người dùng kiểm tra rồi tự bấm Lưu)
+    var rd = cf && cf.querySelector(".tp-read");
+    if (rd) {
+        var rText = rd.querySelector("#tpReadText"), rCard = rd.querySelector(".tp-read__card"), rFileBtn = rd.querySelector('[data-read="file"]');
+        var KIND = { hotel: "Khách sạn", flight: "Vé máy bay", train: "Vé tàu", bus: "Vé xe khách", ticket: "Vé tham quan" };
+        var LABEL = { kind: "loại", title: "tên", startAt: "ngày giờ", code: "mã xác nhận", price: "số tiền", provider: "nơi đặt", endAt: "giờ kết thúc" };
+        var INPUT = { kind: "kind", title: "title", provider: "provider", code: "code", startAt: "startAt", endAt: "endAt", price: "price" };
+        var dm = function (v) { return v ? v.substr(11, 5) + " " + v.substr(8, 2) + "/" + v.substr(5, 2) : ""; };
+        var fileIn = cf.elements.file;
+        if (fileIn) fileIn.addEventListener("change", function () { rFileBtn.hidden = !(fileIn.files && fileIn.files[0]); });
+        cf.addEventListener("input", function (e) { if (e.target.classList) e.target.classList.remove("is-read"); });
+        var show = function (j) {
+            rCard.hidden = false; rCard.textContent = "";
+            rCard.classList.toggle("is-weak", !j.ok);
+            var f = j.fields || {}, parts = [];
+            if (f.kind) parts.push(KIND[f.kind] || f.kind);
+            if (f.title) parts.push(f.title);
+            if (f.startAt) parts.push(dm(f.startAt) + (f.endAt ? " → " + dm(f.endAt) : ""));
+            if (f.code) parts.push("mã " + f.code);
+            if (f.price) parts.push(money(f.price));
+            if (parts.length) rCard.appendChild(el("b", null, parts.join(" · ")));
+            rCard.appendChild(el("span", null, j.message || ""));
+            var miss = (j.missing || []).filter(function (k) { return LABEL[k]; }).map(function (k) { return LABEL[k]; });
+            if (parts.length && miss.length) rCard.appendChild(el("small", null, "Chưa thấy: " + miss.join(", ") + "."));
+        };
+        var fill = function (f) {
+            Object.keys(INPUT).forEach(function (k) {
+                var inp = cf.elements[INPUT[k]];
+                if (!inp || f[k] == null || f[k] === "") return;
+                inp.value = String(f[k]);
+                inp.classList.add("is-read");
+            });
+        };
+        var run = function (mode, btn) {
+            var fd = new FormData(); fd.append("_token", csrf);
+            if (mode === "file") { if (!(fileIn.files && fileIn.files[0])) return; fd.append("file", fileIn.files[0]); }
+            else { if (!rText.value.trim()) { rText.focus(); return; } fd.append("text", rText.value); }
+            btn.disabled = true; rCard.hidden = false; rCard.classList.remove("is-weak"); rCard.textContent = "Đang đọc…";
+            fetch(rd.getAttribute("data-url"), { method: "POST", body: fd, credentials: "same-origin", headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" } })
+                .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw j; return j; }); })
+                .then(function (j) { fill(j.fields || {}); show(j); var first = cf.querySelector(".is-read"); if (first) first.focus(); })
+                .catch(function (e) { rCard.classList.add("is-weak"); rCard.textContent = errText(e); })
+                .then(function () { btn.disabled = false; });
+        };
+        rd.querySelectorAll("[data-read]").forEach(function (b) { b.addEventListener("click", function () { run(b.getAttribute("data-read"), b); }); });
+    }
+
     var ff = document.getElementById("tpFlightForm");
     ff.addEventListener("submit", function (ev) {
         ev.preventDefault();

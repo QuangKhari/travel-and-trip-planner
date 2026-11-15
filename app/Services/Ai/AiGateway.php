@@ -17,7 +17,7 @@ use Throwable;
  */
 final class AiGateway
 {
-    public const FEATURES = ['brief', 'explain', 'copilot', 'packing'];
+    public const FEATURES = ['brief', 'explain', 'copilot', 'packing', 'booking_read'];
 
     public function __construct(private AiLlmFactory $factory) {}
 
@@ -65,7 +65,7 @@ final class AiGateway
      * Gọi LLM một lượt trả JSON. Mọi lỗi được bắt lại và trả về dạng dữ liệu.
      * @return array{ok:bool,data?:array,reason?:string,error?:string,ms:int,in:?int,out:?int,model:?string}
      */
-    public function json(string $feature, ?int $userId, string $system, string $user, array $schema): array
+    public function json(string $feature, ?int $userId, string $system, string $user, array $schema, array $opt = []): array
     {
         $t0 = microtime(true);
         $why = $this->blocked($feature, $userId);
@@ -74,7 +74,7 @@ final class AiGateway
         }
         $llm = $this->factory->make($feature);
         try {
-            $r = $llm->generateJson($system, $user, $schema, [
+            $r = $llm->generateJson($system, $user, $schema, $opt + [
                 'name' => $feature,
                 'timeout' => (int) config('ai.timeout.' . $feature, 20),
                 'max_tokens' => (int) config('ai.max_tokens.' . $feature, 900),

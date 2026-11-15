@@ -1039,12 +1039,29 @@ class PlannerController extends Controller
     }
 
     /** GET /len-ke-hoach/{id}/phien-ban -> {rev, by, role}: giao diện hỏi định kỳ để biết có người khác vừa sửa. */
-    public function revision(int $id): JsonResponse
+    public function revision(Request $request, int $id): JsonResponse
     {
         $sh = app(TripSharing::class);
         $acc = $sh->access($this->uid(), $id) ?? abort(404);
+        $r = $sh->revision($id) + ['role' => $acc['role']];
+        // Sửa chung gần thời gian thực: mỗi lần hỏi cũng là nhịp "đang mở chuyến" (ai, đang xem mục nào, có đang giữ quyền sửa không)
+        $focus = $request->query('focus');
+        $focus = is_string($focus) && preg_match('/^[a-z_]+:[A-Za-z0-9_\-]{1,40}$/', $focus) ? $focus : null;
+        $me = (string) (DB::table('tbl_users')->where('userId', $this->uid())->value('fullName') ?: session('username') ?: 'Bạn đồng hành');
+        $r['present'] = app(\App\Services\Planner\TripPresence::class)->touch($id, $this->uid(), $me, $focus, $request->boolean('editing'));
+        // Có phiên bản mới hơn bản trình duyệt đang có: gửi kèm danh sách mục để vẽ lại tại chỗ, không cần tải lại trang
+        $since = $request->query('since');
+        if ($since !== null && ctype_digit((string) $since) && (int) $since < $r['rev']) {
+            $planner = app(TripPlanner::class);
+            $trip = DB::table('tbl_trips')->where('tripId', $id)->first();
+            $payload = $planner->payload($trip);
+            $all = array_merge($payload['unassigned'], ...array_map(fn($d) => $d['items'], $payload['days']));
+            $r['snapshot'] = ['items' => array_map([TripPlanner::class, 'itemForClient'], $all),
+                'meta' => ['title' => (string) $trip->title, 'start' => $trip->startDate, 'days' => (int) $trip->days, 'group' => (int) $trip->groupSize,
+                    'budget' => $trip->budget !== null ? (float) $trip->budget : null, 'dest' => $trip->destinationId !== null ? (int) $trip->destinationId : null]];
+        }
 
-        return response()->json($sh->revision($id) + ['role' => $acc['role']]);
+        return response()->json($r);
     }
 
     /** GET /len-ke-hoach/{id}/lich-su -> {rev, revisions:[{rev,type,by,items,at}]}: ai xem được chuyến thì xem được lịch sử. */

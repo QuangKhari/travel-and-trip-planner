@@ -71,7 +71,8 @@
                 <span class="go">Trò chuyện với Travela AI</span>
             </a>
         </div>
-        <p class="pch-more">Thích điền vài lựa chọn thay vì trò chuyện? <a href="{{ route('planner.suggest') }}">Để Travela xếp lịch theo biểu mẫu</a> (cùng bộ xếp lịch, không dùng AI).</p>
+        <p class="pch-more">Thích điền vài lựa chọn thay vì trò chuyện? <a href="{{ route('planner.suggest') }}">Để Travela xếp lịch theo biểu mẫu</a> (cùng bộ xếp lịch, không dùng AI).
+            · <a href="{{ route('planner.taste') }}">Travela nhớ gì về bạn</a></p>
         <script>
             document.getElementById('pchManual').addEventListener('click', function(e) {
                 var s = document.getElementById('tplNew');

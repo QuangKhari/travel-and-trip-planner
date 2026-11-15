@@ -85,6 +85,7 @@
                 {!! $item('admin.planner-analytics', 'Phân tích Trip Planner', 'fa-line-chart', $on('admin.planner-analytics*')) !!}
                 {!! $item('admin.travel-alerts', 'Cảnh báo điểm đến', 'fa-exclamation-triangle', $on('admin.travel-alerts*')) !!}
                 {!! $item('admin.place-data', 'Dữ liệu địa điểm', 'fa-clock-o', $on('admin.place-data*'), $badge['placeReports'] ?? 0) !!}
+                {!! $item('admin.place-import', 'Nhập địa điểm', 'fa-upload', $on('admin.place-import*')) !!}
                 {!! $item('admin.content-requests', 'Nhu cầu thiếu dữ liệu', 'fa-lightbulb-o', $on('admin.content-requests*')) !!}
             @endif
         </div>
