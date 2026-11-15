@@ -195,7 +195,8 @@ final class SearchIntent
             $matched = '';
             foreach ($dests as $d) {
                 foreach ($d[$field] ?? [] as $n) {
-                    if (strlen($n) >= 3 && strlen($n) > $bestLen && str_contains($pad, ' ' . $n . ' ')) {
+                    // "xuất phát từ Hà Nội", "bay từ Hà Nội", "về Hà Nội": nơi đi / nơi về, không phải điểm đến
+                    if (strlen($n) >= 3 && strlen($n) > $bestLen && preg_match('/(?<! tu| ve) ' . preg_quote($n, '/') . ' /', $pad)) {
                         $best = $d;
                         $bestLen = strlen($n);
                         $matched = $n;

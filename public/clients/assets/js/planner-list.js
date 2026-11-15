@@ -85,7 +85,13 @@
     $("tplNext").addEventListener("click", function () {
         if (cur === 2) {
             var d = parseInt($("tplDays").value, 10);
-            if (!d || d < 1 || d > (parseInt($("tplDays").max, 10) || 14)) { $("tplDays").focus(); $("tplWhenMsg").textContent = "Số ngày từ 1 đến " + $("tplDays").max + "."; return; }
+            var bad = !d || d < 1 || d > (parseInt($("tplDays").max, 10) || 14);
+            // lỗi gắn với ô (aria-invalid + aria-describedby), đọc được bằng trình đọc màn hình, không chỉ đổi màu
+            $("tplDays").setAttribute("aria-invalid", bad ? "true" : "false");
+            $("tplDays").setAttribute("aria-describedby", "tplWhenMsg");
+            $("tplWhenMsg").classList.toggle("is-error", bad);
+            if (bad) { $("tplWhenMsg").setAttribute("role", "alert"); $("tplWhenMsg").textContent = "⚠ Số ngày phải từ 1 đến " + $("tplDays").max + "."; $("tplDays").focus(); return; }
+            $("tplWhenMsg").removeAttribute("role");
         }
         show(Math.min(3, cur + 1));
     });

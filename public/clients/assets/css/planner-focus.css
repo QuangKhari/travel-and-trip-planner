@@ -1,0 +1,101 @@
+/* Lịch là phần chính của trang chuyến (nạp sau cùng).
+   Ảnh bìa lớn + khối "Lên kế hoạch dễ dàng hơn" thành một thanh tiêu đề gọn; chất lượng chuyến thành một hàng chip;
+   tóm tắt AI, sức khỏe chuyến, gợi ý tour nằm SAU lịch. Mục tiêu: màn hình 1366×768 thấy ít nhất 2 điểm của ngày đầu. */
+
+.tp .tpx-hero, .tp .tpx-hero.has-cover, .tp .tpx-hero:not(.has-cover) { background: none; min-height: 0; padding: 0; margin: 0 auto 12px; max-width: 1632px; border-radius: 0; }
+.tp .tpx-hero::before, .tp .tpx-hero.has-cover::before { display: none; }
+.tp .tpx-hero + * { margin-top: 0; }
+.tp .tpx-hero__card { transform: none; max-width: none; margin: 0 24px; padding: 12px 18px; border: 1px solid #e3ecec; border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .04); grid-template-areas: "main people" "row row" "q q"; gap: 6px 18px; }
+.tp .tpx-hero.has-cover .tpx-hero__card { padding-left: 92px; position: relative; }
+.tp .tpx-hero.has-cover .tpx-hero__card::before { content: ""; position: absolute; left: 14px; top: 12px; width: 64px; height: 64px; border-radius: 12px;
+    background: #dfeeee var(--tpx-cover) center / cover no-repeat; }
+.tp .tpx-hero h1 { font-size: clamp(1.15rem, 1.7vw, 1.4rem); margin: 0 0 2px; }
+.tp .tpx-meta { font-size: .86rem; gap: 4px 14px; }
+.tpx-hero__row { grid-area: row; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; }
+.tp .tpx-kpis { margin: 0; gap: 6px; }
+.tp .tpx-kpi { padding: 3px 10px; font-size: .8rem; }
+.tp .tpx-kpi b { font-size: .88rem; }
+.tpux .tpx-hero__health { max-width: none; padding: 5px 10px; border-radius: 999px; font-size: .8rem; }
+.tp .tpx-lastedit { font-size: .74rem; }
+
+/* Chất lượng chuyến: mặc định một hàng chip; "Giải thích" mở ghi chú từng ô */
+.tp .tgq { grid-area: q; margin: 2px 0 0; padding: 0; border: 0; background: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.tp .tgq .tgq__h { margin: 0; }
+.tp .tgq .tgq__h b { font-size: .78rem; color: #5b6b6d; font-weight: 600; }
+.tp .tgq .tgq__h small { display: none; }
+.tp .tgq .tgq__row { display: flex; flex-wrap: wrap; gap: 6px; }
+.tp .tgq .tgq__c { flex-direction: row; align-items: baseline; gap: 5px; padding: 2px 9px; border-radius: 999px; }
+.tp .tgq .tgq__c b { font-size: .8rem; }
+.tp .tgq .tgq__c span { font-size: .76rem; font-weight: 500; }
+.tp .tgq .tgq__c small, .tp .tgq .tgq__bar { display: none; }
+.tgq__more { flex: 0 0 auto; white-space: nowrap; border: 0; background: none; padding: 2px 4px; color: var(--tp-brand, #167A85); font-size: .78rem; text-decoration: underline; cursor: pointer; }
+.tp .tgq.is-open { display: block; }
+.tp .tgq.is-open .tgq__row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-top: 6px; }
+.tp .tgq.is-open .tgq__c { flex-direction: column; border-radius: 10px; padding: 6px 10px; }
+.tp .tgq.is-open .tgq__c small { display: block; }
+
+/* Khối phụ dưới lịch: cách lịch một khoảng rõ */
+#tpAfterDays:not(:empty) { margin-top: 18px; }
+.tp #tpAfterDays + .ai-story { margin-top: 18px; }
+
+@media (max-width: 767.98px) {
+    .tp .tpx-hero__card { margin: 0 12px; padding: 10px 12px; grid-template-areas: "main" "row" "q"; }
+    .tp .tpx-hero.has-cover .tpx-hero__card { padding-left: 12px; }
+    .tp .tpx-hero.has-cover .tpx-hero__card::before { display: none; }
+    .tp .tpx-people { display: none; }
+    .tpx-hero__row { flex-wrap: wrap; }
+    .tpx-hero__row .tpx-kpis { flex: 1 1 100%; }
+    .tpux .tpx-hero__health { white-space: nowrap; }
+    .tp .tgq { flex-wrap: nowrap; overflow-x: auto; }
+    .tp .tgq .tgq__h { display: none; }
+    .tp .tgq .tgq__row { flex-wrap: nowrap; }
+    .tp .tgq .tgq__c { flex: 0 0 auto; }
+}
+
+/* Thanh "thêm" một dòng; đầu ngày gọn */
+.tp .tpx-addbar { padding: 8px 14px; grid-template-rows: auto; }
+.tp .tpx-addbar small { display: none; }
+.tp .tpx-daysum { gap: 4px 6px; }
+.tp .tpx-dchipx { padding: 1px 8px; font-size: .76rem; }
+.tp .tpx-dayhead > .tpx-load { height: 4px; }
+
+/* Thẻ điểm dừng: dòng trạng thái gộp giờ mở cửa + ngoài trời; lý do chọn mở khi cần */
+.tpx-status { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 4px; }
+.tpx-status .tpx-hours, .tpx-status .tpx-rainchip { margin: 0; }
+.tpx-why { margin-top: 4px; font-size: .8rem; }
+.tpx-why > summary { cursor: pointer; color: #135D65; width: fit-content; list-style: none; }
+.tpx-why > summary::-webkit-details-marker { display: none; }
+.tpx-why > summary::before { content: "▸ "; }
+.tpx-why[open] > summary::before { content: "▾ "; }
+.tpx-why .tp-why { list-style: disc; margin: 4px 0 0 18px; padding: 0; color: #135D65; }
+.tpx-why .tp-why li { margin: 1px 0; }
+.tp .tpx-thumb { width: 52px; height: 52px; }
+.tpx-stops:not(.tpx-stops--wait) .tpx-stop__top { flex-wrap: nowrap; }
+.tpx-stops:not(.tpx-stops--wait) .tpx-stop__right { display: grid; grid-template-columns: auto auto; justify-items: end; align-items: center; gap: 4px 6px; width: auto; margin-left: 0; }
+.tpx-stops:not(.tpx-stops--wait) .tpx-stop__right > :first-child:not(input):not(button) { grid-column: 1 / -1; }
+@media (min-width: 1200px) {
+    /* lịch rộng hơn bản đồ: lịch là phần chính */
+    .tp .tpx-body { grid-template-columns: 208px minmax(460px, 56fr) minmax(0, 44fr); }
+    .tp.tpx--sidemini .tpx-body { grid-template-columns: 56px minmax(440px, 56fr) minmax(0, 44fr); }
+}
+.tpx-kind__sub { text-transform: none; font-weight: 400; letter-spacing: 0; color: #6b7280; }
+
+/* Đoạn di chuyển: giờ rời / tới; không kịp thì đổi màu và có nút sửa */
+.tpx-leg__eta { color: #5b6b6d; font-size: .74rem; white-space: nowrap; }
+.tpx-leg.is-tight .tpx-leg__line { border-color: #dc2626; background: #dc2626; }
+.tpx-leg.is-tight .tpx-leg__chip { border-color: #fca5a5; background: #fef2f2; color: #991b1b; }
+.tpx-leg__warn { display: inline-flex; gap: 5px; align-items: center; color: #991b1b; font-size: .76rem; font-weight: 600; }
+.tpx-stop.is-hot .tpx-stop__card { border-color: var(--c, #167A85); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c, #167A85) 30%, transparent); }
+
+/* Trạng thái ngày bằng chữ + biểu tượng */
+.tpx-dstat { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: .74rem; font-weight: 600; white-space: nowrap; align-self: center; }
+.tpx-dstat .fas { font-size: .7rem; }
+.tpx-dstat--ok { background: #ecfdf5; color: #047857; }
+.tpx-dstat--warn { background: #fff7e6; color: #9a5b00; }
+.tpx-dstat--bad { background: #fdecea; color: #b42318; }
+.tpx-dstat--side { grid-column: 1 / -1; justify-self: start; margin-top: 2px; }
+.tpx-empty b { display: block; color: #1f3b3d; }
+.tpx-empty__act { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tpx-dayhead__t .tpx-dstat { margin-left: 8px; }
+.tpx-empty__act .fas { margin-right: 6px; }

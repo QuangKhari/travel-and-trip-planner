@@ -114,7 +114,7 @@
     <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-final.css') }}?v=1">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-tours-10.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/ux-pass.css') }}?v=5">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/ux-pass.css') }}?v=7">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-decor-fix.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/ux-watercolor.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/journal.css') }}?v=1">

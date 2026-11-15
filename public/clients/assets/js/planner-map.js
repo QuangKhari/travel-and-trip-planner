@@ -44,6 +44,7 @@
                 var icon = L.divIcon({ className: "tp-pin-wrap", html: pinEl(o.color, o.label), iconSize: [30, 30], iconAnchor: [15, 15] });
                 var mk = L.marker([o.lat, o.lng], { icon: icon, title: o.title || "", keyboard: true, riseOnHover: true }).addTo(layer);
                 if (o.onClick) mk.on("click", o.onClick);
+                if (o.onHover) { mk.on("mouseover", function () { o.onHover(true); }); mk.on("mouseout", function () { o.onHover(false); }); }
                 if (o.id != null) byId[o.id] = mk;
                 return mk;
             },
@@ -172,6 +173,7 @@
                     var w = wrap(pin);
                     if (o.title) w.title = o.title;
                     if (o.onClick) w.addEventListener("click", function (ev) { ev.stopPropagation(); o.onClick(ev); });
+                    if (o.onHover) { w.addEventListener("mouseenter", function () { o.onHover(true); }); w.addEventListener("mouseleave", function () { o.onHover(false); }); }
                     var m = new ml.Marker({ element: w, anchor: "center" }).setLngLat([o.lng, o.lat]).addTo(map);
                     marks.push(m);
                     if (o.id != null) byId[o.id] = pin;
@@ -250,6 +252,7 @@
                 marker: function (o) {
                     var m = new Adv({ map: map, position: { lat: o.lat, lng: o.lng }, content: pinEl(o.color, o.label), title: o.title || "", gmpClickable: !!o.onClick });
                     if (o.onClick) m.addListener("click", o.onClick);
+                    if (o.onHover && m.content) { m.content.addEventListener("mouseenter", function () { o.onHover(true); }); m.content.addEventListener("mouseleave", function () { o.onHover(false); }); }
                     marks.push(m);
                     if (o.id != null) byId[o.id] = m;
                     return m;

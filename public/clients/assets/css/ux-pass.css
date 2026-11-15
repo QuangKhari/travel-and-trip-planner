@@ -2278,3 +2278,16 @@
 .td-stop i { color: #167A85; }
 .td-stop small { display: block; color: #6b8592; }
 .td-stop.is-meet b, .td-stop.is-drop b { color: #0f2f3a; }
+
+/* Thẻ tour: bấm cả thẻ để mở tour (liên kết của tiêu đề phủ cả thẻ); tim và So sánh vẫn là nút riêng nằm trên */
+.trc { position: relative; }
+.trc .trc__title a::after { content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; }
+.trc .trc-heart, .trc .trc-cmp { z-index: 3; }
+.trc:hover .trc__title a { text-decoration: underline; }
+.trc:has(.trc__title a:focus-visible) { outline: 3px solid #e9a23b; outline-offset: 2px; }
+.trc .trc__title a:focus-visible { outline: none; }
+.trc .trc-heart, .trc .trc-cmp { min-width: 32px; min-height: 32px; }
+/* Trang tour: một nút chính "Đặt tour ngay"; Chia sẻ / Lưu / In nhẹ hơn. "Lên kế hoạch quanh tour" nằm sau lịch trình. */
+.px-hero__cta .px-iconbtn { background: transparent; border-color: rgba(255, 255, 255, .45); opacity: .92; }
+.px-plan--inline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: -8px 0 28px; padding: 12px 16px; border: 1px dashed #c9dedb; border-radius: 14px; background: #f7fbfa; }
+.px-plan--inline .px-hint { margin: 0; flex: 1 1 260px; }

@@ -66,6 +66,59 @@ class PlannerAiChatTest extends TestCase
         $this->me()->postJson('/len-ke-hoach/tro-ly/tao', $said + ['adjustments' => ['hack' => 1]])->assertStatus(422);
     }
 
+    public function test_preview_returns_real_draft_and_confirm_saves_that_draft(): void
+    {
+        $plan = ['days' => [['day' => 1, 'activityMin' => 150, 'travelMin' => 12, 'items' => [
+            ['key' => 'place:1', 'type' => 'place', 'refId' => 1, 'name' => 'Hồ Xuân Hương', 'startMin' => 480, 'durationMin' => 60, 'travelMin' => 0, 'travelKm' => 0, 'slot' => 'morning',
+                'reasons' => ['Hợp sở thích thiên nhiên', 'Mở cửa cả ngày', 'Gần trung tâm', 'Lý do thứ tư bị cắt'], 'lat' => 11.94, 'lng' => 108.44, 'coordsApprox' => false, 'priceMin' => 0],
+            ['key' => 'place:2', 'type' => 'place', 'refId' => 2, 'name' => 'Vườn hoa', 'startMin' => 552, 'durationMin' => 90, 'travelMin' => 12, 'travelKm' => 3.1, 'slot' => 'morning',
+                'reasons' => [], 'lat' => 11.95, 'lng' => 108.45, 'coordsApprox' => false]]]],
+            'unplaced' => [['key' => 'place:3']], 'budget' => ['knownMin' => 100000, 'message' => 'x']];
+        $result = ['ok' => true, 'destination' => ['id' => $this->dest, 'name' => 'Đà Lạt'], 'request' => ['startDate' => '2027-03-10'], 'plan' => $plan];
+        $calls = 0;
+        $saved = null;
+        $mock = \Mockery::mock(\App\Services\Planner\PlannerService::class);
+        $mock->shouldReceive('generate')->andReturnUsing(function () use (&$calls, $result) { $calls++; return $result; });
+        $mock->shouldReceive('save')->andReturnUsing(function ($uid, $r) use (&$saved) {
+            $saved = $r;
+            return DB::table('tbl_trips')->insertGetId(['userId' => $uid, 'title' => 'Đà Lạt', 'days' => 1, 'groupSize' => 2, 'kind' => 'trip', 'createdAt' => now(), 'updatedAt' => now()]);
+        });
+        $this->app->instance(\App\Services\Planner\PlannerService::class, $mock);
+
+        $said = ['said' => ['Đà Lạt 1 ngày, 2 người lớn, thích thiên nhiên']];
+        $j = $this->me()->postJson('/len-ke-hoach/tro-ly/tao', $said)->assertOk()->json();
+        $this->assertTrue($j['review']);
+        $this->assertSame(2, $j['draft']['count']);
+        $this->assertSame(12, $j['draft']['travelMin']);
+        $this->assertSame('Vườn hoa', $j['draft']['days'][0]['items'][1]['name']);
+        $this->assertCount(3, $j['draft']['days'][0]['items'][0]['reasons'], 'tối đa 3 lý do');
+        $this->assertSame(1, $j['draft']['unplaced']);
+        $this->assertSame(32, strlen($j['draftToken']));
+        $this->assertSame(0, DB::table('tbl_trips')->where('userId', $this->uid)->count(), 'bản nháp chưa ghi gì');
+
+        // xác nhận kèm mã nháp và cùng yêu cầu: lưu đúng bản đã xem, không xếp lại
+        $this->me()->postJson('/len-ke-hoach/tro-ly/tao', $said + ['confirmed' => true, 'draftToken' => $j['draftToken']])->assertOk()->assertJsonPath('ok', true);
+        $this->assertSame(1, $calls);
+        $this->assertSame($plan, $saved['plan']);
+        // mã đã dùng thì hết hiệu lực; yêu cầu đổi (số ngày) thì xếp lại
+        $this->me()->postJson('/len-ke-hoach/tro-ly/tao', $said + ['confirmed' => true, 'draftToken' => $j['draftToken'], 'adjustments' => ['days' => 2]])->assertOk();
+        $this->assertSame(2, $calls);
+        // nhịp đi / sở thích sửa thẳng được, giá trị lạ bị chặn
+        $this->me()->postJson('/len-ke-hoach/tro-ly/tao', $said + ['adjustments' => ['pace' => 'relaxed', 'interests' => ['food']]])->assertOk();
+        $this->me()->postJson('/len-ke-hoach/tro-ly/tao', $said + ['adjustments' => ['pace' => 'sleep']])->assertStatus(422);
+        $this->me()->postJson('/len-ke-hoach/tro-ly/tao', $said + ['adjustments' => ['interests' => ['hack']]])->assertStatus(422);
+    }
+
+    public function test_origin_city_is_not_taken_as_destination(): void
+    {
+        DB::table('tbl_destinations')->insert(['slug' => 'ha-noi', 'name' => 'Hà Nội', 'province' => 'Hà Nội', 'domain' => 'b', 'description' => 'x', 'latitude' => 21.03, 'longitude' => 105.85, 'isActive' => 1]);
+        \Illuminate\Support\Facades\Cache::flush();
+        $i = app(\App\Services\Content\SearchIntent::class);
+        $this->assertSame('da-lat', $i->parse('Mình đi Đà Lạt 3 ngày, xuất phát từ Hà Nội')['destination']['slug']);
+        $this->assertSame('da-lat', $i->parse('từ Hà Nội bay vào Đà Lạt')['destination']['slug']);
+        $this->assertSame('ha-noi', $i->parse('đi Hà Nội 2 ngày')['destination']['slug']);
+    }
+
     public function test_brief_endpoint_works_with_ai_off(): void
     {
         $j = $this->me()->postJson('/len-ke-hoach/hieu-yeu-cau', ['text' => 'Đà Lạt 3 ngày cho 2 người'])->assertOk()->json();

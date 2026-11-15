@@ -288,6 +288,17 @@
                         @endif
                     </div>
                 </section>
+                {{-- Lên kế hoạch quanh tour: đặt cạnh lịch trình (đúng ngữ cảnh), không chen vào khối đặt tour --}}
+                @unless ($soldOut)
+                    {{-- Nối tour với Trip Planner: tạo chuyến đi có sẵn ngày, điểm đến và chính tour này --}}
+                    <form method="POST" action="{{ route('planner.fromTour', ['id' => $tourDetail->tourId]) }}" class="px-plan px-plan--inline">
+                        @csrf
+                        <input type="hidden" name="groupSize" value="2">
+                        <button type="submit" class="px-btn px-btn--sand">Lên kế hoạch quanh tour này</button>
+                        <p class="px-hint">Thêm món ăn, lễ hội, phương án khi mưa quanh nơi đến. Bạn đặt tour sau khi đã vừa ý.</p>
+                        @if (session('planner_error'))<p class="px-hint" role="alert">{{ session('planner_error') }}</p>@endif
+                    </form>
+                @endunless
 
                 {{-- Bản đồ --}}
                 <section class="px-sec" id="ban-do">
@@ -517,16 +528,6 @@
                             @endif
                         </form>
 
-                        @unless ($soldOut)
-                            {{-- Nối tour với Trip Planner: tạo chuyến đi có sẵn ngày, điểm đến và chính tour này --}}
-                            <form method="POST" action="{{ route('planner.fromTour', ['id' => $tourDetail->tourId]) }}" class="px-plan">
-                                @csrf
-                                <input type="hidden" name="groupSize" value="2">
-                                <button type="submit" class="px-btn px-btn--glass">Lên kế hoạch quanh tour này</button>
-                                <p class="px-hint">Thêm món ăn, lễ hội, phương án khi mưa quanh nơi đến. Bạn đặt tour sau khi đã vừa ý.</p>
-                                @if (session('planner_error'))<p class="px-hint" role="alert">{{ session('planner_error') }}</p>@endif
-                            </form>
-                        @endunless
 
                         <a class="px-book__help" href="{{ route('contact') }}"><i class="fal fa-comment-dots"
                                 aria-hidden="true"></i> Cần tư vấn? Nhắn cho chúng tôi</a>

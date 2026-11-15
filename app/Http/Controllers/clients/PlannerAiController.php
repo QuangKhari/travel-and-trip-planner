@@ -13,6 +13,7 @@ use App\Services\Planner\PlannerGate;
 use App\Services\Planner\PlannerService;
 use App\Services\Planner\TripSharing;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -238,7 +239,10 @@ class PlannerAiController extends Controller
         // Điều chỉnh có chủ đích từ màn hình xác nhận. Cùng một payload được gửi
         // cả khi xem trước lẫn khi tạo, tránh kết quả hiển thị khác kết quả lưu.
         $adjustments = $request->validate([
-            'adjustments' => ['sometimes', 'array:days,adults,children,startDate,budget'],
+            'adjustments' => ['sometimes', 'array:days,adults,children,startDate,budget,pace,interests'],
+            'adjustments.pace' => ['sometimes', 'nullable', 'in:' . implode(',', array_keys((array) config('planner.pace')))],
+            'adjustments.interests' => ['sometimes', 'array', 'max:6'],
+            'adjustments.interests.*' => ['string', 'in:' . implode(',', array_keys((array) config('interests')))],
             'adjustments.days' => ['sometimes', 'integer', 'min:1', 'max:' . (int) config('planner.max_days', 7)],
             'adjustments.adults' => ['sometimes', 'integer', 'min:1', 'max:50'],
             'adjustments.children' => ['sometimes', 'integer', 'min:0', 'max:30'],
@@ -248,7 +252,7 @@ class PlannerAiController extends Controller
         if ((int) ($adjustments['adults'] ?? $p['adults']) + (int) ($adjustments['children'] ?? ($p['children'] ?? 0)) > 50) {
             return response()->json(['ok' => false, 'message' => 'Tổng số người không được vượt quá 50.'], 422);
         }
-        foreach (['days', 'adults', 'children', 'budget', 'startDate'] as $key) {
+        foreach (['days', 'adults', 'children', 'budget', 'startDate', 'pace', 'interests'] as $key) {
             if (array_key_exists($key, $adjustments)) $p[$key] = $adjustments[$key];
         }
         if (array_key_exists('startDate', $adjustments) && $adjustments['startDate']) {
@@ -280,10 +284,20 @@ class PlannerAiController extends Controller
             }
         }
 
-        // Lần đầu chỉ xem trước. Chỉ lần xác nhận thứ hai mới chạy engine và ghi DB.
-        // Frontend gửi lại toàn bộ câu người dùng; cache BriefService giữ kết quả AI ổn định trong 10 phút.
+        // Xem trước = BẢN NHÁP LỊCH THẬT, chưa lưu: AI chỉ hiểu yêu cầu; bộ xếp lịch (PlannerService, không LLM) tạo lịch;
+        // người dùng xem từng ngày, giờ, đường đi rồi mới xác nhận. Bản nháp giữ 30 phút theo mã; xác nhận lưu ĐÚNG bản đã xem
+        // (cùng yêu cầu thì không xếp lại, tránh "xem một đằng, lưu một nẻo"). Không ghi gì vào CSDL trước khi xác nhận.
+        $hash = md5(json_encode($data));
         if (!$request->boolean('confirmed')) {
             $destination = DB::table('tbl_destinations')->where('destinationId', $data['destinationId'])->value('name');
+            $draft = null;
+            $token = null;
+            $gen = $service->generate($data + ['userId' => $this->uid()]);
+            if (!empty($gen['ok']) && array_filter($gen['plan']['days'], fn($d) => !empty($d['items']))) {
+                $token = Str::random(32);
+                Cache::put('pai-draft:' . $this->uid() . ':' . $token, ['hash' => $hash, 'result' => $gen], 1800);
+                $draft = self::draftView($gen);
+            }
             return response()->json([
                 'ok' => true, 'review' => true,
                 'details' => [
@@ -293,17 +307,24 @@ class PlannerAiController extends Controller
                     'date' => $data['startDate'], 'month' => $data['month'],
                     'budget' => $data['budget'],
                     'arriveAt' => $data['arriveAt'] ?? null, 'leaveAt' => $data['leaveAt'] ?? null, 'moveKind' => $data['moveKind'] ?? null,
+                    'pace' => $data['pace'] ?? null, 'interests' => array_values((array) ($data['interests'] ?? [])), 'dislikes' => array_values((array) ($data['dislikes'] ?? [])),
                 ],
                 'filled' => array_values(array_unique($filled)),
+                'draft' => $draft, 'draftToken' => $token,
+                'draftMessage' => $draft ? null : (!empty($gen['ok']) ? 'Chưa đủ nội dung phù hợp để xếp lịch với điều kiện này. Bạn thử đổi ngày hoặc sở thích nhé.' : ($gen['message'] ?? 'Chưa tạo được bản nháp.')),
             ]);
         }
 
-        $result = $service->generate($data + ['userId' => $this->uid()]);
+        $cached = $request->filled('draftToken') ? Cache::get('pai-draft:' . $this->uid() . ':' . preg_replace('/[^A-Za-z0-9]/', '', (string) $request->input('draftToken'))) : null;
+        $result = $cached && ($cached['hash'] ?? null) === $hash ? $cached['result'] : $service->generate($data + ['userId' => $this->uid()]);
         if (empty($result['ok'])) {
             return response()->json(['ok' => false, 'message' => $result['message'] ?? 'Không thể tạo lịch trình.']);
         }
         if (!array_filter($result['plan']['days'], fn($d) => !empty($d['items']))) {
             return response()->json(['ok' => false, 'message' => 'Chưa đủ nội dung phù hợp để xếp lịch với điều kiện này. Bạn thử đổi ngày hoặc sở thích nhé.']);
+        }
+        if ($cached) {
+            Cache::forget('pai-draft:' . $this->uid() . ':' . preg_replace('/[^A-Za-z0-9]/', '', (string) $request->input('draftToken')));
         }
         try {
             $id = $service->save($this->uid(), $result);
@@ -317,6 +338,31 @@ class PlannerAiController extends Controller
 
         return response()->json(['ok' => true, 'url' => route('planner.edit', ['id' => $id]),
             'title' => ($result['destination']['name'] ?? 'Chuyến đi') . ' · ' . $data['days'] . ' ngày', 'filled' => array_values(array_unique($filled))]);
+    }
+
+    /**
+     * Bản nháp gọn cho khung chat: từng ngày, từng mục (giờ, đi lại tới mục, lý do chọn tối đa 3 ý), tổng đi lại, chi phí đã biết.
+     * @return array<string,mixed>
+     */
+    public static function draftView(array $r): array
+    {
+        $days = [];
+        foreach ($r['plan']['days'] as $d) {
+            $items = [];
+            foreach ($d['items'] as $it) {
+                $items[] = ['name' => (string) $it['name'], 'type' => (string) $it['type'], 'group' => $it['group'] ?? null, 'start' => (int) $it['startMin'], 'end' => (int) $it['startMin'] + (int) $it['durationMin'],
+                    'travelMin' => (int) ($it['travelMin'] ?? 0), 'travelKm' => (float) ($it['travelKm'] ?? 0), 'osm' => !empty($it['osm']),
+                    'price' => isset($it['priceMin']) && $it['priceMin'] !== null ? (float) $it['priceMin'] : null,
+                    'reasons' => array_slice(array_values((array) ($it['reasons'] ?? [])), 0, 3),
+                    'lat' => isset($it['lat']) && empty($it['coordsApprox']) ? (float) $it['lat'] : null, 'lng' => isset($it['lng']) && empty($it['coordsApprox']) ? (float) $it['lng'] : null];
+            }
+            $days[] = ['day' => (int) $d['day'], 'activityMin' => (int) ($d['activityMin'] ?? 0), 'travelMin' => (int) ($d['travelMin'] ?? 0), 'items' => $items];
+        }
+        $b = $r['plan']['budget'] ?? [];
+
+        return ['destination' => $r['destination']['name'] ?? null, 'startDate' => $r['request']['startDate'] ?? null, 'days' => $days,
+            'knownCost' => (int) round($b['knownMin'] ?? 0), 'costNote' => $b['message'] ?? null, 'unplaced' => count($r['plan']['unplaced'] ?? []),
+            'travelMin' => array_sum(array_column($days, 'travelMin')), 'count' => array_sum(array_map(fn($d) => count($d['items']), $days))];
     }
 
     /** @return array{0:list<string>,1:?string} */

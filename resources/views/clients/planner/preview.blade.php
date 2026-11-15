@@ -185,8 +185,9 @@
                 @endif
 
                 @if ($plan['filterLog'])
-                    <section class="tp-card" aria-labelledby="pvLog">
-                        <h2 id="pvLog">Vì sao không có…?</h2>
+                    {{-- Giải thích đề xuất: mặc định đóng, để lịch là phần chính --}}
+                    <details class="tp-card tp-pv__explain">
+                        <summary><h2 id="pvLog" style="display:inline">Giải thích đề xuất</h2> <span class="tp-muted tp-small">vì sao không có một số nơi</span></summary>
                         <p class="tp-muted tp-small">Travela đã xét {{ $plan['stats']['candidates'] }} mục, chọn {{ $plan['stats']['selected'] }}@if (!empty($plan['stats']['fromMap'])) ({{ $plan['stats']['fromMap'] }} từ bản đồ)@endif. Mỗi mục bị loại đều có lý do:</p>
                         @foreach ($logByCode as $code => $rows)
                             <details class="tp-pv__log">
@@ -194,7 +195,7 @@
                                 <ul>@foreach ($rows->take(20) as $x)<li><b>{{ $x['name'] }}</b>: {{ $x['reason'] }}</li>@endforeach</ul>
                             </details>
                         @endforeach
-                    </section>
+                    </details>
                 @endif
 
                 @if ($r['tours'])

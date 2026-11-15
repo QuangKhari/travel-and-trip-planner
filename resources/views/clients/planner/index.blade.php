@@ -1,6 +1,6 @@
 @include('clients.blocks.header')
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=11">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai-chat.css') }}?v=4">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=12">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai-chat.css') }}?v=8">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/nature-luxury-planner.css') }}?v=bl20261104">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
 
@@ -31,10 +31,6 @@
                 <p>Lên lịch theo ngày, xem tuyến trên bản đồ, quãng đường và chi phí tự cập nhật.</p>
             </div>
             <div class="tpl-head__act">
-                <a class="tp-btn tp-btn--ghost" href="{{ route('planner.discover') }}"><i class="fas fa-compass"
-                        aria-hidden="true"></i> Chưa biết đi đâu?</a>
-                <a class="tp-btn tp-btn--ghost" href="{{ route('planner.suggest') }}"><i class="fas fa-magic"
-                        aria-hidden="true"></i> Để Travela đề xuất</a>
                 <a class="tp-btn" href="#tplNew" id="tplNewBtn"><i class="fas fa-plus" aria-hidden="true"></i> Chuyến đi
                     mới</a>
             </div>
@@ -53,20 +49,29 @@
             </div>
         @endif
 
-        {{-- ================= Chọn cách tạo chuyến ================= --}}
-        <div class="pch" role="group" aria-label="Chọn cách tạo chuyến đi">
+        {{-- ================= Một câu hỏi, ba cách bắt đầu (thay 4 nút chồng nghĩa trước đây) ================= --}}
+        <h2 class="pch-q" id="pchQ">Bạn muốn bắt đầu chuyến đi như thế nào?</h2>
+        <div class="pch pch--3" role="group" aria-labelledby="pchQ">
             <a class="pch-c" href="#tplNew" id="pchManual">
-                <h2>Tự tạo chuyến đi</h2>
-                <p>Bạn nắm quyền: chọn điểm đến, ngày đi rồi tự xếp từng nơi vào lịch.</p>
-                <span class="go">Tạo thủ công</span>
+                <span class="ic" aria-hidden="true"><i class="fas fa-map-marked-alt"></i></span>
+                <h3>Tôi đã biết đi đâu</h3>
+                <p>Chọn điểm đến, ngày đi rồi tự xếp từng nơi vào lịch. Giờ, quãng đường và chi phí tự tính.</p>
+                <span class="go">Tạo chuyến</span>
+            </a>
+            <a class="pch-c" href="{{ route('planner.discover') }}">
+                <span class="ic" aria-hidden="true"><i class="fas fa-compass"></i></span>
+                <h3>Gợi ý điểm đến</h3>
+                <p>Chưa biết đi đâu: xem nơi hợp mùa, hợp sở thích và ngân sách rồi chọn một nơi.</p>
+                <span class="go">Xem gợi ý</span>
             </a>
             <a class="pch-c ai" href="{{ route('planner.ai.chat') }}">
-                <span class="pch-tag">MỚI</span>
-                <h2>Để AI tạo giúp</h2>
-                <p>Trò chuyện vài câu, AI hỏi những gì cần biết rồi xếp sẵn lịch trình cho bạn.</p>
+                <span class="ic" aria-hidden="true"><i class="fas fa-comments"></i></span>
+                <h3>Tạo lịch với AI</h3>
+                <p>Kể vài câu, Travela AI hiểu yêu cầu và xếp sẵn bản nháp lịch từng ngày để bạn xem trước khi lưu.</p>
                 <span class="go">Trò chuyện với Travela AI</span>
             </a>
         </div>
+        <p class="pch-more">Thích điền vài lựa chọn thay vì trò chuyện? <a href="{{ route('planner.suggest') }}">Để Travela xếp lịch theo biểu mẫu</a> (cùng bộ xếp lịch, không dùng AI).</p>
         <script>
             document.getElementById('pchManual').addEventListener('click', function(e) {
                 var s = document.getElementById('tplNew');
@@ -319,5 +324,5 @@
     </div>
 </main>
 
-<script src="{{ asset('clients/assets/js/planner-list.js') }}?v=1" defer></script>
+<script src="{{ asset('clients/assets/js/planner-list.js') }}?v=2" defer></script>
 @include('clients.blocks.footer')

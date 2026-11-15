@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
  * Tuần 5: nạp ứng viên đã xuất bản của MỘT điểm đến, gọi PlannerEngine, rồi (tùy chọn) lưu thành chuyến đi (tbl_trips kind = trip).
  * Cổng Planner-ready chặn điểm đến thiếu dữ liệu (CLI có --force để thử trên dữ liệu chưa đủ; web (tuần 6) không có cách bỏ qua).
  */
-final class PlannerService
+class PlannerService   // không final: test luồng "Tạo lịch với AI" thay bộ xếp lịch bằng bản giả để kiểm bản nháp
 {
     public function __construct(
         private PlannerEngine $engine,

@@ -1877,3 +1877,5 @@ li.tph__msg { padding: 10px; }
 .tp-skel { display: block; height: 30px; margin: 6px 0; border-radius: 8px; background: linear-gradient(90deg, #f3efe3 0%, #fbf8ef 40%, #f3efe3 80%); background-size: 200% 100%; animation: tpSkel 1.2s ease-in-out infinite; }
 @keyframes tpSkel { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @media (prefers-reduced-motion: reduce) { .tp-skel { animation: none; } }
+.tpl #tplWhenMsg.is-error { color: #b42318; font-weight: 600; }
+.tpl input[aria-invalid="true"] { border-color: #b42318 !important; box-shadow: 0 0 0 2px rgba(180, 35, 24, .15); }

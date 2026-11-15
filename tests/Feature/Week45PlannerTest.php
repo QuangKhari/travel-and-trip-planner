@@ -355,7 +355,7 @@ class Week45PlannerTest extends TestCase
     {
         $this->fillHanoi();
         $html = $this->withSession($this->s)->get(route('planner.preview', $this->suggestQuery()))->assertOk()
-            ->assertSee('Xem trước · chưa lưu')->assertSee('Lưu thành chuyến')->assertSee('Vì sao chọn mục này?')->assertSee('Vì sao không có')
+            ->assertSee('Xem trước · chưa lưu')->assertSee('Lưu thành chuyến')->assertSee('Vì sao chọn mục này?')->assertSee('Giải thích đề xuất')->assertSee('vì sao không có một số nơi')
             ->assertSee('Thong thả')->getContent();
         $this->assertSame(0, DB::table('tbl_trips')->where('userId', $this->uid)->count(), 'xem trước không lưu gì');
         $this->assertStringContainsString('action="' . route('planner.generate') . '"', $html);

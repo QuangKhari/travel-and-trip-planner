@@ -47,12 +47,7 @@
                 <div>
                     <p class="v3-eyebrow">Tour trong nước</p>
                     <h1 id="trTitle">Tìm tour <span>phù hợp</span> với bạn</h1>
-                    <p class="tr-hero__sub">Tìm hành trình hợp sở thích, dễ so sánh giá, ngày khởi hành và chỗ còn lại. Mọi thông tin tour đều có thể xem trước khi đặt.</p>
-                    <div class="bl-tour-benefits" aria-label="Tác vụ nhanh trên trang tour">
-                        <button type="button" class="bl-benefit" data-quick-action="focus-cats"><i class="fal fa-sliders-h" aria-hidden="true"></i><span><strong>Lọc nhanh theo nhu cầu</strong><small>Chọn cảm hứng chỉ với một chạm</small></span></button>
-                        <button type="button" class="bl-benefit" data-quick-action="saved-tours"><i class="fal fa-heart" aria-hidden="true"></i><span><strong>Lưu tour để xem lại</strong><small>Mở ngay danh sách tour đã lưu</small></span></button>
-                        <button type="button" class="bl-benefit" data-quick-action="soon"><i class="fal fa-calendar-check" aria-hidden="true"></i><span><strong>Xem ngày khởi hành</strong><small>Ưu tiên tour sắp đi gần nhất</small></span></button>
-                    </div>
+                    <p class="tr-hero__sub">So sánh giá, ngày khởi hành và chỗ còn lại của tour trong nước.</p>
                     <p class="tr-quickmsg" id="tvQuickMsg" aria-live="polite"></p>
                 </div>
             </div>
@@ -86,18 +81,6 @@
                     </div>
                 </div>
                 <div class="tr-field">
-                    <i class="fal fa-compass" aria-hidden="true"></i>
-                    <div class="tr-field__body">
-                        <label for="tvDomain">Miền</label>
-                        <select id="tvDomain">
-                            <option value="">Tất cả</option>
-                            <option value="b">Miền Bắc</option>
-                            <option value="t">Miền Trung</option>
-                            <option value="n">Miền Nam</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="tr-field">
                     <i class="fal fa-user-friends" aria-hidden="true"></i>
                     <div class="tr-field__body">
                         <span class="tr-field__lbl">Số khách</span>
@@ -111,9 +94,6 @@
                 <button type="submit" class="tr-search__btn"><i class="far fa-search" aria-hidden="true"></i> Tìm
                     kiếm</button>
             </form>
-            <div class="tr-searchhelp" aria-label="Mẹo sử dụng bộ lọc">
-                <span><i class="fal fa-info-circle" aria-hidden="true"></i> Chọn cảm hứng để lọc nhanh, dùng tim để lưu tour, hoặc bấm “Khởi hành sớm” để xem các tour đi gần nhất.</span>
-            </div>
 
             {{-- Chip cảm hứng (tbl_inspirations) --}}
             <div class="tr-cats" role="group" aria-label="Lọc theo cảm hứng">

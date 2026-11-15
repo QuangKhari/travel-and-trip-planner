@@ -1,11 +1,12 @@
 @include('clients.blocks.header')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=26">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner.css') }}?v=27">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai.css') }}?v=6">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ux.css') }}?v=1">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/nature-luxury-planner.css') }}?v=bl20261104">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/planner-group.css') }}?v=7">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-focus.css') }}?v=9">
 
 {{-- /len-ke-hoach/{id}. Biến: $payload (TripPlanner::payload), $client (dữ liệu cho planner.js), $role, $members, $tourFit.
      Bố cục "Timeline + Bản đồ" (tham khảo Wanderlog: lịch theo ngày cạnh bản đồ; Roadtrippers: bản đồ lớn, tuyến nối các điểm, thêm điểm dừng theo danh mục).
@@ -22,7 +23,7 @@
         <div class="tpx-head__act">
             <span id="tpMsg" class="tpx-save" role="status" aria-live="polite"></span>
             @if ($aiCopilotOn)
-                <button type="button" class="ai-co-open" id="aiCoOpen" aria-controls="aiCo" aria-expanded="false"><span class="ai-mark ai-mark--sm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.6"/><path d="M12 4.5 14.2 12 12 19.5 9.8 12Z" fill="#e9a23b"/><path d="M12 12 14.2 12 12 19.5Z" fill="#167A85"/></svg></span>Hỏi La bàn</button>
+                <button type="button" class="ai-co-open" id="aiCoOpen" aria-controls="aiCo" aria-expanded="false"><span class="ai-mark ai-mark--sm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.6"/><path d="M12 4.5 14.2 12 12 19.5 9.8 12Z" fill="#e9a23b"/><path d="M12 12 14.2 12 12 19.5Z" fill="#167A85"/></svg></span>Trợ lý La bàn</button>
             @endif
             @if ($role !== 'view')
                 <span class="tpx-iconbtns">
@@ -116,7 +117,10 @@
                     <small class="tpx-lastedit" id="tpLastEdit">{{ $lastEdit['byMe'] ? 'Bạn' : $lastEdit['by'] }} cập nhật lúc {{ \Carbon\Carbon::parse($lastEdit['at'])->format('H:i d/m') }}</small>
                 @endif
             </div>
-            <ul class="tpx-kpis" id="tpKpis" aria-label="Tổng quan chuyến đi"></ul>
+            <div class="tpx-hero__row">
+                <ul class="tpx-kpis" id="tpKpis" aria-label="Tổng quan chuyến đi"></ul>
+                <button type="button" id="tpuxHealthBtn" class="tpux-overview__health tpx-hero__health" aria-controls="tpHealth"><i class="fas fa-heartbeat" aria-hidden="true"></i><span id="tpuxHealthText">Kiểm tra lịch trình</span><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+            </div>
             {{-- Chất lượng chuyến do Travela đánh giá (TripHealth::quality): khả thi, hợp thời tiết, hợp sở thích, ngân sách, thời gian đi lại --}}
             <div class="tgq" id="tpQuality" aria-label="Chất lượng chuyến đi" hidden></div>
         </div>
@@ -127,10 +131,6 @@
     @endif
     <div id="tpSync" class="tp-banner tpx-notice" role="status" hidden></div>
 
-    <section class="tpux-overview" aria-label="Tình trạng chuyến đi">
-        <div class="tpux-overview__intro"><strong>Lên kế hoạch dễ dàng hơn</strong><span>Chọn ngày, sắp xếp điểm đến, kiểm tra cảnh báo rồi lưu chuyến.</span></div>
-        <button type="button" id="tpuxHealthBtn" class="tpux-overview__health" aria-controls="tpHealth"><i class="fas fa-heartbeat" aria-hidden="true"></i><span id="tpuxHealthText">Kiểm tra lịch trình</span><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
-    </section>
     <div class="tpx-body" id="tpBody">
         {{-- ================= Thanh bên (Wanderlog): Tổng quan · Đã lưu · từng ngày · Ngân sách · Thông tin ================= --}}
         <nav class="tpx-side" id="tpSide" aria-label="Mục lục chuyến đi">
@@ -159,10 +159,7 @@
 
             {{-- ---------------- Lịch trình ---------------- --}}
             <div class="tp-panel" id="tpPanelPlan" role="tabpanel" aria-labelledby="tpTabPlan">
-                <div class="tpux-planhead">
-                    <div><h2>Lịch trình từng ngày</h2><p>Chạm vào địa điểm để xem chi tiết; dùng “Sửa” để đổi giờ hoặc thời lượng.</p></div>
-                    <button type="button" id="tpuxJumpToday" class="tpux-softbtn">Đến ngày đang xem</button>
-                </div>
+                <h2 class="sr-only">Lịch trình từng ngày</h2>
                 {{-- Chế độ đang đi (planner.js renderToday): checklist hôm nay khi chuyến đang diễn ra; sắp đi / đã về thì nhắc việc tương ứng --}}
                 <section class="tgt" id="tpToday" aria-label="Hôm nay" hidden
                          @if ($role === 'owner' && ($t['status'] ?? '') !== 'done') data-done-url="{{ route('planner.status', ['id' => $t['id']]) }}" @endif></section>
@@ -185,21 +182,6 @@
                     </div>
                 </div>
 
-                {{-- La bàn F2: lời kể từng ngày + vì sao có mục này + lưu ý có căn cứ. Nằm TRÊN lịch, không thay lịch. --}}
-                <section class="ai-story" id="aiStory" aria-labelledby="aiStoryH">
-                    <button type="button" class="ai-story__open" id="aiStoryBtn" aria-expanded="false" aria-controls="aiStoryBody">
-                        <span class="ai-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.6"/><path d="M12 4.5 14.2 12 12 19.5 9.8 12Z" fill="#e9a23b"/><path d="M12 12 14.2 12 12 19.5Z" fill="#167A85"/></svg></span>
-                        <span><b id="aiStoryH">{{ $aiExplainOn ? 'Tóm tắt chuyến đi bằng AI' : 'Tóm tắt chuyến đi' }}</b><small>Lời kể từng ngày, vì sao có từng nơi, lưu ý có căn cứ</small></span>
-                        <i class="fas fa-chevron-down" aria-hidden="true"></i>
-                    </button>
-                    <div class="ai-story__body" id="aiStoryBody" hidden></div>
-                </section>
-
-                <section class="tpx-health" id="tpHealth" aria-labelledby="tpWarnH">
-                    <h2 id="tpWarnH" class="tpx-health__h"></h2>
-                    <div id="tpWarn"></div>
-                </section>
-
                 <div id="tpBulk" class="tp-bulk" hidden></div>
                 <div id="tpRouteNote" class="tp-banner" hidden role="status"></div>
                 @if ($aiCopilotOn)
@@ -221,6 +203,24 @@
                         </div>
                     </aside>
                 @endif
+                <div id="tpDaysBox" class="tpx-timeline"></div>
+                <p id="tpTotals" class="tp-totals tpx-totals" role="status"></p>
+                <div id="tpAfterDays"></div>
+                {{-- La bàn F2: lời kể từng ngày + vì sao có mục này + lưu ý có căn cứ. Nằm TRÊN lịch, không thay lịch. --}}
+                <section class="ai-story" id="aiStory" aria-labelledby="aiStoryH">
+                    <button type="button" class="ai-story__open" id="aiStoryBtn" aria-expanded="false" aria-controls="aiStoryBody">
+                        <span class="ai-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.6"/><path d="M12 4.5 14.2 12 12 19.5 9.8 12Z" fill="#e9a23b"/><path d="M12 12 14.2 12 12 19.5Z" fill="#167A85"/></svg></span>
+                        <span><b id="aiStoryH">{{ $aiExplainOn ? 'Tóm tắt chuyến đi bằng AI' : 'Tóm tắt chuyến đi' }}</b><small>Lời kể từng ngày, vì sao có từng nơi, lưu ý có căn cứ</small></span>
+                        <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                    </button>
+                    <div class="ai-story__body" id="aiStoryBody" hidden></div>
+                </section>
+
+                <section class="tpx-health" id="tpHealth" aria-labelledby="tpWarnH">
+                    <h2 id="tpWarnH" class="tpx-health__h"></h2>
+                    <div id="tpWarn"></div>
+                </section>
+
                 @if (!empty($tourBanner))
                     {{-- A-05: có tour giống lịch trình này (Match ≥ ngưỡng, còn đủ chỗ). Bấm đặt: điền sẵn ngày, số người và gắn tripId vào đơn. --}}
                     <aside class="tm-banner" id="tpTourBanner" role="note" aria-label="Có tour giống lịch trình này">
@@ -237,8 +237,6 @@
                         </div>
                     </aside>
                 @endif
-                <div id="tpDaysBox" class="tpx-timeline"></div>
-                <p id="tpTotals" class="tp-totals tpx-totals" role="status"></p>
                 <p class="tp-muted tp-small tpx-hint">
                     Giờ trong lịch được xếp tự động từ thứ tự, thời lượng ở lại và quãng đường (bắt đầu 08:00). Bấm <b>Sửa</b> ở một mục để đặt giờ cố định hoặc đổi thời lượng.
                     @if ($role !== 'view') Kéo biểu tượng <i class="fas fa-grip-vertical" aria-hidden="true"></i> để đổi thứ tự hoặc chuyển ngày. Mọi thay đổi tự lưu sau vài giây. @endif
@@ -474,7 +472,7 @@
                 <div id="tpPlaceCard" class="tp-pcard" role="dialog" aria-label="Chi tiết địa điểm" hidden></div>
                 <ol class="tpx-legend" id="tpLegend" aria-label="Chú thích màu theo ngày"></ol>
                 @if ($aiCopilotOn)
-                    <button type="button" class="ai-co-fab" id="aiCoOpen2" aria-controls="aiCo"><span class="ai-mark ai-mark--sm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.6"/><path d="M12 4.5 14.2 12 12 19.5 9.8 12Z" fill="#e9a23b"/><path d="M12 12 14.2 12 12 19.5Z" fill="#167A85"/></svg></span>Hỏi La bàn</button>
+                    <button type="button" class="ai-co-fab" id="aiCoOpen2" aria-controls="aiCo"><span class="ai-mark ai-mark--sm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.6"/><path d="M12 4.5 14.2 12 12 19.5 9.8 12Z" fill="#e9a23b"/><path d="M12 12 14.2 12 12 19.5Z" fill="#167A85"/></svg></span>Trợ lý La bàn</button>
                 @endif
             </div>
             {{-- Điện thoại: bảng trượt dưới bản đồ toàn màn hình (lịch của ngày đang xem, chạm để xem trên bản đồ) --}}
@@ -534,7 +532,7 @@
         <aside class="ai-co" id="aiCo" aria-labelledby="aiCoH" aria-modal="false" role="dialog" tabindex="-1" hidden>
             <header class="ai-co__h">
                 <span class="ai-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.6"/><path d="M12 4.5 14.2 12 12 19.5 9.8 12Z" fill="#e9a23b"/><path d="M12 12 14.2 12 12 19.5Z" fill="#167A85"/></svg></span>
-                <div><b id="aiCoH">La bàn AI</b><small>Đề xuất chỉ được áp dụng khi bạn xác nhận</small></div>
+                <div><b id="aiCoH">Trợ lý hành trình · La bàn</b><small>Đề xuất chỉ được áp dụng khi bạn xác nhận</small></div>
                 <button type="button" class="tpx-icon" id="aiCoClose" aria-label="Đóng La bàn"><i class="fas fa-times" aria-hidden="true"></i></button>
             </header>
             <div class="tpux-ai-trust"><i class="fas fa-shield-alt" aria-hidden="true"></i> AI có thể ước tính sai. Hãy xem lại thay đổi trước khi áp dụng.</div>
@@ -662,8 +660,8 @@
 <script src="{{ asset('clients/assets/js/planner-api.js') }}?v=2"></script>
 <script src="{{ asset('clients/assets/js/planner-save.js') }}?v=3"></script>
 <script src="{{ asset('clients/assets/js/planner-resolve.js') }}?v=2"></script>
-<script src="{{ asset('clients/assets/js/planner-map.js') }}?v=5"></script>
-<script src="{{ asset('clients/assets/js/planner.js') }}?v=31" defer></script>
+<script src="{{ asset('clients/assets/js/planner-map.js') }}?v=6"></script>
+<script src="{{ asset('clients/assets/js/planner.js') }}?v=38" defer></script>
 <script src="{{ asset('clients/assets/js/planner-extras.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-travel.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-share.js') }}?v=1" defer></script>

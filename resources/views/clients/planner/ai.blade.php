@@ -1,11 +1,11 @@
 @include('clients.blocks.header')
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600&family=Bricolage+Grotesque:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai-chat.css') }}?v=6">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/planner-ai-chat.css') }}?v=8">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/nature-luxury-planner.css') }}?v=bl20261104">
 <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
 
-{{-- /len-ke-hoach/tro-ly : "Vạch hải trình". Trái = nhật ký hội thoại (không bong bóng), phải = hải đồ (la bàn, 2 phao, hải trình) + chú giải. JS vẽ cả hai. Biến: $cfg. --}}
+{{-- /len-ke-hoach/tro-ly : Tạo lịch với AI. Trái = hội thoại; phải = ô "Travela đang hiểu" (sửa được) + bản nháp lịch thật (PlannerService, chưa lưu). JS vẽ cả hai. Biến: $cfg. --}}
 <main class="pai" id="paiRoot">
     <section class="pai-log" aria-label="Kể chuyến đi của bạn">
         <header>
@@ -16,9 +16,9 @@
                     <button type="button" class="pai-reset" id="paiReset">Bắt đầu lại</button>
                 </span>
             </div>
-            <div class="pai-eyebrow"><i class="fas fa-compass" aria-hidden="true"></i> TRAVELA · LÊN KẾ HOẠCH VỚI AI</div>
+            <div class="pai-eyebrow"><i class="fas fa-compass" aria-hidden="true"></i> TRAVELA AI · TẠO LỊCH VỚI AI</div>
             <h1>Kể chuyến đi của bạn</h1>
-            <p>Chỉ cần kể nơi muốn đến và cách bạn thích du lịch. Travela sẽ hỏi thêm từng bước, sau đó cho bạn xem lại trước khi tạo lịch.</p>
+            <p>Kể nơi muốn đến và cách bạn thích du lịch. Đủ ý, Travela xếp thử lịch từng ngày ở bên cạnh để bạn xem; chỉ khi bấm “Lưu chuyến này” mới tạo chuyến.</p>
             <div class="pai-progress" aria-label="Tiến độ thông tin chuyến đi"><div class="pai-progress__line"><span id="paiProgressFill"></span></div><span id="paiProgressLabel" role="status" aria-live="polite">Đang chuẩn bị câu hỏi…</span></div>
         </header>
         <div class="pai-rail" id="paiMsgs" role="log" aria-label="Hội thoại lập kế hoạch" aria-live="polite" aria-relevant="additions"></div>
@@ -31,8 +31,8 @@
         </form>
         <p class="pai-priv">AI chỉ đọc nội dung bạn gõ ở đây để xếp lịch. Lịch luôn do Travela kiểm chứng và bạn chỉnh được sau.</p>
     </section>
-    <section class="pai-plate" id="paiPanel" aria-label="Hải đồ chuyến đi"></section>
+    <section class="pai-plate" id="paiPanel" aria-label="Tóm tắt chuyến và bản nháp lịch trình"></section>
 </main>
 <script type="application/json" id="paiData">@json($cfg)</script>
-<script src="{{ asset('clients/assets/js/planner-ai-chat.js') }}?v=4" defer></script>
+<script src="{{ asset('clients/assets/js/planner-ai-chat.js') }}?v=6" defer></script>
 @include('clients.blocks.footer')

@@ -98,8 +98,7 @@ final class WebPush
             }
             try {
                 $res = Http::timeout(5)->withHeaders([
-                    'TTL' => (string) config('push.ttl', 21600),
-                    'Urgency' => 'normal',
+                    'TTL' => (string) config('push.ttl', 21600), 'Urgency' => 'normal',
                     'Authorization' => 'vapid t=' . self::jwt($u['scheme'] . '://' . $u['host'], time() + 12 * 3600) . ', k=' . config('push.public'),
                 ])->withBody('', 'application/octet-stream')->post($s->endpoint);
                 if (in_array($res->status(), [404, 410], true)) {
