@@ -35,15 +35,43 @@ final class AssetBundle
             return null;
         }
         // đang phát triển: tệp nguồn sửa sau lần gộp -> dùng tệp lẻ, không hiện CSS cũ
+        // (giờ sửa tệp mới hơn nhưng nội dung không đổi, ví dụ sau khi chép / giải nén: vẫn dùng bản gộp)
         if (config('app.debug')) {
-            foreach ((array) (config('assets.bundles')[$name] ?? []) as $src) {
+            $srcs = (array) (config('assets.bundles')[$name] ?? []);
+            foreach ($srcs as $src) {
                 if (is_file(public_path($src)) && filemtime(public_path($src)) > (int) $m['built']) {
-                    return null;
+                    if (!isset($m['src']) || $m['src'] !== self::sourceHash($srcs)) {
+                        return null;
+                    }
+                    break;
                 }
             }
         }
 
         return $m['file'];
+    }
+
+    /** Mã băm nội dung các tệp nguồn (không phụ thuộc giờ sửa tệp, đúng cả sau khi chép / giải nén). */
+    public static function sourceHash(array $files): string
+    {
+        $h = hash_init('md5');
+        foreach ($files as $f) {
+            hash_update($h, $f . "\0" . (is_file(public_path($f)) ? (string) file_get_contents(public_path($f)) : ''));
+        }
+
+        return hash_final($h);
+    }
+
+    /** Bản gộp đã cũ so với nguồn (hoặc chưa gộp): dùng cho trang Bảo trì và demo:check. */
+    public static function stale(string $name): bool
+    {
+        $p = self::manifestPath();
+        $m = is_file($p) ? ((json_decode((string) file_get_contents($p), true) ?: [])[$name] ?? null) : null;
+        if (!$m || !is_file(public_path($m['file']))) {
+            return true;
+        }
+
+        return isset($m['src']) && $m['src'] !== self::sourceHash((array) (config('assets.bundles')[$name] ?? []));
     }
 
     public static function tags(string $name): string

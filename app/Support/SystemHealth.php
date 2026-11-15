@@ -91,6 +91,29 @@ final class SystemHealth
             return $free ? round($free / 1073741824, 1) . ' GB trống' : 'ghi được';
         });
 
+        // AI (Đợt D mục D6): không bắt buộc — tắt hoặc hỏng thì hệ thống lùi về chế độ luật
+        $run('ai', false, function () {
+            if (!config('ai.enabled')) {
+                return 'tắt (chế độ luật)';
+            }
+            $until = (int) Cache::get('ai:cb:until', 0);
+            if ($until > time()) {
+                throw new \RuntimeException('ngắt mạch thêm ' . ($until - time()) . ' giây, đang dùng chế độ luật');
+            }
+            if (!Schema::hasTable('tbl_ai_runs')) {
+                return 'bật';
+            }
+            $today = DB::table('tbl_ai_runs')->where('createdAt', '>=', now()->startOfDay());
+            $llm = (clone $today)->where('engine', 'llm')->count();
+            $fail = (clone $today)->where('engine', 'llm')->where('outcome', '!=', 'ok')->count();
+            $fallback = (clone $today)->where('engine', '!=', 'llm')->count();
+            if ($llm >= 10 && $fail / max(1, $llm) > 0.5) {
+                throw new \RuntimeException("hôm nay $fail/$llm lượt lỗi, có thể hết hạn mức nhà cung cấp");
+            }
+
+            return "bật · hôm nay $llm lượt AI ($fail lỗi), $fallback lượt chế độ luật · hạn mức " . (int) config('ai.limits.daily_per_user', 40) . '/người/ngày';
+        });
+
         $ok = collect($checks)->every(fn($c) => $c['ok'] || !$c['required']);
 
         return ['ok' => $ok, 'checks' => $checks];

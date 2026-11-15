@@ -1,0 +1,12 @@
+# HTTPS tự động (Let's Encrypt) trước nginx (Đợt D mục D7).
+# DOMAIN lấy từ biến môi trường, ví dụ travela.tenmien.vn; bản ghi DNS A phải trỏ về máy chủ trước khi chạy.
+{$DOMAIN} {
+    encode zstd gzip
+    reverse_proxy nginx:80 {
+        header_up X-Forwarded-Proto https
+    }
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        -Server
+    }
+}

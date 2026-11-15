@@ -39,6 +39,21 @@ class RouteService
         return new self($provider, $r['minLegKm'], $r['mode'], $r['factor']);
     }
 
+    /** Nguồn đường đi bên trong (DayOptimizer bọc thêm bộ nhớ). */
+    public function rawProvider(): RouteProvider
+    {
+        return $this->provider;
+    }
+
+    /** Bản sao dùng nguồn khác, giữ nguyên phương tiện / ngưỡng cùng khu / hệ số. */
+    public function withProvider(RouteProvider $p): self
+    {
+        $c = clone $this;
+        $c->provider = $p;
+
+        return $c;
+    }
+
     public function mode(): string
     {
         return $this->mode;

@@ -2812,6 +2812,23 @@
         var kf = keepFirst != null ? keepFirst : (ui.opt && ui.opt.day === d ? ui.opt.keepFirst : true);
         var group = dayItems(d);
         if (!cfg.optimizeUrl || group.filter(isFree).length < 3) { optimizeLocal(d, kf); return; }
+        // Đợt D: không còn thay đổi chưa lưu thì máy chủ tối ưu THEO LỊCH (giờ mở cửa, giờ cố định, chỗ ở) trên bản đã lưu
+        if (!dirty) {
+            var sb = { day: d };
+            if (keepFirst != null || (ui.opt && ui.opt.day === d)) sb.keepFirst = kf;
+            post(cfg.optimizeUrl, sb)
+                .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+                .then(function (j) {
+                    if (dirty || dayItems(d).length !== group.length) return;   // lịch vừa đổi trong lúc chờ
+                    var order = (j.order || []).map(function (i) { return group[i]; });
+                    if (order.length !== group.length || order.some(function (x) { return !x; })) { optimizeLocal(d, kf); return; }
+                    if (!j.changed) { ui.opt = null; renderDays(); say("Ngày " + d + ": thứ tự hiện tại đã tốt nhất có thể" + (j.keepFirst ? " (giữ điểm đầu ngày)." : ".")); return; }
+                    showOpt({ day: d, keepFirst: j.keepFirst, method: "schedule", before: j.beforeKm, after: j.afterKm, beforeMin: j.beforeMin, afterMin: j.afterMin,
+                        beforeIssues: j.beforeIssues, afterIssues: j.afterIssues, savedMin: j.savedMin, order: order, provider: j.provider });
+                })
+                .catch(function () { optimizeLocal(d, kf); });
+            return;
+        }
         var body = { keepFirst: kf, stops: group.map(function (x) { return { key: String(x.uid), lat: G.hasPos(x) ? x.lat : null, lng: G.hasPos(x) ? x.lng : null, anchor: !isFree(x) }; }) };
         // có chỗ ở: tuyến tối ưu là vòng từ nơi ngủ đêm trước tới nơi ngủ đêm nay (hai điểm neo ảo, không phải mục)
         var cx = dayCtx(d);
@@ -2858,7 +2875,18 @@
         h.appendChild(el("b", null, "Đề xuất sắp lại tuyến ngày " + p.day));
         box2.appendChild(h);
         var g = el("div", "tpx-opt__nums");
-        [["Hiện tại", "≈ " + (Math.round(p.before * 10) / 10).toLocaleString("vi-VN") + " km"], ["Sau tối ưu", "≈ " + (Math.round(p.after * 10) / 10).toLocaleString("vi-VN") + " km"],
+        if (p.method === "schedule") {
+            var dm = p.beforeMin - p.afterMin, fixedN = (p.beforeIssues || 0) - (p.afterIssues || 0);
+            var gain = (fixedN > 0 ? "Hết " + fixedN + " chỗ vướng giờ" : "") + (dm > 0 ? (fixedN > 0 ? " · " : "") + "bớt " + durText(dm) : dm < 0 ? " (thêm " + durText(-dm) + " đi lại)" : "");
+            [["Hiện tại", durText(p.beforeMin) + " đi lại" + (p.beforeIssues ? " · " + p.beforeIssues + " chỗ vướng giờ" : "")],
+                ["Sau tối ưu", durText(p.afterMin) + " đi lại" + (p.afterIssues ? " · " + p.afterIssues + " chỗ vướng giờ" : " · không vướng giờ")],
+                ["Được", gain || "gọn hơn"]].forEach(function (c, i) {
+                var cell = el("div", "tpx-opt__n" + (i === 2 ? " is-good" : ""));
+                cell.appendChild(el("span", null, c[0]));
+                cell.appendChild(el("b", null, c[1]));
+                g.appendChild(cell);
+            });
+        } else [["Hiện tại", "≈ " + (Math.round(p.before * 10) / 10).toLocaleString("vi-VN") + " km"], ["Sau tối ưu", "≈ " + (Math.round(p.after * 10) / 10).toLocaleString("vi-VN") + " km"],
             ["Tiết kiệm", "≈ " + (Math.round(saved * 10) / 10).toLocaleString("vi-VN") + " km · " + (p.savedMin != null ? p.savedMin : Math.round(saved / G.SPEED_KMH * 60)) + " phút"]].forEach(function (c, i) {
             var cell = el("div", "tpx-opt__n" + (i === 2 ? " is-good" : ""));
             cell.appendChild(el("span", null, c[0]));
@@ -2894,12 +2922,18 @@
             ui.opt = null;
             commit();
             var sm = p.savedMin != null ? p.savedMin : Math.round(saved / G.SPEED_KMH * 60);
+            if (p.method === "schedule") {
+                var fx = (p.beforeIssues || 0) - (p.afterIssues || 0);
+                say("Đã sắp lại ngày " + p.day + ": " + durText(p.beforeMin) + " → " + durText(p.afterMin) + " đi lại" + (fx > 0 ? ", hết " + fx + " chỗ vướng giờ" : "") + ".", false, [["Hoàn tác", undoOnce]]);
+                return;
+            }
             routeNote("Ngày " + p.day + ": đã sắp lại tuyến, tiết kiệm khoảng " + Math.round(saved * 10) / 10 + " km (ước tính).", true);
             say("Đã tối ưu ngày " + p.day + ": " + String(Math.round(p.before * 10) / 10).replace(".", ",") + " km → " + String(Math.round(p.after * 10) / 10).replace(".", ",") + " km, bớt khoảng " + sm + " phút đi lại.", false, [["Hoàn tác", undoOnce]]);
         }));
         row.appendChild(btn("tp-mini", "Giữ như cũ", "Hủy đề xuất tối ưu", function () { ui.opt = null; renderDays(); renderMap(); }));
         box2.appendChild(row);
-        box2.appendChild(el("p", "tp-muted tp-small", "Mục có giờ cố định, đã khóa vị trí, đã chọn buổi hoặc chưa có vị trí được giữ nguyên chỗ. Quãng đường " + (p.provider === "osrm" ? "theo đường bộ (OSRM)." : "ước tính theo đường chim bay × hệ số đường bộ.")));
+        box2.appendChild(el("p", "tp-muted tp-small", (p.method === "schedule" ? "Xếp theo lịch: ưu tiên không vướng giờ mở cửa / giờ cố định, rồi mới ít phút đi lại nhất (tính cả đường từ / về chỗ ở). " : "")
+            + "Mục có giờ cố định, đã khóa vị trí, đã chọn buổi hoặc chưa có vị trí được giữ nguyên chỗ. Quãng đường " + (p.provider === "osrm" ? "theo đường bộ (OSRM)." : "ước tính theo đường chim bay × hệ số đường bộ.")));
         return box2;
     }
 

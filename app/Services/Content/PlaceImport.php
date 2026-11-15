@@ -279,7 +279,7 @@ final class PlaceImport
             $cn = self::norm($c->name);
             $same = $cn === $n;
             similar_text($cn, $n, $pct);
-            $close = $pct >= 82 || (strlen($n) >= 6 && (str_contains($cn, $n) || str_contains($n, $cn)));
+            $close = $pct >= 88 || (strlen($n) >= 6 && (str_contains($cn, $n) || str_contains($n, $cn)));
             if (($same && $km <= 2) || ($close && $km <= self::DUP_NEAR_KM)) {
                 if (!$best || $km < $best->km) {
                     $c->km = $km;

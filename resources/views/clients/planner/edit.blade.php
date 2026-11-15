@@ -676,7 +676,7 @@
 <script src="{{ asset('clients/assets/js/planner-save.js') }}?v=3"></script>
 <script src="{{ asset('clients/assets/js/planner-resolve.js') }}?v=2"></script>
 <script src="{{ asset('clients/assets/js/planner-map.js') }}?v=7"></script>
-<script src="{{ asset('clients/assets/js/planner.js') }}?v=43" defer></script>
+<script src="{{ asset('clients/assets/js/planner.js') }}?v=44" defer></script>
 <script src="{{ asset('clients/assets/js/planner-decide.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-extras.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-travel.js') }}?v=3" defer></script>

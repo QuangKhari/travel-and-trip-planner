@@ -64,6 +64,13 @@ final class TripResolver
         $this->unassigned = $this->payload['unassigned'];
         $this->before = $this->healthOf($this->days, $this->unassigned);
 
+        if ($code === 'day.optimize' && $day !== null && isset($this->days[$day])) {
+            $target = ['code' => $code, 'day' => $day, 'index' => null, 'severity' => 'soft', 'level' => 'warn', 'text' => 'Sắp lại thứ tự ngày ' . $day];
+            $options = $this->routeOptions($day, $target);
+
+            return ['code' => $code, 'day' => $day, 'index' => null, 'problem' => $options ? $target['text'] : 'Thứ tự ngày ' . $day . ' đã tốt nhất có thể.',
+                'severity' => 'soft', 'before' => ['score' => $this->before['score'], 'level' => $this->before['level']], 'options' => $options];
+        }
         if ($code === 'today.replan' && $day !== null && isset($this->days[$day])) {
             $target = ['code' => $code, 'day' => $day, 'index' => null, 'severity' => 'soft', 'level' => 'warn', 'text' => 'Xếp lại phần còn lại của ngày ' . $day . ' từ bây giờ'];
             $options = $this->replanOptions($day, $target);
@@ -728,20 +735,26 @@ final class TripResolver
 
     private function routeOptions(int $day, array $target): array
     {
-        $list = $this->days[$day] ?? [];
-        $stops = [];
-        foreach ($list as $i => $it) {
-            $stops[] = ['key' => (string) $i, 'lat' => $it['lat'], 'lng' => $it['lng'], 'anchor' => !$this->isFree($it, $i)];
+        // Đợt D (AR5): dùng chung bộ tối ưu THEO LỊCH với nút "Tối ưu tuyến" (giờ mở cửa, giờ cố định, chỗ ở), không chỉ theo km
+        $list = array_values($this->days[$day] ?? []);
+        if (count($list) < 3) {
+            return [];
         }
-        $o = $this->route->optimize($stops);
+        $ctx = $this->ctxs[$day] ?? null;
+        $opt = new \App\Services\Planner\Route\DayOptimizer($day, $list, $this->route, $this->rules, $this->dows[$day] ?? null, $ctx);
+        $o = $opt->optimize(empty($ctx['from']), (int) config('planner.optimize_budget_ms', 150));
         if (!$o['changed']) {
             return [];
         }
-        $full = array_map('intval', $o['order']);   // thứ tự đầy đủ; điểm neo và điểm không tọa độ đã giữ nguyên chỗ
+        $b = $o['before'];
+        $a = $o['after'];
+        $why = ['Đi lại ~' . self::h($b['travelMin']) . ' → ~' . self::h($a['travelMin']) . ' (' . round($b['travelKm'], 1) . ' → ' . round($a['travelKm'], 1) . ' km).'];
+        $fixed = ($b['hard'] + $b['hours']) - ($a['hard'] + $a['hours']);
+        if ($fixed > 0) {
+            $why[] = 'Hết ' . $fixed . ' chỗ vướng giờ mở cửa / không kịp giờ.';
+        }
+        $why[] = 'Giữ nguyên mục có giờ cố định, đã khóa, có buổi, lưu trú / ăn uống' . (empty($ctx['from']) ? ' và điểm đầu ngày.' : '.');
 
-        return [$this->option('optimize', 'Sắp lại thứ tự ngày ' . $day, [
-            'Hiện tại ~' . round($o['beforeKm'], 1) . ' km, đề xuất ~' . round($o['afterKm'], 1) . ' km: bớt ~' . round($o['savedKm'], 1) . ' km, ~' . $o['savedMin'] . ' phút đi lại.',
-            'Giữ nguyên mục có giờ cố định, đã khóa, có buổi và điểm đầu ngày.',
-        ], [['op' => 'reorder', 'day' => $day, 'order' => $full]], $target)];
+        return [$this->option('optimize', 'Sắp lại thứ tự ngày ' . $day, $why, [['op' => 'reorder', 'day' => $day, 'order' => $o['order']]], $target)];
     }
 }

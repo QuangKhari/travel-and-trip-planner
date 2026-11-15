@@ -54,6 +54,9 @@ class TasteController extends Controller
         $grp = $request->input('grp');
         $grp = is_string($grp) && preg_match('/^[a-z_]{2,20}$/', $grp) ? $grp : null;
         if (PlaceSignals::ready()) {
+            if (!$grp) {
+                \App\Services\Planner\Reco\RecoLog::forget($this->uid());   // quên hết: xóa cả các lần hiện gợi ý
+            }
             DB::table('tbl_place_signals')->where('userId', $this->uid())->when($grp, fn($q) => $q->where('grp', $grp))->delete();
         }
         if (Schema::hasTable('tbl_user_taste')) {

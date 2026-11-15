@@ -83,7 +83,12 @@ class PlannerAiController extends Controller
         abort_unless(config('ai.features.suggest', true), 404);
         $v = $request->validate(['intent' => ['required', 'in:' . implode(',', TripSuggest::INTENTS)], 'day' => ['nullable', 'integer', 'min:1', 'max:60']]);
 
-        return response()->json($suggest->suggest($trip, $v['intent'], $v['day'] ?? null));
+        $out = $suggest->suggest($trip, $v['intent'], $v['day'] ?? null);
+        // Đợt D (L1): thẻ gợi ý đã hiện (nơi nào, thứ tự nào) để học cá nhân hóa
+        $shown = array_values(array_filter(array_map(fn($c) => isset($c['apply']['refId']) ? ['type' => $c['apply']['type'] ?? null, 'refId' => $c['apply']['refId']] : null, (array) ($out['cards'] ?? []))));
+        $out['listId'] = \App\Services\Planner\Reco\RecoLog::log($this->uid(), $trip, 'suggest', $shown, ['day' => $v['day'] ?? null]);
+
+        return response()->json($out);
     }
 
     /** POST /len-ke-hoach/{id}/la-ban/goi-y/ap-dung {op, type?, refId?, toDay?, item?, startMin?, rev}: nút trên thẻ -> phiếu kiểm chứng. */

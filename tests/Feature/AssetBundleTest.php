@@ -68,7 +68,15 @@ class AssetBundleTest extends TestCase
         file_put_contents(AssetBundle::manifestPath(), json_encode($manifest));
         AssetBundle::reset();
         config(['app.debug' => true]);
+        // giờ sửa mới hơn nhưng nội dung y nguyên (chép / giải nén): vẫn dùng bản gộp
+        $this->assertNotNull(AssetBundle::built('t.css'));
+        $this->assertFalse(AssetBundle::stale('t.css'));
+        // nội dung nguồn đã khác bản gộp: quay về tệp lẻ, trang Bảo trì báo cũ
+        $manifest['t.css']['src'] = 'khac';
+        file_put_contents(AssetBundle::manifestPath(), json_encode($manifest));
+        AssetBundle::reset();
         $this->assertNull(AssetBundle::built('t.css'));
+        $this->assertTrue(AssetBundle::stale('t.css'));
         config(['app.debug' => false]);
         AssetBundle::reset();
         $this->assertNotNull(AssetBundle::built('t.css'));

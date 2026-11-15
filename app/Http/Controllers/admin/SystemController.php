@@ -61,6 +61,13 @@ class SystemController extends Controller
         $add('Gửi mail', config('mail.default') === 'log' ? 'warn' : 'ok', (string) config('mail.default'),
             config('mail.default') === 'log' ? 'Mail chỉ ghi vào log, khách sẽ không nhận được email.' : '');
 
+        $add('Trợ lý AI (La bàn)', $h['ai']['ok'] ? 'ok' : 'warn', $h['ai']['detail'],
+            $h['ai']['ok'] ? 'AI lỗi hoặc hết lượt thì mọi tính năng tự dùng chế độ luật.' : 'Đang dùng chế độ luật; kiểm tra khóa / hạn mức nhà cung cấp AI.');
+        if (class_exists(\App\Support\AssetBundle::class)) {
+            $stale = array_filter(array_keys((array) config('assets.bundles')), fn($n) => \App\Support\AssetBundle::stale($n));
+            $add('Gói CSS/JS (assets:bundle)', $stale ? 'warn' : 'ok', $stale ? 'Cũ: ' . implode(', ', $stale) : 'Mới', $stale ? 'Chạy php artisan assets:bundle sau khi sửa CSS/JS.' : '');
+        }
+
         $ragDirty = (bool) Cache::get('rag.dirty');
         $add('Chỉ mục Hỏi đáp (RAG)', $ragDirty ? 'warn' : 'ok', $ragDirty ? 'Cần dựng lại' : 'Mới', $ragDirty ? 'Nội dung vừa đổi; bấm "Dựng lại chỉ mục" bên dưới.' : '');
 

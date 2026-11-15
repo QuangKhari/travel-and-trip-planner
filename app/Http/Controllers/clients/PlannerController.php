@@ -696,7 +696,7 @@ class PlannerController extends Controller
      */
     public function around(Request $request, int $id, RouteExplorer $explorer): JsonResponse
     {
-        app(TripSharing::class)->editable($this->uid(), $id) ?? abort(404);
+        $trip = (app(TripSharing::class)->editable($this->uid(), $id) ?? abort(404))['trip'];
         $v = $request->validate([
             'pts' => ['required', 'string', 'max:1200'],
             'km' => ['nullable', 'numeric', 'between:0.3,10'],
@@ -715,7 +715,10 @@ class PlannerController extends Controller
             return response()->json(['message' => 'Ngày này chưa có điểm nào có vị trí.', 'results' => [], 'total' => 0], 422);
         }
 
-        return response()->json($explorer->around($pts, (float) ($v['km'] ?? 1), (string) ($v['group'] ?? 'all'), $v['have'] ?? []));
+        $out = $explorer->around($pts, (float) ($v['km'] ?? 1), (string) ($v['group'] ?? 'all'), $v['have'] ?? []);
+        $out['listId'] = \App\Services\Planner\Reco\RecoLog::log($this->uid(), $trip, 'around', (array) ($out['results'] ?? []), ['lat' => $pts[0][0], 'lng' => $pts[0][1]]);
+
+        return response()->json($out);
     }
 
     /**
@@ -749,7 +752,25 @@ class PlannerController extends Controller
      */
     public function optimize(Request $request, int $id, RouteService $route): JsonResponse
     {
-        app(TripSharing::class)->editable($this->uid(), $id) ?? abort(404);
+        $acc = app(TripSharing::class)->editable($this->uid(), $id) ?? abort(404);
+        // Đợt D (AR3): có `day` thì tối ưu THEO LỊCH trên bản đã lưu (giờ mở cửa, giờ cố định, chỗ ở), trả thứ tự là vị trí trong ngày
+        if ($request->has('day')) {
+            $d = $request->validate(['day' => ['required', 'integer', 'min:1', 'max:60'], 'keepFirst' => ['nullable', 'boolean']]);
+            $payload = app(TripPlanner::class)->payload($acc['trip']);
+            $day = collect($payload['days'])->firstWhere('day', (int) $d['day']) ?? abort(404);
+            $opt = new \App\Services\Planner\Route\DayOptimizer((int) $d['day'], array_values($day['items']), $route, null, $day['dow'] ?? null, $day['ctx'] ?? null);
+            $keep = array_key_exists('keepFirst', $d) && $d['keepFirst'] !== null ? (bool) $d['keepFirst'] : empty($day['ctx']['from']);
+            $o = $opt->optimize($keep, (int) config('planner.optimize_budget_ms', 150));
+            $b = $o['before'];
+            $a = $o['after'];
+
+            return response()->json([
+                'changed' => $o['changed'], 'method' => 'schedule', 'order' => $o['order'], 'rev' => $payload['rev'] ?? null, 'keepFirst' => $keep,
+                'beforeKm' => $b['travelKm'], 'afterKm' => $a['travelKm'], 'beforeMin' => $b['travelMin'], 'afterMin' => $a['travelMin'],
+                'savedMin' => max(0, $b['travelMin'] - $a['travelMin']), 'beforeIssues' => $b['hard'] + $b['hours'], 'afterIssues' => $a['hard'] + $a['hours'],
+                'beforeEnd' => $b['end'], 'afterEnd' => $a['end'], 'ms' => $o['ms'], 'provider' => $route->provider(),
+            ]);
+        }
         $v = $request->validate([
             'stops' => ['required', 'array', 'min:2', 'max:' . TripPlanner::MAX_ITEMS],
             'stops.*.key' => ['required', 'string', 'max:40', 'distinct'],
@@ -875,7 +896,12 @@ class PlannerController extends Controller
             'dest' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        return response()->json(['results' => $planner->search($trip, (string) ($v['q'] ?? ''), $v['type'] ?? null, isset($v['dest']) ? (int) $v['dest'] : null)]);
+        $results = $planner->search($trip, (string) ($v['q'] ?? ''), $v['type'] ?? null, isset($v['dest']) ? (int) $v['dest'] : null);
+        // Đợt D (L1): ghi danh sách đã hiện để học cá nhân hóa (không lưu chữ đã gõ)
+        $q = trim((string) ($v['q'] ?? ''));
+        $listId = \App\Services\Planner\Reco\RecoLog::log($this->uid(), $trip, $q === '' ? 'browse' : 'search', $results, ['qlen' => mb_strlen($q)]);
+
+        return response()->json(['results' => $results, 'listId' => $listId]);
     }
 
     /**

@@ -65,6 +65,9 @@ return [
     ],
 
     // ---- Tuyến đường: MỌI phép tính đi qua RouteService (máy chủ) và planner-geo.js (xem trước ở trình duyệt, cùng tham số) ----
+    // Đợt D (AR): ngân sách thời gian (ms) cho tối ưu thứ tự ngày theo lịch (DayOptimizer); benchmark: trung vị ~5 ms, p95 ~20 ms
+    'optimize_budget_ms' => (int) env('PLANNER_OPTIMIZE_BUDGET_MS', 150),
+
     'route' => [
         'provider' => env('PLANNER_ROUTE_PROVIDER', 'haversine'),   // haversine | osrm
         'osrm_url' => env('PLANNER_OSRM_URL', ''),                   // ví dụ https://router.project-osrm.org

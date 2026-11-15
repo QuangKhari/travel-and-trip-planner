@@ -49,7 +49,7 @@ class AssetsBundle extends Command
                 }
             }
             file_put_contents(public_path($file), $out);
-            $manifest[$name] = ['file' => $file, 'built' => time(), 'files' => count($files)];
+            $manifest[$name] = ['file' => $file, 'built' => time(), 'files' => count($files), 'src' => AssetBundle::sourceHash($files)];
             $this->line(sprintf('  %-12s %2d tệp -> %s (%d KB)', $name, count($files), basename($file), (int) round(strlen($out) / 1024)));
         }
         file_put_contents(AssetBundle::manifestPath(), json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));

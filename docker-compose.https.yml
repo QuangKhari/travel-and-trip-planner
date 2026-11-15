@@ -1,0 +1,38 @@
+# Chạy thật có HTTPS + sao lưu hằng ngày (Đợt D mục D7). Dùng CHỒNG lên docker-compose.yml:
+#   DOMAIN=travela.tenmien.vn HTTP_PORT=127.0.0.1:8080 docker compose -f docker-compose.yml -f docker-compose.https.yml --profile backup up -d --build
+# Caddy tự xin và gia hạn chứng chỉ Let's Encrypt cho DOMAIN (cổng 80 và 443 phải mở).
+# HTTP_PORT=127.0.0.1:8080: nginx chỉ nghe trong máy, mọi truy cập từ ngoài đi qua Caddy (HTTPS).
+services:
+  caddy:
+    image: caddy:2-alpine
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:?Đặt DOMAIN=ten-mien-cua-ban}
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      nginx: { condition: service_healthy }
+    restart: unless-stopped
+
+  backup:
+    image: mysql:8.4
+    profiles: ["backup"]
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    env_file: .env.docker
+    environment:
+      DB_DATABASE: ${DB_DATABASE:-travela}
+      DB_USERNAME: ${DB_USERNAME:-travela}
+      DB_PASSWORD: ${DB_PASSWORD:-travela_secret}
+    volumes:
+      - ./docker/backup.sh:/backup.sh:ro
+      - backups:/backups
+    depends_on:
+      mysql: { condition: service_healthy }
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
+  backups:
