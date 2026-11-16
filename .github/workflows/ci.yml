@@ -102,6 +102,7 @@ jobs:
           php artisan key:generate
           php artisan pii:key | grep '^DATA_ENCRYPTION_KEY=' >> .env
           php artisan migrate:fresh --seed --seeder=BrowserTestSeeder --force
+          php artisan demo:reset --force || echo 'demo:reset bỏ qua (thiếu dữ liệu điểm đến)'
           php artisan storage:link || true
           php artisan assets:bundle
       - name: Chạy máy chủ

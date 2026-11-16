@@ -117,7 +117,7 @@ final class RecoFeatures
     public function names(): array
     {
         return array_merge(['bias', 't_food', 't_exp', 'cat_food'], array_map(fn($g) => 'g_' . $g, $this->groups),
-            ['price_log', 'free', 'indoor', 'dur_h', 'pop', 'pos_inv', 'dist_log', 'aff', 'sim', 'glob', 'aff_x_pop']);
+            ['price_log', 'free', 'indoor', 'dur_h', 'pop', 'pos_inv', 'dist_log', 'aff', 'aff_conf', 'sim', 'glob', 'aff_x_pop']);
     }
 
     /**
@@ -149,6 +149,8 @@ final class RecoFeatures
         }
         $f['pos_inv'] = isset($ctx['position']) ? 1 / (1 + (int) $ctx['position']) : 0.0;
         $f['aff'] = $this->affinityAt($userId, $t)[$grp] ?? 0.0;
+        // độ tin của sở thích tăng theo số tín hiệu đã có: giúp mô hình học đúng khi dữ liệu cũ còn ít lịch sử hơn dữ liệu mới
+        $f['aff_conf'] = $f['aff'] * min(1.0, $this->historyAt($userId, $t) / 10);
         $f['sim'] = $this->similarityAt($userId, $key, $t);
         $f['glob'] = $this->globalAt($userId, $key, $t);
         $f['aff_x_pop'] = $f['aff'] * $f['pop'];
@@ -169,6 +171,19 @@ final class RecoFeatures
         }
 
         return array_map(fn($x) => max(-1, min(1, $x['s'] / ($x['n'] + 4))), $acc);
+    }
+
+    public function historyAt(int $userId, int $t): int
+    {
+        $n = 0;
+        foreach ($this->signals[$userId] ?? [] as $s) {
+            if ($s['t'] >= $t) {
+                break;
+            }
+            $n++;
+        }
+
+        return $n;
     }
 
     /** Cosine TF-IDF giữa nơi này và trung bình các nơi người dùng đã thêm / ghé / áp dụng trước $t. */

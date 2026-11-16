@@ -28,7 +28,11 @@ class TasteController extends Controller
             $labels[$g] = $label;
         }
 
-        return view('clients.planner.taste', ['title' => 'Travela nhớ gì về bạn', 'rows' => $sig->explain($this->uid()), 'paused' => $sig->paused($this->uid()),
+        // Đợt E (L6): độ lệch riêng mô hình cá nhân hóa đã học cho bạn theo từng nhóm (khi có mô hình)
+        $model = \App\Services\Planner\Reco\RecoModel::current();
+        $learned = $model ? $model->userVector($this->uid(), new \App\Services\Planner\Reco\RecoFeatures()) : [];
+
+        return view('clients.planner.taste', ['title' => 'Travela nhớ gì về bạn', 'rows' => $sig->explain($this->uid()), 'paused' => $sig->paused($this->uid()), 'learned' => $learned,
             'labels' => $labels, 'ready' => Schema::hasTable('tbl_user_taste'), 'total' => PlaceSignals::ready() ? DB::table('tbl_place_signals')->where('userId', $this->uid())->count() : 0]);
     }
 

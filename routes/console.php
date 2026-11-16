@@ -153,3 +153,6 @@ Artisan::command('payments:simulate-transfer {bookingCode} {--amount= : Số ti�
 
     return 0;
 })->purpose('Giả lập tiền chuyển khoản QR về tài khoản (thử webhook SePay trên máy cá nhân)');
+
+// Đợt E (mức 5): học lại mô hình cá nhân hóa gợi ý mỗi đêm từ nhật ký gợi ý đã hiện + hành vi (chỉ lưu khi đủ dữ liệu)
+Schedule::command('reco:train')->dailyAt('03:30')->withoutOverlapping();

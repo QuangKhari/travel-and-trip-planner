@@ -461,12 +461,34 @@
             b.setAttribute("data-alerts", String(n));
         });
     }
+    // Đợt E (AP1): dấu cảnh báo ngay trên đầu ngày của lịch — bấm để mở thẻ Cảnh báo của La bàn
+    function markDays() {
+        var by = {};
+        (st.alerts || []).forEach(function (a) {
+            // đóng cửa / lệch giờ đã hiện ngay trong danh sách vấn đề của ngày (planner.js) — không nhắc hai lần
+            if (!a.day || /^alert:hours\./.test(a.id || "")) return;
+            var x = by[a.day] || (by[a.day] = { n: 0, bad: false, t: [] });
+            x.n++; if (a.tone === "bad") x.bad = true; if (x.t.length < 3) x.t.push(a.title + (a.sub ? " (" + a.sub + ")" : ""));
+        });
+        document.querySelectorAll("#tpDaysBox .tpx-day[data-day]").forEach(function (sec) {
+            var old = sec.querySelector(".ai-daywarn"); if (old) old.remove();
+            var d = +sec.getAttribute("data-day"), x = by[d], head = sec.querySelector(".tpx-dayhead");
+            if (!x || !head) return;
+            var b = button("ai-daywarn" + (x.bad ? " is-bad" : ""), x.n === 1 ? "1 cảnh báo" : x.n + " cảnh báo", function () { window.TpLaBan.ask("alerts", d); },
+                "Ngày " + d + ": " + x.t.join("; ") + ". Bấm để xem cách xử lý.");
+            var ic = el("i", "fas fa-exclamation-triangle"); ic.setAttribute("aria-hidden", "true"); b.insertBefore(ic, b.firstChild);
+            var act = head.querySelector(".tpx-dayhead__act");
+            if (act) act.insertBefore(b, act.firstChild); else head.appendChild(b);
+        });
+    }
+    document.addEventListener("tp:render", markDays);
     var alertTimer = null;
     function checkAlerts() {
         if (!cfg.suggestUrl) return;
         post(cfg.suggestUrl, { intent: "alerts" }).then(function (r) {
             st.alerts = (r && r.cards) || [];
             setAlertBadge(st.alerts.length);
+            markDays();
             renderTopics();
             var idleBox = feed.querySelector(".ai-co__idle");
             if (idleBox && !idleBox.querySelector(".ai-alertbox") && st.alerts.length) idleBox.insertBefore(alertBox(), idleBox.children[2] || null);
@@ -539,6 +561,8 @@
             card.appendChild(tg);
         }
         if (c.text) card.appendChild(el("p", "ai-sg__t", c.text));
+        // Đợt E (L6): vì sao gợi ý này (mô hình cá nhân hóa); ô "thử khác" để không chỉ gợi ý một kiểu
+        if ((c.why || []).length || c.explore) card.appendChild(el("p", "reco-why", c.explore ? "Thử khác: khác kiểu bạn hay chọn" : "Vì sao gợi ý: " + c.why.join(" · ")));
         if (c.source) card.appendChild(el("p", "ai-sg__src", "Nguồn: " + c.source));
         var acts = el("div", "ai-sg__acts");
         (c.actions || []).forEach(function (x) {
@@ -567,6 +591,22 @@
             }
         });
         if (acts.childNodes.length) card.appendChild(acts);
+        // Đợt E (AP2): giải thích ngắn cho thẻ cảnh báo — LLM chỉ diễn đạt dữ kiện của thẻ, sai thì dùng mẫu soạn sẵn
+        if (c.kind === "alert" && c.id && cfg.alertExplainUrl) {
+            var ex = el("div", "ai-sg__ex"); ex.hidden = true; ex.setAttribute("aria-live", "polite");
+            var eb = button("ai-sg__exbtn", "Vì sao đáng lo, nên chọn cách nào?", function () {
+                eb.disabled = true; ex.hidden = false; ex.textContent = "Đang soạn lời giải thích…";
+                post(cfg.alertExplainUrl, { card: c.id }).then(function (j) {
+                    ex.textContent = "";
+                    if (!j || !j.ok) { ex.appendChild(el("p", null, (j && j.message) || "Chưa giải thích được lúc này.")); eb.disabled = false; return; }
+                    ex.appendChild(el("p", null, j.why));
+                    if (j.fix) ex.appendChild(el("p", "ai-sg__exfix", j.fix));
+                    ex.appendChild(el("small", "ai-sg__src", j.engine === "template" ? "Soạn theo mẫu từ dữ kiện của cảnh báo" + (j.notice ? " (" + j.notice + ")" : "") : "AI diễn đạt lại dữ kiện đã kiểm tra; quyết định đổi lịch vẫn là của bạn"));
+                    eb.remove();
+                }).catch(function (e) { ex.textContent = e === 404 ? "Cảnh báo này đã hết hoặc lịch vừa đổi. Mở lại thẻ Cảnh báo để xem bản mới." : "Chưa giải thích được lúc này."; eb.disabled = false; });
+            });
+            card.appendChild(eb); card.appendChild(ex);
+        }
         return card;
     }
     function applySg(ap, btn) {

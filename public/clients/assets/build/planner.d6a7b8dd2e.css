@@ -998,7 +998,8 @@ div.tpx-dayhead__t { cursor: default; }
 .tpx-dayhead h3 { margin: 0; font-size: 1.12rem; font-weight: 700; color: var(--tp-ink); position: relative; padding-left: 12px; }
 .tpx-dayhead h3::before { content: ""; position: absolute; left: 0; top: .15em; bottom: .15em; width: 4px; border-radius: 4px; background: var(--c); }
 .tpx-dayhead__date { color: var(--tp-mut); font-size: .88rem; text-transform: capitalize; white-space: nowrap; }
-.tpx-dayhead h3 { white-space: nowrap; }
+/* "Ngày 1" không bao giờ ngắt giữa chữ; text-wrap: balance toàn trang (travela-nature-unified) đặt lại chế độ ngắt nên cần độ ưu tiên cao hơn */
+.tpx-day .tpx-dayhead h3 { white-space: nowrap; text-wrap: nowrap; }
 .tpx-dayhead__act { grid-row: 1; grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
 .tpx-dayhead__act .tp-mini .fas { margin-right: 5px; font-size: .8em; }
 .tpx-daysum { grid-column: 1 / -1; margin: 0; color: #4b5563; font-size: .86rem; }
@@ -1517,7 +1518,7 @@ a.tpx-arc__n:hover { text-decoration: underline; }
 /* chẩn đoán + hành động (đợt 6) */
 .tpx-health__sum.is-err { color: #b91c1c; font-weight: 600; }
 .tpx-health.is-err { border-color: #fca5a5; background: #fff7f7; }
-.tpx-score { opacity: .8; font-weight: 600; }
+.tpx-score { font-weight: 600; }
 .tpx-rec { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0 10px; }
 .tpx-rec__h { font-size: .82rem; font-weight: 600; color: #374151; }
 .tpx-rec__b { border-color: #c4b5fd; color: #5b21b6; background: #f5f3ff; }
@@ -1605,9 +1606,9 @@ a.tpx-arc__n:hover { text-decoration: underline; }
 .tpx-daysum .tpx-loadlbl { margin-left: 0; }
 .tpx-daysum__empty { color: var(--tp-mut); font-style: italic; }
 /* thời lượng ước tính / nguồn chi phí */
-.tpx-kind__dur.is-est { color: #64748b; font-style: italic; }
+.tpx-kind__dur.is-est { color: #556375; font-style: italic; }
 .tpx-cost { display: inline-flex; align-items: baseline; gap: 4px; }
-.tpx-cost__t { font-size: .64rem; font-weight: 600; opacity: .8; text-transform: lowercase; }
+.tpx-cost__t { font-size: .64rem; font-weight: 600; color: #4b5563; text-transform: lowercase; }
 /* tối ưu tuyến: hiện tại -> đề xuất */
 .tpx-opt__cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 8px; }
 .tpx-opt__col { padding: 8px 10px; border-radius: 10px; background: #f8fafc; border: 1px solid #e5e7eb; }
@@ -1862,7 +1863,8 @@ li.tph__msg { padding: 10px; }
 
 /* ---------------- Đã ghé + danh sách phẳng ---------------- */
 .tpx-stop.is-visited .tpx-stop__name, .tpx-stop.is-visited h4 { text-decoration: line-through; text-decoration-color: rgba(15, 95, 87, .45); }
-.tpx-stop.is-visited { opacity: .82; }
+/* đã tới: gạch tên + nền nhạt; không làm mờ cả thẻ (mờ làm chữ phụ dưới mức tương phản AA) */
+.tpx-stop.is-visited .tpx-stop__card { background: #f5f8f7; }
 .tpx-visitbox { margin-left: 12px; }
 .tpx-flat { background: #fff; border: 1px solid var(--tp-line, #e5e7eb); border-radius: var(--tp-r, 14px); padding: 12px 14px; }
 .tpx-flat__sum { margin: 0 0 8px; font-weight: 600; color: #0f5f57; }
@@ -2204,6 +2206,11 @@ a.ai-sg__name:hover { color: var(--ai-brand-d); text-decoration: underline; }
 .ai-sg__tag.is-bad { background: var(--ai-miss-l); color: var(--ai-miss); }
 .ai-sg__t { margin: 7px 0 0; font-size: .84rem; line-height: 1.5; color: #33403d; white-space: pre-line; }
 .ai-sg__src { margin: 5px 0 0; font-size: .72rem; color: var(--ai-mut); }
+.ai-sg__exbtn { margin-top: 6px; padding: 0; border: 0; background: none; color: var(--ai-brand-d); font-size: .78rem; text-decoration: underline; cursor: pointer; }
+.ai-sg__exbtn:disabled { opacity: .6; cursor: default; }
+.ai-sg__ex { margin-top: 6px; padding: 8px 10px; border-left: 3px solid var(--ai-brand); background: var(--ai-brand-l); font-size: .82rem; }
+.ai-sg__ex p { margin: 0 0 4px; }
+.ai-sg__exfix { font-weight: 600; }
 .ai-sg__acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
 .ai-sg__btn { border: 1px solid var(--ai-line); background: #fff; color: var(--ai-ink); border-radius: 999px; padding: 5px 12px; font-size: .8rem; font-weight: 700; text-decoration: none; }
 .ai-sg__btn:hover { border-color: var(--ai-brand); color: var(--ai-brand-d); }
@@ -2221,6 +2228,10 @@ a.ai-sg__name:hover { color: var(--ai-brand-d); text-decoration: underline; }
 html.ai-co-on .gx-tray-fab, html.ai-co-on .gx-tray { visibility: hidden; }
 /* Điện thoại: thanh thao tác dưới đã có nút "AI" (kèm chấm cảnh báo) => bỏ nút nổi "Hỏi La bàn" trùng chức năng, đè lên nút hỗ trợ */
 @media (max-width: 991.98px) { body:has(#tpuxMobAi) .ai-co-open { display: none; } }
+/* Đợt E (AP1): dấu cảnh báo trên đầu ngày */
+.ai-daywarn { display: inline-flex; align-items: center; gap: 5px; margin: 0; padding: 2px 9px; border: 1px solid var(--ai-sand-b); border-radius: 999px; background: var(--ai-sand-l); color: var(--ai-sand-d); font-size: .75rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.ai-daywarn.is-bad { border-color: #efc2b2; background: var(--ai-miss-l); color: var(--ai-miss); }
+.ai-daywarn:focus-visible { outline: 2px solid var(--ai-brand); outline-offset: 2px; }
 
 /* clients/assets/css/planner-ux.css */
 /* Travela UX layer: sử dụng sau planner.css + planner-ai.css; mọi selector giới hạn trong .tpux */
@@ -4452,7 +4463,7 @@ a.tgs-it__name:hover {
 .tphg__dh { position: sticky; top: 0; z-index: 2; min-height: 44px; background: #fff; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 13px; padding: 4px 2px; }
 .tphg__dh small { color: #5c7477; }
 .tphg__ruler, .tphg__body { position: relative; }
-.tphg__ruler span { position: absolute; right: 4px; transform: translateY(-50%); font-size: 11px; color: #6b7c7a; }
+.tphg__ruler span { position: absolute; right: 4px; transform: translateY(-50%); font-size: 11px; color: #586866; }
 .tphg__body { background: #f7fbfa; border: 1px solid #e1ecea; border-radius: 10px; overflow: hidden; }
 .tphg__hr { position: absolute; left: 0; right: 0; border-top: 1px dashed #dfe9e7; }
 .tphg__it { position: absolute; left: 4px; right: 4px; display: flex; flex-direction: column; align-items: flex-start; gap: 0; padding: 3px 6px; border: 0; border-left: 4px solid #167a85; border-radius: 7px; background: #e6f3f1; color: #10272b; text-align: left; font-size: 12px; line-height: 1.25; overflow: hidden; cursor: pointer; }
@@ -4537,4 +4548,6 @@ a.tgs-it__name:hover {
 #tpConfirmForm .is-read { background: #fffbe6; border-color: #e0b84a; box-shadow: 0 0 0 2px rgba(224, 184, 74, .25); }
 /* Giữ chỗ cho lịch trước khi planner.js vẽ: các khối bên dưới không bị đẩy xuống sau khi trang hiện (CLS, Đợt C mục 17) */
 #tpDaysBox:empty { min-height: 75vh; }
+/* Vì sao gợi ý (mô hình cá nhân hóa, Đợt E L6) */
+.reco-why { display: block; margin-top: 2px; font-size: 12px; color: #4b6b6f; }
 

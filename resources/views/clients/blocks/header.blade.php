@@ -70,7 +70,7 @@
     {{-- Nature Luxury: lớp thiết kế cuối, giữ sau các CSS cũ --}}
     {!! \App\Support\AssetBundle::tags('site-d.css') !!}
     @if (request()->is('tours') || request()->is('diem-den') || request()->is('explore'))
-        <link rel="stylesheet" href="{{ asset('clients/assets/css/blue-lagoon-tour-explore.css') }}?v=4">
+        <link rel="stylesheet" href="{{ asset('clients/assets/css/blue-lagoon-tour-explore.css') }}?v=5">
         <link rel="stylesheet" href="{{ asset('clients/assets/css/blue-lagoon-layout-fix.css') }}?v=1">
     @endif
     <link rel="stylesheet" href="{{ asset('clients/assets/css/layout-offset.css') }}?v=2">

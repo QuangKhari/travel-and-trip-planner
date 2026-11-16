@@ -51,7 +51,7 @@
             m.appendChild(meta);
             if (e.kind === "alert" && (window.TpLaBan || hasAi)) {
                 var b = el("button", "tp-mini tgw__go", "Xem cách xử lý"); b.type = "button";
-                b.addEventListener("click", function () { openLaBan(null); });
+                b.addEventListener("click", function () { openLaBan(e.day || null); });
                 m.appendChild(b);
             }
             if (e.kind === "quote") { var qa = el("a", "tp-mini tgw__go", "Xem báo giá"); qa.href = "/bao-gia-tour"; m.appendChild(qa); }

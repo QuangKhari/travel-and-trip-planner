@@ -375,6 +375,11 @@ final class PlaceImport
                     if ($fill && empty($existing->factsSource)) {
                         $fill += ['factsSource' => $d['source'], 'factsUrl' => $d['sourceUrl'], 'factsCheckedAt' => now()];
                     }
+                    // tick "Hiển thị ngay": địa điểm có sẵn (vd nạp từ OSM, đang nháp / đã duyệt) cũng được công khai,
+                    // nếu không điểm đến vẫn báo 0 nơi dù lô đã duyệt hết
+                    if ($publish && $existing->reviewStatus !== 'published' && $existing->reviewStatus !== 'rejected') {
+                        $fill += ['reviewStatus' => 'published', 'reviewedBy' => $adminId, 'reviewedAt' => now()];
+                    }
                     if ($fill) {
                         DB::table('tbl_external_places')->where('placeId', $existing->placeId)->update($fill);
                     }

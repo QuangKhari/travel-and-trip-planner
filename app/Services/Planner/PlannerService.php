@@ -101,6 +101,10 @@ class PlannerService   // không final: test luồng "Tạo lịch với AI" tha
         if ($cands && PlaceSignals::ready()) {
             $sig = app(PlaceSignals::class);
             $ctx['profile'] = !empty($req['userId']) ? $sig->profile((int) $req['userId']) : [];
+            // Đợt E (L5): mô hình cá nhân hóa (khi bật) cho điểm "khả năng bạn chọn" từng ứng viên; engine vẫn lọc khả thi như cũ
+            if (!empty($req['userId']) && \App\Services\Planner\Reco\RecoModel::active()) {
+                $ctx['reco'] = self::recoScores((int) $req['userId'], array_column($cands, 'key'));
+            }
             $ctx['placeStats'] = $sig->stats(array_column($cands, 'key'));
             $ctx['reviews'] = $sig->reviews(array_column($cands, 'key'));
             foreach ($cands as &$cd) {
@@ -446,6 +450,23 @@ class PlannerService   // không final: test luồng "Tạo lịch với AI" tha
         }
         unset($o);
         usort($out, fn($a, $b) => [($b['score'] ?? 0), $a['id']] <=> [($a['score'] ?? 0), $b['id']]);
+
+        return $out;
+    }
+
+    /** @return array<string,float> key => xác suất chọn theo mô hình cá nhân hóa */
+    private static function recoScores(int $userId, array $keys): array
+    {
+        $model = \App\Services\Planner\Reco\RecoModel::current();
+        if (!$model || !$keys) {
+            return [];
+        }
+        $f = (new \App\Services\Planner\Reco\RecoFeatures())->load($keys);
+        $uv = $model->userVector($userId, new \App\Services\Planner\Reco\RecoFeatures());
+        $out = [];
+        foreach ($keys as $k) {
+            $out[$k] = $model->score($f->vector($userId, $k, time()), $uv, $f->groupOf($k));
+        }
 
         return $out;
     }

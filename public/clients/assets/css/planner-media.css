@@ -48,7 +48,7 @@
 .tphg__dh { position: sticky; top: 0; z-index: 2; min-height: 44px; background: #fff; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 13px; padding: 4px 2px; }
 .tphg__dh small { color: #5c7477; }
 .tphg__ruler, .tphg__body { position: relative; }
-.tphg__ruler span { position: absolute; right: 4px; transform: translateY(-50%); font-size: 11px; color: #6b7c7a; }
+.tphg__ruler span { position: absolute; right: 4px; transform: translateY(-50%); font-size: 11px; color: #586866; }
 .tphg__body { background: #f7fbfa; border: 1px solid #e1ecea; border-radius: 10px; overflow: hidden; }
 .tphg__hr { position: absolute; left: 0; right: 0; border-top: 1px dashed #dfe9e7; }
 .tphg__it { position: absolute; left: 4px; right: 4px; display: flex; flex-direction: column; align-items: flex-start; gap: 0; padding: 3px 6px; border: 0; border-left: 4px solid #167a85; border-radius: 7px; background: #e6f3f1; color: #10272b; text-align: left; font-size: 12px; line-height: 1.25; overflow: hidden; cursor: pointer; }
@@ -133,3 +133,5 @@
 #tpConfirmForm .is-read { background: #fffbe6; border-color: #e0b84a; box-shadow: 0 0 0 2px rgba(224, 184, 74, .25); }
 /* Giữ chỗ cho lịch trước khi planner.js vẽ: các khối bên dưới không bị đẩy xuống sau khi trang hiện (CLS, Đợt C mục 17) */
 #tpDaysBox:empty { min-height: 75vh; }
+/* Vì sao gợi ý (mô hình cá nhân hóa, Đợt E L6) */
+.reco-why { display: block; margin-top: 2px; font-size: 12px; color: #4b6b6f; }

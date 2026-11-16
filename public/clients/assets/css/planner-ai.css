@@ -319,6 +319,11 @@ a.ai-sg__name:hover { color: var(--ai-brand-d); text-decoration: underline; }
 .ai-sg__tag.is-bad { background: var(--ai-miss-l); color: var(--ai-miss); }
 .ai-sg__t { margin: 7px 0 0; font-size: .84rem; line-height: 1.5; color: #33403d; white-space: pre-line; }
 .ai-sg__src { margin: 5px 0 0; font-size: .72rem; color: var(--ai-mut); }
+.ai-sg__exbtn { margin-top: 6px; padding: 0; border: 0; background: none; color: var(--ai-brand-d); font-size: .78rem; text-decoration: underline; cursor: pointer; }
+.ai-sg__exbtn:disabled { opacity: .6; cursor: default; }
+.ai-sg__ex { margin-top: 6px; padding: 8px 10px; border-left: 3px solid var(--ai-brand); background: var(--ai-brand-l); font-size: .82rem; }
+.ai-sg__ex p { margin: 0 0 4px; }
+.ai-sg__exfix { font-weight: 600; }
 .ai-sg__acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
 .ai-sg__btn { border: 1px solid var(--ai-line); background: #fff; color: var(--ai-ink); border-radius: 999px; padding: 5px 12px; font-size: .8rem; font-weight: 700; text-decoration: none; }
 .ai-sg__btn:hover { border-color: var(--ai-brand); color: var(--ai-brand-d); }
@@ -336,3 +341,7 @@ a.ai-sg__name:hover { color: var(--ai-brand-d); text-decoration: underline; }
 html.ai-co-on .gx-tray-fab, html.ai-co-on .gx-tray { visibility: hidden; }
 /* Điện thoại: thanh thao tác dưới đã có nút "AI" (kèm chấm cảnh báo) => bỏ nút nổi "Hỏi La bàn" trùng chức năng, đè lên nút hỗ trợ */
 @media (max-width: 991.98px) { body:has(#tpuxMobAi) .ai-co-open { display: none; } }
+/* Đợt E (AP1): dấu cảnh báo trên đầu ngày */
+.ai-daywarn { display: inline-flex; align-items: center; gap: 5px; margin: 0; padding: 2px 9px; border: 1px solid var(--ai-sand-b); border-radius: 999px; background: var(--ai-sand-l); color: var(--ai-sand-d); font-size: .75rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.ai-daywarn.is-bad { border-color: #efc2b2; background: var(--ai-miss-l); color: var(--ai-miss); }
+.ai-daywarn:focus-visible { outline: 2px solid var(--ai-brand); outline-offset: 2px; }

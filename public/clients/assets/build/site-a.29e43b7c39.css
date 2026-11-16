@@ -466,7 +466,7 @@ a.theme-btn {
   -webkit-box-pack: center;
   -ms-flex-pack: center;
   justify-content: center;
-  text-transform: capitalize;
+  text-transform: none;   /* Travela: nhãn tiếng Việt viết hoa đầu câu, không viết hoa mọi chữ ("Tạm ngừng học") */
   background: var(--primary-color); }
   @media only screen and (max-width: 375px) {
     .theme-btn,

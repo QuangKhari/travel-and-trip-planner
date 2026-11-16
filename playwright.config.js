@@ -18,6 +18,6 @@ export default defineConfig({
     },
     projects: [
         { name: 'desktop', use: { viewport: { width: 1366, height: 900 } } },
-        { name: 'mobile', use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }, testMatch: /public|planner/ },
+        { name: 'mobile', use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }, testMatch: /public|planner|a11y/ },
     ],
 });

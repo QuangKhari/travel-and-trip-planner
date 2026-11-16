@@ -996,7 +996,8 @@ div.tpx-dayhead__t { cursor: default; }
 .tpx-dayhead h3 { margin: 0; font-size: 1.12rem; font-weight: 700; color: var(--tp-ink); position: relative; padding-left: 12px; }
 .tpx-dayhead h3::before { content: ""; position: absolute; left: 0; top: .15em; bottom: .15em; width: 4px; border-radius: 4px; background: var(--c); }
 .tpx-dayhead__date { color: var(--tp-mut); font-size: .88rem; text-transform: capitalize; white-space: nowrap; }
-.tpx-dayhead h3 { white-space: nowrap; }
+/* "Ngày 1" không bao giờ ngắt giữa chữ; text-wrap: balance toàn trang (travela-nature-unified) đặt lại chế độ ngắt nên cần độ ưu tiên cao hơn */
+.tpx-day .tpx-dayhead h3 { white-space: nowrap; text-wrap: nowrap; }
 .tpx-dayhead__act { grid-row: 1; grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
 .tpx-dayhead__act .tp-mini .fas { margin-right: 5px; font-size: .8em; }
 .tpx-daysum { grid-column: 1 / -1; margin: 0; color: #4b5563; font-size: .86rem; }
@@ -1515,7 +1516,7 @@ a.tpx-arc__n:hover { text-decoration: underline; }
 /* chẩn đoán + hành động (đợt 6) */
 .tpx-health__sum.is-err { color: #b91c1c; font-weight: 600; }
 .tpx-health.is-err { border-color: #fca5a5; background: #fff7f7; }
-.tpx-score { opacity: .8; font-weight: 600; }
+.tpx-score { font-weight: 600; }
 .tpx-rec { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0 10px; }
 .tpx-rec__h { font-size: .82rem; font-weight: 600; color: #374151; }
 .tpx-rec__b { border-color: #c4b5fd; color: #5b21b6; background: #f5f3ff; }
@@ -1603,9 +1604,9 @@ a.tpx-arc__n:hover { text-decoration: underline; }
 .tpx-daysum .tpx-loadlbl { margin-left: 0; }
 .tpx-daysum__empty { color: var(--tp-mut); font-style: italic; }
 /* thời lượng ước tính / nguồn chi phí */
-.tpx-kind__dur.is-est { color: #64748b; font-style: italic; }
+.tpx-kind__dur.is-est { color: #556375; font-style: italic; }
 .tpx-cost { display: inline-flex; align-items: baseline; gap: 4px; }
-.tpx-cost__t { font-size: .64rem; font-weight: 600; opacity: .8; text-transform: lowercase; }
+.tpx-cost__t { font-size: .64rem; font-weight: 600; color: #4b5563; text-transform: lowercase; }
 /* tối ưu tuyến: hiện tại -> đề xuất */
 .tpx-opt__cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 8px; }
 .tpx-opt__col { padding: 8px 10px; border-radius: 10px; background: #f8fafc; border: 1px solid #e5e7eb; }
@@ -1860,7 +1861,8 @@ li.tph__msg { padding: 10px; }
 
 /* ---------------- Đã ghé + danh sách phẳng ---------------- */
 .tpx-stop.is-visited .tpx-stop__name, .tpx-stop.is-visited h4 { text-decoration: line-through; text-decoration-color: rgba(15, 95, 87, .45); }
-.tpx-stop.is-visited { opacity: .82; }
+/* đã tới: gạch tên + nền nhạt; không làm mờ cả thẻ (mờ làm chữ phụ dưới mức tương phản AA) */
+.tpx-stop.is-visited .tpx-stop__card { background: #f5f8f7; }
 .tpx-visitbox { margin-left: 12px; }
 .tpx-flat { background: #fff; border: 1px solid var(--tp-line, #e5e7eb); border-radius: var(--tp-r, 14px); padding: 12px 14px; }
 .tpx-flat__sum { margin: 0 0 8px; font-weight: 600; color: #0f5f57; }

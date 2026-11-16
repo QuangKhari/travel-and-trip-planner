@@ -85,13 +85,48 @@ class PlannerAiController extends Controller
 
         $out = $suggest->suggest($trip, $v['intent'], $v['day'] ?? null);
         // Đợt D (L1): thẻ gợi ý đã hiện (nơi nào, thứ tự nào) để học cá nhân hóa
-        $shown = array_values(array_filter(array_map(fn($c) => isset($c['apply']['refId']) ? ['type' => $c['apply']['type'] ?? null, 'refId' => $c['apply']['refId']] : null, (array) ($out['cards'] ?? []))));
-        $out['listId'] = \App\Services\Planner\Reco\RecoLog::log($this->uid(), $trip, 'suggest', $shown, ['day' => $v['day'] ?? null]);
+        $cards = (array) ($out['cards'] ?? []);
+        $shown = [];
+        foreach ($cards as $i => $c) {
+            if (isset($c['apply']['refId'])) {
+                $shown[] = ['type' => $c['apply']['type'] ?? null, 'refId' => $c['apply']['refId'], '_i' => $i];
+            }
+        }
+        // Đợt E (L5): thẻ gợi ý xếp lại theo mô hình khi bật; thẻ không phải nơi (lễ hội, lời khuyên) giữ chỗ cũ ở cuối
+        $rk = \App\Services\Planner\Reco\RecoRanker::rank($this->uid(), 'suggest', $shown);
+        if ($rk['policy'] !== 'rules') {
+            $used = [];
+            $re = [];
+            foreach ($rk['results'] as $r) {
+                $used[$r['_i']] = true;
+                $re[] = $cards[$r['_i']] + array_intersect_key($r, array_flip(['why', 'explore', 'score', 'team']));
+            }
+            foreach ($cards as $i => $c) {
+                if (!isset($used[$i])) {
+                    $re[] = $c;
+                }
+            }
+            $out['cards'] = $re;
+        }
+        $out['listId'] = \App\Services\Planner\Reco\RecoLog::log($this->uid(), $trip, 'suggest', $rk['results'], ['day' => $v['day'] ?? null], $rk['policy']);
 
         return response()->json($out);
     }
 
     /** POST /len-ke-hoach/{id}/la-ban/goi-y/ap-dung {op, type?, refId?, toDay?, item?, startMin?, rev}: nút trên thẻ -> phiếu kiểm chứng. */
+    /** Đợt E (AP2): lời giải thích ngắn cho một thẻ cảnh báo — LLM chỉ diễn đạt dữ kiện của thẻ, có chốt chặn và mẫu soạn sẵn. */
+    public function alertExplain(Request $request, int $id, TripSuggest $suggest, \App\Services\Ai\Explain\AlertExplainer $ex): JsonResponse
+    {
+        $trip = (app(TripSharing::class)->editable($this->uid(), $id) ?? abort(404))['trip'];
+        $v = $request->validate(['card' => ['required', 'string', 'max:200']]);
+        $card = collect($suggest->suggest($trip, 'alerts')['cards'] ?? [])->firstWhere('id', $v['card']);
+        if (!$card) {
+            return response()->json(['ok' => false, 'message' => 'Cảnh báo này đã hết hoặc lịch vừa đổi. Mở lại thẻ Cảnh báo để xem bản mới.'], 404);
+        }
+
+        return response()->json(['ok' => true, 'card' => $card['id']] + $ex->explain($card, $this->uid() ?: null, (int) $trip->tripId));
+    }
+
     public function suggestApply(Request $request, int $id, TripSuggest $suggest, CopilotService $copilot): JsonResponse
     {
         abort_unless(config('ai.features.suggest', true), 404);

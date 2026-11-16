@@ -95,6 +95,16 @@ class PlaceImportTest extends TestCase
         $this->assertSame(0, $again['created']);
     }
 
+    public function test_publish_also_publishes_the_matched_existing_place(): void
+    {
+        DB::table('tbl_external_places')->where('externalId', 'x1')->update(['reviewStatus' => 'draft']);
+        $r = PlaceImport::stage($this->csv(), 'da-lat.csv', $this->admin);
+        $ids = DB::table('tbl_import_rows')->where('batchId', $r['batchId'])->pluck('rowId', 'line');
+        $out = PlaceImport::approve($r['batchId'], [$ids[3]], $this->admin, true);
+        $this->assertSame(1, $out['merged']);
+        $this->assertSame('published', DB::table('tbl_external_places')->where('externalId', 'x1')->value('reviewStatus'));
+    }
+
     public function test_admin_screens_upload_review_and_reject(): void
     {
         $s = ['adminId' => $this->admin, 'adminRole' => 'manager'];

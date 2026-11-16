@@ -267,6 +267,9 @@
 .bl-tour .trc__b{padding:18px;}
 .bl-tour .tr-search select,.bl-tour .tr-sort select{cursor:pointer;}
 @media (max-width: 1180px){
+  /* khối "TOUR page refined" phía trên đặt lưới 5 cột không kèm điều kiện, đè các @media cũ -> các ô chồng lên nhau trên điện thoại */
+  .bl-tour .tr-search{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .bl-tour .tr-search__btn{grid-column:1/-1;}
   .bl-tour .bl-tour-benefits{grid-template-columns:repeat(2,minmax(0,1fr));}
   .bl-tour .tr-cats{grid-template-columns:repeat(4,minmax(0,1fr));}
   .bl-tour .tr-layout{grid-template-columns:1fr;}
@@ -277,6 +280,9 @@
   .bl-tour .trc-grid{grid-template-columns:1fr;}
 }
 @media (max-width: 720px){
+  .bl-tour .tr-search{grid-template-columns:1fr;padding:10px;border-radius:20px;}
+  .bl-tour .tr-field{min-height:auto;}
+  .bl-tour .tr-search__btn{width:100%;}
   .bl-tour .bl-tour-benefits{grid-template-columns:1fr;}
   .bl-tour .tr-cats{grid-template-columns:repeat(2,minmax(0,1fr));padding:10px;}
   .bl-tour .tr-cat{min-height:96px;font-size:14px;}

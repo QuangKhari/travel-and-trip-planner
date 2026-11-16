@@ -33,6 +33,8 @@
             <div class="tpl-head__act">
                 <a class="tp-btn" href="#tplNew" id="tplNewBtn"><i class="fas fa-plus" aria-hidden="true"></i> Chuyến đi
                     mới</a>
+                {{-- PWA: chỉ hiện khi trình duyệt cho cài (Android/máy tính) hoặc là iPhone chưa cài; planner-pwa.js điều khiển --}}
+                <button type="button" class="tp-btn tp-btn--ghost" id="tpInstall" hidden><i class="fas fa-mobile-alt" aria-hidden="true"></i> Cài lên điện thoại</button>
             </div>
         </header>
 
@@ -211,10 +213,10 @@
                     <li class="tpl-card"
                         data-phase="{{ in_array($t->phase, ['past', 'done'], true) ? 'done' : $t->phase }}">
                         <a class="tpl-card__ph" href="{{ route('planner.edit', ['id' => $t->tripId]) }}"
-                            @if ($t->coverUrl) style="background-image: url('{{ $t->coverUrl }}')" @endif
-                            aria-label="Mở {{ $t->title }}">
+                            @if ($t->coverUrl) style="background-image: url('{{ $t->coverUrl }}')" @endif>
+                            <span class="sr-only">Mở {{ $t->title }}: </span>
                             @unless ($t->coverUrl)
-                                <span
+                                <span aria-hidden="true"
                                     class="tpl-card__ini">{{ mb_strtoupper(mb_substr($t->destName ?: $t->title, 0, 1)) }}</span>
                             @endunless
                             <span
@@ -274,10 +276,10 @@
                 @foreach ($sharedTrips ?? [] as $t)
                     <li class="tpl-card tpl-card--shared" data-phase="shared">
                         <a class="tpl-card__ph" href="{{ route('planner.edit', ['id' => $t->tripId]) }}"
-                            @if ($t->coverUrl) style="background-image: url('{{ $t->coverUrl }}')" @endif
-                            aria-label="Mở {{ $t->title }}">
+                            @if ($t->coverUrl) style="background-image: url('{{ $t->coverUrl }}')" @endif>
+                            <span class="sr-only">Mở {{ $t->title }}: </span>
                             @unless ($t->coverUrl)
-                                <span
+                                <span aria-hidden="true"
                                     class="tpl-card__ini">{{ mb_strtoupper(mb_substr($t->destName ?: $t->title, 0, 1)) }}</span>
                             @endunless
                             <span
@@ -326,4 +328,5 @@
 </main>
 
 <script src="{{ asset('clients/assets/js/planner-list.js') }}?v=2" defer></script>
+<script src="{{ asset('clients/assets/js/planner-pwa.js') }}?v=1" defer></script>
 @include('clients.blocks.footer')

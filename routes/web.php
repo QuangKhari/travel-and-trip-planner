@@ -269,6 +269,7 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::post('/len-ke-hoach/{id}/la-ban/goi-y/ap-dung', [PlannerAiController::class, 'suggestApply'])->whereNumber('id')->middleware('throttle:30,1,planner-ai-suggest-apply')->name('planner.ai.suggest.apply');
     Route::post('/len-ke-hoach/{id}/la-ban/kiem-tra-lai', [PlannerAiController::class, 'recheck'])->whereNumber('id')->middleware('throttle:30,1,planner-ai-recheck')->name('planner.ai.recheck');
     Route::post('/len-ke-hoach/{id}/dan-ghi-chu', [PlannerAiController::class, 'notes'])->whereNumber('id')->middleware('throttle:10,1,planner-notes')->name('planner.notes');
+    Route::post('/len-ke-hoach/{id}/la-ban/canh-bao/giai-thich', [PlannerAiController::class, 'alertExplain'])->whereNumber('id')->middleware('throttle:20,1,planner-ai-alert')->name('planner.ai.alert.explain');
     Route::post('/len-ke-hoach/{id}/la-ban/ket-qua', [PlannerAiController::class, 'feedback'])->whereNumber('id')->middleware('throttle:60,1,planner-ai-feedback')->name('planner.ai.feedback');
     Route::post('/la-ban/danh-gia', [PlannerAiController::class, 'rate'])->middleware('throttle:30,1,planner-ai-rate')->name('planner.ai.rate');
     Route::post('/len-ke-hoach/{id}/trang-thai', [PlannerController::class, 'status'])->whereNumber('id')->middleware('throttle:60,1,planner-status')->name('planner.status');

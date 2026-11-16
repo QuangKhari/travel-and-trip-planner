@@ -41,6 +41,9 @@
                         Chưa có thao tác nào với nhóm này.
                     @endif
                     @if ($r['examples']) Ví dụ: {{ implode(', ', $r['examples']) }}.@endif
+                    @if (isset($learned[$r['grp']]) && abs($learned[$r['grp']]) >= 0.1)
+                        <br><small>Bộ gợi ý cá nhân hóa đã học: bạn {{ $learned[$r['grp']] > 0 ? 'hay chọn' : 'thường bỏ qua' }} nhóm này nhiều hơn người khác, nên xếp nó {{ $learned[$r['grp']] > 0 ? 'lên trước' : 'xuống sau' }}.</small>
+                    @endif
                 </p>
                 @if ($ready)
                     <form method="POST" action="{{ route('planner.taste.set') }}" class="tst__set">@csrf<input type="hidden" name="grp" value="{{ $r['grp'] }}">

@@ -71,7 +71,7 @@
     <link rel="stylesheet" href="{{ asset('clients/assets/css/inspiration-hub.css') }}?v=3">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-weather.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/gx-guide.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/mobile-nav.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/mobile-nav.css') }}?v=2">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/site-ux.css') }}?v=1">
     {{-- Giao diện mới: phải nằm CUỐI <head> --}}
     <link rel="stylesheet" href="{{ asset('clients/assets/css/tv3.css') }}?v=1">

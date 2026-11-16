@@ -716,7 +716,10 @@ class PlannerController extends Controller
         }
 
         $out = $explorer->around($pts, (float) ($v['km'] ?? 1), (string) ($v['group'] ?? 'all'), $v['have'] ?? []);
-        $out['listId'] = \App\Services\Planner\Reco\RecoLog::log($this->uid(), $trip, 'around', (array) ($out['results'] ?? []), ['lat' => $pts[0][0], 'lng' => $pts[0][1]]);
+        $ctx = ['lat' => $pts[0][0], 'lng' => $pts[0][1]];
+        $rk = \App\Services\Planner\Reco\RecoRanker::rank($this->uid(), 'around', (array) ($out['results'] ?? []), $ctx);
+        $out['results'] = $rk['results'];
+        $out['listId'] = \App\Services\Planner\Reco\RecoLog::log($this->uid(), $trip, 'around', $out['results'], $ctx, $rk['policy']);
 
         return response()->json($out);
     }
@@ -899,7 +902,11 @@ class PlannerController extends Controller
         $results = $planner->search($trip, (string) ($v['q'] ?? ''), $v['type'] ?? null, isset($v['dest']) ? (int) $v['dest'] : null);
         // Đợt D (L1): ghi danh sách đã hiện để học cá nhân hóa (không lưu chữ đã gõ)
         $q = trim((string) ($v['q'] ?? ''));
-        $listId = \App\Services\Planner\Reco\RecoLog::log($this->uid(), $trip, $q === '' ? 'browse' : 'search', $results, ['qlen' => mb_strlen($q)]);
+        $surface = $q === '' ? 'browse' : 'search';
+        // Đợt E (L5): danh sách duyệt được xếp lại theo mô hình cá nhân hóa khi bật (tìm có chữ giữ thứ tự khớp chữ)
+        $rk = \App\Services\Planner\Reco\RecoRanker::rank($this->uid(), $surface, $results);
+        $results = $rk['results'];
+        $listId = \App\Services\Planner\Reco\RecoLog::log($this->uid(), $trip, $surface, $results, ['qlen' => mb_strlen($q)], $rk['policy']);
 
         return response()->json(['results' => $results, 'listId' => $listId]);
     }

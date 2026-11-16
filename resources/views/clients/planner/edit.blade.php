@@ -87,7 +87,7 @@
                     @endif
                 </div>
             </details>
-            <button type="button" id="tpInviteBtn" class="tp-btn tpx-share" aria-label="{{ $role === 'owner' ? 'Mời bạn đồng hành' : 'Người trong chuyến' }} ({{ count($members) }} người)"><i class="fas fa-share-alt" aria-hidden="true"></i> <span class="tpx-share__t">Chia sẻ</span></button>
+            <button type="button" id="tpInviteBtn" class="tp-btn tpx-share"><i class="fas fa-share-alt" aria-hidden="true"></i> <span class="tpx-share__t">Chia sẻ</span><span class="sr-only">: {{ $role === 'owner' ? 'mời bạn đồng hành' : 'người trong chuyến' }} ({{ count($members) }} người)</span></button>
         </div>
     </div>
 
@@ -112,7 +112,7 @@
                 <span class="tpx-presence" id="tpPresence" aria-live="polite" hidden></span>
             </div>
             <div class="tpx-hero__row">
-                <ul class="tpx-kpis" id="tpKpis" aria-label="Tổng quan chuyến đi"></ul>
+                <ul class="tpx-kpis" id="tpKpis" aria-label="Tổng quan chuyến đi" tabindex="0">{{-- tabindex: trên điện thoại dải này cuộn ngang, người dùng bàn phím phải vào được --}}</ul>
                 <button type="button" id="tpuxHealthBtn" class="tpux-overview__health tpx-hero__health" aria-controls="tpHealth"><i class="fas fa-heartbeat" aria-hidden="true"></i><span id="tpuxHealthText">Kiểm tra lịch trình</span><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
             </div>
             {{-- Chất lượng chuyến do Travela đánh giá (TripHealth::quality): khả thi, hợp thời tiết, hợp sở thích, ngân sách, thời gian đi lại --}}
@@ -676,25 +676,26 @@
 <script src="{{ asset('clients/assets/js/planner-save.js') }}?v=3"></script>
 <script src="{{ asset('clients/assets/js/planner-resolve.js') }}?v=2"></script>
 <script src="{{ asset('clients/assets/js/planner-map.js') }}?v=7"></script>
-<script src="{{ asset('clients/assets/js/planner.js') }}?v=44" defer></script>
+<script src="{{ asset('clients/assets/js/planner.js') }}?v=46" defer></script>
 <script src="{{ asset('clients/assets/js/planner-decide.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-extras.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-travel.js') }}?v=3" defer></script>
 <script src="{{ asset('clients/assets/js/planner-share.js') }}?v=1" defer></script>
 <script src="{{ asset('clients/assets/js/planner-expenses.js') }}?v=1" defer></script>
 <script src="{{ asset('clients/assets/js/planner-bookings.js') }}?v=3" defer></script>
-<script src="{{ asset('clients/assets/js/planner-watch.js') }}?v=6" defer></script>
+<script src="{{ asset('clients/assets/js/planner-watch.js') }}?v=7" defer></script>
 @if (!empty($client['historyUrl']))<script src="{{ asset('clients/assets/js/planner-history.js') }}?v=1" defer></script>@endif
 @if ($role !== 'view')<script src="{{ asset('clients/assets/js/ai-feedback.js') }}?v=2" data-url="{{ route('planner.ai.rate') }}" data-csrf="{{ csrf_token() }}" data-trip="{{ $client['trip']['id'] ?? '' }}" defer></script>@endif
 <script type="application/json" id="aiData">{!! json_encode(['explainUrl' => route('planner.ai.explain', ['id' => $t['id']]), 'csrf' => csrf_token(), 'on' => $aiExplainOn,
     'copilot' => $aiCopilotOn ? ['url' => route('planner.ai.copilot', ['id' => $t['id']]), 'recheckUrl' => route('planner.ai.recheck', ['id' => $t['id']]),
         'feedbackUrl' => route('planner.ai.feedback', ['id' => $t['id']]),
         'suggestUrl' => config('ai.features.suggest', true) ? route('planner.ai.suggest', ['id' => $t['id']]) : null, 'suggestApplyUrl' => route('planner.ai.suggest.apply', ['id' => $t['id']]),
+        'alertExplainUrl' => route('planner.ai.alert.explain', ['id' => $t['id']]),
         'llm' => (bool) ($aiLlmOn ?? true)] : null], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
 <script src="{{ asset('clients/assets/js/planner-ai-explain.js') }}?v=1" defer></script>
 <script src="{{ asset('clients/assets/js/planner-ux.js') }}?v=1" defer></script>
 @if ($aiCopilotOn)
-    <script src="{{ asset('clients/assets/js/planner-ai-copilot.js') }}?v=5" defer></script>
+    <script src="{{ asset('clients/assets/js/planner-ai-copilot.js') }}?v=8" defer></script>
 @endif
 
 @include('clients.blocks.footer')

@@ -158,12 +158,13 @@
         if (ui || !document.body) return;
         var fab = el("button", "gx-tray-fab");
         fab.type = "button";
-        fab.setAttribute("aria-label", "Mở khay chuyến đi");
         fab.setAttribute("aria-expanded", "false");
         var iconWrap = el("span", "gx-tray-ico");
         // SVG thay emoji: emoji hành lý có thể thành ô vuông trên Windows/Android.
         iconWrap.innerHTML = '<svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="7" width="16" height="14" rx="3"/><path d="M9 7V5a3 3 0 0 1 6 0v2M8 11v6m8-6v6"/></svg>';
         fab.appendChild(iconWrap);
+        // tên nút = chữ ẩn + số trên huy hiệu ("Mở khay chuyến đi, số mục: 3") để tên đọc ra khớp chữ nhìn thấy (WCAG 2.5.3)
+        fab.appendChild(el("span", "sr-only", "Mở khay chuyến đi, số mục: "));
         var badge = el("b", "gx-tray-count", "0");
         fab.appendChild(badge);
 

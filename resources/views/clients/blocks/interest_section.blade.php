@@ -40,17 +40,18 @@
                             class="tvh-row{{ $loop->first ? ' is-selected is-open' : '' }}"
                             data-slug="{{ $it['slug'] }}" data-n="{{ $i }}"
                             @if ($loop->first) aria-current="true" @endif
-                            aria-label="{{ $it['name'] }}, {{ $it['tagline'] }}, {{ $it['count'] }} điểm đến">
+>
                             <svg class="tvh-row__scene" viewBox="0 0 320 170" preserveAspectRatio="xMidYMin slice"
                                 aria-hidden="true" focusable="false">
                                 <use href="#tvh-m-{{ $it['slug'] }}" />
                             </svg>
                             <span class="tvh-row__bar">
                                 <span class="tvh-row__line">
-                                    <span class="tvh-row__num">{{ sprintf('%02d', $i + 1) }}</span>
+                                    <span class="tvh-row__num" aria-hidden="true">{{ sprintf('%02d', $i + 1) }}</span>
                                     <span class="tvh-row__chip" aria-hidden="true"><i
                                             class="fas {{ $it['icon'] }}"></i></span>
                                     <strong class="tvh-row__name">{{ $it['name'] }}</strong>
+                                    <span class="sr-only">, {{ $it['tagline'] }}, {{ $it['count'] }} điểm đến</span>
                                     <span class="tvh-row__slot" aria-hidden="true">
                                         <span class="tvh-row__count">{{ $it['count'] }} nơi</span>
                                         <span class="tvh-row__pick">Chọn</span>

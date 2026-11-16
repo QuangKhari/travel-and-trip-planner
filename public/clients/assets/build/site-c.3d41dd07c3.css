@@ -21709,6 +21709,11 @@ body.page-tour-detail .tv-hsearch__form input {
     body.has-tabbar .tc-widget {
         bottom: calc(76px + env(safe-area-inset-bottom, 0px));
     }
+    /* Trang có thanh thao tác dính đáy riêng (lịch chuyến, tạo lịch với AI, đề xuất lịch): nút liên hệ nổi đè lên nút chính
+       ("Gửi", "Xem trước", thanh Lịch trình/Bản đồ). Ẩn ở đây; liên hệ vẫn có trong menu ☰ và trang /ho-tro. */
+    body:has(main.tp--edit, main.pai, main.tpf) .tc-widget {
+        display: none;
+    }
 
     /* tờ trượt */
     .gx-tray-backdrop:not([hidden]) {

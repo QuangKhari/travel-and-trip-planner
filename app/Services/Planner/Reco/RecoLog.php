@@ -44,7 +44,8 @@ final class RecoLog
             if (!in_array($type, self::TYPES, true) || $ref <= 0) {
                 continue;
             }
-            $rows[] = ['listId' => $listId, 'userId' => $userId, 'tripId' => $trip->tripId ?? null, 'surface' => $surface, 'policy' => $policy,
+            $rows[] = ['listId' => $listId, 'userId' => $userId, 'tripId' => $trip->tripId ?? null, 'surface' => $surface,
+                'policy' => isset($r['team']) && $policy === 'interleave' ? 'il-' . $r['team'] : $policy,
                 'refType' => $type, 'refId' => $ref, 'position' => $pos++, 'score' => isset($r['score']) && is_numeric($r['score']) ? (float) $r['score'] : null,
                 'ctx' => json_encode(self::context($trip, $ctx)), 'createdAt' => now()];
             if ($pos >= self::MAX_PER_LIST) {
@@ -121,7 +122,7 @@ final class RecoLog
             if ($label === 0 && $t > $settle->getTimestamp()) {
                 continue;   // còn quá mới để coi là "không chọn"
             }
-            $out[] = ['impressionId' => (int) $i->impressionId, 'userId' => (int) $i->userId, 'tripId' => $i->tripId ? (int) $i->tripId : null,
+            $out[] = ['impressionId' => (int) $i->impressionId, 'listId' => $i->listId, 'userId' => (int) $i->userId, 'tripId' => $i->tripId ? (int) $i->tripId : null,
                 'surface' => $i->surface, 'policy' => $i->policy, 'refType' => $i->refType, 'refId' => (int) $i->refId, 'position' => (int) $i->position,
                 'ctx' => json_decode((string) $i->ctx, true) ?: [], 'createdAt' => (string) $i->createdAt, 'label' => $label];
         }

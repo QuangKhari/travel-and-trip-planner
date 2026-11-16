@@ -2,12 +2,13 @@
  * Service worker của Travela (PWA):
  *  1. Mở lại trang chuyến đi khi MẤT MẠNG: trang /len-ke-hoach/{id} lấy mạng trước, thành công thì lưu bản sao; mất mạng thì trả bản sao
  *     (lịch nằm sẵn trong trang nên "Hôm nay", giờ đi, chỉ đường vẫn xem được; sửa khi mất mạng được giữ ở bản nháp của trình duyệt).
+ *     Trang danh sách /len-ke-hoach cũng lưu bản sao để mở lại được chuyến khi mất mạng.
  *     Vé điện tử tour /ve-tour/{id} cũng vậy: mở một lần khi có mạng, mất sóng ở điểm tập trung vẫn đưa được mã QR.
  *  2. CSS/JS/ảnh tĩnh: lấy bộ nhớ đệm trước, cập nhật ngầm.
  *  3. Thông báo đẩy: máy chủ chỉ "gõ cửa" (không gửi nội dung); service worker tự hỏi /thong-bao/moi-nhat rồi hiện thông báo.
  * Không đụng tới yêu cầu POST, API, trang quản trị, thanh toán.
  */
-const VERSION = "tv-pwa-2";
+const VERSION = "tv-pwa-3";
 const PAGES = VERSION + "-pages";
 const STATIC = VERSION + "-static";
 
@@ -16,7 +17,7 @@ self.addEventListener("activate", (e) => {
     e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => !k.startsWith(VERSION)).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
 
-function isTripPage(url) { return /^\/len-ke-hoach\/\d+\/?$/.test(url.pathname) || /^\/ve-tour\/\d+\/?$/.test(url.pathname); }
+function isTripPage(url) { return /^\/len-ke-hoach\/?$/.test(url.pathname) || /^\/len-ke-hoach\/\d+\/?$/.test(url.pathname) || /^\/ve-tour\/\d+\/?$/.test(url.pathname); }
 function isStatic(url) { return /^\/(clients|admin\/vendors)\/assets?\/|^\/clients\/assets\//.test(url.pathname) && /\.(css|js|png|jpe?g|webp|svg|woff2?)$/.test(url.pathname); }
 
 self.addEventListener("fetch", (e) => {

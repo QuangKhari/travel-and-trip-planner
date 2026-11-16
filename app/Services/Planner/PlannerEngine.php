@@ -441,6 +441,14 @@ final class PlannerEngine
                 $why[] = 'Bạn hay giữ và ghé những nơi kiểu này';
             }
         }
+        // Đợt E (L5): khả năng bạn chọn nơi này theo mô hình cá nhân hóa (học từ những gì bạn và người khác đã chọn / bỏ)
+        $rp = $ctx['reco'][$c['key']] ?? null;
+        if ($rp !== null) {
+            $score += ($w['model'] ?? 8) * (($rp - 0.5) * 2);
+            if ($rp >= 0.65) {
+                $why[] = 'Hợp với những nơi bạn hay chọn';
+            }
+        }
         $st = $ctx['placeStats'][$c['key']] ?? null;
         if ($st) {
             $score += ($w['crowd_keep'] ?? 6) * (($st['keep'] - 0.5) * 2);
