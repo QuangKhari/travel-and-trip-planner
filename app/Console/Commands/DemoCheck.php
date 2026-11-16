@@ -43,6 +43,16 @@ class DemoCheck extends Command
         $this->row('Cấu hình', 'APP_DEBUG', config('app.debug') ? 'warn' : 'ok', config('app.debug') ? 'đang bật: lỗi sẽ hiện chi tiết cho người xem' : 'tắt');
         $url = (string) config('app.url');
         $this->row('Cấu hình', 'APP_URL', str_starts_with($url, 'https://') ? 'ok' : 'warn', $url . (str_starts_with($url, 'https://') ? '' : ' (chưa HTTPS: PWA, thông báo đẩy, thanh toán cần HTTPS)'));
+        if (str_starts_with($url, 'https://')) {
+            $this->row('Cấu hình', 'Cookie phiên chỉ qua HTTPS', config('session.secure') ? 'ok' : 'warn', config('session.secure') ? 'có' : 'SESSION_SECURE_COOKIE chưa bật');
+        }
+        // OWASP A02: mật khẩu MD5 cũ chỉ còn để nâng cấp khi người đó đăng nhập lại
+        $md5 = \Illuminate\Support\Facades\DB::table('tbl_users')->whereRaw("password REGEXP '^[a-fA-F0-9]{32}$'")->count()
+            + \Illuminate\Support\Facades\DB::table('tbl_admin')->whereRaw("passWord REGEXP '^[a-fA-F0-9]{32}$'")->count();
+        $this->row('Bảo mật', 'Mật khẩu MD5 cũ', $md5 ? 'warn' : 'ok', $md5 ? "$md5 tài khoản (tự nâng lên bcrypt khi đăng nhập; tài khoản bỏ hoang nên đặt lại)" : 'không còn');
+        if (config('study.enabled')) {
+            $this->row('Cấu hình', 'Buổi thử (STUDY_ENABLED)', 'warn', 'đang bật: tắt sau buổi thử');
+        }
         $this->row('Cấu hình', 'Gửi mail', config('mail.default') === 'log' ? 'warn' : 'ok', (string) config('mail.default'));
         $this->row('Cấu hình', 'Bản đồ', 'ok', config('services.google_maps.key') ? 'Google Maps' : 'OpenStreetMap / MapLibre (không cần khóa)');
         $this->row('Cấu hình', 'Liên kết ảnh (storage:link)', is_dir(public_path('storage')) ? 'ok' : 'warn', is_dir(public_path('storage')) ? 'có' : 'chạy php artisan storage:link');

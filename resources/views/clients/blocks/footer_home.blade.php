@@ -1,6 +1,7 @@
         @include('clients.partials.site-footer')
 
         @include('clients.blocks.chat_widget')
+@include('clients.blocks.study_bar')
         <!-- footer area end -->
 
         </div>

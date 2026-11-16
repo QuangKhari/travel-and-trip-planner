@@ -48,6 +48,8 @@ jobs:
           path: ~/.composer/cache
           key: composer-${{ hashFiles('composer.lock') }}
       - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Kiểm tra lỗ hổng thư viện PHP (OWASP A06)
+        run: composer audit --locked --no-interaction
       - name: Chuẩn bị .env
         run: |
           cp .env.example .env
@@ -95,6 +97,8 @@ jobs:
           cache: npm
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: npm ci
+      - name: Kiểm tra lỗ hổng thư viện JS (OWASP A06)
+        run: npm audit --audit-level=high
       - run: npx playwright install --with-deps chromium
       - name: Dựng ứng dụng với dữ liệu mẫu
         run: |

@@ -157,6 +157,17 @@ Route::get('/chuyen-di/{token}', [PlannerController::class, 'shared'])->where('t
 // Cộng đồng hành trình (T-24…T-35): xem công khai; thích, dùng lại, công khai chuyến của mình cần đăng nhập
 Route::get('/cong-dong', [CommunityController::class, 'index'])->middleware('throttle:60,1,community')->name('community.index');
 Route::get('/cong-dong/{id}', [CommunityController::class, 'show'])->whereNumber('id')->middleware('throttle:60,1,community')->name('community.show');
+// Đợt F: buổi thử người dùng (chỉ tài khoản người thử, khi STUDY_ENABLED bật)
+Route::middleware(['checkLoginClient', 'checkUserBlocked', 'throttle:120,1,study'])->prefix('buoi-thu')->group(function () {
+    Route::get('/dong-y', [\App\Http\Controllers\clients\StudyController::class, 'consentForm'])->name('study.consent.form');
+    Route::post('/dong-y', [\App\Http\Controllers\clients\StudyController::class, 'consent'])->name('study.consent');
+    Route::get('/trang-thai', [\App\Http\Controllers\clients\StudyController::class, 'state'])->name('study.state');
+    Route::post('/bat-dau', [\App\Http\Controllers\clients\StudyController::class, 'start'])->name('study.start');
+    Route::post('/xong', [\App\Http\Controllers\clients\StudyController::class, 'finish'])->name('study.finish');
+    Route::get('/danh-gia', [\App\Http\Controllers\clients\StudyController::class, 'susForm'])->name('study.sus.form');
+    Route::post('/danh-gia', [\App\Http\Controllers\clients\StudyController::class, 'sus'])->name('study.sus');
+});
+
 Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::post('/cong-dong/{id}/thich', [CommunityController::class, 'like'])->whereNumber('id')->middleware('throttle:30,1,community-like')->name('community.like');
     Route::post('/cong-dong/{id}/lam-cua-toi', [CommunityController::class, 'remix'])->whereNumber('id')->middleware('throttle:6,1,community-remix')->name('community.remix');

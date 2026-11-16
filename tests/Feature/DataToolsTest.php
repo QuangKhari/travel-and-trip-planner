@@ -14,7 +14,8 @@ class DataToolsTest extends TestCase
 
     public function test_core_import_files_pass_checks_and_meet_the_core_standard(): void
     {
-        $files = glob(database_path('seeders/data/imports/*.csv'));
+        // tệp đủ chuẩn cho từng điểm đến lõi (tên tệp = slug); tệp bổ sung như da-lat-trong-nha.csv kiểm ở bài dưới
+        $files = array_values(array_filter(glob(database_path('seeders/data/imports/*.csv')), fn($f) => in_array(basename($f, '.csv'), (array) config('core_destinations.slugs'), true)));
         $this->assertCount(6, $files);
         foreach ($files as $f) {
             $slug = basename($f, '.csv');
@@ -66,4 +67,16 @@ class DataToolsTest extends TestCase
         config(['core_destinations.slugs' => ['khong-co']]);
         $this->artisan('demo:check')->expectsOutputToContain('không có điểm đến này')->assertExitCode(1);
     }
+
+    public function test_supplement_file_has_valid_indoor_rows(): void
+    {
+        DB::table('tbl_destinations')->insert(['slug' => 'da-lat', 'name' => 'Đà Lạt', 'province' => 'x', 'domain' => 'b', 'description' => 'x', 'latitude' => 11.94, 'longitude' => 108.45, 'isActive' => 1]);
+        $r = PlaceImport::stage((string) file_get_contents(database_path('seeders/data/imports/da-lat-trong-nha.csv')), 'da-lat-trong-nha.csv', null);
+        $this->assertNull($r['error']);
+        $this->assertSame(0, $r['bad']);
+        $data = DB::table('tbl_import_rows')->where('batchId', $r['batchId'])->pluck('data')->map(fn($x) => json_decode($x, true));
+        $this->assertCount(5, $data);
+        $this->assertTrue($data->every(fn($d) => (int) $d['indoor'] === 1 && $d['hours'] && $d['source']));
+    }
+
 }

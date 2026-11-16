@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\DB;
  */
 class TripIncidentBench extends Command
 {
-    protected $signature = 'trips:incident-bench {--n=24 : số sự cố} {--csv= : ghi từng ca ra CSV} {--seed=7 : hạt ngẫu nhiên} {--debug : in các kiểm tra của TripHealth ở ca bị bỏ sót}';
+    protected $signature = 'trips:incident-bench {--n=24 : số sự cố} {--csv= : ghi từng ca ra CSV} {--seed=7 : hạt ngẫu nhiên} {--debug : in các kiểm tra của TripHealth ở ca bị bỏ sót} {--explain : với mỗi sự cố phát hiện được, sinh lời giải thích cảnh báo (AP2) và đếm lần chốt chặn thay bằng mẫu}';
 
     protected $description = 'Thí nghiệm sự cố: đo tỷ lệ phát hiện, tỷ lệ có cách sửa hợp lệ, báo nhầm và độ trễ của TripWatch';
 
@@ -56,7 +56,12 @@ class TripIncidentBench extends Command
             $dests = [1, 18, 25];
             for ($i = 0; $i < $n; $i++) {
                 $kind = self::KINDS[$i % count(self::KINDS)];
-                $rows[] = $this->runCase($service, $uid, $i + 1, $kind, $dests[intdiv($i, count(self::KINDS)) % 3], 2 + ($i * 3) % 10);
+                $row = $this->runCase($service, $uid, $i + 1, $kind, $dests[intdiv($i, count(self::KINDS)) % 3], 2 + ($i * 3) % 10);
+                if ($this->option('explain')) {
+                    $row += $this->explainCase($row);
+                }
+                unset($row['tripId']);
+                $rows[] = $row;
                 $this->output->write('.');
             }
         } finally {
@@ -86,6 +91,7 @@ class TripIncidentBench extends Command
             return ['note' => 'không tạo được chuyến: ' . ($r['message'] ?? '')] + $base;
         }
         $tripId = $service->save($uid, $r);
+        $base['tripId'] = $tripId;
         self::paintSky($destId);
         if (!empty($req['arriveAt'])) {
             \App\Http\Controllers\clients\PlannerController::recordTransfers($tripId, $req);
@@ -218,6 +224,34 @@ class TripIncidentBench extends Command
         return $base;
     }
 
+    /** AP2: lời giải thích cho thẻ cảnh báo của sự cố (thẻ đầu tiên có ngày, giống chỗ người dùng bấm "Vì sao đáng lo"). */
+    private function explainCase(array $row): array
+    {
+        $out = ['explainEngine' => '', 'explainFlags' => '', 'explainText' => ''];
+        if (empty($row['detected']) || empty($row['tripId'])) {
+            return $out;
+        }
+        $trip = DB::table('tbl_trips')->where('tripId', $row['tripId'])->first();
+        $cards = app(\App\Services\Ai\Copilot\TripSuggest::class)->suggest($trip, 'alerts')['cards'] ?? [];
+        // thẻ đúng loại sự cố; trễ chuyến bay / về sớm hiện ở danh sách vấn đề của ngày (kèm cách sửa), không thành thẻ Cảnh báo
+        $want = match ($row['kind']) { 'rain' => '/^alert:weather\.(rain|storm)/', 'storm' => '/^alert:weather\.storm/', 'closure' => '/^alert:hours\.closed/',
+            'alert' => '/^(?!alert:)/', default => null };
+        if (!$want) {
+            return ['explainEngine' => 'ngoài thẻ Cảnh báo'] + $out;
+        }
+        $card = collect($cards)->first(fn($c) => preg_match($want, (string) ($c['id'] ?? '')));
+        if (!$card) {
+            return ['explainEngine' => 'không có thẻ'] + $out;
+        }
+        $runs = DB::table('tbl_ai_runs')->max('runId');
+        $r = app(\App\Services\Ai\Explain\AlertExplainer::class)->explain($card, null, (int) $trip->tripId);
+        $log = DB::table('tbl_ai_runs')->where('runId', '>', (int) $runs)->where('feature', 'explain')->orderByDesc('runId')->first();
+        $flags = array_values(array_diff((array) json_decode((string) ($log->guardFlags ?? ''), true), ['alert']));
+
+        return ['explainEngine' => $r['engine'] === 'template' && $flags ? 'chặn' : $r['engine'], 'explainFlags' => implode(' ', $flags),
+            'explainText' => trim($r['why'] . ' ' . ($r['fix'] ?? ''))];
+    }
+
     /** Ghi dự báo giả (theo self::$sky) cho mọi ô lưới phủ các nơi của điểm đến. */
     public static function paintSky(int $destId): void
     {
@@ -316,6 +350,13 @@ class TripIncidentBench extends Command
             $f = array_filter($d, fn($r) => $r['fixable']);
             $q = count(array_filter($quiet, fn($r) => $r['kind'] === $k));
             $this->line(sprintf('  %s: phát hiện %d/%d · sửa được %d/%d · không ảnh hưởng %d', self::LABEL[$k], count($d), count($a), count($f), count($d), $q));
+        }
+        if ($this->option('explain')) {
+            $ex = array_filter($rows, fn($r) => ($r['explainEngine'] ?? '') !== '');
+            $by = array_count_values(array_column($ex, 'explainEngine'));
+            $this->line(sprintf('Lời giải thích (AP2): %d ca phát hiện · lời AI qua chốt chặn %d · bị chặn thay bằng mẫu %d · dùng mẫu vì AI tắt / lỗi %d%s',
+                count($ex), $by['llm'] ?? 0, $by['chặn'] ?? 0, $by['template'] ?? 0, (isset($by['không có thẻ']) ? ' · thiếu thẻ ' . $by['không có thẻ'] : '') . (isset($by['ngoài thẻ Cảnh báo']) ? ' · trễ chuyến / về sớm (hiện ở vấn đề của ngày, không có thẻ) ' . $by['ngoài thẻ Cảnh báo'] : '')));
+            $this->line('  Lời AI đã qua chốt chặn nằm ở cột explainText của --csv: chấm tay xem có bịa không (ai:grade).');
         }
         if ($path = $this->option('csv')) {
             @mkdir(dirname(base_path($path)), 0775, true);

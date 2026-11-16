@@ -1,0 +1,20 @@
+/* Đợt F: thanh nhiệm vụ buổi thử — nằm góc dưới bên trái, không che nút chính bên phải */
+.stb { position: fixed; left: 16px; bottom: 16px; z-index: 1200; width: min(380px, calc(100vw - 32px)); background: #fff; border: 2px solid #135D65; border-radius: 14px; box-shadow: 0 10px 30px rgba(15, 47, 58, .18); font-size: .9rem; color: #1f2937; }
+.stb__h { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #135D65; color: #fff; border-radius: 11px 11px 0 0; }
+.stb.is-min .stb__h { border-radius: 11px; }
+.stb__p { opacity: .9; font-size: .8rem; }
+.stb__tg { margin-left: auto; background: transparent; border: 1px solid rgba(255,255,255,.6); color: #fff; border-radius: 6px; padding: 2px 8px; font-size: .78rem; cursor: pointer; }
+.stb__body { padding: 10px 12px 12px; }
+.stb__body p { margin: 0 0 8px; }
+.stb__t { font-weight: 700; }
+.stb__q { line-height: 1.5; }
+.stb__a { display: flex; flex-wrap: wrap; gap: 8px; }
+.stb__b { display: inline-flex; align-items: center; padding: 7px 12px; border: 1px solid #135D65; border-radius: 8px; background: #fff; color: #135D65; font-weight: 600; cursor: pointer; text-decoration: none; }
+.stb__b.is-main { background: #135D65; color: #fff; }
+.stb__b:focus-visible, .stb__tg:focus-visible { outline: 2px solid #f59e0b; outline-offset: 2px; }
+.stb__b:disabled { opacity: .6; }
+.stb__msg { margin-top: 8px !important; padding: 6px 8px; border-radius: 6px; background: #f3f4f6; }
+.stb__msg.is-ok { background: #e6f4ea; color: #1e5a32; }
+.stb__msg.is-bad { background: #fff4e5; color: #92400e; }
+.stb__hint { color: #92400e; font-size: .82rem; }
+@media (max-width: 991px) { .stb { left: 8px; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); width: calc(100vw - 16px); } }
