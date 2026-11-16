@@ -1,12 +1,20 @@
 # Kiểm thử tự động mỗi lần đẩy mã / mở pull request (Đợt C mục 18).
-# 1) phpunit: toàn bộ kiểm thử PHP trên MySQL thật.
-# 2) browser: dựng trang với dữ liệu mẫu rồi chạy Playwright qua các luồng chính (khách, lập lịch, quản trị + đăng nhập hai lớp).
+# 1) quality: cổng chất lượng nhanh, không cần CSDL — composer.json/lock hợp lệ, lỗ hổng thư viện PHP + JS (OWASP A06),
+#    định dạng PHP (Pint, chỉ các tệp vừa đổi), bản gộp CSS/JS đã chạy lại sau khi sửa nguồn.
+# 2) phpunit: toàn bộ kiểm thử PHP trên MySQL thật.
+# 3) browser: dựng trang với dữ liệu mẫu rồi chạy Playwright qua các luồng chính (khách, lập lịch, quản trị + đăng nhập hai lớp).
+# 4) docker: dựng thử ảnh Docker của đúng commit (gắn nhãn theo SHA) để bắt lỗi Dockerfile trước khi triển khai.
 name: CI
 
 on:
   push:
     branches: [main, master]
   pull_request:
+  workflow_dispatch:
+
+# Quyền tối thiểu cho GITHUB_TOKEN: chỉ đọc mã nguồn.
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -21,8 +29,63 @@ env:
   PHP_EXTENSIONS: mbstring, pdo_mysql, calendar, intl, gd, zip, bcmath, openssl, fileinfo
 
 jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # cần lịch sử để biết tệp nào vừa đổi (Pint)
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ hashFiles('composer.lock') }}
+      - name: composer.json / composer.lock hợp lệ và khớp nhau
+        run: composer validate --strict --no-check-all
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Kiểm tra lỗ hổng thư viện PHP (OWASP A06)
+        run: composer audit --locked --no-interaction
+      - run: npm ci
+      - name: Kiểm tra lỗ hổng thư viện JS (OWASP A06)
+        run: npm audit --audit-level=high
+      - name: Định dạng PHP (Pint, preset PER trong pint.json) — chỉ các tệp .php vừa thêm/sửa
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="origin/${{ github.base_ref }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] || ! git rev-parse -q --verify "$base^{commit}" > /dev/null; then
+            echo "Không xác định được commit gốc để so sánh, bỏ qua bước này."; exit 0
+          fi
+          mapfile -t files < <(git diff --name-only --diff-filter=ACMR "$base"...HEAD -- '*.php' | grep -v -e '^vendor/' -e '\.blade\.php$' || true)
+          if [ ${#files[@]} -eq 0 ]; then echo "Không có tệp PHP nào thay đổi."; exit 0; fi
+          printf 'Kiểm tra định dạng:\n%s\n' "${files[@]}"
+          php vendor/bin/pint --test "${files[@]}"
+      - name: Bản gộp CSS/JS trong public/clients/assets/build khớp với tệp nguồn
+        run: |
+          php artisan assets:bundle
+          changed=$(git status --porcelain -- public/clients/assets/build ':(exclude)public/clients/assets/build/manifest.json')
+          if [ -n "$changed" ]; then
+            echo "::error::Đã sửa CSS/JS nguồn nhưng chưa chạy lại 'php artisan assets:bundle' rồi commit thư mục build:"
+            echo "$changed"
+            exit 1
+          fi
+
   phpunit:
     runs-on: ubuntu-latest
+    needs: quality
+    timeout-minutes: 30
     services:
       mysql:
         image: mysql:8.0
@@ -48,21 +111,18 @@ jobs:
           path: ~/.composer/cache
           key: composer-${{ hashFiles('composer.lock') }}
       - run: composer install --no-interaction --prefer-dist --no-progress
-      - name: Kiểm tra lỗ hổng thư viện PHP (OWASP A06)
-        run: composer audit --locked --no-interaction
       - name: Chuẩn bị .env
         run: |
           cp .env.example .env
           php artisan key:generate
           php artisan pii:key | grep '^DATA_ENCRYPTION_KEY=' >> .env
-      - name: Gộp CSS/JS (kiểm tra lệnh chạy được)
-        run: php artisan assets:bundle
       - name: PHPUnit
         run: php vendor/bin/phpunit --colors=never
 
   browser:
     runs-on: ubuntu-latest
     needs: phpunit
+    timeout-minutes: 30
     services:
       mysql:
         image: mysql:8.0
@@ -97,8 +157,6 @@ jobs:
           cache: npm
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: npm ci
-      - name: Kiểm tra lỗ hổng thư viện JS (OWASP A06)
-        run: npm audit --audit-level=high
       - run: npx playwright install --with-deps chromium
       - name: Dựng ứng dụng với dữ liệu mẫu
         run: |
@@ -127,3 +185,19 @@ jobs:
             test-results
             storage/logs
           retention-days: 7
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: quality
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dựng ảnh ứng viên phát hành theo commit
+        run: docker build --pull --tag "travela:${{ github.sha }}" .
+      - name: Ghi lại digest của ảnh
+        run: |
+          id=$(docker image inspect "travela:${{ github.sha }}" --format '{{.Id}}')
+          echo "Ảnh travela:${{ github.sha }} -> $id"
+          echo "### Ảnh Docker: \`travela:${{ github.sha }}\` — \`$id\`" >> "$GITHUB_STEP_SUMMARY"
+      # Bước tiếp theo khi có môi trường thật: quét ảnh (Trivy) -> đẩy lên GHCR theo SHA -> staging -> smoke test
+      # -> phê duyệt qua GitHub Environment -> production -> theo dõi / rollback về digest trước.

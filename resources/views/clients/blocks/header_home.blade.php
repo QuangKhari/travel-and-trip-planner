@@ -25,34 +25,10 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&amp;display=swap"
         rel="stylesheet">
-    <!-- Flaticon -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/flaticon.min.css') }}">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/fontawesome-5.14.0.min.css') }}">
-    <!-- Bootstrap -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/bootstrap.min.css') }}">
-    <!-- Magnific Popup -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/magnific-popup.min.css') }}">
-    <!-- Nice Select -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/nice-select.min.css') }}">
-    <!-- Animate -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/aos.css') }}">
-    <!-- Slick -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/slick.min.css') }}">
-    <!-- Main Style -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/style.css') }}">
-    <!-- Datetime picker -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/jquery.datetimepicker.min.css') }}" />
-    <!-- Custom css -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/custom-css.css') }}">
-
-    <!-- jQuery UI -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/jquery-ui.min.css') }}">
-
+    {{-- CSS trang chủ: gộp theo nhóm, đúng thứ tự cũ (config/assets.php: home-a/b/c, php artisan assets:bundle) --}}
+    {!! \App\Support\AssetBundle::tags('home-a.css') !!}
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-
-    <!-- Main css -->
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/css-login/style.css') }}">
+    {!! \App\Support\AssetBundle::tags('home-b.css') !!}
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
 
@@ -66,20 +42,8 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Caveat:wght@600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/travel-theme.css') }}?v=3">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/inspiration.css') }}?v=2">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/inspiration-hub.css') }}?v=3">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv-weather.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/gx-guide.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/mobile-nav.css') }}?v=2">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/site-ux.css') }}?v=1">
-    {{-- Giao diện mới: phải nằm CUỐI <head> --}}
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv3.css') }}?v=1">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/tv3-home.css') }}?v=5">
-    {{-- Nature Luxury: final shared design layer. Keep after legacy styles. --}}
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-unified.css') }}?v=bl20261104">
-    {{-- Nature Luxury v4: final token/component stylesheet for every client page. --}}
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/travela-nature-all-pages.css') }}?v=bl20261104">
+    {{-- Lớp giao diện: travel-theme -> ... -> shell (tv3) -> tv3-home -> Nature Luxury, phải nằm CUỐI <head> --}}
+    {!! \App\Support\AssetBundle::tags('home-c.css') !!}
 </head>
 
 <body class="tv-home">

@@ -46,6 +46,14 @@ class AssetBundleTest extends TestCase
         $this->assertStringContainsString('url(../css/css-login/fonts/material-icon/css/fonts/i.woff)', $deep);
     }
 
+    public function test_minify_keeps_meaning_of_selectors_strings_and_calc(): void
+    {
+        $css = "/* chú thích */\n.a  .b ,\n .c>.d {\n  width: calc(100% - 2px) ;\n  content: \"x  /* y */  z\";\n}\n.e/**/.f { color : red }\n";
+        $out = AssetsBundle::minifyCss($css);
+
+        $this->assertSame('.a .b,.c>.d{width: calc(100% - 2px);content: "x  /* y */  z";}.e.f{color : red}', $out);
+    }
+
     public function test_without_bundle_each_file_is_linked_with_version(): void
     {
         $html = AssetBundle::tags('t.css');

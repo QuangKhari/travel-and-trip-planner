@@ -36,9 +36,10 @@ class AssetsBundle extends Command
 
                     return self::FAILURE;
                 }
-                $src = (string) file_get_contents($path);
+                // CRLF -> LF: máy Windows và CI (git eol=lf) cho ra cùng một bản gộp, cùng tên băm
+                $src = str_replace("\r\n", "\n", (string) file_get_contents($path));
                 $before += strlen($src);
-                $parts[] = '/* ' . $f . " */\n" . ($isCss ? self::rebase(self::stripCharset($src), dirname($f), $dirRel) : rtrim($src) . "\n;");
+                $parts[] = '/* ' . $f . " */\n" . ($isCss ? self::minifyCss(self::rebase(self::stripCharset($src), dirname($f), $dirRel)) : rtrim($src) . "\n;");
             }
             $out = ($isCss ? "@charset \"UTF-8\";\n" : '') . implode("\n", $parts) . "\n";
             $hash = substr(md5($out), 0, 10);
@@ -57,6 +58,49 @@ class AssetsBundle extends Command
         $this->info('Xong. Sửa CSS/JS trong danh sách thì chạy lại lệnh này.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Thu gọn CSS an toàn: bỏ chú thích, gộp khoảng trắng, bỏ khoảng trắng quanh { } ; ,
+     * Không đụng tới nội dung chuỗi "..." / '...', không bỏ khoảng trắng quanh : > + ~ (selector con cháu, calc()).
+     * Chú thích nằm sát hai token (.a/ * x * /.b) không bị biến thành khoảng trắng nên không đổi nghĩa selector. @internal
+     */
+    public static function minifyCss(string $css): string
+    {
+        $out = '';
+        $n = strlen($css);
+        $space = false;
+        for ($i = 0; $i < $n; $i++) {
+            $c = $css[$i];
+            if ($c === '/' && ($css[$i + 1] ?? '') === '*') {
+                $end = strpos($css, '*/', $i + 2);
+                $i = $end === false ? $n : $end + 1;
+                continue;
+            }
+            if ($c === ' ' || $c === "\n" || $c === "\r" || $c === "\t" || $c === "\f") {
+                $space = true;
+                continue;
+            }
+            if ($space) {
+                $last = substr($out, -1);
+                if ($out !== '' && !str_contains('{};,', $last) && !str_contains('{};,', $c)) {
+                    $out .= ' ';
+                }
+                $space = false;
+            }
+            if ($c === '"' || $c === "'") {
+                $j = $i + 1;
+                while ($j < $n && $css[$j] !== $c) {
+                    $j += $css[$j] === '\\' ? 2 : 1;
+                }
+                $out .= substr($css, $i, $j - $i + 1);
+                $i = $j;
+                continue;
+            }
+            $out .= $c;
+        }
+
+        return $out;
     }
 
     private static function stripCharset(string $css): string

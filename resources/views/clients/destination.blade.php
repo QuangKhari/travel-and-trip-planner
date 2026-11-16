@@ -4,11 +4,12 @@
     $base = 'clients/assets/images/';
     $art = fn($f) => asset($base . 'illustrations/' . $f);
     $wc = fn($f) => asset($base . 'watercolor/' . $f);
-    $heroSrc = file_exists(public_path($base . 'destinations/hero-destination.jpg'))
-        ? asset($base . 'destinations/hero-destination.jpg')
+    // Ảnh hero và banner cuối trang dùng chung banner/banner-destination.jpg (trước đây là 3 bản sao giống hệt nhau).
+    $heroSrc = file_exists(public_path($base . 'banner/banner-destination.jpg'))
+        ? asset($base . 'banner/banner-destination.jpg')
         : $art('scene-island-wide.svg');
-    $bannerSrc = file_exists(public_path($base . 'destinations/banner-journey.jpg'))
-        ? asset($base . 'destinations/banner-journey.jpg')
+    $bannerSrc = file_exists(public_path($base . 'banner/banner-destination.jpg'))
+        ? asset($base . 'banner/banner-destination.jpg')
         : $art('scene-bay-wide.svg');
     $hasData = !empty($map['destinations']) && !empty($map['inspirations']);
     $destCollection = collect($map['destinations'] ?? []);

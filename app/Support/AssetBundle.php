@@ -56,7 +56,7 @@ final class AssetBundle
     {
         $h = hash_init('md5');
         foreach ($files as $f) {
-            hash_update($h, $f . "\0" . (is_file(public_path($f)) ? (string) file_get_contents(public_path($f)) : ''));
+            hash_update($h, $f . "\0" . (is_file(public_path($f)) ? str_replace("\r\n", "\n", (string) file_get_contents(public_path($f))) : ''));
         }
 
         return hash_final($h);

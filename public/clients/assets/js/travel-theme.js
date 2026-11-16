@@ -5,15 +5,11 @@
     var reduce =
         window.matchMedia &&
         matchMedia("(prefers-reduced-motion: reduce)").matches;
-    var fine =
-        window.matchMedia &&
-        matchMedia("(hover: hover) and (pointer: fine)").matches;
 
-    /* 1. Thanh tiến trình cuộn + 2. Parallax ảnh hero */
+    /* 1. Thanh tiến trình cuộn */
     var bar = document.createElement("div");
     bar.className = "tv-progress";
     document.body.appendChild(bar);
-    var heroBg = document.querySelector(".tv-hero__bg");
     var busy = false;
     function onScroll() {
         if (busy) return;
@@ -22,19 +18,17 @@
             var y = window.pageYOffset || 0;
             var h = document.documentElement.scrollHeight - innerHeight;
             bar.style.width = (h > 0 ? (y / h) * 100 : 0) + "%";
-            if (heroBg && !reduce && y < 1000)
-                heroBg.style.translate = "0 " + (y * 0.22).toFixed(1) + "px";
             busy = false;
         });
     }
     addEventListener("scroll", onScroll, { passive: true });
     onScroll();
 
-    /* 3. Hiện dần nhẹ khi cuộn tới (một lần, chỉ cho phần tử nằm dưới màn hình đầu tiên).
+    /* 1b. Hiện dần nhẹ khi cuộn tới (một lần, chỉ cho phần tử nằm dưới màn hình đầu tiên).
         Bỏ qua phần tử đã có AOS (data-aos) để không chạy hai hiệu ứng chồng nhau. */
     if (!reduce && "IntersectionObserver" in window) {
         var revealSel =
-            ".tv-card, .tv-dest__item, .tv-steps li, .tv-order, .tv-mini--card, .tv-contact__list li, .tc-faq details";
+            ".tv-order, .tv-mini--card";
         var items = [].slice
             .call(document.querySelectorAll(revealSel))
             .filter(function (n) {
@@ -75,36 +69,7 @@
         }, 6000);
     }
 
-    /* 4. Nút tim (hiện chỉ đổi màu, chưa lưu DB) */
-    document.addEventListener("click", function (e) {
-        var h = e.target.closest && e.target.closest(".tv-heart");
-        if (!h) return;
-        e.preventDefault();
-        h.classList.toggle("is-liked");
-    });
-
-    /* 6. Nhớ thẻ cảm hứng bấm gần nhất (localStorage) */
-    var KEY = "travel:interest";
-    function safe(fn) {
-        try {
-            return fn();
-        } catch (err) {
-            return null;
-        }
-    }
-    var last = safe(function () {
-        return localStorage.getItem(KEY);
-    });
-    document.querySelectorAll(".tv-chip[data-interest]").forEach(function (c) {
-        if (last && c.dataset.interest === last) c.classList.add("is-recent");
-        c.addEventListener("click", function () {
-            safe(function () {
-                localStorage.setItem(KEY, c.dataset.interest);
-            });
-        });
-    });
-
-    /* 7. Header: đổi nền khi cuộn, mở/đóng ô tìm kiếm, menu tài khoản, menu điện thoại */
+    /* 2. Header: đổi nền khi cuộn, mở/đóng ô tìm kiếm, menu tài khoản, menu điện thoại */
     var header = document.getElementById("tvHeader");
     if (header) {
         var syncHeader = function () {
@@ -158,7 +123,7 @@
         });
     }
 
-    /* 8. Hiện/ẩn mật khẩu (nút có data-toggle-pass nằm cạnh ô nhập) */
+    /* 3. Hiện/ẩn mật khẩu (nút có data-toggle-pass nằm cạnh ô nhập) */
     document.addEventListener("click", function (e) {
         var b = e.target.closest && e.target.closest("[data-toggle-pass]");
         if (!b) return;
@@ -173,47 +138,7 @@
         }
     });
 
-    /* 9. Trang "Điểm đến": lọc theo miền + nút "Xem thêm" (hiện 9 mục mỗi lần) */
-    var domBar = document.getElementById("tvDomainFilter");
-    var grid = document.getElementById("tvDestGrid");
-    if (domBar && grid) {
-        var PAGE = 9,
-            limit = PAGE,
-            domain = "all";
-        var more = document.getElementById("tvDestMore");
-        var none = document.getElementById("tvDestNone");
-        var render = function () {
-            var match = 0,
-                shown = 0;
-            grid.querySelectorAll(".tv-dest__item").forEach(function (i) {
-                var ok = domain === "all" || i.dataset.domain === domain;
-                if (ok) match++;
-                var visible = ok && shown < limit;
-                if (visible) shown++;
-                i.classList.toggle("is-hidden", !visible);
-            });
-            if (none) none.hidden = match !== 0;
-            if (more) more.hidden = match <= shown;
-        };
-        domBar.addEventListener("click", function (e) {
-            var b = e.target.closest("[data-domain]");
-            if (!b) return;
-            domBar.querySelectorAll("[data-domain]").forEach(function (x) {
-                x.classList.toggle("is-on", x === b);
-            });
-            domain = b.dataset.domain;
-            limit = PAGE;
-            render();
-        });
-        if (more)
-            more.addEventListener("click", function () {
-                limit += PAGE;
-                render();
-            });
-        render();
-    }
-
-    /* 10. Hộp thoại mẫu: [data-modal-open="id"] / [data-modal-close] (thẻ <dialog>) */
+    /* 4. Hộp thoại mẫu: [data-modal-open="id"] / [data-modal-close] (thẻ <dialog>) */
     document.addEventListener("click", function (e) {
         var o = e.target.closest && e.target.closest("[data-modal-open]");
         if (o) {

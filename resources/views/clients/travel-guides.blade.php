@@ -1,6 +1,8 @@
 @include('clients.blocks.header')
 @include('clients.blocks.banner')
-\
+@push('page_scripts')
+    {!! \App\Support\AssetBundle::tags('team.js') !!}
+@endpush
         <!-- Benefit Area start -->
         <section class="benefit-area mt-100 rel z-1">
             <div class="container">

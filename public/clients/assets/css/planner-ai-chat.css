@@ -70,7 +70,7 @@
 .pch-c.ai .ic{background:#e7f5f2}.pch-c h2{margin:0 0 6px;font-size:19px}.pch-c p{margin:0 0 12px;color:#5d6b68;font-size:14px}
 .pch-c .go{display:inline-block;padding:8px 16px;border-radius:4px;border:1px solid #e3ebe8;font-weight:600;font-size:14px}
 .pch-c.ai .go{background:#0b2b33;color:#fff;border-color:#0b2b33}
-.pch-tag{position:absolute;top:14px;right:14px;background:#e9a23b;color:#2b1a00;font-size:11px;font-weight:700;padding:3px 9px;border-radius:3px}
+
 @media(max-width:700px){.pch{grid-template-columns:1fr}}
 
 /* AI tạo chuyến: phân cấp hành động xác nhận / quay lại sửa. */
@@ -107,8 +107,8 @@
 .pai-review__form label { display: flex; flex-direction: column; min-width: 0; gap: 3px; color: #466369; font-size: .75rem; font-weight: 600; }
 .pai-review__form input { width: 100%; padding: 8px; border: 1px solid #bbd6cd; border-radius: 8px; color: #17343b; font: inherit; background: #fff; }
 .pai-review__form input:focus-visible { outline: 2px solid #e9a23b; outline-offset: 1px; }
-.pai-review__note,.pai-review__assumed,.pai-review__actions { grid-column: 1/-1; }
-.pai-review__note { margin: 2px 0; font-size: .75rem; color: #526f72; }
+.pai-review__assumed,.pai-review__actions { grid-column: 1/-1; }
+
 .pai-review__assumed { margin: 0; background: #fff6e5; padding: 8px 10px; border-radius: 9px; color: #795214; font-size: .77rem; }
 .pai-review__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .pai-review__actions .pai-plot { margin: 0; max-width: none; padding: 10px 8px; border-radius: 10px; font-size: .79rem; }

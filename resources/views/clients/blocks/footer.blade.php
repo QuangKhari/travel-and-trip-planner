@@ -20,6 +20,8 @@
 @include('clients.blocks.trip_boot')
 
 <script src="{{ asset('clients/assets/js/nature-finish.js') }}?v=1" defer></script>
+{{-- JS riêng của từng trang: @push('page_scripts') trong view (sau jQuery và các gói chung) --}}
+@stack('page_scripts')
 </body>
 
 </html>

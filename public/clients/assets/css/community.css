@@ -40,22 +40,9 @@
 /* Trang chi tiết */
 .cm-detail { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 22px; align-items: start; }
 .cm-back { display: inline-flex; gap: 6px; align-items: center; color: #557080; font-size: 14px; margin-bottom: 10px; }
-.cm-hero { background: #fff; border: 1px solid #e3ecef; border-radius: 18px; overflow: hidden; margin-bottom: 18px; }
-.cm-hero__ph { height: 220px; background: #d9ece9 center/cover no-repeat; }
-.cm-hero__b { padding: 18px 20px; }
-.cm-hero__b h1 { font-size: 26px; margin: 0 0 6px; }
-.cm-facts { display: flex; flex-wrap: wrap; gap: 14px; color: #557080; font-size: 14px; margin: 8px 0 0; }
-.cm-facts span { display: inline-flex; gap: 6px; align-items: center; }
+
 .cm-day { background: #fff; border: 1px solid #e3ecef; border-radius: 16px; padding: 16px 18px; margin-bottom: 14px; }
 .cm-day h2 { font-size: 17px; margin: 0 0 10px; } .cm-day h2 small { color: #6b8592; font-weight: 500; margin-left: 6px; }
-.cm-items { list-style: none; margin: 0; padding: 0; counter-reset: it; }
-.cm-items li { position: relative; padding: 8px 0 8px 36px; border-top: 1px solid #f0f4f6; counter-increment: it; }
-.cm-items li:first-child { border-top: 0; }
-.cm-items li::before { content: counter(it); position: absolute; left: 0; top: 8px; width: 24px; height: 24px; border-radius: 50%; background: #e6f4f2; color: #167A85; font-size: 12.5px; font-weight: 700; display: grid; place-items: center; }
-.cm-items .cm-type { font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: #6b8592; display: block; }
-.cm-items a, .cm-items .cm-name { font-weight: 600; color: #0f2f3a; }
-.cm-items small { display: block; color: #6b8592; font-size: 13px; }
-.cm-items .cm-note { margin: 4px 0 0; font-size: 13.5px; color: #3b5662; }
 
 .cm-side { position: sticky; top: 100px; display: flex; flex-direction: column; gap: 14px; }
 .cm-box { background: #fff; border: 1px solid #e3ecef; border-radius: 16px; padding: 16px 18px; }

@@ -212,61 +212,7 @@
     color: #777;
     font-size: 12px;
 }
-.dd-now {
-    display: flex;
-    gap: 14px;
-    align-items: center;
-    flex-wrap: wrap;
-}
-.dd-now > i {
-    font-size: 40px;
-    color: #e0a030;
-}
-.dd-now b {
-    display: block;
-    font-size: 34px;
-    line-height: 1;
-}
-.dd-now span {
-    color: #555;
-}
-.dd-now ul {
-    list-style: none;
-    margin: 0 0 0 auto;
-    padding: 0;
-    font-size: 13px;
-    color: #555;
-}
-.dd-days {
-    list-style: none;
-    margin: 18px 0 0;
-    padding: 0;
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 6px;
-    text-align: center;
-}
-.dd-days li {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    font-size: 13px;
-    background: #f6f3ec;
-    border-radius: 10px;
-    padding: 8px 2px;
-}
-.dd-days i {
-    font-size: 18px;
-    color: #0b3a5c;
-}
-.dd-days small {
-    color: #777;
-}
-.dd-days em {
-    font-style: normal;
-    color: #2a78b5;
-    font-size: 11px;
-}
+
 .dd-map {
     height: 340px;
     border-radius: 12px;
@@ -304,7 +250,5 @@
     .dd-grid {
         grid-template-columns: 1fr;
     }
-    .dd-now ul {
-        margin-left: 0;
-    }
+    
 }

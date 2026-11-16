@@ -30,7 +30,7 @@ body.page-planner-ai-chat main.pai { margin-top: var(--tl-head); height: calc(10
 @media (max-width: 575.98px) { .tv-rescue__dl > div { grid-template-columns: 1fr; gap: 2px; } }
 
 /* Liên hệ: tiêu đề hero bị lớp giao diện chung đổi sang màu chữ tối trên nền xanh đậm (độ tương phản thấp) */
-body.page-contact .ct-hero h1, body.page-contact .ct-hero .ct-title { color: #fff; }
+body.page-contact .ct-hero h1 { color: #fff; }
 
 /* Độ tương phản chữ (axe WCAG AA, quét 11/2026) */
 .td-noreview, .td-noreview p { color: #4b5b57; }

@@ -27,29 +27,9 @@
     };
     var els = {
         toc: $("tvhToc"),
-        hero: $("tvhHero"),
-        heroImg: $("tvhHeroImg"),
-        p1: $("tvhHeroP1"),
-        p2: $("tvhHeroP2"),
         quote: $("tvhQuote"),
-        badgeIcon: $("tvhBadgeIcon"),
-        title: $("tvhHeroTitle"),
-        tag: $("tvhHeroTag"),
-        desc: $("tvhHeroDesc"),
-        cta: $("tvhCta"),
-        ctaText: $("tvhCtaText"),
-        pager: $("tvhPager"),
-        prev: $("tvhPrev"),
-        next: $("tvhNext"),
-        thumbs: $("tvhThumbs"),
-        mini: $("tvhMini"),
-        miniDots: $("tvhMiniDots"),
-        miniName: $("tvhMiniName"),
-        miniCount: $("tvhMiniCount"),
-        mapIns: $("tvhMapIns"),
         nowIcon: $("tvhNowIcon"),
         nowName: $("tvhNowName"),
-        nowTag: $("tvhNowTag"),
         doms: $("tvhDoms"),
         board: $("tvhBoard"),
         pins: $("tvhPins"),
@@ -61,8 +41,6 @@
         dName: $("tvhDetailName"),
         dDesc: $("tvhDetailDesc"),
         dCta: $("tvhDetailCta"),
-        dSoon: $("tvhDetailSoon"),
-        dWx: $("tvhDetailWx"),
         dMore: $("tvhDetailMore"),
         all: $("tvhAll"),
         allText: $("tvhAllText"),
@@ -71,8 +49,8 @@
         dPhoto: $("tvmPhoto"),
         dTemp: $("tvhDetailTemp"),
     };
-    // Trang chủ bố cục mới bỏ ảnh hero, 4 thẻ nhỏ và bản đồ mini: phần tử nào không có thì dùng
-    // một thẻ div tách rời để các hàm vẽ cũ vẫn chạy mà không cần sửa từng chỗ.
+    // Phòng hờ: phần tử nào không có trong trang thì dùng một thẻ div tách rời để hàm vẽ không lỗi.
+    // (16/11/2026: đã bỏ hẳn phần vẽ ảnh hero, 4 thẻ nhỏ, bản đồ mini và hộp thời tiết chi tiết — bố cục trang chủ không còn các khối đó.)
     Object.keys(els).forEach(function (k) {
         if (!els[k]) {
             els[k] = document.createElement("div");
@@ -80,35 +58,6 @@
     });
 
     var DOMNAME = { b: "Miền Bắc", t: "Miền Trung", n: "Miền Nam" };
-    var SHAPES = {
-        waves: [
-            "M0 176 Q100 150 200 176 T400 176 T600 176 T800 176 V480 H0Z",
-            "M0 206 Q100 184 200 206 T400 206 T600 206 T800 206 V480 H0Z",
-        ],
-        mountains: [
-            "M0 190 L140 70 L260 170 L420 40 L580 170 L700 100 L800 150 V480 H0Z",
-            "M0 214 L180 160 L330 205 L520 150 L800 205 V480 H0Z",
-        ],
-        hills: [
-            "M0 170 C120 110 260 120 380 165 S650 120 800 160 V480 H0Z",
-            "M0 210 C140 170 280 190 400 208 S680 180 800 200 V480 H0Z",
-        ],
-        terraces: [
-            "M0 150 C140 130 260 165 400 145 S660 150 800 135 V480 H0Z",
-            "M0 195 C140 175 260 205 400 190 S660 195 800 180 V480 H0Z",
-        ],
-    };
-    var SHAPE_OF = {
-        bien: "waves",
-        "thien-nhien": "mountains",
-        "chua-lanh": "hills",
-        "van-hoa": "terraces",
-        "am-thuc": "hills",
-        "mien-que": "terraces",
-        "san-anh": "mountains",
-        "hai-nguoi": "hills",
-    };
-
     var mqCompact = window.matchMedia("(max-width: 767.98px)");
     var mqHover = window.matchMedia("(hover: hover) and (min-width: 992px)");
     var mqMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -202,9 +151,8 @@
         }
     }
 
-    /* ---------- dựng sẵn pin + chấm bản đồ mini (một lần) ---------- */
-    var pinEls = {},
-        dotEls = {};
+    /* ---------- dựng sẵn pin trên bản đồ (một lần) ---------- */
+    var pinEls = {};
     DEST.forEach(function (d) {
         var b = document.createElement("button");
         b.type = "button";
@@ -216,12 +164,6 @@
         b.appendChild(document.createElement("i"));
         els.pins.appendChild(b);
         pinEls[d.slug] = b;
-
-        var dot = document.createElement("i");
-        dot.style.left = d.x + "%";
-        dot.style.top = d.y + "%";
-        els.miniDots.appendChild(dot);
-        dotEls[d.slug] = dot;
     });
 
     /* ---------- vẽ từng phần ---------- */
@@ -241,86 +183,10 @@
         });
     }
 
-    function renderMini() {
-        var pv = insBy(state.hov || state.ins);
-        var n = 0;
-        els.mini.setAttribute("data-ins", pv.slug);
-        els.miniName.textContent = pv.name;
-        DEST.forEach(function (d) {
-            var s = score(d, pv.slug);
-            var dot = dotEls[d.slug];
-            dot.className = s > 0 ? "is-lit" : "";
-            dot.style.setProperty(
-                "--d",
-                (s > 0 ? Math.round(5 + (Math.max(0, s - 40) / 60) * 5) : 2) +
-                    "px",
-            );
-            if (s > 0) {
-                n++;
-            }
-        });
-        els.miniCount.textContent = n;
-        els.mini.setAttribute(
-            "aria-label",
-            "Xem " + n + " điểm đến trên bản đồ",
-        );
-    }
-
-    function renderHero(ins, pool) {
-        var sh = SHAPES[SHAPE_OF[ins.slug] || "hills"];
-        els.p1.setAttribute("d", sh[0]);
-        els.p2.setAttribute("d", sh[1]);
-        if (ins.image) {
-            els.heroImg.src = ins.image;
-            els.hero.classList.add("has-photo");
-        } else {
-            els.hero.classList.remove("has-photo");
-            els.heroImg.removeAttribute("src");
-        }
-        els.quote.textContent = ins.quote || ins.headline;
-        els.badgeIcon.className = "fas " + ins.icon;
-        els.title.textContent = ins.name;
-        els.tag.textContent = ins.tagline;
-        els.desc.textContent = ins.headline;
-        els.ctaText.textContent = "Xem " + pool.length + " nơi trên bản đồ";
-        var idx = INS.indexOf(ins) + 1;
-        els.pager.textContent =
-            (idx < 10 ? "0" : "") +
-            idx +
-            " / " +
-            (INS.length < 10 ? "0" : "") +
-            INS.length;
-    }
-
-    function renderThumbs(ins, sel) {
-        var top = ranked(ins.slug, "all").slice(0, 4);
-        els.thumbs.innerHTML = top
-            .map(function (d) {
-                var s = score(d, ins.slug);
-                return (
-                    '<button type="button" class="tvh-thumb' +
-                    (d.image ? " has-photo" : "") +
-                    (d.slug === sel.slug ? " is-on" : "") +
-                    '" data-dest="' +
-                    esc(d.slug) +
-                    '" aria-label="' +
-                    esc(d.name + ". Xem trên bản đồ") +
-                    '">' +
-                    (d.image ? photo(d) : scene("thumb")) +
-                    (s >= 85 ? '<span class="tvh-thumb__pct">Đề xuất</span>' : "") +
-                    '<span class="tvh-thumb__name">' +
-                    esc(d.name) +
-                    "</span></button>"
-                );
-            })
-            .join("");
-    }
-
     function renderIntro(ins) {
-        els.mapIns.textContent = ins.name;
+        els.quote.textContent = ins.quote || ins.headline;
         els.nowIcon.className = "fas " + ins.icon;
         els.nowName.textContent = ins.name;
-        els.nowTag.textContent = ins.tagline;
         [].forEach.call(els.doms.querySelectorAll("button"), function (b) {
             b.setAttribute(
                 "aria-pressed",
@@ -512,112 +378,6 @@
             .join("");
     }
 
-    var WX_THEME = {
-        "fa-sun": "clear",
-        "fa-cloud-sun": "partly",
-        "fa-cloud": "cloud",
-        "fa-cloud-rain": "rain",
-        "fa-cloud-sun-rain": "rain",
-        "fa-cloud-showers-heavy": "rain",
-        "fa-bolt": "storm",
-        "fa-smog": "fog",
-        "fa-snowflake": "snow",
-    };
-    var WX_WD = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
-    function wxNum(v) {
-        return v === null || v === undefined ? "–" : esc(String(v));
-    }
-    function wxTip(w) {
-        var d = w.daily && w.daily[0];
-        if (!d) return null;
-        if (d.rain !== null && d.rain >= 60)
-            return [
-                "fa-umbrella",
-                "Khả năng mưa cao hôm nay — nên mang áo mưa hoặc ô.",
-            ];
-        if (d.tMax !== null && d.tMax >= 34)
-            return [
-                "fa-sun",
-                "Trời nóng — nhớ mang mũ, kem chống nắng và nước uống.",
-            ];
-        if (d.tMax !== null && d.tMax <= 17)
-            return ["fa-snowflake", "Trời lạnh — nên mang theo áo ấm."];
-        return null;
-    }
-    function renderWeather(w) {
-        var theme = WX_THEME[w.icon] || "cloud",
-            chips = "";
-        if (w.feels != null)
-            chips +=
-                '<span class="tvw__chip"><i class="fas fa-thermometer-half"></i>Cảm giác ' +
-                wxNum(w.feels) +
-                "°</span>";
-        if (w.humidity != null)
-            chips +=
-                '<span class="tvw__chip"><i class="fas fa-tint"></i>' +
-                wxNum(w.humidity) +
-                "%</span>";
-        if (w.wind != null)
-            chips +=
-                '<span class="tvw__chip"><i class="fas fa-wind"></i>' +
-                wxNum(w.wind) +
-                " km/h</span>";
-        var tip = wxTip(w),
-            days = "";
-        (w.daily || []).forEach(function (d, i) {
-            var dt = new Date(d.date + "T00:00:00"),
-                r = (r = d.rain);
-            var name =
-                i === 0 ? "Hôm nay" : isNaN(dt) ? "" : WX_WD[dt.getDay()];
-            days +=
-                '<li class="tvw__day' +
-                (i === 0 ? " is-today" : "") +
-                '"><span class="tvw__dn">' +
-                esc(name) +
-                "</span>" +
-                '<i class="fas ' +
-                esc(d.icon) +
-                '" title="' +
-                esc(d.label) +
-                '"></i><b>' +
-                wxNum(d.tMax) +
-                "°</b><small>" +
-                wxNum(d.tMin) +
-                "°</small>" +
-                (r !== null && r !== undefined
-                    ? '<span class="tvw__rain"><i style="--r:' +
-                      Math.max(0, Math.min(100, Number(r) || 0)) +
-                      '%"></i></span><span class="tvw__rn">' +
-                      wxNum(r) +
-                      "%</span>"
-                    : "") +
-                "</li>";
-        });
-        return (
-            '<div class="tvw" data-wx="' +
-            theme +
-            '"><div class="tvw__now"><span class="tvw__ico"><i class="fas ' +
-            esc(w.icon) +
-            '"></i></span>' +
-            '<div><span class="tvw__temp">' +
-            wxNum(w.temp) +
-            '<sup>°C</sup></span><span class="tvw__lbl">' +
-            esc(w.label) +
-            "</span></div>" +
-            (chips ? '<div class="tvw__chips">' + chips + "</div>" : "") +
-            "</div>" +
-            (tip
-                ? '<p class="tvw__tip"><i class="fas ' +
-                  tip[0] +
-                  '"></i><span>' +
-                  esc(tip[1]) +
-                  "</span></p>"
-                : "") +
-            (days ? '<ol class="tvw__days">' + days + "</ol>" : "") +
-            '<p class="tvw__src">Dữ liệu: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo.com</a></p></div>'
-        );
-    }
-
     function renderDetail(ins, sel, pool) {
         els.dWhere.textContent =
             sel.province +
@@ -638,19 +398,12 @@
         } else {
             els.dTemp.hidden = true;
         }
-        if (sel.weather && sel.weather.temp !== null) {
-            els.dWx.innerHTML = renderWeather(sel.weather);
-            els.dWx.hidden = false;
-        } else {
-            els.dWx.hidden = true;
-        }
         var withTour = sel.tourCount > 0 && sel.tourUrl;
         if (withTour) {
             els.dCta.href = sel.tourUrl;
             els.dCta.className = "tvh-btn";
             els.dCta.innerHTML = "Xem " + sel.tourCount + " tour";
             els.dCta.setAttribute("aria-label", "Xem " + sel.tourCount + " tour tại " + sel.name);
-            els.dSoon.hidden = true;
         } else {
             els.dCta.href =
                 data.exploreUrl +
@@ -659,9 +412,6 @@
             els.dCta.className = "tvh-btn is-ghost";
             els.dCta.innerHTML =
                 'Xem điểm đến cùng cảm hứng <i class="fas fa-arrow-right" aria-hidden="true"></i>';
-            els.dSoon.textContent =
-                "Chưa có tour tại " + sel.name + " — sắp có.";
-            els.dSoon.hidden = false;
         }
         els.all.href =
             data.exploreUrl +
@@ -691,9 +441,6 @@
 
         hub.setAttribute("data-ins", ins.slug);
         renderRows();
-        renderHero(ins, pool);
-        renderThumbs(ins, sel);
-        renderMini();
         renderIntro(ins);
         renderPins(ins, sel, pool);
         renderLabels(ins, sel, pool);
@@ -759,7 +506,6 @@
         }
         state.hov = slug;
         renderRows();
-        renderMini();
     }
 
     /* ---------- sự kiện ---------- */
@@ -826,22 +572,6 @@
         rows[n].focus();
     });
 
-    els.prev.addEventListener("click", function () {
-        choose(
-            INS[(INS.indexOf(insBy(state.ins)) - 1 + INS.length) % INS.length]
-                .slug,
-        );
-    });
-    els.next.addEventListener("click", function () {
-        choose(INS[(INS.indexOf(insBy(state.ins)) + 1) % INS.length].slug);
-    });
-
-    els.thumbs.addEventListener("click", function (e) {
-        var b = e.target.closest("[data-dest]");
-        if (b) {
-            selectDest(b.getAttribute("data-dest"), true);
-        }
-    });
     els.band.addEventListener("click", function (e) {
         var b = e.target.closest("[data-dest]");
         if (b) {

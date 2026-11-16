@@ -70,6 +70,7 @@ class PlannerBatchTwoTest extends TestCase
         $this->save($id, [['type' => 'place', 'refId' => $mus[0], 'day' => 1, 'visitedAt' => '2027-03-03T03:00:00Z'],
             ['type' => 'place', 'refId' => $mus[1], 'day' => 1, 'visitedAt' => '2027-03-03T05:00:00Z']]);
         $sig = DB::table('tbl_place_signals')->where('userId', $this->uid)->pluck('signal')->countBy()->all();
+        ksort($sig); // countBy giữ thứ tự hàng trả về (không ORDER BY): so sánh không phụ thuộc thứ tự khóa
         $this->assertSame(['added' => 3, 'removed' => 1, 'visited' => 2], array_intersect_key($sig, ['added' => 1, 'removed' => 1, 'visited' => 1]) + []);
         $p = app(PlaceSignals::class)->profile($this->uid);
         $this->assertGreaterThan(0.3, $p['culture']);

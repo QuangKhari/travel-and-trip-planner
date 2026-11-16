@@ -19,7 +19,7 @@
 .pai-trust__c.is-warn::before, .tp-trust.is-warn::before { content: "!"; font-weight: 800; }
 .pai-trust__c.is-info, .tp-trust.is-info { background: #eef4ff; color: #1e40af; border-color: #c9d8fb; }
 .pai-trust__c.is-info::before, .tp-trust.is-info::before { content: "≈"; }
-.tp-credit { font-size: 10px; color: #6b7c7a; }
+
 .tpx-thumb.tp-tile { width: 52px; height: 52px; font-size: 20px; border-radius: 9px; }
 .tpx-status .tp-trust { margin-left: 2px; }
 /* "Dán ghi chú" trong khu Đã lưu */

@@ -1,82 +1,12 @@
 $(document).ready(function () {
+    // Dọn 16/11/2026: bỏ tab đăng nhập/đăng ký kiểu cũ, form #login-form, menu #userDropdown của header cũ và bộ lọc tour AJAX cũ
+    // (thanh trượt giá jQuery UI, #tours-container) — không còn trang nào có các phần tử đó.
     var sqlInjectionPattern = /[<>'"%;()&+]/;
 
     /****************************************
-     *              PAGE LOGIN              *
+     *          PAGE LOGIN / REGISTER       *
      * ***************************************/
-    //Handle click switch tab
-    $("#sign-up").click(function () {
-        console.log("111");
-        $(".sign-in").hide();
-        $(".signup").show();
-    });
-    $("#sign-in").click(function () {
-        console.log("222");
-        $(".signup").hide();
-        $(".sign-in").show();
-    });
-
-    // Handle form submission for signin
-    $("#login-form").on("submit", function (e) {
-        e.preventDefault();
-        var userName = $("#username_login").val().trim();
-        var password = $("#password_login").val().trim();
-
-        // Đặt lại nội dung thông báo lỗi và ẩn chúng
-        $("#validate_username").hide().text("");
-        $("#validate_password").hide().text("");
-
-        var isValid = true;
-
-        // Kiểm tra độ dài mật khẩu
-        if (password.length < 6) {
-            isValid = false;
-            $("#validate_password")
-                .show()
-                .text("Mật khẩu phải có ít nhất 6 ký tự.");
-        }
-
-        // Kiểm tra tên đăng nhập và mật khẩu không chứa ký tự đặc biệt (SQL injection)
-
-        if (sqlInjectionPattern.test(userName)) {
-            isValid = false;
-            $("#validate_username")
-                .show()
-                .text("Tên đăng nhập không được chứa ký tự đặc biệt.");
-        }
-
-        if (isValid) {
-            var formData = {
-                username: userName,
-                password: password,
-                _token: $('input[name="_token"]').val(),
-            };
-
-            $.ajax({
-                type: "POST",
-                url: $(this).attr("action"),
-                data: formData,
-                success: function (response) {
-                    if (response.success) {
-                        window.location.href = response.redirectUrl || "/";
-                    } else {
-                        toastr.error(response.message);
-                    }
-                },
-                error: function (xhr, textStatus, errorThrown) {
-                    if (xhr.status === 429) {
-                        toastr.error(
-                            "Bạn thử quá nhiều lần. Vui lòng đợi một phút rồi thử lại.",
-                        );
-                        return;
-                    }
-                    toastr.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
-                },
-            });
-        }
-    });
-
-    // Handle form submission for signup
+    // Đăng ký (form #register-form)
     $("#register-form").on("submit", function (e) {
         e.preventDefault();
         $(".loader").show();
@@ -195,185 +125,6 @@ $(document).ready(function () {
         format: "d/m/Y",
         timepicker: false,
     });
-    /****************************************
-     *              HEADER                  *
-     * ***************************************/
-    $("#userDropdown").click(function (e) {
-        e.stopPropagation();
-        $("#dropdownMenu").toggle();
-    });
-
-    // Đóng dropdown khi click ra ngoài
-    $(document).click(function (e) {
-        if (!$(e.target).closest(".menu-sidebar").length) {
-            $("#dropdownMenu").hide();
-        }
-    });
-
-    $("#dropdownMenu a").on("click", function (e) {
-        e.stopPropagation(); // ngăn bubble lên document
-        var href = $(this).attr("href");
-        if (href && href !== "#") {
-            window.location.href = href;
-        }
-    });
-
-    // Form đăng xuất: không cho click nổi bọt lên .menu-sidebar
-    // (script.js gọi preventDefault ở đó nên form không được gửi)
-    $("#dropdownMenu form").on("click", function (e) {
-        e.stopPropagation();
-    });
-
-    /****************************************
-     *              PAGE TOURS              *
-     * ***************************************/
-    // Kiểm tra nếu thanh trượt đã tồn tại
-    if ($(".price-slider-range").length) {
-        $(".price-slider-range").on("slidestop", function (event, ui) {
-            filterTours(ui.values[0], ui.values[1]);
-        });
-    }
-    let filterTimeout;
-
-    function debounceFilter() {
-        clearTimeout(filterTimeout);
-
-        filterTimeout = setTimeout(() => {
-            filterTours();
-        }, 300);
-    }
-
-    $('input[name="domain"]').on("change", debounceFilter);
-    $('input[name="filter_star"]').on("change", debounceFilter);
-    $('input[name="duration"]').on("change", debounceFilter);
-
-    $("#sorting_tours").on("change", function () {
-        filterTours(null, null);
-    });
-
-    function filterTours(minPrice = null, maxPrice = null) {
-        $(".loader").show();
-        $("#tours-container").addClass("hidden-content");
-
-        if (minPrice === null || maxPrice === null) {
-            minPrice = $(".price-slider-range").slider("values", 0);
-            maxPrice = $(".price-slider-range").slider("values", 1);
-        }
-
-        var domain = $('input[name="domain"]:checked').val();
-        var star = $('input[name="filter_star"]:checked').val();
-        var duration = $('input[name="duration"]:checked').val();
-        var sorting = $("#sorting_tours").val();
-
-        formDataFilter = {
-            minPrice: minPrice,
-            maxPrice: maxPrice,
-            domain: domain,
-            star: star,
-            time: duration,
-            sorting: sorting,
-        };
-        console.log(formDataFilter);
-
-        $.ajax({
-            url: filterToursUrl,
-            method: "GET",
-            data: formDataFilter,
-            success: function (res) {
-                $("#tours-container").html(res).removeClass("hidden-content");
-                $("#tours-container .destination-item").addClass("aos-animate");
-                $(".loader").hide();
-            },
-        });
-    }
-
-    $(document).on("click", ".pagination-tours a", function (e) {
-        e.preventDefault();
-        $(".loader").show();
-        $("#tours-container").addClass("hidden-content");
-
-        var url = $(this).attr("href");
-        console.log(url);
-
-        var domain = $('input[name="domain"]:checked').val();
-        var star = $('input[name="filter_star"]:checked').val();
-        var duration = $('input[name="duration"]:checked').val();
-        var sorting = $("#sorting_tours").val();
-
-        var minPrice = $(".price-slider-range").slider("values", 0);
-        var maxPrice = $(".price-slider-range").slider("values", 1);
-
-        $.ajax({
-            url: url,
-            type: "GET",
-            data: {
-                minPrice: minPrice,
-                maxPrice: maxPrice,
-                domain: domain,
-                star: star,
-                time: duration,
-                sorting: sorting,
-            },
-
-            success: function (response) {
-                // Cập nhật toàn bộ nội dung (tours và phân trang)
-                $("#tours-container")
-                    .html(response)
-                    .removeClass("hidden-content");
-                $("#tours-container .destination-item").addClass("aos-animate");
-                $(".loader").hide();
-            },
-            error: function (xhr, status, error) {
-                $(".loader").hide();
-                console.log("Có lỗi xảy ra trong quá trình tải dữ liệu!");
-            },
-        });
-    });
-
-    // Hàm để clear các filter đã chọn
-    $(".clear_filter a").on("click", function (e) {
-        e.preventDefault();
-
-        // reset slider
-        $(".price-slider-range").slider("values", [0, 20000000]);
-
-        // bỏ chọn filter
-        $('input[name="domain"]').prop("checked", false);
-        $('input[name="filter_star"]').prop("checked", false);
-        $('input[name="duration"]').prop("checked", false);
-
-        // reset sorting
-        $("#sorting_tours").val("default");
-
-        // gọi lại filter
-        filterTours(0, 20000000);
-
-        // Bỏ chọn radio và checkbox
-        $('input[name="domain"]').prop("checked", false);
-        $('input[name="filter_star"]').prop("checked", false);
-        $('input[name="duration"]').prop("checked", false);
-
-        var url = $(this).attr("href");
-
-        $.ajax({
-            url: url,
-            type: "GET",
-            dataType: "json",
-            success: function (response) {
-                // Cập nhật toàn bộ nội dung (tours và phân trang)
-                $("#tours-container")
-                    .html(response.tours)
-                    .removeClass("hidden-content");
-                $("#tours-container .destination-item").addClass("aos-animate");
-                $("#tours-container .pagination-tours").addClass("aos-animate");
-                $(".loader").hide();
-            },
-            error: function (xhr, status, error) {
-                console.log("Có lỗi xảy ra trong quá trình tải dữ liệu!");
-            },
-        });
-    });
-
     /****************************************
      *             PAGE TOURDETAIL          *
      * ***************************************/
@@ -581,8 +332,10 @@ $(document).ready(function () {
             isRecognizing = false; // Đánh dấu trạng thái nhận diện kết thúc
         };
     } else {
-        console.log("Speech recognition not supported in this browser.");
-        toastr.error("Trình duyệt của bạn không hỗ trợ nhận diện giọng nói.");
+        // Trình duyệt không hỗ trợ (vd. Firefox): chỉ báo khi người dùng bấm nút micro, không báo lỗi mỗi lần mở trang
+        $("#voice-search").on("click", function () {
+            toastr.error("Trình duyệt của bạn không hỗ trợ nhận diện giọng nói.");
+        });
     }
 });
 

@@ -15,12 +15,7 @@
 .tpf-eyebrow { margin: 0; text-transform: uppercase; letter-spacing: .1em; font-size: .74rem; font-weight: 700; color: var(--f-brand); }
 .tpf-hero h1 { font-size: clamp(1.6rem, 2.6vw, 2.25rem); margin: 4px 0 6px; letter-spacing: -.01em; }
 .tpf-lead { color: var(--f-mut); max-width: 62ch; margin: 0 0 14px; }
-.tpf-quick { display: flex; align-items: center; gap: 10px; background: var(--f-card); border: 1px solid var(--f-line); border-radius: 999px; padding: 6px 6px 6px 16px; box-shadow: var(--f-sh); max-width: 760px; }
-.tpf-quick > i { color: var(--f-brand); }
-.tpf-quick input { flex: 1; border: 0; outline: 0; background: transparent; font-size: .95rem; min-width: 0; }
-.tpf-quick .tp-btn { border-radius: 999px; white-space: nowrap; }
-.tpf-quick:focus-within { border-color: var(--f-brand); box-shadow: 0 0 0 3px rgba(13, 111, 106, .15); }
-@media (max-width: 575px) { .tpf-quick { flex-wrap: wrap; border-radius: 16px; padding: 10px; } .tpf-quick .tp-btn { width: 100%; } }
+
 .tpf-alert { margin: 16px 0; }
 .tpf-note { margin: 16px 0; }
 .tpf-miss summary { cursor: pointer; color: var(--f-brand-d); font-weight: 600; }
@@ -171,10 +166,9 @@
 @media (max-width: 640px) { .tpf-fcard { grid-template-columns: 1fr; } .tpf-fcard__img { min-height: 120px; } }
 
 /* ================= Danh sách chuyến ================= */
-.tp-tcard__cover img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
 
 /* chống kiểu mặc định của giao diện chung */
-.tpf .tpf-combo input, .tpf .tpf-quick input, .tpf .tpf-stepper input { border: 0 !important; box-shadow: none !important; height: auto; background: transparent; }
+.tpf .tpf-combo input, .tpf .tpf-stepper input { border: 0 !important; box-shadow: none !important; height: auto; background: transparent; }
 .tpf .tp-seg legend, .tpf .tpf-toggles legend, .tpf .tpf-months legend { font-size: .92rem; font-weight: 600; line-height: 1.4; border: 0; width: 100%; flex-basis: 100%; float: none; padding: 0; }
 .tpf .tpf-step h2 { font-weight: 700; color: var(--f-ink); }
 .tpf .tp-seg__o b i { color: var(--f-brand); margin-right: 2px; }

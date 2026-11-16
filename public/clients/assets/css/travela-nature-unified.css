@@ -68,8 +68,6 @@ body.tv-sea, body.tv-home {
   --border-color: var(--nl-line);
   --primary-rgb: 22,122,133;
   --secondary-rgb: 244,215,161;
-  background: var(--nl-ivory);
-  color: var(--nl-ink);
   font-family: "Be Vietnam Pro", system-ui, sans-serif;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -151,13 +149,6 @@ body.tv-sea .tvf,body.tv-home .tvf {
   --f-sand: #E4CBA1;
   background: radial-gradient(900px 400px at 85% -10%,rgba(145,178,161,.13),transparent 63%),linear-gradient(180deg,#183F46,#1B322A);
 }
-body.tv-sea .tvf-cta,body.tv-home .tvf-cta {
-  background: linear-gradient(120deg,#167A85,#115D66);
-  box-shadow: 0 15px 34px rgba(30,57,43,.19);
-}
-body.tv-sea .tvf-col h3,body.tv-home .tvf-col h3 { color: #F0DBB5; }
-body.tv-sea .tvf-brand p,body.tv-home .tvf-brand p { color: #D1E1D6; }
-body.tv-sea .tvf .tvf-btn--sand,body.tv-home .tvf .tvf-btn--sand { background: var(--nl-champagne); color: #3C3529; }
 
 /* Accessibility, loading, form and touch affordance. Avoid overriding icon-only dimensions. */
 body.tv-sea :is(button,[role=button],.theme-btn), body.tv-home :is(button,[role=button],.theme-btn) { touch-action: manipulation; }
@@ -213,13 +204,12 @@ body.tv-sea :is(.px-tabsw .is-on,.px-chips .is-on,.tr-quick__b.is-on) {
   color:var(--nl-primary-hover);border-color:var(--nl-primary);
 }
 /* Warm watercolor should stay decorative and never reduce text contrast. */
-body.tv-sea .tvf-dhero__wash {opacity:.65;pointer-events:none;}
+
 body.tv-sea :is(.tvp-eyebrow,.v3-eyebrow) {color:var(--nl-primary-hover);}
 /* Ensure errors and warnings retain meaning independent of the brand palette. */
 body.tv-sea :is([aria-invalid=true],.is-invalid) {border-color:var(--nl-danger);}
 body.tv-sea :is(.invalid-feedback,.text-danger,[role=alert]) {color:var(--nl-danger);}
 body.tv-sea [role=alert] a {text-decoration:underline;}
-
 
 /* Travela Nature Luxury • patch scoped v2 • loaded after all public legacy styles. */
 :root {
@@ -228,7 +218,7 @@ body.tv-sea [role=alert] a {text-decoration:underline;}
   --gx-mute: #526A70; --gx-line: #DAECEB;
 }
 html {scroll-padding-top: 92px;}
-body.tv-home, body.tv-sea {background: #FFFDF8; color: #1E2F33;}
+body.tv-home, body.tv-sea {background: #FFFDF8; }
 body.tv-home .v3-wrap {width: min(1180px, calc(100% - 40px)); max-width: 1180px; margin-inline: auto;}
 /* Fix the home tour card visual regression seen in the supplied screenshot. */
 body.tv-home #hxTours.trc-grid {
@@ -321,8 +311,6 @@ body.tv-home #hxTours .trc__title a:focus-visible {outline:3px solid #8A5A21;out
 .nl-library__tour .nl-library__item {background:#FFFDF8;}
 .nl-library__tour .nl-library__item h3 {font-size:17px;margin:0;}
 
-
-
 /* Travela Nature Luxury • unified design tokens & interaction pass 2026-11.
    Scope: shared public experience. All status colors remain semantic. */
 :root {
@@ -352,7 +340,7 @@ body.tv-sea .nl-library__item:focus-within { border-color:var(--tl-primary); box
 body.tv-sea .nl-library__head h1 { text-wrap:balance; }
 body.tv-sea .nl-library__filters a:focus-visible { outline:3px solid #8A5A21;outline-offset:3px; }
 body.tv-sea .nl-library__actions button[disabled] {opacity:.6; cursor:progress;}
-.nl-library__feedback {font-size:13px;min-height:1.4em;color:#AA423D;}
+
 .nl-library__actions .nl-remove { min-height:42px; }
 .nl-library__tour .nl-tour-remove { border:1px solid #DAC5BA;border-radius:9px;padding:8px 11px;background:#fff;color:#984A3E;cursor:pointer;min-height:40px;align-self:flex-start; }
 .nl-library__tour .nl-tour-remove:hover {background:#FAEEEA;}

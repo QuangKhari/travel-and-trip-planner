@@ -42,11 +42,11 @@
                     </div>
                 </div>
                 <div class="ab-photos" aria-hidden="true">
-                    <figure class="p1"><img src="{{ $img('about/hero-about.jpg') }}" alt=""
+                    <figure class="p1"><img src="{{ $img('banner/banner-about.jpg') }}" alt=""
                             fetchpriority="high"></figure>
-                    <figure class="p2"><img src="{{ $img('about/story-2.jpg') }}" alt="" loading="lazy">
+                    <figure class="p2"><img src="{{ $img('blog/blog-list3.jpg') }}" alt="" loading="lazy">
                     </figure>
-                    <figure class="p3"><img src="{{ $img('about/story-3.jpg') }}" alt="" loading="lazy">
+                    <figure class="p3"><img src="{{ $img('blog/blog1.jpg') }}" alt="" loading="lazy">
                     </figure>
                     <span class="ab-note">Việt Nam đẹp lắm!</span>
                 </div>
@@ -86,7 +86,7 @@
     <section class="v3-sec" aria-labelledby="abStory">
         <div class="v3-wrap ab-story">
             <div class="ab-story__img v3-rv">
-                <img src="{{ $img('about/story-1.jpg') }}" alt="Du khách ngắm cảnh trong một chuyến đi"
+                <img src="{{ $img('blog/blog-list1.jpg') }}" alt="Du khách ngắm cảnh trong một chuyến đi"
                     loading="lazy">
                 <span class="ab-story__badge"><i class="fas fa-route" aria-hidden="true"></i>Tour, lịch trình<br>và
                     cẩm nang ở một nơi</span>
@@ -166,7 +166,7 @@
         <div class="v3-wrap">
             <div class="ab-quote v3-rv">
                 <div class="ab-quote__img">
-                    <img src="{{ $img('about/testimonial-landscape.jpg') }}" alt="" loading="lazy">
+                    <img src="{{ $img('hero/hero.jpg') }}" alt="" loading="lazy">
                     <p>Không chỉ là<br>một chuyến đi...</p>
                 </div>
                 <div class="ab-quote__body">
