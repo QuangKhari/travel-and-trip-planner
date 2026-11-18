@@ -29,11 +29,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'checkAdminRole'   => \App\Http\Middleware\CheckAdminRole::class,
             'api.active'       => \App\Http\Middleware\EnsureApiAccountActive::class,
             'throttle'         => \App\Http\Middleware\ThrottleRequests::class,
+            'idempotent'       => \App\Http\Middleware\Idempotent::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Mọi route /api/* luôn trả JSON, kể cả khi client quên gửi header Accept
         $exceptions->shouldRenderJsonWhen(
-            fn(Request $request, Throwable $e) => $request->is('api/*') || $request->expectsJson()
+            fn(Request $request, Throwable $e) => $request->is('api/*') || $request->expectsJson(),
         );
     })->create();

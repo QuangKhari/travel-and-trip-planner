@@ -28,3 +28,6 @@
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .ask__chip { transition: none; } }
 @media (max-width: 480px) { .ask__msg { max-width: 100%; } }
+.ask__trust { margin-left: 6px; font-size: .72rem; padding: 0 6px; border-radius: 999px; background: #eef6f4; color: #2f6f62; }
+.ask__trust--user { background: #fff7e6; color: #8a5a00; }
+.ask__trust--estimate { background: #f3f4f6; color: #4b5563; }

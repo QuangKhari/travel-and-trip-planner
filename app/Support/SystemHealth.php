@@ -70,6 +70,46 @@ final class SystemHealth
 
             return $conn;
         });
+        // Nhịp scheduler / worker (routes/console.php): cron hay worker dừng thì các việc định kỳ (hết hạn giữ chỗ, đối soát, hoàn tiền,
+        // sự kiện nghiệp vụ, email) lặng lẽ ngừng — phải thấy được ở đây.
+        $run('scheduler', false, function () {
+            $t = (int) \Illuminate\Support\Facades\Cache::get('ops:hb:scheduler', 0);
+            if ($t === 0) {
+                throw new \RuntimeException('chưa thấy nhịp: cron "php artisan schedule:run" mỗi phút đã được cài chưa?');
+            }
+            $ago = time() - $t;
+            if ($ago > 180) {
+                throw new \RuntimeException('nhịp cuối cách đây ' . intdiv($ago, 60) . ' phút: scheduler có thể đã dừng');
+            }
+
+            return 'nhịp cuối ' . $ago . ' giây trước';
+        });
+        $run('worker', false, function () {
+            if (config('queue.default') === 'sync') {
+                return 'sync (không cần worker)';
+            }
+            $t = (int) \Illuminate\Support\Facades\Cache::get('ops:hb:queue', 0);
+            if ($t === 0) {
+                throw new \RuntimeException('chưa thấy worker xử lý việc nào: "php artisan queue:work" đang chạy chưa?');
+            }
+            $ago = time() - $t;
+            if ($ago > 900) {
+                throw new \RuntimeException('worker xử lý việc cuối cách đây ' . intdiv($ago, 60) . ' phút');
+            }
+
+            return 'xử lý việc cuối ' . intdiv($ago, 60) . ' phút trước';
+        });
+        $run('outbox', false, function () {
+            if (!Schema::hasTable('tbl_domain_events')) {
+                return 'không dùng';
+            }
+            $late = DB::table('tbl_domain_events')->whereNull('processedAt')->where('createdAt', '<', now()->subMinutes(5))->count();
+            if ($late > 0) {
+                throw new \RuntimeException($late . ' sự kiện nghiệp vụ chưa xử lý quá 5 phút');
+            }
+
+            return 'không tồn đọng';
+        });
         $run('failed_jobs', false, function () {
             if (!Schema::hasTable('failed_jobs')) {
                 return 'không dùng';
@@ -114,7 +154,9 @@ final class SystemHealth
                 throw new \RuntimeException("hôm nay $fail/$llm lượt lỗi, có thể hết hạn mức nhà cung cấp");
             }
 
-            return "bật · hôm nay $llm lượt AI ($fail lỗi), $fallback lượt chế độ luật · hạn mức " . (int) config('ai.limits.daily_per_user', 40) . '/người/ngày';
+            $usd = \App\Services\Ai\AiCost::report(now()->toDateString(), now()->toDateString())['total'];
+
+            return "bật · hôm nay $llm lượt AI ($fail lỗi), $fallback lượt chế độ luật, chi phí ~\$" . number_format($usd, 4) . ' · hạn mức ' . (int) config('ai.limits.daily_per_user', 40) . '/người/ngày';
         });
 
         $ok = collect($checks)->every(fn($c) => $c['ok'] || !$c['required']);

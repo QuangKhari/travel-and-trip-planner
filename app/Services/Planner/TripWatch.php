@@ -207,8 +207,10 @@ final class TripWatch
         }
         $alerts = array_values($this->signals($trip));
         $book = BookingPlan::ready() ? app(BookingPlan::class)->forTrip($trip) : ['needs' => [], 'planned' => []];
-        $todo = array_merge(array_map(fn($n) => $n['title'], array_filter($book['needs'], fn($n) => empty($n['plannedId']))),
-            array_map(fn($p) => 'Cần đặt: ' . $p['title'], $book['planned']));
+        $todo = array_merge(
+            array_map(fn($n) => $n['title'], array_filter($book['needs'], fn($n) => empty($n['plannedId']))),
+            array_map(fn($p) => 'Cần đặt: ' . $p['title'], $book['planned']),
+        );
         $today = null;
         if (str_starts_with($milestone, 'day')) {
             $d = (int) substr($milestone, 3);
@@ -266,8 +268,8 @@ final class TripWatch
             foreach ($this->recipients($trip) as $u) {
                 Mail::to($u->email)->queue(new TemplateMail('admin.emails.trip-digest', [
                     'name' => $u->fullName, 'trip' => $trip, 'heading' => $title, 'milestone' => $m] + $data + [
-                    'url' => route('planner.edit', ['id' => $trip->tripId]),
-                ], $title . ' · ' . $trip->title));
+                        'url' => route('planner.edit', ['id' => $trip->tripId]),
+                    ], $title . ' · ' . $trip->title));
             }
         }
 
@@ -287,10 +289,24 @@ final class TripWatch
 
         return [
             'events' => $rows->map(fn($e) => ['id' => (int) $e->eventId, 'kind' => $e->kind, 'tone' => $e->tone, 'title' => $e->title, 'text' => $e->text,
-                'day' => $e->day !== null ? (int) $e->day : null, 'at' => Carbon::parse($e->createdAt)->toIso8601String(), 'unread' => (int) $e->eventId > $seen])->all(),
+                'day' => $e->day !== null ? (int) $e->day : null, 'at' => Carbon::parse($e->createdAt)->toIso8601String(), 'unread' => (int) $e->eventId > $seen]
+                + self::action($e))->all(),
             'unread' => DB::table('tbl_trip_events')->where('tripId', $tripId)->where('eventId', '>', $seen)->count(),
             'checkedAt' => DB::table('tbl_trip_watch')->where('tripId', $tripId)->value('checkedAt'),
         ];
+    }
+
+    /**
+     * Nút hành động của thông báo: nơi bị gỡ (ref "unpub:{type}:{refId}") -> mở phương án lập lại kế hoạch cho đúng mục đó.
+     * @return array{action?:array{type:string,code:string,refType:string,refId:int}}
+     */
+    private static function action(object $e): array
+    {
+        if ($e->kind === 'content' && preg_match('/^unpub:([a-z]+):(\d+)$/', (string) $e->ref, $m)) {
+            return ['action' => ['type' => 'resolve', 'code' => 'content.unavailable', 'refType' => $m[1], 'refId' => (int) $m[2]]];
+        }
+
+        return [];
     }
 
     public function markSeen(int $tripId, int $userId): void

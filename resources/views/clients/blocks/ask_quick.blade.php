@@ -20,5 +20,5 @@
         <p class="ask__login"><a href="{{ route('login') }}">Đăng nhập</a> để hỏi trợ lý về {{ $destination->name }}.</p>
     @endif
 </section>
-<link rel="stylesheet" href="{{ asset('clients/assets/css/ask.css') }}?v=1">
-<script src="{{ asset('clients/assets/js/ask.js') }}?v=1" defer></script>
+<link rel="stylesheet" href="{{ asset('clients/assets/css/ask.css') }}?v=2">
+<script src="{{ asset('clients/assets/js/ask.js') }}?v=2" defer></script>

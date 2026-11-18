@@ -80,9 +80,13 @@ final class OpenAiJsonLlm implements StructuredLlm
         $data = json_decode(self::stripFence($raw), true);
         if (!is_array($data)) {
             $finish = (string) ($r['choices'][0]['finish_reason'] ?? '');
-            throw new SchemaViolation($finish === 'length'
+            throw new SchemaViolation(
+                $finish === 'length'
                 ? 'JSON bị cắt vì hết max_tokens (' . $maxTokens . '): tăng AI_MAX_TOKENS_* của tính năng này.'
-                : 'Không đọc được JSON từ mô hình' . ($finish !== '' && $finish !== 'stop' ? ' (finish_reason=' . $finish . ')' : '') . ': ' . mb_substr($raw, 0, 60));
+                : 'Không đọc được JSON từ mô hình' . ($finish !== '' && $finish !== 'stop' ? ' (finish_reason=' . $finish . ')' : '') . ': ' . mb_substr($raw, 0, 60),
+                $r['usage']['prompt_tokens'] ?? null,
+                $r['usage']['completion_tokens'] ?? null,
+            );
         }
 
         return ['data' => $data, 'input_tokens' => $r['usage']['prompt_tokens'] ?? null, 'output_tokens' => $r['usage']['completion_tokens'] ?? null, 'raw' => $raw];

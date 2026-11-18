@@ -33,13 +33,58 @@
                     <td>{{ $f === 'copilot' ? (int) $r->refused : '—' }}</td>
                     <td>{{ $r->avgMs !== null ? round($r->avgMs) : '—' }} / {{ $x['p95'] ?? '—' }}</td>
                     <td>{{ number_format((int) $r->tin, 0, ',', '.') }} / {{ number_format((int) $r->tout, 0, ',', '.') }}</td>
-                    <td>{{ $x['cost'] !== null ? '$' . number_format($x['cost'], 4) : 'đặt AI_PRICE_IN/OUT' }}</td>
+                    <td>@if ($x['cost'] === null) — @else ${{ number_format($x['cost']['usd'], 4) }}@if ($x['cost']['unpriced'])<br><small class="text-warning">{{ $x['cost']['unpriced'] }} lượt chưa có giá</small>@endif @endif</td>
                 </tr>
             @endforeach
             </tbody>
         </table>
         <p class="text-muted small">"Gọi AI" = lượt có engine llm. "Chế độ cơ bản" = lùi về luật / câu mẫu (AI tắt, hết lượt, ngắt mạch, lỗi). Đề xuất Copilot luôn đã qua TripHealth: "không đề xuất được" là khi mọi phương án đều tạo lỗi cứng mới.</p>
     </div></div>
+
+    @if (!empty($cost))
+    @php
+        $costLabel = $features + ['ask' => 'Hỏi đáp / F5 (RAG)'];
+        $days = array_slice($cost['byDay'], 0, 31, true);
+        $maxDay = $days ? max($days) : 0;
+    @endphp
+    <div class="x_panel"><div class="x_title"><h2>Chi phí AI <small>theo bảng giá từng model · giá kiểm ngày {{ $cost['checked'] }} (config/ai.php)</small></h2><div class="clearfix"></div></div><div class="x_content">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-bordered" style="font-variant-numeric:tabular-nums">
+                    <thead><tr><th>Chức năng</th><th class="text-right">Lượt gọi model</th><th class="text-right">Token vào / ra</th><th class="text-right">USD</th><th class="text-right">USD / lượt</th></tr></thead>
+                    <tbody>
+                    @forelse ($cost['byFeature'] as $f => $c)
+                        <tr><td>{{ $costLabel[$f] ?? $f }}</td><td class="text-right">{{ $c['calls'] }}</td>
+                            <td class="text-right">{{ number_format($c['in'], 0, ',', '.') }} / {{ number_format($c['out'], 0, ',', '.') }}</td>
+                            <td class="text-right">${{ number_format($c['usd'], 4) }}</td>
+                            <td class="text-right">{{ $c['calls'] - $c['unpriced'] > 0 ? '$' . number_format($c['usd'] / ($c['calls'] - $c['unpriced']), 5) : '—' }}</td></tr>
+                    @empty
+                        <tr><td colspan="5" class="text-muted">Chưa có lượt gọi model nào trong khoảng này.</td></tr>
+                    @endforelse
+                    </tbody>
+                    <tfoot><tr><th colspan="3">Tổng</th><th class="text-right">${{ number_format($cost['total'], 4) }}</th><th></th></tr></tfoot>
+                </table>
+                @if ($cost['unpriced'])
+                    <p class="text-warning small">Chưa có giá cho: {{ implode(', ', $cost['unpriced']) }}. Thêm vào <code>ai.pricing</code> hoặc đặt <code>AI_PRICE_IN</code> / <code>AI_PRICE_OUT</code>; các lượt này không được cộng vào tổng.</p>
+                @endif
+            </div>
+            <div class="col-md-6">
+                <table class="table table-condensed" style="font-variant-numeric:tabular-nums">
+                    <thead><tr><th>Ngày</th><th>USD</th><th style="width:55%"></th></tr></thead>
+                    <tbody>
+                    @forelse ($days as $d => $usd)
+                        <tr><td>{{ date('d/m/Y', strtotime($d)) }}</td><td>${{ number_format($usd, 4) }}</td>
+                            <td><div style="height:8px;border-radius:4px;background:#1abb9c;width:{{ $maxDay > 0 ? max(2, round($usd * 100 / $maxDay)) : 0 }}%"></div></td></tr>
+                    @empty
+                        <tr><td colspan="3" class="text-muted">—</td></tr>
+                    @endforelse
+                    </tbody>
+                </table>
+                <p class="text-muted small">Lượt lấy từ bộ đệm không tốn token. Lượt sai khuôn rồi tự sửa tính cả hai lần gọi. Xuất chi tiết: <code>php artisan ai:cost --csv=storage/app/ai-cost.csv</code>.</p>
+            </div>
+        </div>
+    </div></div>
+    @endif
 
     @if ($fb['has'])
     @php

@@ -1,5 +1,5 @@
 @include('clients.blocks.header')
-<link rel="stylesheet" href="{{ asset('clients/assets/css/ask.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/ask.css') }}?v=2">
 
 <main class="gx-page" id="main">
     <div class="gx-wrap">
@@ -36,5 +36,5 @@
     </div>
 </main>
 
-<script src="{{ asset('clients/assets/js/ask.js') }}?v=1" defer></script>
+<script src="{{ asset('clients/assets/js/ask.js') }}?v=2" defer></script>
 @include('clients.blocks.footer')

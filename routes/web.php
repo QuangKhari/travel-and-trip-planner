@@ -152,6 +152,12 @@ Route::get('/chuyen-di/{token}', [PlannerController::class, 'shared'])->where('t
 Route::get('/cong-dong', [CommunityController::class, 'index'])->middleware('throttle:60,1,community')->name('community.index');
 Route::get('/cong-dong/{id}', [CommunityController::class, 'show'])->whereNumber('id')->middleware('throttle:60,1,community')->name('community.show');
 // Đợt F: buổi thử người dùng (chỉ tài khoản người thử, khi STUDY_ENABLED bật)
+// Thu câu đánh giá AI do người khác viết (bộ held-out): đường dẫn có chữ ký, không cần tài khoản. Tạo link: php artisan ai:peer-link ten-nguoi
+Route::middleware(['signed', 'throttle:60,1,peer-eval'])->prefix('gop-cau-danh-gia')->group(function () {
+    Route::get('/{writer}', [\App\Http\Controllers\clients\PeerEvalController::class, 'show'])->name('peer.eval');
+    Route::post('/{writer}', [\App\Http\Controllers\clients\PeerEvalController::class, 'store'])->name('peer.eval.store');
+});
+
 Route::middleware(['checkLoginClient', 'checkUserBlocked', 'throttle:120,1,study'])->prefix('buoi-thu')->group(function () {
     Route::get('/dong-y', [\App\Http\Controllers\clients\StudyController::class, 'consentForm'])->name('study.consent.form');
     Route::post('/dong-y', [\App\Http\Controllers\clients\StudyController::class, 'consent'])->name('study.consent');
@@ -235,7 +241,7 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::get('/thanh-toan/{method}/{bookingId}', [PaymentController::class, 'pay'])->whereIn('method', ['vnpay', 'momo', 'qr'])->whereNumber('bookingId')->middleware('throttle:10,1,pay-start')->name('payment.pay');
     Route::post('/thanh-toan/{bookingId}/kiem-tra', [PaymentController::class, 'check'])->whereNumber('bookingId')->middleware('throttle:6,1,pay-check')->name('payment.check');
     Route::get('/thanh-toan/{bookingId}/trang-thai', [PaymentController::class, 'status'])->whereNumber('bookingId')->middleware('throttle:40,1,pay-status')->name('payment.status');
-    Route::post('/create-booking', [BookingController::class, 'createBooking'])->middleware('throttle:10,1,create-booking')->name('create-booking');
+    Route::post('/create-booking', [BookingController::class, 'createBooking'])->middleware(['throttle:10,1,create-booking', 'idempotent'])->name('create-booking');
     Route::post('/apply-coupon', [BookingController::class, 'applyCoupon'])->middleware('throttle:20,1,apply-coupon')->name('apply-coupon');
     Route::post('/checkBooking', [BookingController::class, 'checkBooking'])->name('checkBooking');
 
@@ -266,7 +272,7 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::post('/len-ke-hoach/hieu-yeu-cau', [PlannerAiController::class, 'brief'])->middleware('throttle:10,1,planner-ai-brief')->name('planner.ai.brief');
     Route::get('/len-ke-hoach/tro-ly', [PlannerAiController::class, 'chatPage'])->name('planner.ai.chat');
     Route::post('/len-ke-hoach/tro-ly/doc', [PlannerAiController::class, 'chatRead'])->middleware('throttle:30,1,planner-ai-chat')->name('planner.ai.chat.read');
-    Route::post('/len-ke-hoach/tro-ly/tao', [PlannerAiController::class, 'chatCreate'])->middleware('throttle:6,1,planner-ai-make')->name('planner.ai.chat.make');
+    Route::post('/len-ke-hoach/tro-ly/tao', [PlannerAiController::class, 'chatCreate'])->middleware(['throttle:6,1,planner-ai-make', 'idempotent'])->name('planner.ai.chat.make');
     Route::post('/len-ke-hoach/tro-ly/nhap/sua', [PlannerAiController::class, 'draftEdit'])->middleware('throttle:40,1,planner-ai-draft-edit')->name('planner.ai.chat.edit');
     Route::post('/len-ke-hoach/{id}/tom-tat-ai', [PlannerAiController::class, 'explain'])->whereNumber('id')->middleware('throttle:10,1,planner-ai-explain')->name('planner.ai.explain');
     Route::post('/len-ke-hoach/{id}/la-ban', [PlannerAiController::class, 'copilot'])->whereNumber('id')->middleware('throttle:12,1,planner-ai-copilot')->name('planner.ai.copilot');
@@ -275,7 +281,7 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::post('/len-ke-hoach/{id}/la-ban/kiem-tra-lai', [PlannerAiController::class, 'recheck'])->whereNumber('id')->middleware('throttle:30,1,planner-ai-recheck')->name('planner.ai.recheck');
     Route::post('/len-ke-hoach/{id}/dan-ghi-chu', [PlannerAiController::class, 'notes'])->whereNumber('id')->middleware('throttle:10,1,planner-notes')->name('planner.notes');
     Route::post('/len-ke-hoach/{id}/la-ban/canh-bao/giai-thich', [PlannerAiController::class, 'alertExplain'])->whereNumber('id')->middleware('throttle:20,1,planner-ai-alert')->name('planner.ai.alert.explain');
-    Route::post('/len-ke-hoach/{id}/la-ban/ket-qua', [PlannerAiController::class, 'feedback'])->whereNumber('id')->middleware('throttle:60,1,planner-ai-feedback')->name('planner.ai.feedback');
+    Route::post('/len-ke-hoach/{id}/la-ban/ket-qua', [PlannerAiController::class, 'feedback'])->whereNumber('id')->middleware(['throttle:60,1,planner-ai-feedback', 'idempotent'])->name('planner.ai.feedback');
     Route::post('/la-ban/danh-gia', [PlannerAiController::class, 'rate'])->middleware('throttle:30,1,planner-ai-rate')->name('planner.ai.rate');
     Route::post('/len-ke-hoach/{id}/trang-thai', [PlannerController::class, 'status'])->whereNumber('id')->middleware('throttle:60,1,planner-status')->name('planner.status');
     Route::post('/len-ke-hoach', [PlannerController::class, 'store'])->middleware('throttle:20,1,planner-store')->name('planner.store');
@@ -297,7 +303,7 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::post('/len-ke-hoach/{id}/bao-gia-tour', [\App\Http\Controllers\clients\TourQuoteController::class, 'store'])->whereNumber('id')->middleware('throttle:5,1,tour-quote')->name('quotes.store');
     Route::get('/bao-gia-tour', [\App\Http\Controllers\clients\TourQuoteController::class, 'index'])->name('quotes.index');
     Route::get('/bao-gia-tour/{id}', [\App\Http\Controllers\clients\TourQuoteController::class, 'show'])->whereNumber('id')->name('quotes.show');
-    Route::post('/bao-gia-tour/{id}/tra-loi', [\App\Http\Controllers\clients\TourQuoteController::class, 'decide'])->whereNumber('id')->middleware('throttle:10,1')->name('quotes.decide');
+    Route::post('/bao-gia-tour/{id}/tra-loi', [\App\Http\Controllers\clients\TourQuoteController::class, 'decide'])->whereNumber('id')->middleware(['throttle:10,1', 'idempotent'])->name('quotes.decide');
     Route::post('/bao-gia-tour/{id}/nhan-tin', [\App\Http\Controllers\clients\TourQuoteController::class, 'message'])->whereNumber('id')->middleware('throttle:20,1,quote-msg')->name('quotes.message');
     Route::post('/dia-diem/bao-sai', [\App\Http\Controllers\clients\PlaceReportController::class, 'store'])->middleware('throttle:10,1,place-report')->name('places.report');
     Route::get('/len-ke-hoach/{id}/lich.ics', [\App\Http\Controllers\clients\TripCalendarController::class, 'download'])->whereNumber('id')->middleware('throttle:20,1,planner-ics')->name('planner.ics');

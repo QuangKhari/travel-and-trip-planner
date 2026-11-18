@@ -117,11 +117,16 @@ class ChatLogController extends Controller
                     AVG(CASE WHEN engine = 'llm' THEN latencyMs END) avgMs, SUM(inputTokens) tin, SUM(outputTokens) tout")->first();
                 $llm = (int) $row->llm;
                 $p95 = $llm ? (clone $q)->where('engine', 'llm')->orderBy('latencyMs')->offset((int) floor($llm * 0.95))->limit(1)->value('latencyMs') : null;
-                $cost = config('ai.price_in') !== null && config('ai.price_out') !== null
-                    ? (float) $row->tin / 1e6 * (float) config('ai.price_in') + (float) $row->tout / 1e6 * (float) config('ai.price_out') : null;
-                $stats[$f] = ['label' => $label, 'row' => $row, 'p95' => $p95, 'cost' => $cost,
+                $stats[$f] = ['label' => $label, 'row' => $row, 'p95' => $p95, 'cost' => null,
                     'accept' => ($row->applied + $row->skipped) > 0 ? round($row->applied * 100 / ($row->applied + $row->skipped), 1) : null];
             }
+            // chi phí theo bảng giá từng model (AiCost), cùng khoảng ngày của bộ lọc
+            $cost = \App\Services\Ai\AiCost::report((string) $request->query('from', ''), (string) $request->query('to', ''));
+            foreach ($stats as $f => &$x) {
+                $c = $cost['byFeature'][$f] ?? null;
+                $x['cost'] = $c ? ['usd' => $c['usd'], 'unpriced' => $c['unpriced']] : null;
+            }
+            unset($x);
             $byOutcome = $this->aiFiltered($request)->selectRaw('feature, outcome, COUNT(*) n')->groupBy('feature', 'outcome')->orderBy('feature')->orderByDesc('n')->get();
         }
 
@@ -137,6 +142,7 @@ class ChatLogController extends Controller
         }
 
         return view('admin.chat.ai', [
+            'cost' => $cost ?? null,
             'fb' => $fb,
             'title' => 'Nhật ký AI (La bàn)',
             'has' => $has,

@@ -48,8 +48,13 @@ final class BriefService
         $brief = $rules;
 
         if ($text !== '') {
-            $res = $this->gateway->json('brief', $userId, BriefPrompt::system(array_map(fn($d) => ['name' => $d['name']], $ctx['dests']), $today),
-                BriefPrompt::user($text), BriefPrompt::schema($ctx['maxDays']));
+            $res = $this->gateway->json(
+                'brief',
+                $userId,
+                BriefPrompt::system(array_map(fn($d) => ['name' => $d['name']], $ctx['dests']), $today),
+                BriefPrompt::user($text),
+                BriefPrompt::schema($ctx['maxDays']),
+            );
             if ($res['ok'] && is_array($res['data'])) {
                 $brief = BriefValidator::merge($this->validator->validate($res['data'], $text, $ctx), $rules);
                 $engine = 'llm';
@@ -63,7 +68,7 @@ final class BriefService
 
         $this->gateway->log(['feature' => 'brief', 'userId' => $userId, 'engine' => $engine, 'outcome' => $outcome, 'model' => $res['model'] ?? null,
             'inputChars' => mb_strlen($text), 'in' => $res['in'] ?? null, 'out' => $res['out'] ?? null, 'ms' => (int) round((microtime(true) - $t0) * 1000),
-            'flags' => $brief['flags'], 'error' => $res['error'] ?? null, 'text' => $text]);
+            'flags' => array_merge((array) $brief['flags'], array_map(fn($f) => 'inject:' . $f, \App\Services\Ai\PromptShield::scan($text))), 'error' => $res['error'] ?? null, 'text' => $text]);
 
         return [
             'ok' => $text !== '' && !$brief['refused'],

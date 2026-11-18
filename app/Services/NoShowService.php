@@ -46,14 +46,20 @@ class NoShowService
                 return ['ok' => false, 'message' => 'Chưa tới ngày khởi hành nên chưa đánh dấu khách không đến được.'];
             }
             $paid = $b->paymentStatus === 'y';
-            $upd = ['noShowAt' => now(), 'noShowBy' => $adminId, 'noShowNote' => $note ? mb_substr(trim($note), 0, 255) : null,
-                'bookingStatus' => $paid ? 'f' : 'c'];
+            $upd = ['noShowAt' => now(), 'noShowBy' => $adminId, 'noShowNote' => $note ? mb_substr(trim($note), 0, 255) : null];
             if (!$paid && Schema::hasColumn('tbl_booking', 'cancelReason')) {
                 $upd['cancelReason'] = 'no_show';
             }
-            DB::table('tbl_booking')->where('bookingId', $bookingId)->update($upd);
-            AuditLog::record('booking.no_show', 'booking', $bookingId, 'Khách không đến: đơn ' . $b->bookingCode . ($paid ? ' (đã thu, không hoàn)' : ' (chưa thu, hủy đơn)'),
-                ['bookingStatus' => $b->bookingStatus], ['bookingStatus' => $upd['bookingStatus'], 'noShow' => true, 'note' => $upd['noShowNote']]);
+            \App\Support\BookingState::force($bookingId, $b->bookingStatus, $paid ? 'f' : 'c', $upd, 'no_show', $adminId ? 'admin:' . $adminId : null);
+            $upd['bookingStatus'] = $paid ? 'f' : 'c';
+            AuditLog::record(
+                'booking.no_show',
+                'booking',
+                $bookingId,
+                'Khách không đến: đơn ' . $b->bookingCode . ($paid ? ' (đã thu, không hoàn)' : ' (chưa thu, hủy đơn)'),
+                ['bookingStatus' => $b->bookingStatus],
+                ['bookingStatus' => $upd['bookingStatus'], 'noShow' => true, 'note' => $upd['noShowNote']],
+            );
 
             return ['ok' => true, 'message' => 'Đã đánh dấu khách không đến' . ($paid ? '; đơn giữ nguyên số tiền đã thu.' : '; đơn chưa thanh toán được hủy.')];
         });
@@ -75,11 +81,11 @@ class NoShowService
             if (now()->diffInHours($b->noShowAt, true) > self::UNDO_HOURS) {
                 return ['ok' => false, 'message' => 'Đã quá ' . self::UNDO_HOURS . ' giờ, không hoàn tác được nữa.'];
             }
-            $upd = ['noShowAt' => null, 'noShowBy' => null, 'noShowNote' => null, 'bookingStatus' => 'y'];
+            $upd = ['noShowAt' => null, 'noShowBy' => null, 'noShowNote' => null];
             if (($b->cancelReason ?? null) === 'no_show') {
                 $upd['cancelReason'] = null;
             }
-            DB::table('tbl_booking')->where('bookingId', $bookingId)->update($upd);
+            \App\Support\BookingState::force($bookingId, $b->bookingStatus, 'y', $upd, 'no_show_undo', $adminId ? 'admin:' . $adminId : null);
             AuditLog::record('booking.no_show_undo', 'booking', $bookingId, 'Hoàn tác đánh dấu khách không đến đơn ' . $b->bookingCode, ['noShow' => true], ['bookingStatus' => 'y']);
 
             return ['ok' => true, 'message' => 'Đã hoàn tác: đơn trở về "Đã xác nhận".'];

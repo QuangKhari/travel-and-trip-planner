@@ -345,3 +345,7 @@ html.ai-co-on .gx-tray-fab, html.ai-co-on .gx-tray { visibility: hidden; }
 .ai-daywarn { display: inline-flex; align-items: center; gap: 5px; margin: 0; padding: 2px 9px; border: 1px solid var(--ai-sand-b); border-radius: 999px; background: var(--ai-sand-l); color: var(--ai-sand-d); font-size: .75rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .ai-daywarn.is-bad { border-color: #efc2b2; background: var(--ai-miss-l); color: var(--ai-miss); }
 .ai-daywarn:focus-visible { outline: 2px solid var(--ai-brand); outline-offset: 2px; }
+/* nhãn độ tin cậy của nguồn (F5) */
+.ai-trust { font-size: .7rem; padding: 0 6px; border-radius: 999px; background: #eef6f4; color: #2f6f62; border: 1px solid #cfe6e0; }
+.ai-trust--user { background: #fff7e6; color: #8a5a00; border-color: #f2dfb3; }
+.ai-trust--estimate { background: #f3f4f6; color: #4b5563; border-color: #e5e7eb; }

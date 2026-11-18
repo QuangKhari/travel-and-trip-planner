@@ -65,7 +65,7 @@ final class AnthropicJsonLlm implements StructuredLlm
                     'output_tokens' => $r['usage']['output_tokens'] ?? null, 'raw' => json_encode($b['input'], JSON_UNESCAPED_UNICODE)];
             }
         }
-        throw new SchemaViolation('Mô hình không trả về khối tool_use.');
+        throw new SchemaViolation('Mô hình không trả về khối tool_use.', $r['usage']['input_tokens'] ?? null, $r['usage']['output_tokens'] ?? null);
     }
 
     /** Ảnh (đọc vé, Đợt C mục 20): khối image base64 đứng trước lời nhắc. */

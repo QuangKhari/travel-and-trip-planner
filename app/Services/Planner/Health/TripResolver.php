@@ -3,7 +3,6 @@
 namespace App\Services\Planner\Health;
 
 use App\Services\Planner\TripLogistics;
-
 use App\Services\Planner\OpeningHours;
 use App\Services\Planner\PlannerRules;
 use App\Services\Planner\Route\HaversineProvider;
@@ -77,6 +76,9 @@ final class TripResolver
 
             return ['code' => $code, 'day' => $day, 'index' => null, 'problem' => $options ? $target['text'] : 'Ngày ' . $day . ' vẫn kịp như đã xếp, không cần đổi.',
                 'severity' => 'soft', 'before' => ['score' => $this->before['score'], 'level' => $this->before['level']], 'options' => $options];
+        }
+        if ($code === 'content.unavailable') {
+            return $this->unavailable($day, $index);
         }
         $target = null;
         foreach ($this->before['checks'] as $c) {
@@ -193,8 +195,13 @@ final class TripResolver
     private function apply(array $changes): array
     {
         // Một nguồn ngữ nghĩa thao tác cho Resolution Engine và La bàn Copilot (đã kiểm tra tương đương với bản cũ)
-        return ChangeSimulator::apply($this->days, $this->unassigned, $this->payload, $changes,
-            fn(string $type, int $refId, ?array $old) => $this->resolvedItem($type, $refId, $old ?? []));
+        return ChangeSimulator::apply(
+            $this->days,
+            $this->unassigned,
+            $this->payload,
+            $changes,
+            fn(string $type, int $refId, ?array $old) => $this->resolvedItem($type, $refId, $old ?? []),
+        );
     }
 
     /** Khóa nhận diện một kiểm tra theo MỤC (không theo vị trí, vì vị trí đổi sau khi áp dụng). */
@@ -247,16 +254,19 @@ final class TripResolver
         ];
     }
 
-    /** @return list<array{day:int,beforePct:int,afterPct:int,beforeMin:int,afterMin:int,beforeCount:int,afterCount:int,beforeKm:float,afterKm:float}> */
+    /** @return list<array{day:int,beforePct:int,afterPct:int,beforeMin:int,afterMin:int,beforeCount:int,afterCount:int,beforeKm:float,afterKm:float,beforeEnd:?string,afterEnd:?string,beforeCost:int,afterCost:int}> */
     private function effects(array $changes, array $after): array
     {
         $out = [];
         foreach (ChangeSimulator::touchedDays($changes) as $d) {
             $b = $this->schedule($d);
             $a = $this->schedule($d, $after[$d] ?? []);
+            // so sánh trước / sau cho người dùng duyệt: độ dày, phút, số mục, km, GIỜ KẾT THÚC và CHI PHÍ của ngày
             $out[] = ['day' => $d, 'beforePct' => (int) round($b->load() * 100), 'afterPct' => (int) round($a->load() * 100),
                 'beforeMin' => $b->occupiedMin(), 'afterMin' => $a->occupiedMin(), 'beforeCount' => $b->count(), 'afterCount' => $a->count(),
-                'beforeKm' => round($b->travelKm, 1), 'afterKm' => round($a->travelKm, 1)];
+                'beforeKm' => round($b->travelKm, 1), 'afterKm' => round($a->travelKm, 1),
+                'beforeEnd' => $b->count() ? DaySchedule::hhmm($b->end) : null, 'afterEnd' => $a->count() ? DaySchedule::hhmm($a->end) : null,
+                'beforeCost' => (int) round($b->cost), 'afterCost' => (int) round($a->cost)];
         }
 
         return $out;
@@ -361,12 +371,21 @@ final class TripResolver
             $it = $list[$cands[0]['i']];
             $b = $this->bestDayFor($it, $day, $this->days);
             if ($b) {
-                $opts[] = $this->option('move-one', 'Chuyển “' . $it['name'] . '” sang ngày ' . $b['day'],
+                $opts[] = $this->option(
+                    'move-one',
+                    'Chuyển “' . $it['name'] . '” sang ngày ' . $b['day'],
                     array_merge(['Mục dài nhất có thể dời (' . self::h($cands[0]['dur']) . ').'], $this->dayReason($b)),
-                    [['op' => 'move', 'day' => $day, 'index' => $cands[0]['i'], 'toDay' => $b['day']]], $target);
+                    [['op' => 'move', 'day' => $day, 'index' => $cands[0]['i'], 'toDay' => $b['day']]],
+                    $target,
+                );
             }
-            $opts[] = $this->option('inbox-one', 'Đưa “' . $it['name'] . '” về Đã lưu', ['Bớt ' . self::h($cands[0]['dur']) . ' cho ngày ' . $day . '; mục không mất, kéo lại vào ngày khác khi muốn.'],
-                [['op' => 'move', 'day' => $day, 'index' => $cands[0]['i'], 'toDay' => null]], $target);
+            $opts[] = $this->option(
+                'inbox-one',
+                'Đưa “' . $it['name'] . '” về Đã lưu',
+                ['Bớt ' . self::h($cands[0]['dur']) . ' cho ngày ' . $day . '; mục không mất, kéo lại vào ngày khác khi muốn.'],
+                [['op' => 'move', 'day' => $day, 'index' => $cands[0]['i'], 'toDay' => null]],
+                $target,
+            );
         }
 
         return $opts;
@@ -383,10 +402,20 @@ final class TripResolver
         $earliest = (int) (ceil(($prev['end'] + $prev['travelMin']) / 5) * 5);
         $why = '“' . $prev['item']['name'] . '” xong lúc ' . DaySchedule::hhmm($prev['end']) . ($prev['travelMin'] ? ', cần thêm ' . $prev['travelMin'] . ' phút di chuyển.' : '.');
         $opts = [];
-        $opts[] = $this->option('shift', 'Dời “' . $it['name'] . '” sang ' . DaySchedule::hhmm($earliest), [$why, 'Giữ giờ cố định, chỉ dời cho kịp.'],
-            [['op' => 'time', 'day' => $day, 'index' => $index, 'startMin' => $earliest]], $target);
-        $opts[] = $this->option('unfix', 'Bỏ giờ cố định của “' . $it['name'] . '”', [$why, 'Planner tự xếp nối tiếp mục trước.'],
-            [['op' => 'time', 'day' => $day, 'index' => $index, 'startMin' => null]], $target);
+        $opts[] = $this->option(
+            'shift',
+            'Dời “' . $it['name'] . '” sang ' . DaySchedule::hhmm($earliest),
+            [$why, 'Giữ giờ cố định, chỉ dời cho kịp.'],
+            [['op' => 'time', 'day' => $day, 'index' => $index, 'startMin' => $earliest]],
+            $target,
+        );
+        $opts[] = $this->option(
+            'unfix',
+            'Bỏ giờ cố định của “' . $it['name'] . '”',
+            [$why, 'Planner tự xếp nối tiếp mục trước.'],
+            [['op' => 'time', 'day' => $day, 'index' => $index, 'startMin' => null]],
+            $target,
+        );
 
         return $opts;
     }
@@ -493,8 +522,13 @@ final class TripResolver
         $why = $target['text'];
         $opts = [];
         if ($r['fixed'] && in_array($r['conflict'], ['arrival', 'transfer'], true)) {
-            $opts[] = $this->option('unfix', 'Bỏ giờ cố định của “' . $it['name'] . '”', [$why, $r['conflict'] === 'transfer' ? 'Planner tự xếp sau khi tới thành phố mới.' : 'Planner tự xếp sau giờ tới nơi.'],
-                [['op' => 'time', 'day' => $day, 'index' => $index, 'startMin' => null]], $target);
+            $opts[] = $this->option(
+                'unfix',
+                'Bỏ giờ cố định của “' . $it['name'] . '”',
+                [$why, $r['conflict'] === 'transfer' ? 'Planner tự xếp sau khi tới thành phố mới.' : 'Planner tự xếp sau giờ tới nơi.'],
+                [['op' => 'time', 'day' => $day, 'index' => $index, 'startMin' => null]],
+                $target,
+            );
         }
         // ngày khác còn chỗ: ngày giữa chuyến (không phải ngày tới / ngày về) nhẹ nhất
         $best = null;
@@ -510,11 +544,21 @@ final class TripResolver
             }
         }
         if ($best) {
-            $opts[] = $this->option('move', 'Chuyển sang ngày ' . $best[0], [$why, 'Ngày ' . $best[0] . ' sau khi thêm dùng khoảng ' . (int) round($best[1] * 100) . '% thời gian.'],
-                [['op' => 'move', 'day' => $day, 'index' => $index, 'toDay' => $best[0]]], $target);
+            $opts[] = $this->option(
+                'move',
+                'Chuyển sang ngày ' . $best[0],
+                [$why, 'Ngày ' . $best[0] . ' sau khi thêm dùng khoảng ' . (int) round($best[1] * 100) . '% thời gian.'],
+                [['op' => 'move', 'day' => $day, 'index' => $index, 'toDay' => $best[0]]],
+                $target,
+            );
         }
-        $opts[] = $this->option('park', 'Đưa “' . $it['name'] . '” vào “Đã lưu”', [$why, 'Giữ lại để xếp sau, không mất mục.'],
-            [['op' => 'move', 'day' => $day, 'index' => $index, 'toDay' => null]], $target);
+        $opts[] = $this->option(
+            'park',
+            'Đưa “' . $it['name'] . '” vào “Đã lưu”',
+            [$why, 'Giữ lại để xếp sau, không mất mục.'],
+            [['op' => 'move', 'day' => $day, 'index' => $index, 'toDay' => null]],
+            $target,
+        );
 
         return $opts;
     }
@@ -536,11 +580,21 @@ final class TripResolver
                 $from = $r['hours'] === 'early' ? $r['start'] : $this->rules->dayStart();
                 $fit = OpeningHours::fit($it['hours'], $dow, $from, $r['dur']);
                 if ($fit !== null) {
-                    $opts[] = $this->option('shift', ($fit < $r['start'] ? 'Dời sớm hơn: ' : 'Dời sang ') . DaySchedule::hhmm($fit), [$todayText, 'Vẫn giữ giờ cố định.'],
-                        [['op' => 'time', 'day' => $day, 'index' => $index, 'startMin' => $fit]], $target);
+                    $opts[] = $this->option(
+                        'shift',
+                        ($fit < $r['start'] ? 'Dời sớm hơn: ' : 'Dời sang ') . DaySchedule::hhmm($fit),
+                        [$todayText, 'Vẫn giữ giờ cố định.'],
+                        [['op' => 'time', 'day' => $day, 'index' => $index, 'startMin' => $fit]],
+                        $target,
+                    );
                 }
-                $opts[] = $this->option('unfix', 'Bỏ giờ cố định', [$todayText, 'Planner tự chờ tới giờ mở cửa khi xếp lịch.'],
-                    [['op' => 'time', 'day' => $day, 'index' => $index, 'startMin' => null]], $target);
+                $opts[] = $this->option(
+                    'unfix',
+                    'Bỏ giờ cố định',
+                    [$todayText, 'Planner tự chờ tới giờ mở cửa khi xếp lịch.'],
+                    [['op' => 'time', 'day' => $day, 'index' => $index, 'startMin' => null]],
+                    $target,
+                );
             }
         }
         foreach ($this->days as $d => $list) {
@@ -552,8 +606,13 @@ final class TripResolver
             $it2['startMin'] = null;
             if ($this->schedule($d, array_merge($list, [$it2]))->load() < 1) {
                 $free = max(0, $this->schedule($d)->availableMin - $this->schedule($d)->occupiedMin());
-                $opts[] = $this->option('move', 'Chuyển sang ngày ' . $d, ['Ngày ' . $d . ' mở cửa ' . OpeningHours::describe($it['hours'], $w) . '.', 'Ngày ' . $d . ' còn ' . self::h($free) . ' trống.'],
-                    [['op' => 'move', 'day' => $day, 'index' => $index, 'toDay' => $d]], $target);
+                $opts[] = $this->option(
+                    'move',
+                    'Chuyển sang ngày ' . $d,
+                    ['Ngày ' . $d . ' mở cửa ' . OpeningHours::describe($it['hours'], $w) . '.', 'Ngày ' . $d . ' còn ' . self::h($free) . ' trống.'],
+                    [['op' => 'move', 'day' => $day, 'index' => $index, 'toDay' => $d]],
+                    $target,
+                );
                 break;
             }
         }
@@ -565,10 +624,77 @@ final class TripResolver
                 '“' . $it['name'] . '” về Đã lưu, không mất.',
             ]), [['op' => 'replace', 'day' => $day, 'index' => $index, 'with' => TripPlanner::itemForClient($new)]], $target);
         }
-        $opts[] = $this->option('inbox', 'Đưa về Đã lưu', [$todayText, 'Giữ mục lại để chọn ngày khác hoặc thay bằng nơi tương tự.'],
-            [['op' => 'move', 'day' => $day, 'index' => $index, 'toDay' => null]], $target);
+        $opts[] = $this->option(
+            'inbox',
+            'Đưa về Đã lưu',
+            [$todayText, 'Giữ mục lại để chọn ngày khác hoặc thay bằng nơi tương tự.'],
+            [['op' => 'move', 'day' => $day, 'index' => $index, 'toDay' => null]],
+            $target,
+        );
 
         return $opts;
+    }
+
+    /**
+     * Lập lại kế hoạch khi một địa điểm trong lịch bị Travela gỡ (ẩn / chuyển nháp) — sự kiện PlaceUnpublished hoặc người dùng bấm "Xem cách xử lý".
+     * Mục được chỉ bằng (ngày, vị trí); không chỉ rõ thì lấy mục không còn xác thực đầu tiên đang nằm trong các ngày.
+     * Phương án: thay bằng tối đa 2 nơi cùng loại, gần, đang mở hôm đó (mục cũ về "Đã lưu", không mất); hoặc đưa mục về "Đã lưu".
+     * "Giải quyết được" = mục không còn nằm trong ngày nào VÀ không sinh lỗi cứng mới. Lịch KHÔNG tự đổi: người dùng xem so sánh rồi bấm Áp dụng.
+     */
+    private function unavailable(?int $day, ?int $index): array
+    {
+        $found = null;
+        foreach ($this->days as $d => $list) {
+            foreach ($list as $i => $it) {
+                if (!empty($it['unavailable']) && ($day === null || $d === $day) && ($index === null || $i === $index)) {
+                    $found = [$d, $i, $it];
+                    break 2;
+                }
+            }
+        }
+        $before = ['score' => $this->before['score'], 'level' => $this->before['level']];
+        if ($found === null) {
+            return ['code' => 'content.unavailable', 'day' => $day, 'index' => $index, 'problem' => null, 'severity' => 'soft', 'before' => $before, 'options' => []];
+        }
+        [$day, $index, $it] = $found;
+        $text = '“' . $it['name'] . '” (ngày ' . $day . ') không còn được Travela xác thực: giờ mở cửa, giá và ảnh có thể đã sai.';
+        $target = ['code' => 'content.unavailable', 'day' => $day, 'index' => $index, 'severity' => 'soft', 'level' => 'warn', 'text' => $text];
+        // nơi đã bị ẩn vẫn còn dòng trong CSDL: lấy LOẠI nơi (không lộ nội dung đã ẩn) để tìm nơi tương tự
+        $probe = $it;
+        if (($it['type'] ?? '') === 'place' && empty($it['kind'])) {
+            $probe['kind'] = \Illuminate\Support\Facades\DB::table('tbl_external_places')->where('placeId', (int) $it['refId'])->value('kind');
+        }
+        $opts = [];
+        foreach ($this->similarPlaces($probe, $day) as $cand) {
+            $new = $this->resolvedItem('place', $cand['id'], $it);
+            $opts[] = $this->option('replace', 'Thay bằng “' . $new['name'] . '”', array_filter([
+                'Cùng loại' . ($new['sub'] ? ' (' . mb_strtolower($new['sub']) . ')' : '') . ', cách ~' . round($cand['km'], 1) . ' km, đã được Travela xác thực.',
+                $cand['open'] ? 'Mở cửa hôm đó: ' . OpeningHours::describe($new['hours'], $this->dows[$day] ?? null) . '.' : 'Chưa có dữ liệu giờ mở cửa của nơi này.',
+                '“' . $it['name'] . '” về Đã lưu, không mất.',
+            ]), [['op' => 'replace', 'day' => $day, 'index' => $index, 'with' => TripPlanner::itemForClient($new)]], $target);
+        }
+        $opts[] = $this->option(
+            'inbox',
+            'Bỏ khỏi ngày ' . $day . ' (về Đã lưu)',
+            ['Ngày ' . $day . ' nhẹ bớt một điểm; mục vẫn còn trong “Đã lưu” nếu bạn muốn giữ.'],
+            [['op' => 'move', 'day' => $day, 'index' => $index, 'toDay' => null]],
+            $target,
+        );
+        foreach ($opts as &$o) {
+            // kiểm tra "không còn xác thực" tính trên cả chuyến (kể cả Đã lưu): xét riêng mục đã rời khỏi lịch chưa
+            [$after] = $this->apply($o['changes']);
+            $still = false;
+            foreach ($after as $list) {
+                foreach ($list as $x) {
+                    $still = $still || (($x['type'] ?? '') === ($it['type'] ?? '') && (int) ($x['refId'] ?? 0) === (int) ($it['refId'] ?? -1) && !empty($x['unavailable']));
+                }
+            }
+            $o['resolves'] = !$still && !array_filter($o['newIssues'], fn($n) => $n['severity'] === 'hard');
+        }
+        unset($o);
+        usort($opts, fn($a, $b) => [$b['resolves'], $b['id'] === 'replace', $b['after']['score']] <=> [$a['resolves'], $a['id'] === 'replace', $a['after']['score']]);
+
+        return ['code' => 'content.unavailable', 'day' => $day, 'index' => $index, 'problem' => $text, 'severity' => 'soft', 'before' => $before, 'options' => $opts];
     }
 
     /**
@@ -692,8 +818,10 @@ final class TripResolver
         if (!$sugg) {
             return $opts;
         }
-        $backup = array_map(fn($x) => ['type' => $x['type'], 'refId' => $x['refId'], 'name' => $x['name'], 'sub' => $x['sub'], 'url' => $x['url'], 'lat' => $x['lat'], 'lng' => $x['lng']],
-            array_slice($sugg, 0, min(3, (int) config('planner.rain_plan.max_per_day', 4))));
+        $backup = array_map(
+            fn($x) => ['type' => $x['type'], 'refId' => $x['refId'], 'name' => $x['name'], 'sub' => $x['sub'], 'url' => $x['url'], 'lat' => $x['lat'], 'lng' => $x['lng']],
+            array_slice($sugg, 0, min(3, (int) config('planner.rain_plan.max_per_day', 4))),
+        );
         $opts[] = $this->option('rain-backup', 'Giữ lịch, lưu ' . count($backup) . ' nơi trong nhà làm dự phòng', [
             'Ngày ' . $day . ' có ' . count($outdoor) . ' hoạt động ngoài trời.',
             'Nếu mưa: ' . implode(', ', array_map(fn($x) => '“' . $x['name'] . '”', $backup)) . '.',
@@ -726,7 +854,9 @@ final class TripResolver
         }
         if ($changes) {
             $opts[] = $this->option('rain-swap', 'Đổi ' . count($changes) . ' hoạt động ngoài trời sang trong nhà', array_merge(
-                ['Hợp khi dự báo chắc chắn mưa.'], $pairs, ['Các mục ngoài trời về Đã lưu, đổi lại được khi trời đẹp.']
+                ['Hợp khi dự báo chắc chắn mưa.'],
+                $pairs,
+                ['Các mục ngoài trời về Đã lưu, đổi lại được khi trời đẹp.'],
             ), $changes, $target);
         }
 

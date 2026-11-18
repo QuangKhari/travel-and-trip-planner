@@ -25,8 +25,11 @@
     function post(url, body) {
         var ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
         var t = ctl ? setTimeout(function () { ctl.abort(); }, 60000) : null;
+        var hd = { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-TOKEN": cfg.csrf || "", "X-Requested-With": "XMLHttpRequest" };
+        /* lưu chuyến từ bản nháp: cùng bản nháp = cùng khóa chống gửi lặp (bấm Lưu hai lần, mạng chập chờn gửi lại) */
+        if (url === cfg.make && body && body.draftToken) hd["Idempotency-Key"] = ("mk-" + String(body.draftToken)).replace(/[^A-Za-z0-9_.:-]/g, "").slice(0, 64);
         return fetch(url, { method: "POST", credentials: "same-origin", signal: ctl ? ctl.signal : undefined,
-            headers: { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-TOKEN": cfg.csrf || "", "X-Requested-With": "XMLHttpRequest" },
+            headers: hd,
             body: JSON.stringify(body) }).then(function (r) {
                 clearTimeout(t);
                 if (r.ok) return r.json();

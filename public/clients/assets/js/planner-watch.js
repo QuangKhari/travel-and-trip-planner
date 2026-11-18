@@ -54,6 +54,12 @@
                 b.addEventListener("click", function () { openLaBan(e.day || null); });
                 m.appendChild(b);
             }
+            if (e.action && e.action.type === "resolve" && window.TpPlanner && window.TpPlanner.openResolve) {
+                var rb = el("button", "tp-mini tgw__go", "Xem phương án");
+                rb.type = "button";
+                rb.addEventListener("click", function () { box.hidden = true; window.TpPlanner.openResolve(e.action.code, e.action.refType, e.action.refId); });
+                m.appendChild(rb);
+            }
             if (e.kind === "quote") { var qa = el("a", "tp-mini tgw__go", "Xem báo giá"); qa.href = "/bao-gia-tour"; m.appendChild(qa); }
             li.appendChild(m);
             list.appendChild(li);

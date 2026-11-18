@@ -89,31 +89,111 @@ final class AiGateway
         }
         $llm = $this->factory->make($feature);
         $consumed = false;
+        $tin = $tout = 0;
+        $repaired = false;
+        $call = function (string $u) use ($llm, $system, $schema, $opt, $feature) {
+            return $llm->generateJson($system, $u, $schema, $opt + [
+                'name' => $feature,
+                'timeout' => (int) config('ai.timeout.' . $feature, 20),
+                'max_tokens' => (int) config('ai.max_tokens.' . $feature, 900),
+            ]);
+        };
         try {
             try {
-                $r = $llm->generateJson($system, $user, $schema, $opt + [
-                    'name' => $feature,
-                    'timeout' => (int) config('ai.timeout.' . $feature, 20),
-                    'max_tokens' => (int) config('ai.max_tokens.' . $feature, 900),
-                ]);
+                try {
+                    $r = $call($user);
+                    $miss = self::missingRequired($r['data'], $schema);
+                    if (self::badlyIncomplete($miss, $schema) && $this->repairOn($opt)) {
+                        // JSON đọc được nhưng thiếu trường bắt buộc: coi như sai khuôn, sửa một lần (giữ kết quả cũ nếu lần sửa cũng thiếu)
+                        throw new SchemaViolation('thiếu trường bắt buộc: ' . implode(', ', $miss), $r['input_tokens'] ?? null, $r['output_tokens'] ?? null);
+                    }
+                } catch (SchemaViolation $first) {
+                    if (!$this->repairOn($opt)) {
+                        throw $first;
+                    }
+                    // Tự sửa (mục A): gửi lại MỘT lần, kèm đúng câu báo lỗi; vẫn sai thì lùi về chế độ cơ bản như trước
+                    $tin += (int) $first->inputTokens;
+                    $tout += (int) $first->outputTokens;
+                    $repaired = true;
+                    $keep = $r ?? null;
+                    $r = $call($user . "\n\n" . self::repairNote($first->getMessage(), $schema));
+                    if ($keep && count(self::missingRequired($keep['data'], $schema)) < count(self::missingRequired($r['data'], $schema))) {
+                        $r['data'] = $keep['data'];   // lần sửa còn tệ hơn: giữ lần đầu
+                    }
+                }
                 Cache::forget(self::cbKey('fails', $feature));
                 $consumed = true;
+                $tin += (int) ($r['input_tokens'] ?? 0);
+                $tout += (int) ($r['output_tokens'] ?? 0);
 
-                return ['ok' => true, 'data' => $r['data'], 'ms' => self::ms($t0), 'in' => $r['input_tokens'], 'out' => $r['output_tokens'], 'model' => $llm->model()];
+                $this->repairs[$feature] = $repaired ? 1 : 0;
+
+                return ['ok' => true, 'data' => $r['data'], 'ms' => self::ms($t0), 'in' => $tin ?: null, 'out' => $tout ?: null, 'model' => $llm->model(), 'repaired' => $repaired];
             } catch (SchemaViolation $e) {
                 $this->fail($feature);
                 $consumed = true;   // model đã trả lời (tốn token), chỉ là sai khuôn
+                $tin += (int) $e->inputTokens;
+                $tout += (int) $e->outputTokens;
+                $this->repairs[$feature] = $repaired ? 1 : 0;
 
-                return ['ok' => false, 'reason' => 'invalid', 'error' => mb_substr($e->getMessage(), 0, 200), 'ms' => self::ms($t0), 'in' => null, 'out' => null, 'model' => $llm->model()];
+                return ['ok' => false, 'reason' => 'invalid', 'error' => mb_substr($e->getMessage(), 0, 200), 'ms' => self::ms($t0),
+                    'in' => $tin ?: null, 'out' => $tout ?: null, 'model' => $llm->model(), 'repaired' => $repaired];
             } catch (Throwable $e) {
                 $this->fail($feature);
                 $timeout = str_starts_with($e->getMessage(), 'timeout');
 
-                return ['ok' => false, 'reason' => $timeout ? 'timeout' : 'error', 'error' => mb_substr($e->getMessage(), 0, 200), 'ms' => self::ms($t0), 'in' => null, 'out' => null, 'model' => $llm->model()];
+                return ['ok' => false, 'reason' => $timeout ? 'timeout' : 'error', 'error' => mb_substr($e->getMessage(), 0, 200), 'ms' => self::ms($t0),
+                    'in' => $tin ?: null, 'out' => $tout ?: null, 'model' => $llm->model(), 'repaired' => $repaired];
             }
         } finally {
             $this->release($userId, $consumed);
         }
+    }
+
+    /** Số lượt sửa khuôn của lệnh gọi gần nhất theo tính năng: log() tự ghi vào repairRounds (dịch vụ không cần truyền). */
+    private array $repairs = [];
+
+    /** Tự sửa khi sai khuôn: bật mặc định (ai.schema_repair); bộ đánh giá có thể tắt để đo riêng (ablation) qua $opt['repair'] = false. */
+    private function repairOn(array $opt): bool
+    {
+        return (bool) ($opt['repair'] ?? config('ai.schema_repair', true));
+    }
+
+    /**
+     * Trường bắt buộc (cấp ngoài cùng của schema) mà dữ liệu thiếu. Chỉ kiểm cấp ngoài: dịch vụ vẫn tự kiểm từng giá trị.
+     * @return list<string>
+     */
+    public static function missingRequired(mixed $data, array $schema): array
+    {
+        if (!is_array($data) || ($data !== [] && array_is_list($data))) {
+            return ['(đối tượng JSON)'];
+        }
+
+        return array_values(array_filter((array) ($schema['required'] ?? []), fn($k) => is_string($k) && !array_key_exists($k, $data)));
+    }
+
+    /**
+     * Thiếu trường tới mức nên hỏi lại: không phải đối tượng JSON, hoặc schema ít trường bắt buộc (<= 3, mỗi trường đều thiết yếu) mà thiếu,
+     * hoặc thiếu quá nửa. Model ở chế độ json_object hay bỏ các trường null: thiếu vài trường không đáng tốn thêm một lượt gọi.
+     */
+    public static function badlyIncomplete(array $miss, array $schema): bool
+    {
+        if ($miss === []) {
+            return false;
+        }
+        $req = count((array) ($schema['required'] ?? []));
+
+        return in_array('(đối tượng JSON)', $miss, true) || $req <= 3 || count($miss) * 2 > $req;
+    }
+
+    /** Lời nhắc cho lượt sửa: nói đúng lỗi, nhắc các trường bắt buộc, không lặp lại cả schema (đã có trong lời gọi). */
+    public static function repairNote(string $error, array $schema): string
+    {
+        $req = array_values(array_filter((array) ($schema['required'] ?? []), 'is_string'));
+
+        return 'LẦN TRẢ LỜI TRƯỚC KHÔNG HỢP LỆ: ' . mb_substr(preg_replace('/\s+/u', ' ', $error) ?? $error, 0, 160) . '. '
+            . 'Hãy trả lời lại đúng MỘT đối tượng JSON theo schema, không bọc ```, không thêm chữ ngoài JSON'
+            . ($req ? ', có đủ các trường: ' . implode(', ', $req) : '') . '.';
     }
 
     /**
@@ -143,6 +223,7 @@ final class AiGateway
                 'inputText' => config('ai.log_text') && isset($row['text']) ? mb_substr((string) $row['text'], 0, 500) : null,
                 'error' => isset($row['error']) ? mb_substr((string) $row['error'], 0, 160) : null,
                 'createdAt' => now(),
+            ] + ($this->repairColumn() ? ['repairRounds' => min(255, (int) ($row['repairs'] ?? ($row['engine'] === 'llm' || ($row['outcome'] ?? '') === 'invalid' ? ($this->repairs[$row['feature']] ?? 0) : 0)))] : []) + [
             ]);
         } catch (Throwable) {
             return null;   // log là phụ: lỗi ghi log không được làm hỏng trải nghiệm
@@ -282,6 +363,13 @@ final class AiGateway
     }
 
     private ?bool $hasLog = null;
+
+    private ?bool $repairCol = null;
+
+    private function repairColumn(): bool
+    {
+        return $this->repairCol ??= $this->hasLog() && Schema::hasColumn('tbl_ai_runs', 'repairRounds');
+    }
 
     private function hasLog(): bool
     {

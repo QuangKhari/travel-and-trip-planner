@@ -69,6 +69,17 @@ return [
         'rag' => (bool) env('AI_FALLBACK_RAG', true),
     ],
 
+    // Hồ sơ model cho thí nghiệm so sánh (php artisan ai:compare / ai:eval --profile=...): mỗi hồ sơ đủ driver + model + khóa + địa chỉ,
+    // nên so được nhiều nhà cung cấp trong một lần chạy mà không sửa .env. Khóa để trống thì hồ sơ đó bị bỏ qua (báo rõ).
+    'profiles' => [
+        'gemini-flash-lite' => ['driver' => 'openai', 'model' => env('AI_PROFILE_GEMINI_MODEL', 'gemini-3.5-flash-lite'), 'key' => env('RAG_LLM_KEY'),
+            'base_url' => env('RAG_LLM_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/openai'), 'json_mode' => 'schema', 'reasoning' => env('AI_REASONING_EFFORT')],
+        'haiku' => ['driver' => 'anthropic', 'model' => 'claude-haiku-5-5', 'key' => env('ANTHROPIC_API_KEY')],
+        'sonnet' => ['driver' => 'anthropic', 'model' => 'claude-sonnet-5-5', 'key' => env('ANTHROPIC_API_KEY')],
+        'gpt-4o-mini' => ['driver' => 'openai', 'model' => 'gpt-4o-mini', 'key' => env('OPENAI_API_KEY'), 'base_url' => 'https://api.openai.com/v1', 'json_mode' => 'schema'],
+        'groq-oss' => ['driver' => 'openai', 'model' => 'openai/gpt-oss-120b', 'key' => env('AI_FALLBACK_KEY'), 'base_url' => 'https://api.groq.com/openai/v1', 'json_mode' => 'object'],
+    ],
+
     'timeout' => [   // giây, MỖI lệnh gọi HTTP; quá hạn thì lùi về chế độ cơ bản
         'brief' => (int) env('AI_TIMEOUT_BRIEF', 20),
         'explain' => (int) env('AI_TIMEOUT_EXPLAIN', 25),
@@ -107,7 +118,25 @@ return [
     // Ngắt mạch: lỗi liên tiếp quá ngưỡng thì không gọi LLM trong N giây (giống cool-down của Overpass).
     'cooldown' => ['fail_threshold' => 3, 'seconds' => 90],
 
-    // Giá USD / 1 triệu token, chỉ để báo cáo chi phí ở ai:eval. Để trống thì chỉ hiện số token.
+    // Tự sửa khi model trả JSON sai khuôn / thiếu trường bắt buộc: gửi lại MỘT lần kèm câu báo lỗi rồi mới lùi về chế độ cơ bản.
+    'schema_repair' => (bool) env('AI_SCHEMA_REPAIR', true),
+
+    // Bảng giá USD / 1 triệu token theo model (App\Services\Ai\AiCost). Tra theo tên model đúng nguyên văn, rồi theo tên đã bỏ tiền tố
+    // nhà cung cấp ("models/", "openai/"...). "long" = giá khác khi lời nhắc vượt ngưỡng token (vd Claude Haiku 5.5 trên 100K: x5).
+    // Giá niêm yết của nhà cung cấp, cập nhật ngày ghi ở pricing_checked — kiểm lại trước khi đưa số liệu vào quyển.
+    // Gói miễn phí (Gemini free tier, Groq free) vẫn tính theo giá niêm yết: đó là chi phí khi chạy thật.
+    'pricing_checked' => '2026-11-18',
+    'pricing' => [
+        'gemini-3.5-flash-lite' => ['in' => 0.30, 'out' => 2.50],
+        'gemini-3.1-flash-lite' => ['in' => 0.25, 'out' => 1.50],
+        'gemini-3.5-flash' => ['in' => 1.50, 'out' => 9.00],
+        'gpt-oss-120b' => ['in' => 0.15, 'out' => 0.60],          // Groq; Cerebras có giá riêng: đặt AI_PRICE_* hoặc thêm dòng
+        'claude-haiku-5-5' => ['in' => 0.10, 'out' => 0.50, 'long' => ['over' => 100000, 'x' => 5]],
+        'claude-sonnet-5-5' => ['in' => 2.00, 'out' => 10.00],
+        'gpt-4o-mini' => ['in' => 0.15, 'out' => 0.60],
+        'gpt-4o' => ['in' => 2.50, 'out' => 10.00],
+    ],
+    // Giá dùng cho model KHÔNG có trong bảng trên (để trống = không tính được, báo cáo ghi "chưa có giá").
     'price_in' => is_numeric(env('AI_PRICE_IN')) ? (float) env('AI_PRICE_IN') : null,
     'price_out' => is_numeric(env('AI_PRICE_OUT')) ? (float) env('AI_PRICE_OUT') : null,
 

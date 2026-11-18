@@ -39,18 +39,45 @@ class RecoTrain extends Command
         }
         $r = RecoEval::run($lab, $f);
         $names = ['pop' => 'Độ nổi bật', 'rules' => 'Sở thích theo luật (trước mức 5)', 'global' => 'Mô hình chung', 'model' => 'Mô hình + riêng từng người (mức 5)'];
-        $this->info(sprintf('%d lần hiện (%d học / %d kiểm), %d danh sách kiểm có ít nhất một nơi được chọn, %d người.',
-            $r['n'], $r['train'], $r['test'], $r['lists'], count(array_unique(array_column($lab, 'userId')))));
+        $this->info(sprintf(
+            '%d lần hiện (%d học / %d kiểm), %d danh sách kiểm có ít nhất một nơi được chọn, %d người.',
+            $r['n'],
+            $r['train'],
+            $r['test'],
+            $r['lists'],
+            count(array_unique(array_column($lab, 'userId'))),
+        ));
         $this->table(['Cách xếp', 'AUC', 'NDCG@5', 'Hit@5'], array_map(fn($k) => [$names[$k], $r['methods'][$k]['auc'], $r['methods'][$k]['ndcg5'], $r['methods'][$k]['hit5']], array_keys($names)));
         $d = $r['diff'];
-        $this->line(sprintf('Chênh NDCG@5 (mức 5 − luật): %+.3f, khoảng tin cậy 95%%: [%+.3f; %+.3f]%s', $d['mean'], $d['lo'], $d['hi'],
-            $d['lo'] > 0 ? ' → tốt hơn có ý nghĩa' : ($d['hi'] < 0 ? ' → kém hơn có ý nghĩa' : ' → chưa khác biệt có ý nghĩa')));
+        $this->line(sprintf(
+            'Chênh NDCG@5 (mức 5 − luật): %+.3f, khoảng tin cậy 95%%: [%+.3f; %+.3f]%s',
+            $d['mean'],
+            $d['lo'],
+            $d['hi'],
+            $d['lo'] > 0 ? ' → tốt hơn có ý nghĩa' : ($d['hi'] < 0 ? ' → kém hơn có ý nghĩa' : ' → chưa khác biệt có ý nghĩa'),
+        ));
+        // Đủ để kết luận chưa (mục B): dữ liệu thật ít người / ít danh sách kiểm thì chỉ báo "chưa đủ", kèm câu ghi vào quyển
+        $users = count(array_unique(array_column($lab, 'userId')));
+        $enough = !$this->option('simulate') && $users >= 10 && $r['lists'] >= 30;
+        if ($this->option('simulate')) {
+            $this->warn('Ghi vào quyển: "RecoRanker mới được kiểm trên dữ liệu giả lập; chưa có bằng chứng hiệu quả trên người dùng thật."');
+        } elseif (!$enough) {
+            $this->warn(sprintf(
+                'CHƯA ĐỦ để kết luận (%d người thật, %d danh sách kiểm; cần ≥ 10 người và ≥ 30 danh sách). Ghi vào quyển: '
+                . '"Đánh giá offline trên %d lần hiện của %d người dùng thật; cỡ mẫu nhỏ nên chênh lệch giữa mô hình cá nhân hóa và luật chưa đủ cơ sở để kết luận."',
+                $users,
+                $r['lists'],
+                $r['n'],
+                $users,
+            ));
+        }
         if ($csv = $this->option('csv')) {
             @mkdir(dirname($csv), 0777, true);
             $fh = fopen($csv, 'w');
-            fputcsv($fh, ['method', 'auc', 'ndcg5', 'hit5', 'n', 'train', 'test', 'lists', 'diff_mean', 'diff_lo', 'diff_hi'], ',', '"', '');
+            fputcsv($fh, ['method', 'auc', 'ndcg5', 'hit5', 'n', 'train', 'test', 'lists', 'diff_mean', 'diff_lo', 'diff_hi', 'data', 'users', 'enough'], ',', '"', '');
             foreach ($r['methods'] as $m => $x) {
-                fputcsv($fh, [$m, $x['auc'], $x['ndcg5'], $x['hit5'], $r['n'], $r['train'], $r['test'], $r['lists'], $d['mean'], $d['lo'], $d['hi']], ',', '"', '');
+                fputcsv($fh, [$m, $x['auc'], $x['ndcg5'], $x['hit5'], $r['n'], $r['train'], $r['test'], $r['lists'], $d['mean'], $d['lo'], $d['hi'],
+                    $this->option('simulate') ? 'simulated' : 'real', $users, $enough ? 1 : 0], ',', '"', '');
             }
             fclose($fh);
             $this->info('Đã ghi ' . $csv);

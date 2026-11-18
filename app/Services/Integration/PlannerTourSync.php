@@ -120,6 +120,20 @@ class PlannerTourSync
         return $rows->isEmpty() ? null : $rows->map(fn($r) => ($r->label ?: $r->refType) . ' (ngày ' . $r->dayNo . ')')->implode(', ');
     }
 
+    /** Số phương án lập lại kế hoạch cho mục không còn xác thực trong ngày $day (0 nếu lỗi / không có). */
+    private function replanCount(int $tripId, ?int $day): int
+    {
+        try {
+            $trip = DB::table('tbl_trips')->where('tripId', $tripId)->first();
+
+            return $trip ? count(app(\App\Services\Planner\Health\TripResolver::class)->forTrip($trip, 'content.unavailable', $day, null)['options'] ?? []) : 0;
+        } catch (\Throwable $e) {
+            report($e);
+
+            return 0;
+        }
+    }
+
     private function placeUnpublished(string $type, int $refId, string $name): void
     {
         $trips = DB::table('tbl_trip_items as i')->join('tbl_trips as t', 't.tripId', '=', 'i.tripId')->where('i.refType', $type)->where('i.refId', $refId)
@@ -129,9 +143,14 @@ class PlannerTourSync
             if (!TripWatch::ready()) {
                 return;
             }
+            // Lập lại kế hoạch chủ động: chuẩn bị sẵn phương án (thay bằng nơi tương tự / bỏ khỏi ngày), đã mô phỏng bằng TripHealth.
+            // Chỉ ghi SỐ phương án vào thông báo; người dùng bấm "Xem phương án" thì máy chủ tính lại trên bản mới nhất rồi mới áp dụng.
+            $n = $this->replanCount((int) $tripId, $day !== null ? (int) $day : null);
             DB::table('tbl_trip_events')->insertOrIgnore(['tripId' => (int) $tripId, 'kind' => 'content', 'tone' => 'warn',
                 'title' => mb_substr('“' . ($name ?: 'Một địa điểm') . '” không còn được Travela xác thực', 0, 200),
-                'text' => 'Mục vẫn được giữ trong chuyến của bạn. Hãy kiểm tra lại giờ mở cửa hoặc thay bằng nơi khác.',
+                'text' => 'Mục vẫn được giữ trong chuyến của bạn. ' . ($n > 1
+                    ? 'Travela đã chuẩn bị ' . $n . ' phương án (thay bằng nơi tương tự gần đó hoặc bỏ khỏi ngày), có so sánh trước / sau. Lịch chỉ đổi khi bạn bấm Áp dụng.'
+                    : 'Hãy kiểm tra lại giờ mở cửa hoặc thay bằng nơi khác.'),
                 'day' => $day !== null ? (int) $day : null, 'ref' => mb_substr('unpub:' . $type . ':' . $refId, 0, 120), 'createdAt' => now()]);
         }
     }

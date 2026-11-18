@@ -72,6 +72,8 @@
             data-step="{{ $step }}"
             data-price-adult="{{ (int) $tour->priceAdult }}" data-price-child="{{ (int) $tour->priceChild }}"
             data-limit="{{ $limit }}" data-quote-url="{{ route('booking.quote') }}">
+            {{-- chống gửi lặp: bấm Đặt tour hai lần / tải lại trang sau khi gửi không tạo hai đơn --}}
+            <input type="hidden" name="_idem" value="{{ 'bk-' . \Illuminate\Support\Str::uuid() }}">
             @csrf
             <input type="hidden" name="requestToken" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
             <input type="hidden" name="tourId" value="{{ $tour->tourId }}">

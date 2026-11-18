@@ -3138,8 +3138,9 @@
         });
     }
     /* ---------------- Resolution Engine: đề xuất -> xem trước -> áp dụng (máy chủ đề xuất, trình duyệt áp dụng rồi tự lưu) ---------------- */
-    var RESOLVABLE = { "time.arrival": 1, "time.departure": 1, "time.transfer": 1, "capacity.overload": 1, "capacity.tight": 1, "time.late": 1, "time.overlap": 1, "time.travel": 1, "hours.closed": 1, "hours.early": 1, "hours.late": 1, "route.long_day": 1, "context.rain": 1, "weather.rain": 1, "weather.storm": 1 };
-    function resKey(c) { return c.code + "|" + (c.day || "") + "|" + (c.index == null ? "" : c.index); }
+    var RESOLVABLE = { "time.arrival": 1, "time.departure": 1, "time.transfer": 1, "capacity.overload": 1, "capacity.tight": 1, "time.late": 1, "time.overlap": 1, "time.travel": 1, "hours.closed": 1, "hours.early": 1, "hours.late": 1, "route.long_day": 1, "context.rain": 1, "weather.rain": 1, "weather.storm": 1, "content.unavailable": 1 };
+    /* "Không còn xác thực" là một dòng cho cả chuyến: mở từ chuông (đúng mục) hay từ bảng Sức khỏe đều hiện ở cùng dòng đó */
+    function resKey(c) { return c.code === "content.unavailable" ? c.code : c.code + "|" + (c.day || "") + "|" + (c.index == null ? "" : c.index); }
     function loadResolve(c) {
         var k = resKey(c);
         ui.rsv = { key: k, loading: true, data: null };
@@ -3183,8 +3184,11 @@
             (o.effects || []).forEach(function (e) {
                 var chip = el("span", "tpx-resolve__chip" + (e.afterPct >= 100 ? " is-bad" : e.afterPct < e.beforePct ? " is-good" : ""));
                 var dm = e.afterMin - e.beforeMin, dk = Math.round((e.afterKm - e.beforeKm) * 10) / 10;
+                var dc = (e.afterCost || 0) - (e.beforeCost || 0);
                 chip.textContent = "Ngày " + e.day + ": " + e.beforePct + "% → " + e.afterPct + "%"
-                    + (dm ? " (" + (dm > 0 ? "+" : "−") + durText(Math.abs(dm)) + ")" : "") + (dk ? " · " + (dk > 0 ? "+" : "−") + Math.abs(dk) + " km" : "");
+                    + (dm ? " (" + (dm > 0 ? "+" : "−") + durText(Math.abs(dm)) + ")" : "") + (dk ? " · " + (dk > 0 ? "+" : "−") + Math.abs(dk) + " km" : "")
+                    + (e.beforeEnd && e.afterEnd && e.beforeEnd !== e.afterEnd ? " · xong " + e.beforeEnd + " → " + e.afterEnd : "")
+                    + (dc ? " · " + (dc > 0 ? "+" : "−") + money(Math.abs(dc)) : "");
                 fx.appendChild(chip);
             });
             t.appendChild(fx);
@@ -5381,6 +5385,18 @@
             return x ? { name: x.name, day: x.day } : null;
         },
         saveNow: function () { if (!RO && (dirty || saving)) save(true); },
+        /* Chuông "Theo dõi chuyến": mở phương án lập lại kế hoạch cho đúng mục (nơi bị gỡ). Vị trí tính trên lịch đang hiện;
+           lịch có thay đổi chưa lưu thì không mở (phương án tính trên bản đã lưu). */
+        openResolve: function (code, refType, refId) {
+            if (RO || !cfg.resolveUrl) return false;
+            if (dirty || saving) { say("Đang có thay đổi chưa lưu, đợi lưu xong rồi xem phương án.", true); return true; }
+            var it = items.filter(function (x) { return x.day != null && x.type === refType && +x.refId === +refId; })[0];
+            if (!it) { say("Mục này không còn nằm trong các ngày của chuyến.", false); return true; }
+            switchTab("plan"); ui.healthOpen = true; renderWarn();
+            loadResolve({ code: code, day: it.day, index: dayItems(it.day).indexOf(it) });
+            var h = $("tpHealth"); if (h) h.scrollIntoView({ block: "start", behavior: "smooth" });
+            return true;
+        },
         /* Đặt chỗ đổi (planner-bookings.js): chỗ ở / vé đi về mới -> tính lại lịch từng ngày ngay, không cần tải lại trang */
         refreshToday: function () { renderToday(); },
         setLogistics: function (x) { if (x && x.stays) { cfg.logistics = x; renderAll(); } },

@@ -676,14 +676,14 @@
 <script src="{{ asset('clients/assets/js/planner-save.js') }}?v=4"></script>
 <script src="{{ asset('clients/assets/js/planner-resolve.js') }}?v=2"></script>
 <script src="{{ asset('clients/assets/js/planner-map.js') }}?v=7"></script>
-<script src="{{ asset('clients/assets/js/planner.js') }}?v=48" defer></script>
+<script src="{{ asset('clients/assets/js/planner.js') }}?v=49" defer></script>
 <script src="{{ asset('clients/assets/js/planner-decide.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-extras.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-travel.js') }}?v=3" defer></script>
 <script src="{{ asset('clients/assets/js/planner-share.js') }}?v=1" defer></script>
 <script src="{{ asset('clients/assets/js/planner-expenses.js') }}?v=1" defer></script>
 <script src="{{ asset('clients/assets/js/planner-bookings.js') }}?v=3" defer></script>
-<script src="{{ asset('clients/assets/js/planner-watch.js') }}?v=7" defer></script>
+<script src="{{ asset('clients/assets/js/planner-watch.js') }}?v=8" defer></script>
 @if (!empty($client['historyUrl']))<script src="{{ asset('clients/assets/js/planner-history.js') }}?v=1" defer></script>@endif
 @if ($role !== 'view')<script src="{{ asset('clients/assets/js/ai-feedback.js') }}?v=2" data-url="{{ route('planner.ai.rate') }}" data-csrf="{{ csrf_token() }}" data-trip="{{ $client['trip']['id'] ?? '' }}" defer></script>@endif
 <script type="application/json" id="aiData">{!! json_encode(['explainUrl' => route('planner.ai.explain', ['id' => $t['id']]), 'csrf' => csrf_token(), 'on' => $aiExplainOn,
@@ -695,7 +695,7 @@
 <script src="{{ asset('clients/assets/js/planner-ai-explain.js') }}?v=1" defer></script>
 <script src="{{ asset('clients/assets/js/planner-ux.js') }}?v=1" defer></script>
 @if ($aiCopilotOn)
-    <script src="{{ asset('clients/assets/js/planner-ai-copilot.js') }}?v=8" defer></script>
+    <script src="{{ asset('clients/assets/js/planner-ai-copilot.js') }}?v=10" defer></script>
 @endif
 
 @include('clients.blocks.footer')

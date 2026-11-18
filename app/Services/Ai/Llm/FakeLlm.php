@@ -18,7 +18,7 @@ final class FakeLlm implements StructuredLlm
 
     /**
      * @param array<string,array|callable> $byTask  ['brief' => [...json...] | fn(string $user): array]
-     * @param ?string $fail null | 'error' | 'timeout' | 'schema'
+     * @param ?string $fail null | 'error' | 'timeout' | 'schema' | 'schema_once' (chỉ lượt đầu sai khuôn, lượt sửa trả đúng)
      */
     public function __construct(private array $byTask = [], private ?string $fail = null) {}
 
@@ -54,8 +54,8 @@ final class FakeLlm implements StructuredLlm
         if ($this->fail === 'error') {
             throw new RuntimeException('fake down');
         }
-        if ($this->fail === 'schema') {
-            throw new \App\Services\Ai\SchemaViolation('fake schema');
+        if ($this->fail === 'schema' || ($this->fail === 'schema_once' && $this->calls === 1)) {
+            throw new \App\Services\Ai\SchemaViolation('fake schema', 80, 20);
         }
         $d = $this->byTask[$opt['name'] ?? ''] ?? [];
         if (is_callable($d)) {

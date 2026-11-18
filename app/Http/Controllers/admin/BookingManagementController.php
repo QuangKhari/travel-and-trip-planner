@@ -271,7 +271,7 @@ class BookingManagementController extends Controller
             if ($row->paymentStatus !== 'y') {
                 return ['ok' => false, 'message' => 'Đơn chưa được xác nhận thanh toán.'];
             }
-            DB::table('tbl_booking')->where('bookingId', $id)->update(['bookingStatus' => 'f']);
+            \App\Support\BookingState::force($id, 'y', 'f', [], 'finish', 'admin:' . (int) session('adminId'));
 
             return ['ok' => true, 'message' => 'Đã hoàn tất đơn ' . $row->bookingCode . '.', 'code' => $row->bookingCode];
         });

@@ -44,7 +44,7 @@ final class TripAskService
         } catch (AskLimitException) {
             return ['ok' => false, 'kind' => 'reply', 'rev' => $rev, 'notice' => AiGateway::reasonText('quota'),
                 'say' => [['t' => 'Bạn đã dùng hết lượt hỏi hôm nay. Lịch và các nút sửa vẫn dùng bình thường.']]];
-        } catch (RagUnavailableException | Throwable $e) {
+        } catch (RagUnavailableException|Throwable $e) {
             report($e);
 
             return ['ok' => false, 'kind' => 'reply', 'rev' => $rev, 'say' => [['t' => 'La bàn chưa trả lời được câu hỏi này lúc này.']]];
@@ -55,7 +55,9 @@ final class TripAskService
             $day = TripFacts::dayOf($s['key'] ?? null);
             $isTrip = str_starts_with((string) ($s['key'] ?? ''), 'trip:');
             $sources[] = ['n' => (int) $s['n'], 'title' => (string) $s['title'], 'url' => $isTrip ? null : (string) $s['url'], 'day' => $day,
-                'trip' => $isTrip, 'cited' => (bool) $s['cited']];
+                'trip' => $isTrip, 'cited' => (bool) $s['cited'],
+                // nhãn độ tin cậy cho giao diện: verified = số liệu hệ thống, guide = cẩm nang đã kiểm duyệt, user = ghi chú của bạn
+                'trust' => (string) ($s['trust'] ?? ($isTrip ? 'verified' : 'guide'))];
         }
 
         return [

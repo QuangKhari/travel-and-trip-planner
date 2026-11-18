@@ -223,6 +223,23 @@
                 </div>
             </section>
 
+            @php $states = \App\Support\BookingState::history((int) $b->bookingId); @endphp
+            @if (count($states))
+            <section class="ad-card">
+                <div class="ad-card__head"><h2>Lịch sử trạng thái</h2></div>
+                <div class="ad-card__body">
+                    <ul class="ad-timeline">
+                        @foreach ($states as $st)
+                            <li style="--c:{{ $st->toStatus === 'c' ? '#ef4444' : ($st->toStatus === 'f' ? '#64748b' : '#168F99') }}">
+                                <div class="ad-timeline__t">{{ \App\Support\BookingState::LABEL[$st->fromStatus] ?? $st->fromStatus }} → {{ \App\Support\BookingState::LABEL[$st->toStatus] ?? $st->toStatus }}</div>
+                                <div class="ad-timeline__m">{{ $st->reason ?? '—' }} · {{ $st->actor ?? 'hệ thống' }} · {{ date('H:i d/m/Y', strtotime($st->createdAt)) }}</div>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            </section>
+            @endif
+
             <section class="ad-card">
                 <div class="ad-card__head"><h2>Lịch sử thao tác</h2></div>
                 <div class="ad-card__body">

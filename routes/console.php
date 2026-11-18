@@ -64,6 +64,13 @@ Artisan::command('events:relay', function () {
 })->purpose('Gửi lại các sự kiện nghiệp vụ (Tour ↔ Trip Planner) chưa được xử lý');
 Schedule::command('events:relay')->everyMinute()->withoutOverlapping();
 
+// Giám sát vận hành (mục "Nền móng"): nhịp của scheduler mỗi phút, nhịp của queue worker 5 phút một lần (job Heartbeat).
+// SystemHealth báo lỗi khi nhịp cũ: cron schedule:run hoặc queue:work đã dừng mà không ai biết.
+Schedule::call(fn() => Cache::put('ops:hb:scheduler', time(), 86400))->everyMinute()->name('ops-heartbeat')->withoutOverlapping();
+Schedule::job(new \App\Jobs\Heartbeat())->everyFiveMinutes();
+// Khóa chống gửi lặp quá 24 giờ
+Schedule::call(fn() => \App\Http\Middleware\Idempotent::prune())->dailyAt('04:20')->name('idempotency-prune');
+
 // Ghi bù sổ cái hai bút toán cho dữ liệu có trước khi bật sổ cái (chạy một lần sau migrate; chạy lại không ghi trùng).
 Artisan::command('payments:ledger-backfill', function () {
     $n = app(\App\Services\Payments\DoubleEntryLedger::class)->backfill();

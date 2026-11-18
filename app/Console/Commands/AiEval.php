@@ -26,7 +26,7 @@ use Illuminate\Support\Facades\Cache;
  */
 class AiEval extends Command
 {
-    protected $signature = 'ai:eval {--suite=brief : brief | plan | copilot | explain} {--mode= : plan: engine|llm_data|llm · copilot: verified|unchecked} {--file= : bộ mẫu khác (mặc định database/ai/eval_<suite>.json)} {--engine=llm : llm | rules} {--limit=0} {--from= : bắt đầu từ mẫu có id này (chạy tiếp sau khi hết hạn mức), vd c07} {--out=} {--today=2026-11-01} {--model= : đổi model cho lần chạy này, vd gemini-3.8-flash} {--sleep=4 : giây nghỉ giữa hai câu (tránh vượt hạn mức phút của gói miễn phí)} {--retry=2 : số lần thử lại khi lỗi} {--timeout= : giây chờ mỗi lệnh gọi (mặc định theo config ai.timeout.brief)} {--effort= : reasoning_effort low|medium|high} {--allow-fallback : cho phép gói dự phòng AI_FALLBACK_MODEL (mặc định TẮT: số liệu phải từ một model)} {--use-fallback : chạy THẲNG bằng model dự phòng 1 (AI_FALLBACK_MODEL, vd Groq)} {--use-fallback2 : chạy THẲNG bằng model dự phòng 2 (AI_FALLBACK2_MODEL, vd Cerebras)}';
+    protected $signature = 'ai:eval {--suite=brief : brief | plan | copilot | explain} {--mode= : plan: engine|llm_data|llm · copilot: verified|unchecked} {--file= : bộ mẫu khác (mặc định database/ai/eval_<suite>.json)} {--engine=llm : llm | rules} {--limit=0} {--from= : bắt đầu từ mẫu có id này (chạy tiếp sau khi hết hạn mức), vd c07} {--out=} {--today=2026-11-01} {--model= : đổi model cho lần chạy này, vd gemini-3.8-flash} {--sleep=4 : giây nghỉ giữa hai câu (tránh vượt hạn mức phút của gói miễn phí)} {--retry=2 : số lần thử lại khi lỗi} {--timeout= : giây chờ mỗi lệnh gọi (mặc định theo config ai.timeout.brief)} {--effort= : reasoning_effort low|medium|high} {--allow-fallback : cho phép gói dự phòng AI_FALLBACK_MODEL (mặc định TẮT: số liệu phải từ một model)} {--use-fallback : chạy THẲNG bằng model dự phòng 1 (AI_FALLBACK_MODEL, vd Groq)} {--use-fallback2 : chạy THẲNG bằng model dự phòng 2 (AI_FALLBACK2_MODEL, vd Cerebras)} {--profile= : hồ sơ model trong config ai.profiles (haiku, sonnet, gpt-4o-mini...), dùng cho ai:compare} {--no-repair : tắt tự sửa khi sai khuôn (ablation)}';
     protected $description = 'Chạy bộ đánh giá La bàn (F1 brief) và in độ chính xác từng trường';
 
     private const FIELDS = ['destination', 'month', 'days', 'adults', 'children', 'pace', 'interests', 'dislikes', 'budget'];
@@ -34,7 +34,30 @@ class AiEval extends Command
     public function handle(BriefService $brief, BriefValidator $validator, AiGateway $gateway): int
     {
         $suite = (string) $this->option('suite');
-        if ($this->option('use-fallback') || $this->option('use-fallback2')) {
+        if ($this->option('no-repair')) {
+            config(['ai.schema_repair' => false]);
+        }
+        if ($prof = (string) $this->option('profile')) {
+            $p = config('ai.profiles.' . $prof);
+            if (!is_array($p)) {
+                $this->error('Không có hồ sơ ' . $prof . ' trong config ai.profiles (' . implode(', ', array_keys((array) config('ai.profiles'))) . ').');
+
+                return self::FAILURE;
+            }
+            if (empty($p['key'])) {
+                $this->error('Hồ sơ ' . $prof . ' chưa có khóa API (xem config/ai.php, mục profiles).');
+
+                return self::FAILURE;
+            }
+            // tiêu đề bảng và CSV ghi đúng model của hồ sơ
+            config(['ai.profile' => $prof, 'ai.driver' => $p['driver'], 'ai.fallback.disabled' => true, 'ai.enabled' => true, 'ai.features.brief' => true]);
+            foreach (['brief', 'explain', 'copilot', 'packing'] as $t) {
+                config(['ai.models.' . $p['driver'] . '.' . $t => $p['model']]);
+            }
+        }
+        if ($this->option('profile')) {
+            // đã cố định model ở trên
+        } elseif ($this->option('use-fallback') || $this->option('use-fallback2')) {
             $n = $this->option('use-fallback2') ? 2 : 1;
             $fbModel = $n === 2 ? config('ai.fallback.second.model') : config('ai.fallback.model');
             if (!$fbModel) {
@@ -152,7 +175,8 @@ class AiEval extends Command
             $lat[] = $engine === 'rules' ? (int) round((microtime(true) - $t0) * 1000) : (int) $res['ms'];
             $got = $this->flatten($out);
             $exp = $c['expect'] ?? [];
-            $line = ['id' => $c['id'], 'group' => $c['group'], 'source' => $c['source'] ?? 'author', 'ms' => end($lat)];
+            $line = ['id' => $c['id'], 'group' => $c['group'], 'source' => $c['source'] ?? 'author', 'ms' => end($lat)]
+                + ($engine === 'llm' ? ['in' => (int) ($res['in'] ?? 0), 'tokOut' => (int) ($res['out'] ?? 0)] : []);
             if ($engine === 'llm') {
                 // model ĐÃ trả lời câu này (khi --allow-fallback có thể là model dự phòng)
                 $line['model'] = (string) ($res['model'] ?? $model);
@@ -202,7 +226,7 @@ class AiEval extends Command
         $miss = [];
         foreach ($rows as $r) {
             foreach ($r as $k => $v) {
-                if ($v === 0) {
+                if ($v === 0 && !in_array($k, ['ms', 'in', 'tokOut'], true)) {
                     $miss[$k][] = $r['id'];
                 }
             }
@@ -235,8 +259,7 @@ class AiEval extends Command
         sort($lat);
         $p = fn(float $q) => $lat ? $lat[min(count($lat) - 1, (int) floor($q * count($lat)))] : 0;
         $this->line('Độ trễ p50 ' . $p(0.5) . ' ms · p95 ' . $p(0.95) . ' ms' . ($engine === 'llm' ? ' · token vào ' . $tokIn . ' / ra ' . $tokOut : ''));
-        if ($engine === 'llm' && config('ai.price_in') !== null) {
-            $usd = $tokIn / 1e6 * (float) config('ai.price_in') + $tokOut / 1e6 * (float) config('ai.price_out');
+        if ($engine === 'llm' && ($usd = \App\Services\Ai\AiCost::usd($model, $tokIn, $tokOut, $cases ? intdiv($tokIn, count($cases)) : 0)) !== null) {
             $this->line('Chi phí ước tính: $' . number_format($usd, 4) . ' (≈ $' . number_format($usd / max(1, count($cases)), 5) . '/câu)');
         }
         if (count($failed) === count($rows)) {
@@ -472,7 +495,8 @@ class AiEval extends Command
                 ['Lý do lùi về câu mẫu', $this->reasons($ok)],
                 ['Qua guard trọn vẹn (0 đoạn bị thay)', $rate('passed')],
                 ['Số đoạn phải thay (tổng)', (string) array_sum(array_column($ok, 'replaced'))],
-                ['Số bịa lọt tới người dùng', '0 (guard thay mọi đoạn có số / tên không có trong dữ kiện)'],
+                ['CÓ NumberGuard: số đoạn không căn cứ tới người dùng', '0 (guard thay mọi đoạn có số / tên không có trong dữ kiện)'],
+                ['KHÔNG có NumberGuard (ablation): số đoạn không căn cứ tới người dùng', array_sum(array_column($ok, 'leakNoGuard')) . ' (TB ' . $avg('leakNoGuard') . ' / chuyến; chấm cột judgeGuard trong CSV để tách chặn đúng / chặn nhầm)'],
                 $lat, $tok,
             ],
         };

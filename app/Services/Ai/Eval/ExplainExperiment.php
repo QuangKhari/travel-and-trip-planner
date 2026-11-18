@@ -28,7 +28,7 @@ final class ExplainExperiment
             $tripId = $this->planner->save($uid, $res);
             $trip = DB::table('tbl_trips')->where('tripId', $tripId)->first();
             \App\Services\Ai\AiGateway::resetCircuits();
-            $r = $this->explain->forTrip($trip, null, true);
+            $r = $this->explain->withRejected()->forTrip($trip, null, true);
             $run = DB::table('tbl_ai_runs')->where('tripId', $tripId)->where('feature', 'explain')->orderByDesc('runId')->first();
             if (($run->outcome ?? '') === 'error') {
                 // lỗi phía nhà cung cấp (429 hết hạn mức, 400...): không tính là F2 thất bại
@@ -47,6 +47,11 @@ final class ExplainExperiment
                 'replaced' => (int) ($r['guards']['replaced'] ?? 0),
                 'passed' => ($r['engine'] ?? '') === 'llm' && (int) ($r['guards']['replaced'] ?? 0) === 0 ? 1 : 0,
                 'flags' => $r['guards']['flags'] ?? [],
+                // Ablation "không có NumberGuard": mọi đoạn bị chặn sẽ tới người dùng. leakNoGuard = số đoạn đó; rejected = nguyên văn để
+                // người chấm đánh dấu từng đoạn là bịa thật (guard đúng) hay chặn nhầm (cột judgeGuard).
+                'leakNoGuard' => count($r['rejected'] ?? []),
+                'rejected' => implode(' || ', array_map(fn($x) => '[' . $x['why'] . '] ' . $x['text'], $r['rejected'] ?? [])),
+                'judgeGuard' => '',
                 'ms' => $run->latencyMs ?? 0, 'in' => $run->inputTokens ?? 0, 'tokOut' => $run->outputTokens ?? 0,
                 'story' => $story,
                 'judgeFaithful' => '', 'judgeUseful' => '',

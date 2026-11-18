@@ -44,6 +44,8 @@
                     li.appendChild(a);
                     var meta = (TYPE[s.type] || "") + (s.updatedOn ? " · cập nhật " + fmtDate(s.updatedOn) : "");
                     if (meta) li.appendChild(el("span", "ask__src-meta", " " + meta));
+                    var tl = { verified: "đã xác minh", guide: "đã kiểm duyệt", user: "ghi chú người dùng", estimate: "ước lượng" }[s.trust];
+                    if (tl) li.appendChild(el("span", "ask__trust ask__trust--" + s.trust, tl));
                     ul.appendChild(li);
                 });
                 b.appendChild(ul);

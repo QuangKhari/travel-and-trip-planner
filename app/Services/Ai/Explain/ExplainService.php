@@ -62,13 +62,25 @@ final class ExplainService
             'model' => $res['model'] ?? null, 'inputChars' => mb_strlen($facts['table']), 'in' => $res['in'] ?? null, 'out' => $res['out'] ?? null,
             'ms' => (int) round((microtime(true) - $t0) * 1000), 'flags' => $out['guards']['flags'], 'error' => $res['error'] ?? null]);
 
+        $rejected = $out['guards']['rejected'] ?? [];
+        unset($out['guards']['rejected']);   // nguyên văn đoạn bị chặn không đưa tới người dùng
         $body = ['ok' => true] + $out;
         if ($engine === 'llm') {
             $this->store($tripId, $rev, $res['model'] ?? 'llm', $version, $body);
         }
 
         return $body + ['engine' => $engine, 'rev' => $rev, 'notice' => $engine === 'template' ? AiGateway::reasonText($res['reason'] ?? 'disabled') : null,
-            'remaining' => $this->gateway->remaining($userId)];
+            'remaining' => $this->gateway->remaining($userId)] + ($this->keepRejected ? ['rejected' => $rejected] : []);
+    }
+
+    /** Chỉ bộ đánh giá bật: trả kèm nguyên văn các đoạn guard đã chặn (thí nghiệm bỏ NumberGuard). */
+    private bool $keepRejected = false;
+
+    public function withRejected(bool $on = true): static
+    {
+        $this->keepRejected = $on;
+
+        return $this;
     }
 
     private function destName(object $trip): ?string
@@ -118,7 +130,7 @@ final class ExplainService
         try {
             DB::table('tbl_trip_ai_cache')->updateOrInsert(
                 ['tripId' => $tripId, 'rev' => $rev, 'feature' => 'explain', 'model' => mb_substr($model, 0, 60), 'promptVersion' => $version],
-                ['payload' => json_encode($body, JSON_UNESCAPED_UNICODE), 'createdAt' => now()]
+                ['payload' => json_encode($body, JSON_UNESCAPED_UNICODE), 'createdAt' => now()],
             );
             // giữ gọn: bỏ bản của các rev cũ
             DB::table('tbl_trip_ai_cache')->where('tripId', $tripId)->where('rev', '<', $rev)->delete();

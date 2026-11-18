@@ -71,7 +71,8 @@ final class TripFacts
             $out[] = $f('trip:month', 'Mùa và thời tiết tháng đi', $monthText . ' (khí hậu trung bình, không phải dự báo).');
         }
         if ($notes) {
-            $out[] = $f('trip:notes', 'Ghi chú của bạn', $notes);
+            // chữ người dùng tự gõ: AskService đánh dấu nguoi_viet="nguoi_dung" và lược câu giống lệnh (PromptShield)
+            $out[] = ['author' => 'user', 'trust' => 'user'] + $f('trip:notes', 'Ghi chú của bạn', $notes);
         }
         if (!empty($payload['unassigned'])) {
             $names = array_map(fn($x) => ExplainFacts::clean((string) $x['name']), array_slice($payload['unassigned'], 0, 10));

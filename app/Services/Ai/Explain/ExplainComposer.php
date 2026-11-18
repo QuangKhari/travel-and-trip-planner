@@ -18,7 +18,8 @@ final class ExplainComposer
      */
     public function compose(array $raw, array $facts): array
     {
-        $stat = ['passed' => 0, 'replaced' => 0, 'flags' => []];
+        // rejected: đoạn bị guard chặn (nguyên văn, tối đa 12) — để thí nghiệm bỏ guard (ablation) đếm và để người chấm xem guard chặn đúng hay nhầm
+        $stat = ['passed' => 0, 'replaced' => 0, 'flags' => [], 'rejected' => []];
         $check = function (mixed $text, ?int $day) use ($facts, &$stat): ?array {
             $why = $this->problem(is_string($text) ? $text : '', $facts, $day);
             if ($why === null) {
@@ -28,6 +29,9 @@ final class ExplainComposer
             }
             $stat['replaced']++;
             $stat['flags'][] = $why;
+            if (count($stat['rejected']) < 12 && is_string($text) && trim($text) !== '') {
+                $stat['rejected'][] = ['why' => $why, 'text' => mb_substr($text, 0, 200)];
+            }
 
             return null;
         };
@@ -78,6 +82,9 @@ final class ExplainComposer
             $basis = array_values(array_filter((array) ($t['basedOn'] ?? []), fn($b) => is_string($b) && $this->validBasis($b, $codes, $facts)));
             if (!$basis) {
                 $stat['flags'][] = 'tip_without_basis';
+                if (count($stat['rejected']) < 12 && is_string($t['text'] ?? null)) {
+                    $stat['rejected'][] = ['why' => 'tip_without_basis', 'text' => mb_substr((string) $t['text'], 0, 200)];
+                }
                 continue;   // lưu ý không có căn cứ thì bỏ hẳn, không thay câu mẫu
             }
             $seg = $check(mb_substr((string) ($t['text'] ?? ''), 0, 240), null);

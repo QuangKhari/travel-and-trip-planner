@@ -346,7 +346,7 @@ class OnlinePaymentService
                 // Tiền về SAU khi đơn đã hủy / hết hạn: còn chỗ thì xác nhận lại, hết chỗ thì hoàn tiền 100%
                 $people = (int) $b->numAdults + (int) $b->numChildren;
                 if ($b->availabilityId && $this->departures->bookDirect((int) $b->availabilityId, $people)) {
-                    DB::table('tbl_booking')->where('bookingId', $bookingId)->update(['bookingStatus' => 'y', 'cancelReason' => null]);
+                    \App\Support\BookingState::force($bookingId, 'c', 'y', ['cancelReason' => null], 'late_payment', 'system');
                     $this->departures->syncTour((int) $b->tourId);
 
                     return ['duplicate' => false, 'event' => 'revived', 'booking' => $b];

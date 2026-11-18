@@ -18,6 +18,15 @@ final class AiLlmFactory
         if (app()->bound(StructuredLlm::class)) {
             return app(StructuredLlm::class);
         }
+        if ($name = config('ai.profile')) {
+            // ai:eval --profile=... / ai:compare: một model cố định cho mọi tác vụ, không dự phòng (số liệu phải từ đúng model đó)
+            $p = (array) config('ai.profiles.' . $name, []);
+            $l = !empty($p['driver']) && !empty($p['model'])
+                ? $this->build((string) $p['driver'], (string) $p['model'], $task, $p['key'] ?? null, $p['base_url'] ?? null, !empty($p['reasoning']), $p['json_mode'] ?? null, $p['reasoning'] ?? null)
+                : null;
+
+            return $l && $l->available() ? $l : null;
+        }
         $driver = (string) config('ai.driver', 'none');
         $only = (int) config('ai.fallback.only', 0);
         if ($only > 0) {
@@ -49,9 +58,14 @@ final class AiLlmFactory
             if (($fb['driver'] ?: 'openai') !== 'openai') {
                 continue;   // Hỏi đáp chỉ cần chuẩn OpenAI cho dự phòng (Groq, Cerebras, Gemini...)
             }
-            $l = new OpenAiCompatLlm($fb['key'] ?: config('rag.llm.openai.key'), (string) $fb['model'],
+            $l = new OpenAiCompatLlm(
+                $fb['key'] ?: config('rag.llm.openai.key'),
+                (string) $fb['model'],
                 (string) ($fb['base_url'] ?: config('rag.llm.openai.base_url', 'https://api.openai.com/v1')),
-                (int) config('rag.llm.max_tokens', 600), (float) config('rag.llm.temperature', 0.2), (int) config('rag.llm.timeout', 45));
+                (int) config('rag.llm.max_tokens', 600),
+                (float) config('rag.llm.temperature', 0.2),
+                (int) config('rag.llm.timeout', 45),
+            );
             if ($l->available()) {
                 $out[] = $l;
             }
@@ -89,17 +103,32 @@ final class AiLlmFactory
         return $out;
     }
 
-    private function build(string $driver, string $model, string $task, ?string $key = null, ?string $base = null, bool $reasoning = true): ?StructuredLlm
+    private function build(string $driver, string $model, string $task, ?string $key = null, ?string $base = null, bool $reasoning = true, ?string $jsonMode = null, ?string $effort = null): ?StructuredLlm
     {
         $max = (int) config('ai.max_tokens.' . $task, 900);
         $temp = (float) config('ai.temperature', 0.1);
         $timeout = (int) config('ai.timeout.' . $task, 20);
 
         return match ($driver) {
-            'anthropic' => new AnthropicJsonLlm($key ?: config('rag.llm.anthropic.key'), $model,
-                (string) ($base ?: config('rag.llm.anthropic.base_url', 'https://api.anthropic.com')), (string) config('rag.llm.anthropic.version', '2023-06-01'), $max, $temp, $timeout),
-            'openai' => new OpenAiJsonLlm($key ?: config('rag.llm.openai.key'), $model,
-                (string) ($base ?: config('rag.llm.openai.base_url', 'https://api.openai.com/v1')), $max, $temp, $timeout, (string) config('ai.openai_json_mode', 'schema'), $reasoning ? (config('ai.reasoning_effort') ?: null) : null),
+            'anthropic' => new AnthropicJsonLlm(
+                $key ?: config('rag.llm.anthropic.key'),
+                $model,
+                (string) ($base ?: config('rag.llm.anthropic.base_url', 'https://api.anthropic.com')),
+                (string) config('rag.llm.anthropic.version', '2023-06-01'),
+                $max,
+                $temp,
+                $timeout,
+            ),
+            'openai' => new OpenAiJsonLlm(
+                $key ?: config('rag.llm.openai.key'),
+                $model,
+                (string) ($base ?: config('rag.llm.openai.base_url', 'https://api.openai.com/v1')),
+                $max,
+                $temp,
+                $timeout,
+                (string) ($jsonMode ?: config('ai.openai_json_mode', 'schema')),
+                $reasoning ? ($effort ?: config('ai.reasoning_effort') ?: null) : null,
+            ),
             default => null,
         };
     }

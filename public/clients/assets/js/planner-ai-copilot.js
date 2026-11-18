@@ -41,9 +41,12 @@
         return w;
     }
     function post(url, body, signal) {
+        var hd = { Accept: "application/json", "Content-Type": "application/json", "X-CSRF-TOKEN": data.csrf || "", "X-Requested-With": "XMLHttpRequest" };
+        /* ghi kết quả đề xuất: một đề xuất + một kết quả = một khóa (gửi lại không ghi hai lần) */
+        if (body && body.proposal && typeof body.applied === "boolean") hd["Idempotency-Key"] = ("fb-" + body.proposal + "-" + (body.applied ? 1 : 0)).replace(/[^A-Za-z0-9_.:-]/g, "").slice(0, 64);
         return fetch(url, {
             method: "POST", credentials: "same-origin", signal: signal,
-            headers: { Accept: "application/json", "Content-Type": "application/json", "X-CSRF-TOKEN": data.csrf || "", "X-Requested-With": "XMLHttpRequest" },
+            headers: hd,
             body: JSON.stringify(body || {}),
         }).then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); });
     }
@@ -363,6 +366,9 @@
         return t.indexOf("?") >= 0 || /\s(có|không|nên|cần|gì|nào|mấy giờ|bao nhiêu|ở đâu|thế nào)\s/.test(low);
     }
 
+    /* Nhãn độ tin cậy của nguồn: số liệu hệ thống đã xác minh / cẩm nang đã duyệt / ghi chú người dùng tự gõ / số ước lượng */
+    var TRUST = { verified: "đã xác minh", guide: "cẩm nang đã duyệt", user: "ghi chú của bạn", estimate: "ước lượng" };
+
     /* ---------------- F5: trả lời có nguồn (lịch của bạn + cẩm nang), không đổi lịch ---------------- */
     function answer(bubble, r) {
         if (r.notice) bubble.body.appendChild(el("p", "ai-notice", r.notice));
@@ -397,6 +403,8 @@
                     li.appendChild(a);
                 } else li.appendChild(el("span", null, s.title));
                 if (s.trip && !s.day) li.appendChild(el("small", null, " · từ chuyến của bạn"));
+                var tl = TRUST[s.trust];
+                if (tl) li.appendChild(el("span", "ai-trust ai-trust--" + s.trust, tl));
                 ul.appendChild(li);
             });
             bubble.body.appendChild(ul);

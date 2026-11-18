@@ -100,7 +100,9 @@ final class ExplainFacts
     /** Tên địa điểm (nhất là nguồn OSM) là dữ liệu ngoài: bỏ ký tự điều khiển, dấu ngoặc nhọn, cắt độ dài (P7). */
     public static function clean(string $s): string
     {
-        $s = preg_replace('/[\x00-\x1F\x7F<>{}`]+/u', ' ', strip_tags($s)) ?? '';
+        // tên mục / ghi chú do người dùng gõ là DỮ LIỆU: câu giống lệnh gửi trợ lý bị lược trước khi vào lời nhắc
+        $s = \App\Services\Ai\PromptShield::neutralize(strip_tags($s))['text'];
+        $s = preg_replace('/[\x00-\x1F\x7F<>{}`]+/u', ' ', $s) ?? '';
 
         return mb_substr(trim(preg_replace('/\s+/u', ' ', $s) ?? ''), 0, 90);
     }

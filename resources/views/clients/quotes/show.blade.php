@@ -29,7 +29,7 @@
                     @if ($q->excludes)<p><b>Không bao gồm:</b> {{ $q->excludes }}</p>@endif
                     @if ($q->message)<p>{{ $q->message }}</p>@endif
                     @if ($q->status === 'quoted')
-                        <form method="POST" action="{{ route('quotes.decide', $q->quoteId) }}" style="display:flex;gap:8px">@csrf
+                        <form method="POST" action="{{ route('quotes.decide', $q->quoteId) }}" style="display:flex;gap:8px">@csrf<input type="hidden" name="_idem" value="{{ 'qd-' . \Illuminate\Support\Str::uuid() }}">
                             <button class="theme-btn" name="decision" value="accept">Nhận báo giá</button>
                             <button class="theme-btn style-two" name="decision" value="decline">Từ chối</button></form>
                     @else

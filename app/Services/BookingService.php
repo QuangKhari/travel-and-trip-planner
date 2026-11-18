@@ -231,9 +231,13 @@ class BookingService
     public function cancelLocked(object $booking, string $reason = 'customer', bool $releaseCoupon = true): void
     {
         \App\Support\DomainEvents::record(\App\Support\DomainEvents::BOOKING_CANCELLED, 'booking', (int) $booking->bookingId, ['bookingId' => (int) $booking->bookingId, 'reason' => $reason]);
-        DB::table('tbl_booking')
-            ->where('bookingId', $booking->bookingId)
-            ->update(['bookingStatus' => 'c', 'holdExpiresAt' => null] + (self::hasReason() ? ['cancelReason' => $reason] : []));
+        \App\Support\BookingState::force(
+            (int) $booking->bookingId,
+            ['n', 'y'],
+            'c',
+            ['holdExpiresAt' => null] + (self::hasReason() ? ['cancelReason' => $reason] : []),
+            $reason,
+        );
 
         // Trả chỗ về đúng ngày khởi hành (chỗ đang giữ nếu đơn chờ, chỗ đã bán nếu đơn đã xác nhận)
         $this->departures->release($booking);
@@ -257,8 +261,7 @@ class BookingService
     public function confirmLocked(object $booking): void
     {
         \App\Support\DomainEvents::record(\App\Support\DomainEvents::BOOKING_CONFIRMED, 'booking', (int) $booking->bookingId, ['bookingId' => (int) $booking->bookingId]);
-        DB::table('tbl_booking')->where('bookingId', $booking->bookingId)
-            ->update(['bookingStatus' => 'y', 'holdExpiresAt' => null]);
+        \App\Support\BookingState::force((int) $booking->bookingId, 'n', 'y', ['holdExpiresAt' => null], 'confirm');
         $this->departures->confirm($booking);
     }
 
@@ -315,7 +318,7 @@ class BookingService
             if (self::tripEndDate($r) >= $today) {
                 continue;
             }
-            $done += DB::table('tbl_booking')->where('bookingId', $r->bookingId)->where('bookingStatus', 'y')->update(['bookingStatus' => 'f']);
+            $done += \App\Support\BookingState::transition((int) $r->bookingId, 'y', 'f', [], 'auto_finish', 'system') ? 1 : 0;
         }
 
         return $done;
