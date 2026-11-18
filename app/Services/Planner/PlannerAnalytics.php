@@ -25,12 +25,8 @@ final class PlannerAnalytics
         $upcoming = (clone $trips)->whereNotNull('startDate')->whereBetween('startDate', [now()->addDay()->toDateString(), now()->addDays(16)->toDateString()])->count();
 
         // 2. Từ chuyến tự lên tới đặt tour (đơn có tripId: đặt từ banner "có tour giống lịch trình này")
-        $fromTrip = Schema::hasColumn('tbl_booking', 'tripId')
-            ? DB::table('tbl_booking as b')->leftJoin('tbl_checkout as c', 'c.bookingId', '=', 'b.bookingId')
-                ->whereNotNull('b.tripId')->where('b.bookingDate', '>=', $since)
-                ->selectRaw("count(*) n, sum(b.bookingStatus <> 'c') live, avg(b.matchScore) score, sum(case when c.paymentStatus = 'y' then b.totalPrice else 0 end) paid")->first()
-            : null;
-        $allBookings = DB::table('tbl_booking')->where('bookingDate', '>=', $since)->count();
+        // đọc qua giao diện của phân hệ Commerce (không đọc thẳng bảng đơn / thanh toán)
+        ['fromTrip' => $fromTrip, 'all' => $allBookings] = app(\App\Modules\Commerce\CommerceReader::class)->plannerConversion($since instanceof \DateTimeInterface ? $since->format('Y-m-d H:i:s') : (string) $since);
 
         // 3. La bàn: tỷ lệ chấp nhận đề xuất, độ trễ, luật vs LLM
         $ai = [];

@@ -10,9 +10,15 @@ class PricingService
 {
     public function __construct(private CouponService $coupons) {}
 
-    public function subtotal(object $tour, int $adults, int $children): int
+    /**
+     * Tạm tính theo số khách. Có ngày khởi hành thì áp giá theo mùa (PriceRules): % áp lên đơn giá mỗi suất, làm tròn 1.000đ.
+     * $pct (khi đã biết, vd đơn đã chốt mức mùa lúc đặt) dùng thay cho việc tra lại quy tắc.
+     */
+    public function subtotal(object $tour, int $adults, int $children, ?string $departureDate = null, ?int $pct = null): int
     {
-        return max(0, (int) round((float) $tour->priceAdult * max(0, $adults) + (float) $tour->priceChild * max(0, $children)));
+        $pct ??= PriceRules::for((int) ($tour->tourId ?? 0), $departureDate)['pct'] ?? 0;
+
+        return max(0, PriceRules::apply((float) $tour->priceAdult, $pct) * max(0, $adults) + PriceRules::apply((float) $tour->priceChild, $pct) * max(0, $children));
     }
 
     /**
@@ -41,11 +47,13 @@ class PricingService
      * Xem trước: không trừ lượt mã. Mã không hợp lệ thì trả lỗi trong 'couponError' (không ném).
      * @return array{subtotal:int, discount:int, total:int, promotionId:?int, percent:float, couponError:?string}
      */
-    public function quote(object $tour, int $adults, int $children, ?string $coupon, int $userId, array $addonIds = []): array
+    public function quote(object $tour, int $adults, int $children, ?string $coupon, int $userId, array $addonIds = [], ?string $departureDate = null): array
     {
         $ad = $this->addons((int) $tour->tourId, $addonIds, $adults, $children);
-        $subtotal = $this->subtotal($tour, $adults, $children) + $ad['sum'];
-        $out = ['subtotal' => $subtotal, 'discount' => 0, 'total' => $subtotal, 'promotionId' => null, 'percent' => 0.0, 'couponError' => null, 'addons' => $ad['lines']];
+        $season = PriceRules::for((int) $tour->tourId, $departureDate);
+        $subtotal = $this->subtotal($tour, $adults, $children, null, $season['pct'] ?? 0) + $ad['sum'];
+        $out = ['subtotal' => $subtotal, 'discount' => 0, 'total' => $subtotal, 'promotionId' => null, 'percent' => 0.0, 'couponError' => null, 'addons' => $ad['lines'],
+            'season' => $season ? ['pct' => $season['pct'], 'label' => $season['label']] : null];
         $coupon = trim((string) $coupon);
         if ($coupon !== '') {
             try {

@@ -150,6 +150,8 @@ class TripPayloadBuilder
             // tên các mục có nội dung nguồn không còn công khai (TripHealth cảnh báo, người dùng tự thay / xóa)
             'unavailable' => array_values(array_map(fn($x) => (string) $x['name'], array_filter($items, fn($x) => !empty($x['unavailable'])))),
             'advice' => $adviceRows,
+            // ngày đi tour đã đặt (đọc qua giao diện của phân hệ Commerce, không đọc thẳng bảng đơn): TripHealth báo mục tự lập trùng ngày tour
+            'tourDays' => app(\App\Modules\Commerce\CommerceReader::class)->tourDaysForTrip((int) $trip->tripId),
             // nguồn số liệu tuyến THỰC SỰ đã dùng (OSRM lỗi thì ghi rõ đang là ước tính)
             'route' => $this->route->status(),
             'estimateNote' => $this->route->status()['fallback']

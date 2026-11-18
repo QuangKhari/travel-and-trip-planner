@@ -281,6 +281,10 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::post('/len-ke-hoach/{id}/la-ban/kiem-tra-lai', [PlannerAiController::class, 'recheck'])->whereNumber('id')->middleware('throttle:30,1,planner-ai-recheck')->name('planner.ai.recheck');
     Route::post('/len-ke-hoach/{id}/dan-ghi-chu', [PlannerAiController::class, 'notes'])->whereNumber('id')->middleware('throttle:10,1,planner-notes')->name('planner.notes');
     Route::post('/len-ke-hoach/{id}/la-ban/canh-bao/giai-thich', [PlannerAiController::class, 'alertExplain'])->whereNumber('id')->middleware('throttle:20,1,planner-ai-alert')->name('planner.ai.alert.explain');
+    // Trí nhớ theo chuyến của La bàn: xem, dặn thêm, từ chối một gợi ý, xóa
+    Route::get('/len-ke-hoach/{id}/la-ban/tri-nho', [PlannerAiController::class, 'memory'])->whereNumber('id')->middleware('throttle:60,1,planner-ai-mem')->name('planner.ai.memory');
+    Route::post('/len-ke-hoach/{id}/la-ban/tri-nho', [PlannerAiController::class, 'memoryAdd'])->whereNumber('id')->middleware('throttle:30,1,planner-ai-mem-w')->name('planner.ai.memory.add');
+    Route::post('/len-ke-hoach/{id}/la-ban/tri-nho/xoa', [PlannerAiController::class, 'memoryForget'])->whereNumber('id')->middleware('throttle:30,1,planner-ai-mem-w')->name('planner.ai.memory.forget');
     Route::post('/len-ke-hoach/{id}/la-ban/ket-qua', [PlannerAiController::class, 'feedback'])->whereNumber('id')->middleware(['throttle:60,1,planner-ai-feedback', 'idempotent'])->name('planner.ai.feedback');
     Route::post('/la-ban/danh-gia', [PlannerAiController::class, 'rate'])->middleware('throttle:30,1,planner-ai-rate')->name('planner.ai.rate');
     Route::post('/len-ke-hoach/{id}/trang-thai', [PlannerController::class, 'status'])->whereNumber('id')->middleware('throttle:60,1,planner-status')->name('planner.status');
@@ -290,6 +294,7 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
     Route::get('/len-ke-hoach/{id}/kham-pha', [PlannerController::class, 'browse'])->whereNumber('id')->middleware('throttle:60,1,planner-browse')->name('planner.browse');
     Route::get('/len-ke-hoach/{id}/tim', [PlannerController::class, 'search'])->whereNumber('id')->middleware('throttle:90,1,planner-search')->name('planner.search');
     Route::post('/len-ke-hoach/{id}/luu', [PlannerController::class, 'save'])->whereNumber('id')->middleware('throttle:60,1,planner-save')->name('planner.save');
+    Route::get('/len-ke-hoach/{id}/san-sang', [\App\Http\Controllers\clients\TripLifecycleController::class, 'show'])->whereNumber('id')->middleware('throttle:60,1,planner-ready')->name('planner.lifecycle');
     Route::get('/len-ke-hoach/{id}/do-mang-theo', [PlannerController::class, 'packing'])->whereNumber('id')->middleware('throttle:20,1,planner-packing')->name('planner.packing');
     Route::post('/thong-bao-day/dang-ky', [\App\Http\Controllers\clients\PushController::class, 'subscribe'])->middleware('throttle:10,1,push-sub')->name('push.subscribe');
     Route::post('/thong-bao-day/huy', [\App\Http\Controllers\clients\PushController::class, 'unsubscribe'])->middleware('throttle:10,1,push-sub')->name('push.unsubscribe');
@@ -485,6 +490,10 @@ Route::prefix('admin')->group(function () {
 
         // Lịch khởi hành (A3 / D-02)
         Route::get('/departures', [DepartureManagementController::class, 'index'])->name('admin.departures');
+        Route::get('/departures/dieu-hanh', [DepartureManagementController::class, 'ops'])->name('admin.departures.ops');
+        Route::get('/price-rules', [\App\Http\Controllers\admin\PriceRuleController::class, 'index'])->name('admin.price-rules');
+        Route::post('/price-rules', [\App\Http\Controllers\admin\PriceRuleController::class, 'store'])->name('admin.price-rules.store');
+        Route::post('/price-rules/{id}/toggle', [\App\Http\Controllers\admin\PriceRuleController::class, 'toggle'])->whereNumber('id')->name('admin.price-rules.toggle');
         Route::post('/departures', [DepartureManagementController::class, 'store'])->name('admin.departures.store');
         Route::post('/departures/{id}', [DepartureManagementController::class, 'update'])->whereNumber('id')->name('admin.departures.update');
         Route::post('/departures/{id}/toggle', [DepartureManagementController::class, 'toggle'])->whereNumber('id')->name('admin.departures.toggle');

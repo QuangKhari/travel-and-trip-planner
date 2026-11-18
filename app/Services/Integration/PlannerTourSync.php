@@ -2,6 +2,7 @@
 
 namespace App\Services\Integration;
 
+use App\Services\Planner\Health\TripHealth;
 use App\Services\Planner\TripWatch;
 use App\Support\DomainEvents;
 use Carbon\Carbon;
@@ -23,6 +24,7 @@ class PlannerTourSync
             DomainEvents::BOOKING_CANCELLED => $this->bookingCancelled((int) $p['bookingId'], (string) ($p['reason'] ?? '')),
             DomainEvents::DEPARTURE_CHANGED => $this->departureChanged((int) $p['bookingId'], $p['from'] ?? null, $p['to'] ?? null),
             DomainEvents::PLACE_UNPUBLISHED => $this->placeUnpublished((string) $p['type'], (int) $p['refId'], (string) ($p['name'] ?? '')),
+            DomainEvents::PLACE_HOURS_CHANGED => $this->placeHoursChanged((string) $p['type'], (int) $p['refId']),
             default => null,
         };
     }
@@ -30,13 +32,10 @@ class PlannerTourSync
     /** @return ?object{bookingId, bookingCode, tripId, departureDate, tourId, title, durationDays, time, startDate, endDate} */
     private function linked(int $bookingId): ?object
     {
-        if (!\Illuminate\Support\Facades\Schema::hasColumn('tbl_booking', 'tripId')) {
-            return null;
-        }
-        $b = DB::table('tbl_booking as b')->join('tbl_tours as t', 't.tourId', '=', 'b.tourId')->where('b.bookingId', $bookingId)
-            ->first(['b.bookingId', 'b.bookingCode', 'b.tripId', 'b.departureDate', 'b.tourId', 't.title', 't.durationDays', 't.time', 't.startDate', 't.endDate']);
+        // đơn đọc qua giao diện của phân hệ Commerce; chuyến là bảng của chính Planner
+        $b = app(\App\Modules\Commerce\CommerceReader::class)->linkedBooking($bookingId);
 
-        return $b && $b->tripId && DB::table('tbl_trips')->where('tripId', $b->tripId)->exists() ? $b : null;
+        return $b && DB::table('tbl_trips')->where('tripId', $b->tripId)->exists() ? $b : null;
     }
 
     private function note(int $tripId, string $tone, string $title, ?string $text, string $ref, ?int $day = null): void
@@ -62,7 +61,7 @@ class PlannerTourSync
         $text = 'Travela đã xác nhận đơn ' . $b->bookingCode . '. Đây là dịch vụ đã đặt: lịch tour do Travela vận hành, các mục khác trong ngày tour nên để trống hoặc là hoạt động ngoài giờ tour.';
         $clash = $this->overlap((int) $b->tripId, $b);
         if ($clash) {
-            $text .= ' Trong lịch tự lập đang có mục vào ngày đi tour: ' . $clash . '.';
+            $text .= ' Trong lịch tự lập đang có mục vào ngày đi tour: ' . $clash . '.' . $this->overlapOptions((int) $b->tripId);
         }
         $this->note((int) $b->tripId, 'ok', 'Đã xác nhận tour “' . $b->title . '”, khởi hành ' . self::d($b->departureDate), $text, 'confirmed:' . $bookingId);
     }
@@ -92,7 +91,7 @@ class PlannerTourSync
         $text = 'Ngày khởi hành của đơn ' . $b->bookingCode . ' đổi từ ' . self::d($from) . ' sang ' . self::d($to) . ' (theo phương án bạn đã đồng ý). Lịch tự lập KHÔNG tự đổi.';
         $clash = $this->overlap((int) $b->tripId, $b);
         if ($clash) {
-            $text .= ' Các mục có thể trùng ngày tour mới: ' . $clash . '.';
+            $text .= ' Các mục có thể trùng ngày tour mới: ' . $clash . '.' . $this->overlapOptions((int) $b->tripId);
         }
         $trip = DB::table('tbl_trips')->where('tripId', $b->tripId)->first(['startDate', 'days']);
         if ($to && $trip && $trip->startDate) {
@@ -120,6 +119,20 @@ class PlannerTourSync
         return $rows->isEmpty() ? null : $rows->map(fn($r) => ($r->label ?: $r->refType) . ' (ngày ' . $r->dayNo . ')')->implode(', ');
     }
 
+    /** Câu báo số phương án dời các mục trùng ngày tour (rỗng nếu không có / lỗi). Lịch không tự đổi. */
+    private function overlapOptions(int $tripId): string
+    {
+        try {
+            $trip = DB::table('tbl_trips')->where('tripId', $tripId)->first();
+            $n = $trip ? count(app(\App\Services\Planner\Health\TripResolver::class)->forTrip($trip, 'tour.overlap', null, null)['options'] ?? []) : 0;
+        } catch (\Throwable $e) {
+            report($e);
+            $n = 0;
+        }
+
+        return $n ? ' Travela đã chuẩn bị ' . $n . ' phương án dời lịch (có so sánh trước / sau), chỉ áp dụng khi bạn bấm.' : '';
+    }
+
     /** Số phương án lập lại kế hoạch cho mục không còn xác thực trong ngày $day (0 nếu lỗi / không có). */
     private function replanCount(int $tripId, ?int $day): int
     {
@@ -131,6 +144,45 @@ class PlannerTourSync
             report($e);
 
             return 0;
+        }
+    }
+
+    /**
+     * Giờ mở cửa của một nơi vừa được xác minh / sửa: với chuyến SẮP ĐI hoặc ĐANG ĐI có nơi này trong các ngày, kiểm lại bằng TripHealth;
+     * nơi giờ đóng cửa / không kịp giờ ở ngày đã xếp thì báo vào chuông kèm phương án (mở đúng mục bằng "Xem phương án"). Lịch không tự đổi.
+     */
+    private function placeHoursChanged(string $type, int $refId): void
+    {
+        if (!TripWatch::ready()) {
+            return;
+        }
+        $today = now()->toDateString();
+        $tripIds = DB::table('tbl_trip_items as i')->join('tbl_trips as t', 't.tripId', '=', 'i.tripId')->where('i.refType', $type)->where('i.refId', $refId)
+            ->whereNotNull('i.dayNo')->where('t.kind', 'trip')->whereNotNull('t.startDate')->whereNotIn('t.status', ['done', 'cancelled'])
+            ->whereRaw('DATE_ADD(t.startDate, INTERVAL GREATEST(t.days, 1) - 1 DAY) >= ?', [$today])
+            ->where('t.startDate', '<=', now()->addDays(120)->toDateString())->distinct()->limit(500)->pluck('i.tripId');
+        foreach ($tripIds as $tripId) {
+            try {
+                $trip = DB::table('tbl_trips')->where('tripId', $tripId)->first();
+                $h = app(TripHealth::class)->forTrip($trip);
+                $payload = app(\App\Services\Planner\TripPlanner::class)->payload($trip);
+                foreach ($h['checks'] as $c) {
+                    if (!in_array($c['code'], ['hours.closed', 'hours.late', 'hours.early'], true) || ($c['day'] ?? null) === null || ($c['index'] ?? null) === null) {
+                        continue;
+                    }
+                    $it = collect($payload['days'])->firstWhere('day', $c['day'])['items'][$c['index']] ?? null;
+                    if (!$it || ($it['type'] ?? '') !== $type || (int) ($it['refId'] ?? 0) !== $refId) {
+                        continue;
+                    }
+                    $n = count(app(\App\Services\Planner\Health\TripResolver::class)->forTrip($trip, $c['code'], (int) $c['day'], (int) $c['index'])['options'] ?? []);
+                    DB::table('tbl_trip_events')->insertOrIgnore(['tripId' => (int) $tripId, 'kind' => 'content', 'tone' => $c['code'] === 'hours.closed' ? 'bad' : 'warn',
+                        'title' => mb_substr('Giờ mở cửa của “' . $it['name'] . '” vừa được cập nhật', 0, 200),
+                        'text' => $c['text'] . ($n ? ' Travela đã chuẩn bị ' . $n . ' phương án (có so sánh trước / sau), chỉ áp dụng khi bạn bấm.' : ''),
+                        'day' => (int) $c['day'], 'ref' => mb_substr('hours:' . $c['code'] . ':' . $type . ':' . $refId . ':' . substr(md5($c['text']), 0, 8), 0, 120), 'createdAt' => now()]);
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
     }
 

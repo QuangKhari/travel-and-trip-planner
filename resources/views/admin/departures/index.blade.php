@@ -10,6 +10,7 @@
             @if ($tour)<a class="ad-back" href="{{ route('admin.departures') }}"><i class="fa fa-arrow-left"></i> Mọi ngày khởi hành</a>@endif
             <h1>{{ $tour ? $tour->title : 'Lịch khởi hành' }}</h1>
             <a class="ad-btn ad-btn--sm" href="{{ route('admin.departures.grouping') }}"><i class="fa fa-users"></i> Quản lý ghép đoàn</a>
+            <a class="ad-btn ad-btn--sm" href="{{ route('admin.departures.ops') }}"><i class="fa fa-tachometer-alt"></i> Bảng điều hành</a>
             <p>Mỗi tour có thể mở bán nhiều ngày khởi hành, mỗi ngày có số chỗ riêng. Chỗ <b>đã bán</b> là của đơn đã xác nhận / hoàn tất, chỗ <b>đang giữ</b> là của đơn chờ xác nhận. Ngày đã có đơn thì chỉ được ngừng bán, không xóa.</p>
         </div>
         <form class="ad-actions" method="GET" action="{{ route('admin.departures') }}">

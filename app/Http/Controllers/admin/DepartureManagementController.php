@@ -19,6 +19,14 @@ class DepartureManagementController extends Controller
         parent::__construct();
     }
 
+    /** Bảng điều hành: các ngày khởi hành 3–30 ngày tới và đang đi, cờ đỏ / vàng việc cần xử lý (DepartureOps). */
+    public function ops(Request $request, \App\Services\Departures\DepartureOps $ops)
+    {
+        $days = max(3, min(30, (int) $request->query('days', 14)));
+
+        return view('admin.departures.ops', ['title' => 'Điều hành khởi hành', 'days' => $days] + $ops->board($days));
+    }
+
     public function index(Request $request)
     {
         $title = 'Lịch khởi hành';
@@ -90,8 +98,14 @@ class DepartureManagementController extends Controller
             $res = $this->departures->add((int) $d['tourId'], $date, (int) $d['totalSlots'], $d['note'] ?? null);
             if ($res['ok']) {
                 $ok[] = Carbon::parse($date)->format('d/m/Y');
-                AuditLog::record('departure.create', 'departure', $res['id'], 'Thêm ngày ' . Carbon::parse($date)->format('d/m/Y') . ' (' . $d['totalSlots'] . ' chỗ) cho tour #' . $d['tourId'],
-                    null, ['tourId' => (int) $d['tourId'], 'departureDate' => $date, 'totalSlots' => (int) $d['totalSlots']]);
+                AuditLog::record(
+                    'departure.create',
+                    'departure',
+                    $res['id'],
+                    'Thêm ngày ' . Carbon::parse($date)->format('d/m/Y') . ' (' . $d['totalSlots'] . ' chỗ) cho tour #' . $d['tourId'],
+                    null,
+                    ['tourId' => (int) $d['tourId'], 'departureDate' => $date, 'totalSlots' => (int) $d['totalSlots']],
+                );
             } else {
                 $fail[] = $res['message'];
             }
@@ -119,7 +133,7 @@ class DepartureManagementController extends Controller
         if ($res['ok']) {
             [$b, $a] = AuditLog::diff(
                 array_intersect_key($res['before'], array_flip(['departureDate', 'totalSlots', 'note'])),
-                array_intersect_key($res['after'], array_flip(['departureDate', 'totalSlots', 'note']))
+                array_intersect_key($res['after'], array_flip(['departureDate', 'totalSlots', 'note'])),
             );
             if ($a) {
                 AuditLog::record('departure.update', 'departure', $id, 'Sửa ngày khởi hành ' . Carbon::parse($res['after']['departureDate'])->format('d/m/Y') . ' (tour #' . $res['tourId'] . ')', $b, $a);
@@ -133,8 +147,14 @@ class DepartureManagementController extends Controller
     {
         $res = $this->departures->toggle($id);
         if ($res['ok']) {
-            AuditLog::record('departure.close', 'departure', $id, ($res['status'] === 'open' ? 'Mở bán lại' : 'Ngừng bán') . ' ngày ' . Carbon::parse($res['date'])->format('d/m/Y') . ' (tour #' . $res['tourId'] . ')',
-                ['status' => $res['status'] === 'open' ? 'closed' : 'open'], ['status' => $res['status']]);
+            AuditLog::record(
+                'departure.close',
+                'departure',
+                $id,
+                ($res['status'] === 'open' ? 'Mở bán lại' : 'Ngừng bán') . ' ngày ' . Carbon::parse($res['date'])->format('d/m/Y') . ' (tour #' . $res['tourId'] . ')',
+                ['status' => $res['status'] === 'open' ? 'closed' : 'open'],
+                ['status' => $res['status']],
+            );
         }
 
         return back()->with($res['ok'] ? 'success' : 'error', $res['message']);

@@ -162,6 +162,10 @@ final class OpeningHours
         if ($rows) {
             DB::table('tbl_opening_hours')->insert($rows);
         }
+        // giờ do admin xác minh / duyệt từ báo sai: phát sự kiện để các chuyến có nơi này được báo ngay (không đợi lượt theo dõi 3 giờ)
+        if (in_array($source, ['admin', 'report'], true)) {
+            \App\Support\DomainEvents::record(\App\Support\DomainEvents::PLACE_HOURS_CHANGED, $type, $refId, ['type' => $type, 'refId' => $refId]);
+        }
 
         return count($rows);
     }

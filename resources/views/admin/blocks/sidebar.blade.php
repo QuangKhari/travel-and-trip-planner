@@ -10,7 +10,7 @@
     $kindNow = request()->route('kind');
     $onKind = fn(string $k) => ($k === 'itineraries' && $on('admin.itinerary*'))
         || ($on('admin.content', 'admin.content.create', 'admin.content.edit', 'admin.content.preview') && ($kindNow ?? 'foods') === $k);
-    $inTours = $on('admin.tours', 'admin.page-add-tours', 'admin.tour-edit', 'admin.departures*', 'admin.resources*', 'admin.incidents*', 'admin.waitlist*', 'admin.feasibility*', 'admin.profit*', 'admin.suppliers*');
+    $inTours = $on('admin.tours', 'admin.page-add-tours', 'admin.tour-edit', 'admin.departures*', 'admin.price-rules*', 'admin.resources*', 'admin.incidents*', 'admin.waitlist*', 'admin.feasibility*', 'admin.profit*', 'admin.suppliers*');
     $inWrite = $on('admin.destinations*', 'admin.blog*', 'admin.itinerary*')
         || $on('admin.content', 'admin.content.create', 'admin.content.edit', 'admin.content.preview');
     $inReport = $on('admin.content.overview', 'admin.content.quality*');
@@ -58,6 +58,8 @@
                     <summary class="ad-nav__link{{ $inTours ? ' is-in' : '' }}" title="Tour"><i class="fa fa-suitcase" aria-hidden="true"></i><span class="ad-nav__txt">Tour</span>@if ($tourWork > 0)<span class="ad-nav__pill" title="Lịch sắp thiếu khách / phương án chờ / sự cố tour">{{ $tourWork }}</span>@endif<i class="fa fa-angle-down ad-nav__caret" aria-hidden="true"></i></summary>
                     <div class="ad-nav__subs">
                         {!! $sub('admin.tours', 'Danh sách tour', $on('admin.tours', 'admin.tour-edit')) !!}
+                        {!! $sub('admin.departures.ops', 'Điều hành khởi hành', $on('admin.departures.ops')) !!}
+                        {!! $sub('admin.price-rules', 'Giá theo mùa', $on('admin.price-rules*')) !!}
                         {!! $sub('admin.departures', 'Lịch khởi hành', $on('admin.departures', 'admin.departures.store', 'admin.departures.update', 'admin.departures.toggle', 'admin.departures.destroy')) !!}
                         {!! $sub('admin.resources', 'Xếp xe & HDV', $on('admin.resources*')) !!}
                         {!! $sub('admin.departures.rescue', 'Xử lý thiếu khách', $on('admin.departures.rescue*'), [], $depWork) !!}

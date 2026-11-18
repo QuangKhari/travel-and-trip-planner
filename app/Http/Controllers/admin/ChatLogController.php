@@ -141,7 +141,19 @@ class ChatLogController extends Controller
             $fb['recent'] = (clone $fq)->where('helpful', 0)->orderByDesc('feedbackId')->limit(10)->get();
         }
 
+        // A/B thử nghiệm: thử nghiệm đang bật, hoặc đã có lượt ghi nhóm
+        $experiments = [];
+        if ($has && Schema::hasColumn('tbl_ai_runs', 'variant')) {
+            foreach (array_keys((array) config('ai.experiments', [])) as $name) {
+                $r = \App\Services\Ai\AiExperiments::report($name);
+                if (config('ai.experiments.' . $name . '.active') || $r['variants']['A']['runs'] + $r['variants']['B']['runs'] > 0) {
+                    $experiments[] = $r + ['active' => (bool) config('ai.experiments.' . $name . '.active')];
+                }
+            }
+        }
+
         return view('admin.chat.ai', [
+            'experiments' => $experiments,
             'cost' => $cost ?? null,
             'fb' => $fb,
             'title' => 'Nhật ký AI (La bàn)',

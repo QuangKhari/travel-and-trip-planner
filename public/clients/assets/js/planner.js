@@ -3138,9 +3138,9 @@
         });
     }
     /* ---------------- Resolution Engine: đề xuất -> xem trước -> áp dụng (máy chủ đề xuất, trình duyệt áp dụng rồi tự lưu) ---------------- */
-    var RESOLVABLE = { "time.arrival": 1, "time.departure": 1, "time.transfer": 1, "capacity.overload": 1, "capacity.tight": 1, "time.late": 1, "time.overlap": 1, "time.travel": 1, "hours.closed": 1, "hours.early": 1, "hours.late": 1, "route.long_day": 1, "context.rain": 1, "weather.rain": 1, "weather.storm": 1, "content.unavailable": 1 };
+    var RESOLVABLE = { "time.arrival": 1, "time.departure": 1, "time.transfer": 1, "capacity.overload": 1, "capacity.tight": 1, "time.late": 1, "time.overlap": 1, "time.travel": 1, "hours.closed": 1, "hours.early": 1, "hours.late": 1, "route.long_day": 1, "context.rain": 1, "weather.rain": 1, "weather.storm": 1, "content.unavailable": 1, "tour.overlap": 1, "trip.optimize": 1 };
     /* "Không còn xác thực" là một dòng cho cả chuyến: mở từ chuông (đúng mục) hay từ bảng Sức khỏe đều hiện ở cùng dòng đó */
-    function resKey(c) { return c.code === "content.unavailable" ? c.code : c.code + "|" + (c.day || "") + "|" + (c.index == null ? "" : c.index); }
+    function resKey(c) { return /^(content\.unavailable|tour\.overlap|trip\.optimize)$/.test(c.code) ? c.code : c.code + "|" + (c.day || "") + "|" + (c.index == null ? "" : c.index); }
     function loadResolve(c) {
         var k = resKey(c);
         ui.rsv = { key: k, loading: true, data: null };
@@ -3200,7 +3200,13 @@
     }
     function resolveSection(box) {
         if (!cfg.resolveUrl || RO || !ui.srv || dirty || !items.length) return;
-        var probs = (ui.srv.checks || []).filter(function (c) { return RESOLVABLE[c.code] && (c.level === "bad" || c.level === "warn" || c.code === "context.rain"); }).slice(0, 6);
+        var seen = {};
+        var probs = (ui.srv.checks || []).filter(function (c) {
+            if (!RESOLVABLE[c.code] || !(c.level === "bad" || c.level === "warn" || c.code === "context.rain")) return false;
+            var k = resKey(c); if (seen[k]) return false; seen[k] = 1; return true;   // vấn đề cấp chuyến (tour trùng ngày...) chỉ một dòng
+        }).slice(0, 6);
+        // Bộ giải chia ngày: luôn có khi chuyến từ 2 ngày và có mục trong ngày
+        if (items.some(function (x) { return x.day != null; }) && allSched().length >= 2) probs.push({ code: "trip.optimize", level: "info", text: "Tối ưu cả chuyến: chia lại các mục giữa các ngày cho đỡ đi lại, đỡ dồn" });
         if (!probs.length) return;
         var sec = el("div", "tpx-resolve");
         var h = el("p", "tpx-resolve__h");
@@ -5390,6 +5396,11 @@
         openResolve: function (code, refType, refId) {
             if (RO || !cfg.resolveUrl) return false;
             if (dirty || saving) { say("Đang có thay đổi chưa lưu, đợi lưu xong rồi xem phương án.", true); return true; }
+            if (!refType) {   // vấn đề cấp chuyến / ngày (tour trùng ngày): mở đúng dòng trong bảng Sức khỏe
+                switchTab("plan"); ui.healthOpen = true; renderWarn(); loadResolve({ code: code, day: null, index: null });
+                var hh = $("tpHealth"); if (hh) hh.scrollIntoView({ block: "start", behavior: "smooth" });
+                return true;
+            }
             var it = items.filter(function (x) { return x.day != null && x.type === refType && +x.refId === +refId; })[0];
             if (!it) { say("Mục này không còn nằm trong các ngày của chuyến.", false); return true; }
             switchTab("plan"); ui.healthOpen = true; renderWarn();

@@ -78,6 +78,24 @@ final class AiGateway
      */
     public function json(string $feature, ?int $userId, string $system, string $user, array $schema, array $opt = []): array
     {
+        // A/B thử nghiệm (AiExperiments): áp cấu hình của nhóm người dùng cho đúng lệnh gọi này rồi trả lại
+        $exp = AiExperiments::pick($feature, $userId);
+        $this->variants[$feature] = $exp ? $exp['name'] . ':' . $exp['variant'] : null;
+        $restore = $exp ? AiExperiments::apply($feature, $exp['cfg']) : null;
+        try {
+            return $this->call($feature, $userId, $system, $user, $schema, $opt);
+        } finally {
+            if ($restore) {
+                $restore();
+            }
+        }
+    }
+
+    /** Nhóm thử nghiệm của lệnh gọi gần nhất theo tính năng: log() tự ghi vào cột variant. */
+    private array $variants = [];
+
+    private function call(string $feature, ?int $userId, string $system, string $user, array $schema, array $opt): array
+    {
         $t0 = microtime(true);
         $why = $this->blocked($feature, $userId);
         if ($why !== null) {
@@ -223,8 +241,9 @@ final class AiGateway
                 'inputText' => config('ai.log_text') && isset($row['text']) ? mb_substr((string) $row['text'], 0, 500) : null,
                 'error' => isset($row['error']) ? mb_substr((string) $row['error'], 0, 160) : null,
                 'createdAt' => now(),
-            ] + ($this->repairColumn() ? ['repairRounds' => min(255, (int) ($row['repairs'] ?? ($row['engine'] === 'llm' || ($row['outcome'] ?? '') === 'invalid' ? ($this->repairs[$row['feature']] ?? 0) : 0)))] : []) + [
-            ]);
+            ] + ($this->variantColumn() ? ['variant' => $row['variant'] ?? ($this->variants[$row['feature']] ?? null)] : [])
+              + ($this->repairColumn() ? ['repairRounds' => min(255, (int) ($row['repairs'] ?? ($row['engine'] === 'llm' || ($row['outcome'] ?? '') === 'invalid' ? ($this->repairs[$row['feature']] ?? 0) : 0)))] : []) + [
+              ]);
         } catch (Throwable) {
             return null;   // log là phụ: lỗi ghi log không được làm hỏng trải nghiệm
         }
@@ -365,6 +384,13 @@ final class AiGateway
     private ?bool $hasLog = null;
 
     private ?bool $repairCol = null;
+
+    private ?bool $variantCol = null;
+
+    private function variantColumn(): bool
+    {
+        return $this->variantCol ??= $this->hasLog() && Schema::hasColumn('tbl_ai_runs', 'variant');
+    }
 
     private function repairColumn(): bool
     {

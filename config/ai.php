@@ -69,6 +69,26 @@ return [
         'rag' => (bool) env('AI_FALLBACK_RAG', true),
     ],
 
+    // A/B thử nghiệm trên người dùng thật (App\Services\Ai\AiExperiments): chia nhóm cố định theo người dùng, A = cấu hình hiện tại.
+    // Khóa được đổi ở nhóm B: model, temperature, reasoning_effort, schema_repair, max_tokens. Xem kết quả: trang Nhật ký AI hoặc
+    // php artisan ai:experiment copilot-model. Mỗi tính năng chỉ chạy MỘT thử nghiệm đang bật (thử nghiệm đầu tiên khớp).
+    'experiments' => [
+        'copilot-model' => [
+            'feature' => 'copilot',
+            'active' => (bool) env('AI_EXP_COPILOT', false),
+            'split' => (int) env('AI_EXP_COPILOT_SPLIT', 50),
+            'started' => env('AI_EXP_COPILOT_START'),
+            'variants' => ['A' => [], 'B' => ['model' => env('AI_EXP_COPILOT_MODEL_B', 'gemini-3.5-flash')]],
+        ],
+        'brief-repair' => [
+            'feature' => 'brief',
+            'active' => (bool) env('AI_EXP_BRIEF_REPAIR', false),
+            'split' => 50,
+            'started' => env('AI_EXP_BRIEF_REPAIR_START'),
+            'variants' => ['A' => [], 'B' => ['schema_repair' => false]],
+        ],
+    ],
+
     // Hồ sơ model cho thí nghiệm so sánh (php artisan ai:compare / ai:eval --profile=...): mỗi hồ sơ đủ driver + model + khóa + địa chỉ,
     // nên so được nhiều nhà cung cấp trong một lần chạy mà không sửa .env. Khóa để trống thì hồ sơ đó bị bỏ qua (báo rõ).
     'profiles' => [

@@ -288,9 +288,13 @@
     /* --------------------------------------------------------------- vẽ tóm tắt */
     function render() {
         var a = +inAdults.value, c = +inChildren.value;
-        var subA = a * priceA, subC = c * priceC;
         // chỉ dùng số của máy chủ khi báo giá đúng với lựa chọn đang hiện; đang chờ báo giá mới thì tạm tính tại chỗ
         var q = state.quote && state.quote.key === quoteKey() ? state.quote : null;
+        // giá theo mùa của ngày khởi hành (máy chủ báo trong báo giá): đơn giá mỗi suất tăng / giảm %, làm tròn 1.000đ như máy chủ
+        var sp = q && q.season ? +q.season.pct || 0 : 0;
+        var unit = function (p) { return sp ? Math.max(0, Math.round(p * (100 + sp) / 100 / 1000) * 1000) : p; };
+        var pA = unit(priceA), pC = unit(priceC);
+        var subA = a * pA, subC = c * pC;
         var discount = q && state.coupon ? +q.discount || 0 : 0;
         var total = q ? (state.coupon ? +q.total : +q.subtotal) : subA + subC;
         if (!q && state.coupon && state.quote && state.quote.percent) {
@@ -299,9 +303,9 @@
         }
         $("#bkAdultsOut").textContent = a;
         $("#bkChildrenOut").textContent = c;
-        $("#bkAdultsFormula").textContent = a + " × " + money(priceA);
+        $("#bkAdultsFormula").textContent = a + " × " + money(pA) + (sp ? " (" + q.season.label + " " + (sp > 0 ? "+" : "") + sp + "%)" : "");
         $("#bkAdultsSum").textContent = money(subA);
-        $("#bkChildrenFormula").textContent = c + " × " + money(priceC);
+        $("#bkChildrenFormula").textContent = c + " × " + money(pC);
         $("#bkChildrenSum").textContent = money(subC);
         $("#bkRowChildren").hidden = c === 0;
         var adl = q && q.addons ? q.addons : [], adSum = adl.reduce(function (t, x) { return t + (+x.amount || 0); }, 0);

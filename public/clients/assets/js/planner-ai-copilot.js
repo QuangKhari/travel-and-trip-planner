@@ -444,6 +444,53 @@
             if (t[0] === "alerts" && st.alerts && st.alerts.length) b.appendChild(el("b", "ai-topic__n", String(st.alerts.length)));
             topicBox.appendChild(b);
         });
+        if (cfg.memoryUrl) {
+            var mb = button("ai-topic", null, function () { showMemory(); });
+            var mi = el("i", "fas fa-bookmark"); mi.setAttribute("aria-hidden", "true");
+            mb.appendChild(mi);
+            mb.appendChild(el("span", null, "Trí nhớ chuyến"));
+            topicBox.appendChild(mb);
+        }
+    }
+    /* ---------------- Trí nhớ theo chuyến: điều bạn dặn + nơi đã từ chối (La bàn không đề xuất lại). Xem, thêm, xóa. ---------------- */
+    function getJson(url) {
+        return fetch(url, { credentials: "same-origin", headers: { Accept: "application/json" } }).then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); });
+    }
+    function showMemory() {
+        var b = aiBubble();
+        b.body.appendChild(el("p", "ai-small", "Đang mở trí nhớ của chuyến…"));
+        scroll();
+        getJson(cfg.memoryUrl).then(function (j) { renderMemory(b, j.items || []); scroll(); }).catch(function () { b.body.textContent = "Chưa mở được trí nhớ của chuyến."; });
+    }
+    function renderMemory(b, items) {
+        b.body.textContent = "";
+        b.body.appendChild(el("p", "ai-ans", items.length ? "La bàn đang nhớ cho riêng chuyến này:" : "La bàn chưa nhớ gì cho chuyến này."));
+        var ul = el("ul", "ai-mem");
+        items.forEach(function (m) {
+            var li = el("li");
+            li.appendChild(el("span", "ai-mem__k", m.kindLabel));
+            li.appendChild(el("span", null, m.label));
+            li.appendChild(button("ai-mem__x", "Xóa", function () {
+                post(cfg.memoryForgetUrl, { id: m.id }).then(function (j) { renderMemory(b, j.items || []); });
+            }, "Quên điều này"));
+            ul.appendChild(li);
+        });
+        b.body.appendChild(ul);
+        var f = el("div", "ai-mem__add");
+        var kind = el("select", "no-nice");
+        [["prefer", "Muốn"], ["avoid", "Tránh"], ["note", "Lưu ý"]].forEach(function (k) { var o = el("option", null, k[1]); o.value = k[0]; kind.appendChild(o); });
+        var inp = el("input"); inp.type = "text"; inp.maxLength = 160; inp.placeholder = "vd: ăn chay, tránh leo dốc, đi chậm buổi sáng";
+        inp.setAttribute("aria-label", "Điều muốn La bàn nhớ cho chuyến này");
+        f.appendChild(kind); f.appendChild(inp);
+        f.appendChild(button("ai-sg__btn is-primary", "Nhớ", function () {
+            if (!inp.value.trim()) return;
+            post(cfg.memoryAddUrl, { kind: kind.value, text: inp.value }).then(function (j) { renderMemory(b, j.items || []); }).catch(function () {});
+        }));
+        b.body.appendChild(f);
+        if (items.length) b.body.appendChild(button("tp-link tp-small", "Xóa hết trí nhớ của chuyến", function () {
+            post(cfg.memoryForgetUrl, {}).then(function (j) { renderMemory(b, j.items || []); });
+        }));
+        b.body.appendChild(el("p", "ai-small", "Chỉ dùng cho chuyến này; mọi người cùng sửa chuyến đều thấy. Nơi bạn bấm Bỏ qua hoặc \u201cKhông hợp\u201d sẽ không được gợi ý lại."));
     }
     function alertBox() {
         var n = st.alerts.length, a = st.alerts[0];
@@ -598,6 +645,15 @@
                 } else acts.appendChild(b);
             }
         });
+        // "Không hợp": nhớ cho chuyến này, không gợi ý lại nơi đó
+        var rid = /^(place|food|experience|event):(\d+)$/.exec(c.id || "");
+        if (rid && cfg.memoryAddUrl) {
+            var nb = button("ai-sg__btn ai-sg__btn--link", "Không hợp", function () {
+                nb.disabled = true;
+                post(cfg.memoryAddUrl, { reject: { type: rid[1], refId: +rid[2], name: c.title } }).then(function () { card.remove(); }).catch(function () { nb.disabled = false; });
+            }, "Không gợi ý lại nơi này cho chuyến");
+            acts.appendChild(nb);
+        }
         if (acts.childNodes.length) card.appendChild(acts);
         // Đợt E (AP2): giải thích ngắn cho thẻ cảnh báo — LLM chỉ diễn đạt dữ kiện của thẻ, sai thì dùng mẫu soạn sẵn
         if (c.kind === "alert" && c.id && cfg.alertExplainUrl) {

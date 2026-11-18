@@ -455,6 +455,13 @@ final class CopilotService
                     $with[] = ['with' => ['type' => $m[1], 'refId' => (int) $m[2]]];
                 }
             }
+            if (!$applied) {
+                foreach ((array) ($saved['cands'] ?? []) as $k => $c) {
+                    if (preg_match('/^c:(\w+):(\d+)$/', (string) $k, $m)) {
+                        \App\Services\Ai\TripMemory::reject((int) $trip->tripId, $m[1], (int) $m[2], (string) (is_array($c) ? ($c['name'] ?? 'nơi này') : 'nơi này'));
+                    }
+                }
+            }
             app(\App\Services\Planner\PlaceSignals::class)->recordProposal(isset($trip->userId) ? (int) session('userId') ?: (int) $trip->userId : null, (int) $trip->tripId, $with, $applied);
         } catch (Throwable) {
             // log là phụ
@@ -540,7 +547,12 @@ final class CopilotService
         $dest = !empty($trip->destinationId) ? DB::table('tbl_destinations')->where('destinationId', (int) $trip->destinationId)->value('name') : null;
         $notes = isset($trip->notes) && trim((string) $trip->notes) !== '' ? ExplainFacts::clean(mb_substr((string) $trip->notes, 0, 300)) : null;
 
-        return CopilotContext::build($payload, $health, $dest, $notes);
+        $ctx = CopilotContext::build($payload, $health, $dest, $notes);
+        if ($mem = \App\Services\Ai\TripMemory::promptLines((int) $trip->tripId)) {
+            $ctx['table'] .= "\n" . implode("\n", $mem);
+        }
+
+        return $ctx;
     }
 
     /**

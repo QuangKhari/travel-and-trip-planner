@@ -39,12 +39,20 @@ class QuoteController extends Controller
         $list = collect($deps->forTour((int) $tour->tourId, true));
         $dep = !empty($d['availabilityId']) ? $list->firstWhere('availabilityId', (int) $d['availabilityId']) : ($list->firstWhere('departureDate', $tour->startDate) ?? $list->first());
         $people = (int) $d['adults'] + (int) ($d['children'] ?? 0);
-        $q = $pricing->quote($tour, (int) $d['adults'], (int) ($d['children'] ?? 0), $d['coupon'] ?? null, (int) (session('userId') ?? 0), $d['addons'] ?? []);
+        $q = $pricing->quote(
+            $tour,
+            (int) $d['adults'],
+            (int) ($d['children'] ?? 0),
+            $d['coupon'] ?? null,
+            (int) (session('userId') ?? 0),
+            $d['addons'] ?? [],
+            $dep->departureDate ?? $tour->startDate,
+        );
 
         return response()->json([
             'ok' => true,
             'subtotal' => $q['subtotal'], 'discount' => $q['discount'], 'total' => $q['total'],
-            'percent' => $q['percent'], 'couponError' => $q['couponError'], 'addons' => $q['addons'],
+            'percent' => $q['percent'], 'couponError' => $q['couponError'], 'addons' => $q['addons'], 'season' => $q['season'],
             'availabilityId' => $dep->availabilityId ?? null,
             'departureDate' => $dep->departureDate ?? $tour->startDate,
             'remaining' => $dep ? $dep->remaining : (int) $tour->quantity,

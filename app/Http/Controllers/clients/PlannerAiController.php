@@ -192,6 +192,41 @@ class PlannerAiController extends Controller
         return response()->json($copilot->recheck($trip, $v['proposal']));
     }
 
+    /** GET /la-ban/tri-nho : trí nhớ của chuyến (ai xem được chuyến thì xem được). */
+    public function memory(int $id): JsonResponse
+    {
+        (app(TripSharing::class)->access($this->uid(), $id) ?? abort(404));
+
+        return response()->json(['ok' => true, 'items' => \App\Services\Ai\TripMemory::list($id)]);
+    }
+
+    /** POST /la-ban/tri-nho {kind: prefer|avoid|note, text} hoặc {reject: {type, refId, name}} (nút "Không hợp" trên thẻ gợi ý). */
+    public function memoryAdd(Request $request, int $id): JsonResponse
+    {
+        (app(TripSharing::class)->editable($this->uid(), $id) ?? abort(404));
+        $v = $request->validate([
+            'kind' => ['nullable', 'in:prefer,avoid,note'], 'text' => ['nullable', 'string', 'max:160'],
+            'reject.type' => ['nullable', 'in:place,food,experience,event'], 'reject.refId' => ['nullable', 'integer', 'min:1'], 'reject.name' => ['nullable', 'string', 'max:120'],
+        ]);
+        if (!empty($v['reject']['type']) && !empty($v['reject']['refId'])) {
+            \App\Services\Ai\TripMemory::reject($id, $v['reject']['type'], (int) $v['reject']['refId'], strip_tags((string) ($v['reject']['name'] ?? 'nơi này')), 'suggest');
+        } elseif (!empty($v['kind']) && \App\Services\Ai\TripMemory::add($id, $v['kind'], (string) ($v['text'] ?? '')) === null) {
+            return response()->json(['ok' => false, 'message' => 'Nội dung trống hoặc đã có.'], 422);
+        }
+
+        return response()->json(['ok' => true, 'items' => \App\Services\Ai\TripMemory::list($id)]);
+    }
+
+    /** POST /la-ban/tri-nho/xoa {id?} : xóa một dòng, hoặc xóa hết khi không gửi id. */
+    public function memoryForget(Request $request, int $id): JsonResponse
+    {
+        (app(TripSharing::class)->editable($this->uid(), $id) ?? abort(404));
+        $mid = $request->integer('id') ?: null;
+        \App\Services\Ai\TripMemory::forget($id, $mid);
+
+        return response()->json(['ok' => true, 'items' => \App\Services\Ai\TripMemory::list($id)]);
+    }
+
     public function feedback(Request $request, int $id, CopilotService $copilot): JsonResponse
     {
         $trip = (app(TripSharing::class)->editable($this->uid(), $id) ?? abort(404))['trip'];

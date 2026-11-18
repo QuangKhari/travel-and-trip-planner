@@ -349,3 +349,11 @@ html.ai-co-on .gx-tray-fab, html.ai-co-on .gx-tray { visibility: hidden; }
 .ai-trust { font-size: .7rem; padding: 0 6px; border-radius: 999px; background: #eef6f4; color: #2f6f62; border: 1px solid #cfe6e0; }
 .ai-trust--user { background: #fff7e6; color: #8a5a00; border-color: #f2dfb3; }
 .ai-trust--estimate { background: #f3f4f6; color: #4b5563; border-color: #e5e7eb; }
+/* trí nhớ theo chuyến */
+.ai-mem { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 4px; font-size: .82rem; }
+.ai-mem li { display: flex; gap: 6px; align-items: baseline; }
+.ai-mem li > span:nth-child(2) { flex: 1; }
+.ai-mem__k { font-size: .7rem; padding: 0 6px; border-radius: 999px; background: #eef6f4; color: #2f6f62; white-space: nowrap; }
+.ai-mem__x { background: none; border: 0; color: #b91c1c; font-size: .75rem; cursor: pointer; }
+.ai-mem__add { display: flex; gap: 6px; margin: 6px 0; }
+.ai-mem__add input { flex: 1; min-width: 0; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px; }

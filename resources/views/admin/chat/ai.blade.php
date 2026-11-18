@@ -41,6 +41,31 @@
         <p class="text-muted small">"Gọi AI" = lượt có engine llm. "Chế độ cơ bản" = lùi về luật / câu mẫu (AI tắt, hết lượt, ngắt mạch, lỗi). Đề xuất Copilot luôn đã qua TripHealth: "không đề xuất được" là khi mọi phương án đều tạo lỗi cứng mới.</p>
     </div></div>
 
+    @foreach ($experiments ?? [] as $ex)
+    <div class="x_panel"><div class="x_title"><h2>A/B thử nghiệm: {{ $ex['name'] }} <small>{{ $features[$ex['feature']] ?? $ex['feature'] }} · {{ $ex['active'] ? 'đang chạy' : 'đã dừng' }}</small></h2><div class="clearfix"></div></div><div class="x_content">
+        <table class="table table-bordered text-center" style="font-variant-numeric:tabular-nums">
+            <thead><tr><th class="text-left">Nhóm</th><th>Cấu hình</th><th>Lượt</th><th>Gọi thành công</th><th>JSON sai / tự sửa</th><th>P50 / P95 (ms)</th><th>USD / lượt</th><th>Áp dụng đề xuất</th><th>Đúng ý</th></tr></thead>
+            <tbody>
+            @foreach ($ex['variants'] as $v => $x)
+                <tr><td class="text-left"><b>{{ $v }}</b>{{ $v === 'A' ? ' (đối chứng)' : '' }}</td>
+                    <td><code>{{ $x['cfg'] ? json_encode($x['cfg'], JSON_UNESCAPED_UNICODE) : 'như hiện tại' }}</code></td>
+                    <td>{{ $x['runs'] }}</td><td>{{ $x['okRate'] !== null ? $x['okRate'] . '%' : '—' }}</td><td>{{ $x['invalid'] }} / {{ $x['repaired'] }}</td>
+                    <td>{{ $x['p50'] ?? '—' }} / {{ $x['p95'] ?? '—' }}</td><td>{{ $x['usdPerRun'] !== null ? '$' . number_format($x['usdPerRun'], 5) : '—' }}</td>
+                    <td>{{ $x['appliedRate'] !== null ? $x['appliedRate'] . '% (' . $x['applied'] . '/' . $x['decided'] . ')' : '—' }}</td>
+                    <td>{{ $x['rated'] ? round(100 * $x['helpful'] / $x['rated'], 1) . '% (' . $x['helpful'] . '/' . $x['rated'] . ')' : '—' }}</td></tr>
+            @endforeach
+            </tbody>
+        </table>
+        @if ($ex['test'])
+            <p class="small" style="margin:0">Chỉ số chính ({{ $ex['test']['metric'] }}): A {{ $ex['test']['a'] }}% · B {{ $ex['test']['b'] }}% · chênh {{ $ex['test']['diff'] > 0 ? '+' : '' }}{{ $ex['test']['diff'] }} điểm ·
+                z = {{ $ex['test']['z'] }}, p = {{ $ex['test']['p'] }} →
+                <b>{{ $ex['test']['significant'] ? 'khác biệt có ý nghĩa thống kê' : 'CHƯA đủ cơ sở kết luận' }}</b>{{ $ex['test']['nA'] < 30 || $ex['test']['nB'] < 30 ? ' (mỗi nhóm cần ít nhất 30 lượt)' : '' }}.</p>
+        @else
+            <p class="text-muted small" style="margin:0">Chưa có lượt nào trong cả hai nhóm.</p>
+        @endif
+    </div></div>
+    @endforeach
+
     @if (!empty($cost))
     @php
         $costLabel = $features + ['ask' => 'Hỏi đáp / F5 (RAG)'];

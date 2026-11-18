@@ -33,6 +33,16 @@ final class ContextConstraint implements Constraint
                 $out[] = ['level' => 'warn', 'code' => 'context.season', 'text' => $a['dest'] . ' tháng ' . $a['month'] . ': ' . $a['label'] . (!empty($a['note']) ? ' (' . $a['note'] . ')' : '') . '.'];
             }
         }
+        // Mục tự lập rơi vào ngày đi tour đã đặt (tour do Travela vận hành cả ngày): cảnh báo theo ngày, có phương án "tour.overlap"
+        foreach ((array) ($ctx->payload['tourDays'] ?? []) as $td) {
+            for ($d = (int) $td['from']; $d <= (int) $td['to']; $d++) {
+                $own = isset($ctx->days[$d]) ? array_filter($ctx->days[$d]->rows, fn($r) => ($r['item']['type'] ?? '') !== 'tour' && !\App\Services\Planner\TripLogistics::exempt($r['item'], \App\Services\Planner\PlannerRules::fromConfig())) : [];
+                if ($own) {
+                    $out[] = ['level' => 'warn', 'code' => 'tour.overlap', 'day' => $d,
+                        'text' => 'Ngày ' . $d . ' là ngày đi tour “' . $td['title'] . '” (đơn ' . $td['code'] . ') nhưng lịch tự lập còn ' . count($own) . ' mục. Nên chuyển sang ngày khác hoặc để ngoài giờ tour.'];
+                }
+            }
+        }
         $gone = (array) ($ctx->payload['unavailable'] ?? []);
         if ($gone) {
             $out[] = ['level' => 'warn', 'code' => 'content.unavailable',

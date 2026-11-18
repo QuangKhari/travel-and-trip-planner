@@ -44,6 +44,8 @@ final class PlaceFinder
             }
         }
         $destIds = array_values(array_unique(array_filter($destIds)));
+        // trí nhớ của chuyến: nơi người dùng đã từ chối không đưa vào kết quả nữa
+        $have += \App\Services\Ai\TripMemory::rejected((int) $trip->tripId);
 
         $kinds = null;
         if ($group === 'indoor') {

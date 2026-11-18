@@ -80,6 +80,12 @@ final class TripResolver
         if ($code === 'content.unavailable') {
             return $this->unavailable($day, $index);
         }
+        if ($code === 'tour.overlap') {
+            return $this->tourOverlap($day);
+        }
+        if ($code === 'trip.optimize') {
+            return $this->tripOptimize();
+        }
         $target = null;
         foreach ($this->before['checks'] as $c) {
             if ($c['code'] === $code && ($day === null || $c['day'] === $day) && ($index === null || $c['index'] === $index)) {
@@ -695,6 +701,240 @@ final class TripResolver
         usort($opts, fn($a, $b) => [$b['resolves'], $b['id'] === 'replace', $b['after']['score']] <=> [$a['resolves'], $a['id'] === 'replace', $a['after']['score']]);
 
         return ['code' => 'content.unavailable', 'day' => $day, 'index' => $index, 'problem' => $text, 'severity' => 'soft', 'before' => $before, 'options' => $opts];
+    }
+
+    /**
+     * Lập lại kế hoạch khi tour đã đặt (xác nhận / dời ngày) trùng ngày với lịch tự lập. Tour do Travela vận hành cả ngày nên các mục tự lập
+     * của những ngày đó nên dời đi. Phương án: (a) dời từng mục sang ngày KHÔNG đi tour còn chỗ, hợp giờ mở cửa, gần các điểm của ngày đó;
+     * (b) đưa các mục đó về "Đã lưu". Mục lưu trú / di chuyển và mục đã khóa giữ nguyên. Ngày tour đọc qua CommerceReader (không đọc bảng đơn).
+     */
+    private function tourOverlap(?int $only): array
+    {
+        $tours = $this->payload['tourDays'] ?? app(\App\Modules\Commerce\CommerceReader::class)->tourDaysForTrip((int) $this->trip->tripId);
+        $tourDay = [];
+        foreach ($tours as $t) {
+            for ($d = (int) $t['from']; $d <= (int) $t['to']; $d++) {
+                $tourDay[$d] = $t;
+            }
+        }
+        $before = ['score' => $this->before['score'], 'level' => $this->before['level']];
+        $movable = [];
+        $kept = [];
+        foreach ($this->days as $d => $list) {
+            if (!isset($tourDay[$d]) || ($only !== null && $d !== $only)) {
+                continue;
+            }
+            foreach ($list as $i => $it) {
+                if (($it['type'] ?? '') === 'tour' || TripLogistics::exempt($it, $this->rules)) {
+                    continue;
+                }
+                if (!empty($it['locked'])) {
+                    $kept[] = $it['name'];
+                    continue;
+                }
+                $movable[] = [$d, $i, $it];
+            }
+        }
+        if (!$movable) {
+            return ['code' => 'tour.overlap', 'day' => $only, 'index' => null, 'problem' => null, 'severity' => 'soft', 'before' => $before, 'options' => []];
+        }
+        $firstTour = $tourDay[$movable[0][0]];
+        $text = 'Lịch tự lập còn ' . count($movable) . ' mục trong ngày đi tour “' . $firstTour['title'] . '”.';
+        $target = ['code' => 'tour.overlap', 'day' => $only, 'index' => null, 'severity' => 'soft', 'level' => 'warn', 'text' => $text];
+        $free = array_diff_key($this->days, $tourDay);
+
+        // (a) dời sang ngày không đi tour
+        $changes = [];
+        $names = [];
+        foreach ($movable as [$d, $i, $it]) {
+            [$after] = $this->apply($changes);
+            $b = $free ? $this->bestDayFor($it, $d, array_intersect_key($after, $free)) : null;
+            $changes[] = ['op' => 'move', 'day' => $d, 'index' => $i, 'toDay' => $b['day'] ?? null];
+            $names[] = '“' . $it['name'] . '” → ' . ($b ? 'ngày ' . $b['day'] : 'Đã lưu');
+        }
+        $opts = [];
+        if (array_filter($changes, fn($c) => $c['toDay'] !== null)) {
+            $opts[] = $this->option('move_out', 'Dời sang ngày không đi tour', array_filter([
+                'Tour “' . $firstTour['title'] . '” chiếm trọn ngày ' . implode(', ', array_keys($tourDay)) . '.',
+                'Chuyển ' . implode(', ', array_slice($names, 0, 4)) . (count($names) > 4 ? '…' : '') . '.',
+                $kept ? 'Giữ nguyên mục đã khóa: ' . implode(', ', array_slice($kept, 0, 3)) . '.' : null,
+            ]), $changes, $target);
+        }
+        // (b) về Đã lưu
+        $opts[] = $this->option(
+            'inbox',
+            'Đưa các mục ngày tour về Đã lưu',
+            ['Ngày đi tour để trống cho lịch của tour; các mục vẫn còn trong “Đã lưu”.'],
+            array_map(fn($m) => ['op' => 'move', 'day' => $m[0], 'index' => $m[1], 'toDay' => null], $movable),
+            $target,
+        );
+        foreach ($opts as &$o) {
+            [$after] = $this->apply($o['changes']);
+            $left = 0;
+            foreach ($after as $d => $list) {
+                if (isset($tourDay[$d])) {
+                    $left += count(array_filter($list, fn($x) => ($x['type'] ?? '') !== 'tour' && !TripLogistics::exempt($x, $this->rules) && empty($x['locked'])));
+                }
+            }
+            $o['resolves'] = $left === 0 && !array_filter($o['newIssues'], fn($n) => $n['severity'] === 'hard');
+        }
+        unset($o);
+
+        return ['code' => 'tour.overlap', 'day' => $only, 'index' => null, 'problem' => $text, 'severity' => 'soft', 'before' => $before, 'options' => $opts];
+    }
+
+    /**
+     * "Tối ưu cả chuyến": bộ giải ràng buộc nhỏ cho việc CHIA MỤC VÀO CÁC NGÀY (thứ tự trong ngày đã có DayOptimizer).
+     *   Ràng buộc cứng: không đụng mục có giờ cố định, đã khóa, có buổi, lưu trú / ăn uống / di chuyển, tour; không đưa mục vào ngày đi tour;
+     *                   ngày đích phải mở cửa (khi biết giờ). Phương án có lỗi cứng mới (TripHealth) bị loại.
+     *   Hàm mục tiêu (nhỏ là tốt), tính bằng chính DaySchedule: 10 000 × chỗ vướng giờ (trùng giờ, đóng cửa, quá giờ) + 3 × phút vượt 90% sức chứa
+     *                   + phút di chuyển trong ngày.
+     *   Tìm kiếm: leo đồi "cải thiện tốt nhất" — mỗi vòng thử (a) dời từng mục tự do sang cuối mọi ngày khác và (b) đổi chỗ từng cặp mục tự do
+     *   giữa hai ngày, lấy bước giảm mục tiêu nhiều nhất;
+     *   dừng khi không còn bước cải thiện, quá 25 bước hoặc hết ngân sách thời gian. Không bao giờ trả phương án kém hơn hiện tại.
+     * LLM không tham gia: đây là phần "bộ giải" của kiến trúc LLM hiểu ý → bộ giải tạo phương án → hệ thống kiểm chứng → người dùng duyệt.
+     */
+    private function tripOptimize(): array
+    {
+        $before = ['score' => $this->before['score'], 'level' => $this->before['level']];
+        $target = ['code' => 'trip.optimize', 'day' => null, 'index' => null, 'severity' => 'soft', 'level' => 'info', 'text' => 'Chia lại các mục giữa các ngày cho đỡ đi lại và đỡ dồn'];
+        $empty = ['code' => 'trip.optimize', 'day' => null, 'index' => null, 'problem' => 'Cách chia ngày hiện tại đã tốt nhất trong các bước bộ giải thử.', 'severity' => 'soft', 'before' => $before, 'options' => []];
+        if (count($this->days) < 2) {
+            return $empty;
+        }
+        $tourDay = [];
+        foreach ((array) ($this->payload['tourDays'] ?? []) as $t) {
+            for ($d = (int) $t['from']; $d <= (int) $t['to']; $d++) {
+                $tourDay[$d] = true;
+            }
+        }
+        // bản làm việc: mỗi mục mang vị trí gốc
+        $cur = [];
+        foreach ($this->days as $d => $list) {
+            $cur[$d] = [];
+            foreach ($list as $i => $it) {
+                $cur[$d][] = $it + ['_o' => [$d, $i]];
+            }
+        }
+        $movable = function (array $it, int $i): bool {
+            $k = $this->rules->kindOf($it);
+
+            return ($it['startMin'] ?? null) === null && empty($it['locked']) && empty($it['slot']) && ($it['type'] ?? '') !== 'tour'
+                && !in_array($k, ['lodging', 'meal', 'transport'], true) && empty($it['visitedAt']) && empty($it['skippedAt']);
+        };
+        $dayCost = function (int $d, array $list): float {
+            $s = $this->schedule($d, array_map(fn($x) => array_diff_key($x, ['_o' => 1]), $list));
+            $hard = 0;
+            foreach ($s->rows as $r) {
+                $hard += ($r['conflict'] !== null || in_array($r['hours'], ['closed', 'late', 'early'], true)) ? 1 : 0;
+            }
+            $over = max(0, $s->occupiedMin() - (int) round($s->availableMin * self::BALANCE_TARGET));
+
+            return 10000 * $hard + 3 * $over + $s->travelMin;
+        };
+        $costs = [];
+        foreach ($cur as $d => $list) {
+            $costs[$d] = $dayCost($d, $list);
+        }
+        $start = array_sum($costs);
+        $t0 = microtime(true);
+        $budget = (int) config('planner.optimize_trip_budget_ms', 1500);
+        for ($step = 0; $step < 25 && (microtime(true) - $t0) * 1000 < $budget; $step++) {
+            $best = null;
+            foreach ($cur as $d => $list) {
+                foreach ($list as $pos => $it) {
+                    if (!$movable($it, $pos)) {
+                        continue;
+                    }
+                    $fromList = $list;
+                    array_splice($fromList, $pos, 1);
+                    $fromCost = $dayCost($d, $fromList);
+                    foreach ($cur as $to => $toList) {
+                        if ($to === $d || isset($tourDay[$to])) {
+                            continue;
+                        }
+                        $w = $this->dows[$to] ?? null;
+                        if (!empty($it['hours']) && $w !== null && array_key_exists((string) $w, $it['hours'])
+                            && OpeningHours::fit($it['hours'], $w, $this->rules->dayStart(), $this->schedule($to)->durationOf($it)) === null) {
+                            continue;   // ngày đích đóng cửa / không đủ giờ mở
+                        }
+                        $toNew = array_merge($toList, [$it]);
+                        $delta = $fromCost + $dayCost($to, $toNew) - $costs[$d] - $costs[$to];
+                        if ($delta < -5 && ($best === null || $delta < $best['delta'])) {
+                            $best = ['delta' => $delta, 'from' => $d, 'pos' => $pos, 'to' => $to, 'fromList' => $fromList, 'toList' => $toNew, 'fromCost' => $fromCost];
+                        }
+                    }
+                }
+            }
+            // láng giềng thứ hai: ĐỔI CHỖ hai mục tự do giữa hai ngày (dời một mục đơn lẻ hay kẹt ở cực tiểu cục bộ khi cả hai ngày đã khá đầy)
+            $daysK = array_keys($cur);
+            foreach ($daysK as $x => $d1) {
+                foreach (array_slice($daysK, $x + 1) as $d2) {
+                    if (isset($tourDay[$d1]) || isset($tourDay[$d2])) {
+                        continue;
+                    }
+                    foreach ($cur[$d1] as $p1 => $a) {
+                        if (!$movable($a, $p1)) {
+                            continue;
+                        }
+                        foreach ($cur[$d2] as $p2 => $c2) {
+                            if (!$movable($c2, $p2)) {
+                                continue;
+                            }
+                            $l1 = $cur[$d1];
+                            array_splice($l1, $p1, 1);
+                            $l1[] = $c2;
+                            $l2 = $cur[$d2];
+                            array_splice($l2, $p2, 1);
+                            $l2[] = $a;
+                            $c1n = $dayCost($d1, $l1);
+                            $c2n = $dayCost($d2, $l2);
+                            $delta = $c1n + $c2n - $costs[$d1] - $costs[$d2];
+                            if ($delta < -5 && ($best === null || $delta < $best['delta'])) {
+                                $best = ['delta' => $delta, 'from' => $d1, 'to' => $d2, 'fromList' => $l1, 'toList' => $l2, 'fromCost' => $c1n, 'toCost' => $c2n];
+                            }
+                        }
+                    }
+                }
+            }
+            if ($best === null) {
+                break;
+            }
+            $cur[$best['from']] = $best['fromList'];
+            $cur[$best['to']] = $best['toList'];
+            $costs[$best['from']] = $best['fromCost'];
+            $costs[$best['to']] = $best['toCost'] ?? $dayCost($best['to'], $best['toList']);
+        }
+        if (array_sum($costs) >= $start - 5) {
+            return $empty;
+        }
+        // thao tác theo vị trí gốc; mục chuyển tới được nối vào cuối ngày nhận ĐÚNG thứ tự của bản làm việc
+        $changes = [];
+        $names = [];
+        foreach ($cur as $d => $list) {
+            foreach ($list as $it) {
+                if ($it['_o'][0] !== $d) {
+                    $changes[] = ['op' => 'move', 'day' => $it['_o'][0], 'index' => $it['_o'][1], 'toDay' => $d];
+                    $names[] = '“' . $it['name'] . '” ngày ' . $it['_o'][0] . ' → ' . $d;
+                }
+            }
+        }
+        $travel = fn(array $days) => array_sum(array_map(fn($d) => $this->schedule($d, array_map(fn($x) => array_diff_key($x, ['_o' => 1]), $days[$d]))->travelMin, array_keys($days)));
+        $tb = $travel(array_map(fn($l) => array_map(fn($x) => $x + ['_o' => 1], $l), $this->days));
+        $ta = $travel($cur);
+        $over = fn(array $days) => count(array_filter(array_keys($days), fn($d) => $this->schedule($d, array_map(fn($x) => array_diff_key($x, ['_o' => 1]), $days[$d]))->load() >= 1));
+        $o = $this->option('optimize_trip', 'Chia lại ' . count($changes) . ' mục giữa các ngày', array_filter([
+            'Đi lại cả chuyến ~' . self::h($tb) . ' → ~' . self::h($ta) . '.',
+            ($ob = $over($this->days)) > ($oa = $over($cur)) ? 'Bớt ' . ($ob - $oa) . ' ngày quá tải.' : null,
+            implode('; ', array_slice($names, 0, 4)) . (count($names) > 4 ? '…' : '') . '.',
+            'Không đụng mục có giờ cố định, đã khóa, có buổi, lưu trú / ăn uống, đã ghé; không đưa mục vào ngày đi tour.',
+        ]), $changes, $target);
+        if (array_filter($o['newIssues'], fn($n) => $n['severity'] === 'hard')) {
+            return $empty;   // kiểm chứng bằng TripHealth thật: có lỗi cứng mới thì không đề xuất
+        }
+        $o['resolves'] = true;
+
+        return ['code' => 'trip.optimize', 'day' => null, 'index' => null, 'problem' => $target['text'], 'severity' => 'soft', 'before' => $before, 'options' => [$o]];
     }
 
     /**

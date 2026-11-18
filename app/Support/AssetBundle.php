@@ -74,6 +74,32 @@ final class AssetBundle
         return isset($m['src']) && $m['src'] !== self::sourceHash((array) (config('assets.bundles')[$name] ?? []));
     }
 
+    /**
+     * URL cho một tệp JS lẻ: bản rút gọn (assets:bundle + esbuild) nếu còn khớp nội dung nguồn, không thì tệp gốc kèm ?v=.
+     * Kiểm "còn khớp" rẻ: giờ sửa tệp nguồn mới hơn lúc rút gọn thì mới băm lại nội dung (sửa nguồn mà quên chạy lại lệnh vẫn đúng).
+     */
+    public static function js(string $file, int|string $v): string
+    {
+        $orig = asset($file) . '?v=' . $v;
+        if (!config('assets.enabled', true)) {
+            return $orig;
+        }
+        if (self::$manifest === null) {
+            $p = self::manifestPath();
+            self::$manifest = is_file($p) ? (json_decode((string) file_get_contents($p), true) ?: []) : [];
+        }
+        $m = self::$manifest['min:' . $file] ?? null;
+        $src = public_path($file);
+        if (!$m || !is_file(public_path($m['file'])) || !is_file($src)) {
+            return $orig;
+        }
+        if (filemtime($src) > (int) $m['built'] && ($m['src'] ?? '') !== md5(str_replace("\r\n", "\n", (string) file_get_contents($src)))) {
+            return $orig;
+        }
+
+        return asset($m['file']);
+    }
+
     public static function tags(string $name): string
     {
         $isCss = str_ends_with($name, '.css');

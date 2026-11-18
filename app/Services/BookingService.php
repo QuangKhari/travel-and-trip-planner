@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Services\Payments\OnlinePaymentService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use App\Support\BookingPii;
 
 /**
@@ -96,7 +97,9 @@ class BookingService
             }
 
             // 3. Server tự tính giá (PricingService)
-            $subtotal = $this->pricing->subtotal($tour, $adults, $children);
+            // giá theo mùa theo ĐÚNG ngày khởi hành đã giữ chỗ; lưu lại mức đã áp để điều chỉnh số khách về sau tính đúng
+            $season = PriceRules::for($tourId, $departureDate);
+            $subtotal = $this->pricing->subtotal($tour, $adults, $children, null, $season['pct'] ?? 0);
             // hoạt động thêm tùy chọn: giá từ CSDL, cộng vào tạm tính (mã giảm giá tính trên tổng này)
             $addons = $this->pricing->addons($tourId, (array) ($in['addons'] ?? []), $adults, $children);
             $subtotal += $addons['sum'];
@@ -136,7 +139,7 @@ class BookingService
                 'requestToken' => $token,
                 // giữ chỗ 48 giờ nhưng không quá 0h ngày khởi hành: đặt sát ngày đi thì đơn chưa xác nhận không được "treo" qua ngày đi
                 'holdExpiresAt' => min($online ? now()->addMinutes(OnlinePaymentService::holdMinutes($method)) : now()->addHours((int) config('travela.hold_hours', 48)), \Carbon\Carbon::parse($departureDate)->startOfDay()),
-            ]));
+            ] + ($season && Schema::hasColumn('tbl_booking', 'seasonPct') ? ['seasonPct' => $season['pct'], 'seasonLabel' => mb_substr($season['label'], 0, 80)] : [])));
 
             if ($addons['lines']) {
                 DB::table('tbl_booking_addons')->insert(array_map(fn($l) => ['bookingId' => $bookingId, 'addonId' => $l['addonId'], 'name' => $l['name'],

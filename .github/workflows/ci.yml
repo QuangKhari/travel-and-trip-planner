@@ -118,6 +118,10 @@ jobs:
           php artisan pii:key | grep '^DATA_ENCRYPTION_KEY=' >> .env
       - name: PHPUnit
         run: php vendor/bin/phpunit --colors=never
+      - name: Ranh giới phân hệ + đặc tả OpenAPI không lệch mã
+        run: |
+          php artisan arch:modules
+          php artisan api:docs --check
 
   browser:
     runs-on: ubuntu-latest

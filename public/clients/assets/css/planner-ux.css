@@ -49,3 +49,22 @@
 .tpux .tpux-save--busy { color: #875818; }
 .tpux .tpx-empty { background: #fafcfb; border: 1px dashed #c2dcd4; border-radius: 12px; padding: 16px; color: #58716c; }
 .tpux .tpx-stop__right :is(button,select):focus-visible { outline: 2px solid #e9a23b; outline-offset: 2px; }
+/* Vòng đời chuyến: mức sẵn sàng / tổng kết (planner-ready.js) */
+.tgr { padding: 14px 16px; margin-bottom: 12px; }
+.tgr h2 { font-size: 1rem; margin: 0; }
+.tgr__head { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+.tgr__ring { --p: 0; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; flex: none;
+    background: conic-gradient(var(--c, #168F99) calc(var(--p) * 1%), #e5e7eb 0); }
+.tgr__ring::before { content: ""; grid-area: 1 / 1; width: 40px; height: 40px; border-radius: 50%; background: #fff; }
+.tgr__ring b { grid-area: 1 / 1; position: relative; font-size: .95rem; }
+.tgr__ring.is-todo { --c: #e9a23b; } .tgr__ring.is-almost { --c: #3aa0a8; }
+.tgr__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: .88rem; }
+.tgr__it { display: flex; gap: 8px; align-items: flex-start; }
+.tgr__it > i { margin-top: 3px; color: #cbd5e1; } .tgr__it.is-ok > i { color: #168F99; } .tgr__it.is-late > i { color: #dc2626; }
+.tgr__m { flex: 1; display: grid; } .tgr__m small { color: #64748b; }
+.tgr__it.is-ok .tgr__m span { color: #64748b; }
+.tgr__go { background: none; border: 0; padding: 0; text-align: left; color: #0f5f66; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.tgr__due { font-size: .75rem; color: #8a5a00; background: #fff7e6; border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.tgr__it.is-late .tgr__due { color: #b91c1c; background: #fef2f2; }
+.tgr__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 8px 0; }
+.tgr__stat { background: #f8fafc; border-radius: 10px; padding: 8px 10px; display: grid; } .tgr__stat small { color: #64748b; }

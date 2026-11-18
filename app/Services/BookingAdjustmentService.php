@@ -110,7 +110,9 @@ class BookingAdjustmentService
                 $pa = (float) ($snap['priceAdult'] ?? $pa);
                 $pc = (float) ($snap['priceChild'] ?? $pc);
             }
-            $subtotal = (int) round($pa * $adults + $pc * $children);
+            // giá theo mùa: dùng ĐÚNG mức đã chốt lúc đặt (seasonPct của đơn), không tra lại quy tắc hiện tại
+            $sp = (int) ($b->seasonPct ?? 0);
+            $subtotal = \App\Services\PriceRules::apply($pa, $sp) * $adults + \App\Services\PriceRules::apply($pc, $sp) * $children;
             $discount = 0;
             $usage = Schema::hasTable('tbl_promotion_usage') ? DB::table('tbl_promotion_usage')->where('bookingId', $bookingId)->first() : null;
             if ($usage) {

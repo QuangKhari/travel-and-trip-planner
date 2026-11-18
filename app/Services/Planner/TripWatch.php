@@ -305,6 +305,13 @@ final class TripWatch
         if ($e->kind === 'content' && preg_match('/^unpub:([a-z]+):(\d+)$/', (string) $e->ref, $m)) {
             return ['action' => ['type' => 'resolve', 'code' => 'content.unavailable', 'refType' => $m[1], 'refId' => (int) $m[2]]];
         }
+        if ($e->kind === 'content' && preg_match('/^hours:(hours\.[a-z]+):([a-z]+):(\d+):/', (string) $e->ref, $m)) {
+            return ['action' => ['type' => 'resolve', 'code' => $m[1], 'refType' => $m[2], 'refId' => (int) $m[3]]];
+        }
+        // tour đã xác nhận / dời ngày mà lịch tự lập có mục trùng ngày tour: mở phương án "tour.overlap"
+        if ($e->kind === 'booking' && preg_match('/^(confirmed|moved):\d+/', (string) $e->ref) && str_contains((string) $e->text, 'phương án')) {
+            return ['action' => ['type' => 'resolve', 'code' => 'tour.overlap', 'refType' => null, 'refId' => null]];
+        }
 
         return [];
     }

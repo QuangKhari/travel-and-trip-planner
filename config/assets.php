@@ -74,4 +74,11 @@ return [
             'clients/assets/js/isotope.pkgd.min.js', 'clients/assets/js/team-page.js',
         ],
     ],
+    // Tệp JS LẺ được rút gọn (minify) bằng esbuild khi chạy assets:bundle (cần "npm ci"; không có esbuild thì bỏ qua, trang dùng tệp gốc).
+    // Trang gọi \App\Support\AssetBundle::js('clients/assets/js/planner.js', 50): có bản rút gọn còn khớp nguồn thì dùng, không thì tệp gốc ?v=50.
+    'minify' => [
+        'clients/assets/js/planner.js', 'clients/assets/js/planner-ai-copilot.js', 'clients/assets/js/planner-ai-chat.js', 'clients/assets/js/planner-ai-explain.js',
+        'clients/assets/js/planner-bookings.js', 'clients/assets/js/planner-expenses.js', 'clients/assets/js/planner-share.js', 'clients/assets/js/planner-watch.js',
+        'clients/assets/js/planner-ready.js', 'clients/assets/js/planner-ux.js', 'clients/assets/js/planner-history.js', 'clients/assets/js/booking-wizard.js',
+    ],
 ];

@@ -424,6 +424,6 @@
     <button type="button" class="bk-btn bk-btn--cta" data-bk-cta>Tiếp tục</button>
 </div>
 <link rel="stylesheet" href="{{ asset('clients/assets/css/booking-wizard.css') }}?v=1">
-<script src="{{ asset('clients/assets/js/booking-wizard.js') }}?v=3" defer></script>
+<script src="{{ \App\Support\AssetBundle::js('clients/assets/js/booking-wizard.js', 4) }}" defer></script>
 
 @include('clients.blocks.footer')

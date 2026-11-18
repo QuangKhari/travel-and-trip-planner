@@ -17,6 +17,7 @@ class DomainEvents
     public const BOOKING_CANCELLED = 'BookingCancelled';
     public const DEPARTURE_CHANGED = 'DepartureChanged';
     public const PLACE_UNPUBLISHED = 'PlaceUnpublished';
+    public const PLACE_HOURS_CHANGED = 'PlaceHoursChanged';
 
     private static ?bool $ready = null;
 

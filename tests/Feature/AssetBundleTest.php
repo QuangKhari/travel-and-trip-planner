@@ -23,8 +23,12 @@ class AssetBundleTest extends TestCase
 
     protected function tearDown(): void
     {
-        foreach (glob(public_path($this->dir) . '/*') ?: [] as $f) {
-            @unlink($f);
+        // xóa cả thư mục con (bản JS rút gọn nằm ở min/{băm}/)
+        if (is_dir(public_path($this->dir))) {
+            $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(public_path($this->dir), \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST);
+            foreach ($it as $f) {
+                $f->isDir() ? @rmdir($f->getPathname()) : @unlink($f->getPathname());
+            }
         }
         @rmdir(public_path($this->dir));
         AssetBundle::reset();

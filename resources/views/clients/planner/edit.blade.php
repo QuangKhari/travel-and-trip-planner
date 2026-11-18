@@ -157,6 +157,8 @@
                 {{-- Chế độ đang đi (planner.js renderToday): checklist hôm nay khi chuyến đang diễn ra; sắp đi / đã về thì nhắc việc tương ứng --}}
                 <section class="tgt" id="tpToday" aria-label="Hôm nay" hidden
                          @if ($role === 'owner' && ($t['status'] ?? '') !== 'done') data-done-url="{{ route('planner.status', ['id' => $t['id']]) }}" @endif></section>
+                {{-- Vòng đời chuyến (planner-ready.js): trước chuyến = mức sẵn sàng + việc có hạn chót; sau chuyến = dự toán / thực chi, nơi chưa đánh giá --}}
+                <section class="tp-card tgr" id="tpReady" data-url="{{ route('planner.lifecycle', ['id' => $t['id']]) }}" aria-labelledby="tpReadyH" hidden></section>
                 <nav class="tpx-days" aria-label="Các ngày">
                     <ol class="tpx-days__list" id="tpDayNav"></ol>
                 </nav>
@@ -676,26 +678,28 @@
 <script src="{{ asset('clients/assets/js/planner-save.js') }}?v=4"></script>
 <script src="{{ asset('clients/assets/js/planner-resolve.js') }}?v=2"></script>
 <script src="{{ asset('clients/assets/js/planner-map.js') }}?v=7"></script>
-<script src="{{ asset('clients/assets/js/planner.js') }}?v=49" defer></script>
+<script src="{{ \App\Support\AssetBundle::js('clients/assets/js/planner.js', 50) }}" defer></script>
 <script src="{{ asset('clients/assets/js/planner-decide.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-extras.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-travel.js') }}?v=3" defer></script>
-<script src="{{ asset('clients/assets/js/planner-share.js') }}?v=1" defer></script>
-<script src="{{ asset('clients/assets/js/planner-expenses.js') }}?v=1" defer></script>
-<script src="{{ asset('clients/assets/js/planner-bookings.js') }}?v=3" defer></script>
-<script src="{{ asset('clients/assets/js/planner-watch.js') }}?v=8" defer></script>
-@if (!empty($client['historyUrl']))<script src="{{ asset('clients/assets/js/planner-history.js') }}?v=1" defer></script>@endif
+<script src="{{ \App\Support\AssetBundle::js('clients/assets/js/planner-share.js', 1) }}" defer></script>
+<script src="{{ \App\Support\AssetBundle::js('clients/assets/js/planner-expenses.js', 1) }}" defer></script>
+<script src="{{ \App\Support\AssetBundle::js('clients/assets/js/planner-bookings.js', 3) }}" defer></script>
+<script src="{{ \App\Support\AssetBundle::js('clients/assets/js/planner-watch.js', 8) }}" defer></script>
+<script src="{{ \App\Support\AssetBundle::js('clients/assets/js/planner-ready.js', 1) }}" defer></script>
+@if (!empty($client['historyUrl']))<script src="{{ \App\Support\AssetBundle::js('clients/assets/js/planner-history.js', 1) }}" defer></script>@endif
 @if ($role !== 'view')<script src="{{ asset('clients/assets/js/ai-feedback.js') }}?v=2" data-url="{{ route('planner.ai.rate') }}" data-csrf="{{ csrf_token() }}" data-trip="{{ $client['trip']['id'] ?? '' }}" defer></script>@endif
 <script type="application/json" id="aiData">{!! json_encode(['explainUrl' => route('planner.ai.explain', ['id' => $t['id']]), 'csrf' => csrf_token(), 'on' => $aiExplainOn,
     'copilot' => $aiCopilotOn ? ['url' => route('planner.ai.copilot', ['id' => $t['id']]), 'recheckUrl' => route('planner.ai.recheck', ['id' => $t['id']]),
         'feedbackUrl' => route('planner.ai.feedback', ['id' => $t['id']]),
         'suggestUrl' => config('ai.features.suggest', true) ? route('planner.ai.suggest', ['id' => $t['id']]) : null, 'suggestApplyUrl' => route('planner.ai.suggest.apply', ['id' => $t['id']]),
         'alertExplainUrl' => route('planner.ai.alert.explain', ['id' => $t['id']]),
+        'memoryUrl' => route('planner.ai.memory', ['id' => $t['id']]), 'memoryAddUrl' => route('planner.ai.memory.add', ['id' => $t['id']]), 'memoryForgetUrl' => route('planner.ai.memory.forget', ['id' => $t['id']]),
         'llm' => (bool) ($aiLlmOn ?? true)] : null], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
-<script src="{{ asset('clients/assets/js/planner-ai-explain.js') }}?v=1" defer></script>
-<script src="{{ asset('clients/assets/js/planner-ux.js') }}?v=1" defer></script>
+<script src="{{ \App\Support\AssetBundle::js('clients/assets/js/planner-ai-explain.js', 1) }}" defer></script>
+<script src="{{ \App\Support\AssetBundle::js('clients/assets/js/planner-ux.js', 1) }}" defer></script>
 @if ($aiCopilotOn)
-    <script src="{{ asset('clients/assets/js/planner-ai-copilot.js') }}?v=10" defer></script>
+    <script src="{{ \App\Support\AssetBundle::js('clients/assets/js/planner-ai-copilot.js', 11) }}" defer></script>
 @endif
 
 @include('clients.blocks.footer')

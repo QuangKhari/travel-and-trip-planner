@@ -96,6 +96,11 @@ final class TripSuggest
             default => $this->alerts($c),
         };
 
+        // trí nhớ của chuyến: không gợi ý lại nơi người dùng đã từ chối
+        if ($intent !== 'alerts' && ($rej = \App\Services\Ai\TripMemory::rejected((int) $trip->tripId))) {
+            $cards = array_filter($cards, fn($cd) => !isset($rej[(string) ($cd['id'] ?? '')]));
+        }
+
         return ['ok' => true, 'kind' => 'suggest', 'intent' => $intent, 'rev' => (int) ($trip->rev ?? 0), 'days' => $c['days'],
             'dayLabels' => $c['dayLabels'], 'say' => [['t' => $say]], 'cards' => array_values($cards),
             'more' => $this->more($intent)];
@@ -265,8 +270,10 @@ final class TripSuggest
                 });
             }
             $rows = $q->orderByDesc('f.isMustTry')->orderBy('f.name')->limit(40)
-                ->get(array_merge(['f.foodId', 'f.slug', 'f.name', 'f.category', 'f.description', 'f.coverImage', 'f.isMustTry', 'f.monthFrom', 'f.monthTo', 'f.whereToTry'],
-                    $hasPlace ? ['p.name as pName', 'p.latitude as pLat', 'p.longitude as pLng'] : []));
+                ->get(array_merge(
+                    ['f.foodId', 'f.slug', 'f.name', 'f.category', 'f.description', 'f.coverImage', 'f.isMustTry', 'f.monthFrom', 'f.monthTo', 'f.whereToTry'],
+                    $hasPlace ? ['p.name as pName', 'p.latitude as pLat', 'p.longitude as pLng'] : [],
+                ));
             $list = [];
             foreach ($rows as $f) {
                 if (isset($c['have']['food:' . $f->foodId])) {

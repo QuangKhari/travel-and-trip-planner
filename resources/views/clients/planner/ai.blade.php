@@ -35,5 +35,5 @@
     <section class="pai-plate" id="paiPanel" aria-label="Tóm tắt chuyến và bản nháp lịch trình"></section>
 </main>
 <script type="application/json" id="paiData">@json($cfg)</script>
-<script src="{{ asset('clients/assets/js/planner-ai-chat.js') }}?v=8" defer></script>
+<script src="{{ \App\Support\AssetBundle::js('clients/assets/js/planner-ai-chat.js', 8) }}" defer></script>
 @include('clients.blocks.footer')

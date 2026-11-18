@@ -15,6 +15,62 @@ class AssetsBundle extends Command
 
     protected $description = 'Gộp CSS/JS dùng chung của trang khách thành ít tệp (giữ đúng thứ tự)';
 
+    /**
+     * Rút gọn các tệp JS lẻ trong config('assets.minify') bằng esbuild (node_modules/.bin/esbuild). Không có esbuild: bỏ qua, trang dùng tệp gốc.
+     * Bản rút gọn: {dir}/min/{băm}/{tên}.js; manifest khóa "min:{đường dẫn nguồn}" kèm băm nội dung nguồn để AssetBundle::js biết còn khớp không.
+     * @return array<string,array{file:string,built:int,src:string}>
+     */
+    private function minifySingles(string $dirRel): array
+    {
+        $files = (array) config('assets.minify', []);
+        $bin = base_path('node_modules/.bin/esbuild' . (PHP_OS_FAMILY === 'Windows' ? '.cmd' : ''));
+        if (!$files || !is_file($bin)) {
+            if ($files) {
+                $this->warn('Chưa có esbuild (chạy "npm ci"): bỏ qua rút gọn JS lẻ, trang dùng tệp gốc.');
+            }
+
+            return [];
+        }
+        @mkdir(public_path($dirRel . '/min'), 0775, true);
+        $out = [];
+        $before = $after = 0;
+        foreach ($files as $f) {
+            $path = public_path($f);
+            if (!is_file($path)) {
+                continue;
+            }
+            $src = str_replace("\r\n", "\n", (string) file_get_contents($path));
+            $p = new \Symfony\Component\Process\Process([$bin, '--minify', '--target=es2017', '--loader=js', '--legal-comments=none']);
+            $p->setInput($src);
+            $p->setTimeout(60);
+            $p->run();
+            if (!$p->isSuccessful()) {
+                $this->warn('  không rút gọn được ' . $f . ': ' . trim(mb_substr($p->getErrorOutput(), 0, 200)));
+                continue;
+            }
+            $min = $p->getOutput();
+            // giữ nguyên tên tệp, phiên bản nằm ở thư mục băm: min/{băm}/planner.js (tên tệp gốc vẫn nhận ra được trong trang)
+            $name = basename($f);
+            $file = $dirRel . '/min/' . substr(md5($min), 0, 10) . '/' . $name;
+            foreach (glob(public_path($dirRel . '/min/*/' . $name)) ?: [] as $old) {
+                if (realpath($old) !== realpath(public_path($file))) {
+                    @unlink($old);
+                    @rmdir(dirname($old));
+                }
+            }
+            @mkdir(dirname(public_path($file)), 0775, true);
+            file_put_contents(public_path($file), $min);
+            $out['min:' . $f] = ['file' => $file, 'built' => time(), 'src' => md5($src)];
+            $before += strlen($src);
+            $after += strlen($min);
+        }
+        if ($before) {
+            $this->line(sprintf('  JS lẻ rút gọn: %d tệp, %d KB -> %d KB', count($out), (int) round($before / 1024), (int) round($after / 1024)));
+        }
+
+        return $out;
+    }
+
     public function handle(): int
     {
         $dirRel = trim((string) config('assets.dir', 'clients/assets/build'), '/');
@@ -53,6 +109,7 @@ class AssetsBundle extends Command
             $manifest[$name] = ['file' => $file, 'built' => time(), 'files' => count($files), 'src' => AssetBundle::sourceHash($files)];
             $this->line(sprintf('  %-12s %2d tệp -> %s (%d KB)', $name, count($files), basename($file), (int) round(strlen($out) / 1024)));
         }
+        $manifest += $this->minifySingles($dirRel);
         file_put_contents(AssetBundle::manifestPath(), json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
         AssetBundle::reset();
         $this->info('Xong. Sửa CSS/JS trong danh sách thì chạy lại lệnh này.');

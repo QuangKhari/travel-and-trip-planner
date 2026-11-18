@@ -13,7 +13,6 @@ use App\Http\Controllers\Api\V1\TripController;
 use App\Http\Controllers\Api\V1\AdviceController;
 use App\Http\Controllers\Api\V1\TourMatchController;
 
-
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1,api-login');
@@ -71,6 +70,8 @@ Route::prefix('v1')->group(function () {
         Route::get('trips', [TripController::class, 'index']);
         Route::post('trips', [TripController::class, 'store']);
         Route::get('trips/{id}', [TripController::class, 'show'])->whereNumber('id');
+        Route::get('trips/{id}/readiness', [TripController::class, 'readiness'])->whereNumber('id');
+        Route::get('trips/{id}/today', [TripController::class, 'today'])->whereNumber('id');
         Route::put('trips/{id}', [TripController::class, 'update'])->whereNumber('id');
         Route::delete('trips/{id}', [TripController::class, 'destroy'])->whereNumber('id');
     });

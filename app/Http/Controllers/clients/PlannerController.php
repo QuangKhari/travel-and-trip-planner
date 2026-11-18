@@ -1276,19 +1276,7 @@ class PlannerController extends Controller
 
         // đơn đặt tour của chính người xem cho các tour có trong chuyến
         $tourIds = DB::table('tbl_trip_items')->where('tripId', $id)->where('refType', 'tour')->pluck('refId')->filter()->all();
-        $bookings = $tourIds ? DB::table('tbl_booking as b')->join('tbl_tours as t', 't.tourId', '=', 'b.tourId')
-            ->leftJoin('tbl_checkout as c', 'c.bookingId', '=', 'b.bookingId')
-            ->where('b.userId', $this->uid())->whereIn('b.tourId', $tourIds)->where('b.bookingStatus', '!=', 'c')
-            ->orderBy('b.bookingId')->get(['b.bookingCode', 't.title', 'b.departureDate', 't.startDate', 'b.numAdults', 'b.numChildren', 'b.totalPrice', 'b.bookingStatus', 'c.paymentStatus'])
-            ->map(fn($b) => [
-                'code' => $b->bookingCode,
-                'title' => $b->title,
-                'date' => \Carbon\Carbon::parse($b->departureDate ?: $b->startDate)->format('d/m/Y'),
-                'people' => (int) $b->numAdults + (int) $b->numChildren,
-                'total' => (float) $b->totalPrice,
-                'status' => ['n' => 'Chờ xác nhận', 'y' => 'Đã xác nhận', 'f' => 'Hoàn tất'][$b->bookingStatus] ?? $b->bookingStatus,
-                'paid' => $b->paymentStatus === 'y',
-            ])->all() : [];
+        $bookings = app(\App\Modules\Commerce\CommerceReader::class)->userBookingsForTours($this->uid(), array_map('intval', $tourIds));
         $pack = $packing->forTrip($trip, $this->uid(), false);
 
         return response()->json([
