@@ -112,6 +112,7 @@
         x.legMode = x.legMode || null;
         x.visitedAt = x.visitedAt || null;
         x.skippedAt = x.skippedAt || null;
+        x.itemUid = x.itemUid || null;   // định danh ổn định do máy chủ cấp (lưu theo thay đổi, không đổi qua các lần lưu)
         return x;
     }
     var sugg = cfg.suggestions || {};
@@ -871,6 +872,12 @@
         if (sub && sub.length <= 36) kind.insertBefore(el("span", "tpx-kind__sub", " · " + sub), kind.querySelector(".tpx-kind__dur"));   // mô tả ngắn đi chung dòng loại
         else if (sub) main.appendChild(el("small", "tpx-sub", sub));
         if (CUSTOM[it.type] && !G.hasPos(it)) main.appendChild(el("span", "tp-badge", "Chưa có vị trí"));
+        if (it.unavailable) {   // nội dung nguồn đã bị ẩn / gỡ: mục vẫn giữ, người dùng tự quyết thay hay xóa
+            var ub = el("span", "tp-badge", "Không còn được Travela xác thực");
+            ub.title = "Địa điểm này đã bị ẩn hoặc gỡ khỏi Travela. Mục vẫn được giữ trong chuyến của bạn; hãy thay bằng địa điểm khác hoặc xóa.";
+            main.appendChild(ub);
+            card.classList.add("is-unavailable");
+        }
         var sb = socialBadge(it);
         if (sb) main.appendChild(sb);
         var stRow = el("div", "tpx-status");
@@ -990,6 +997,10 @@
             var ctl = el("div", "tpx-panel-edit__act");
             ctl.appendChild(ibtn("tp-mini", "fa-arrow-up", "Lên", "Lên: " + it.name, function () { shift(it, -1); }));
             ctl.appendChild(ibtn("tp-mini", "fa-arrow-down", "Xuống", "Xuống: " + it.name, function () { shift(it, 1); }));
+            if (!CUSTOM[it.type] && it.day != null && daysCount() > 1) {
+                // ghé lại cùng một nơi vào ngày khác (mỗi lần ghé là một mục riêng, có giờ / ghi chú / trạng thái đã ghé riêng)
+                ctl.appendChild(ibtn("tp-mini", "fa-redo", "Ghé lại ngày khác", "Ghé lại " + it.name + " vào ngày khác", function () { revisit(it); }));
+            }
             ctl.appendChild(ibtn("tp-mini tp-mini--danger", "fa-trash-alt", "Bỏ khỏi chuyến", "Bỏ " + it.name + " khỏi chuyến đi", function () {
                 items.splice(items.indexOf(it), 1);
                 delete ui.sel[it.uid];
@@ -2597,22 +2608,43 @@
         commit();
         say("Đã xóa ngày " + d + ". Bấm Hoàn tác nếu nhầm.");
     }
-    /** Nhân bản ngày: chèn ngày mới ngay sau, chép các mục tự thêm (khách sạn, xe, ghi chú...). Nội dung Travela chỉ có một lần trong chuyến. */
+    /** Bản sao một mục cho lần ghé khác: định danh mới (máy chủ cấp itemUid), chưa ghé / chưa bỏ qua. */
+    function cloneItem(x, day) {
+        var c = JSON.parse(JSON.stringify(x));
+        c.uid = ++seq;
+        c.itemUid = null;
+        c.day = day;
+        c.visitedAt = null;
+        c.skippedAt = null;
+        c.locked = false;
+        return c;
+    }
+    /** Ghé lại một nơi vào ngày khác: chọn ngày còn nhẹ nhất (không trùng ngày đang có nơi này). */
+    function revisit(it) {
+        var used = {};
+        items.forEach(function (x) { if (key(x) === key(it) && x.day != null) used[x.day] = true; });
+        var best = null, bl = Infinity;
+        allSched().forEach(function (o) { if (!used[o.day] && o.load < bl) { bl = o.load; best = o.day; } });
+        if (best == null) { say("Mọi ngày đều đã có “" + it.name + "”.", true); return; }
+        if (items.length >= LIMITS.maxItems) { say("Chuyến đã đủ số mục tối đa.", true); return; }
+        var c = cloneItem(it, best);
+        c.startMin = null;
+        items.push(c);
+        commit();
+        say("Đã thêm lần ghé “" + it.name + "” vào ngày " + best + ".", false, [["Hoàn tác", undoOnce]]);
+    }
+    /** Nhân bản ngày: chèn ngày mới ngay sau, chép mọi mục (một nơi được ghé lại ở ngày khác là một lần ghé riêng). */
     function duplicateDay(d) {
         var src = dayItems(d);
         if (!insertDayAfter(d)) return;
-        var copied = 0, skipped = [];
+        var copied = 0;
         src.forEach(function (x) {
-            if (!CUSTOM[x.type]) { skipped.push(x.name); return; }
             if (items.length >= LIMITS.maxItems) return;
-            var c = JSON.parse(JSON.stringify(x));
-            c.uid = ++seq;
-            c.day = d + 1;
-            items.push(c);
+            items.push(cloneItem(x, d + 1));
             copied++;
         });
         commit();
-        say("Đã thêm ngày " + (d + 1) + " với " + copied + " mục tự thêm được chép" + (skipped.length ? "; " + skipped.length + " mục từ Travela không chép vì mỗi nơi chỉ có một lần trong chuyến" : "") + ".");
+        say("Đã thêm ngày " + (d + 1) + " với " + copied + " mục được chép.");
     }
     function dayMenu(d) {
         var det = el("details", "tpx-menu");
@@ -4795,6 +4827,7 @@
         var m = meta();
         if (!m.title) { saveState("error", "Thiếu tên chuyến"); say("Hãy nhập tên chuyến đi ở tab “Thông tin & chia sẻ” (chưa lưu).", true); return; }
         var body = window.TpSave.body({ meta: m, items: items, rain: rain, rev: rev });   // planner-save.js: hợp đồng /luu
+        var sentItems = items.slice();   // cùng thứ tự với body.items: nhận lại itemUid máy chủ cấp cho mục mới
         var sent = snap();
         saving = true;
         $("tpSave").disabled = true;
@@ -4808,7 +4841,11 @@
                 if (res.status === 409) { showSync(res.j.message || "Chuyến đi vừa được người khác cập nhật.", true); autoFail = true; saveState("error", "Xung đột phiên bản"); return; }
                 if (res.ok) {
                     if (res.j.rev != null) rev = res.j.rev;
-                    savedSnap = sent;
+                    var cleanNow = snap() === sent;
+                    if (Array.isArray(res.j.uids)) {
+                        sentItems.forEach(function (x, i) { if (res.j.uids[i] && items.indexOf(x) >= 0) x.itemUid = res.j.uids[i]; });
+                    }
+                    savedSnap = cleanNow ? snap() : sent;   // định danh vừa nhận không tính là thay đổi chưa lưu
                     cfg.contentWarnings = res.j.contentWarnings || [];
                     cfg.advice = res.j.advice || [];
                     if (res.j.fit) {

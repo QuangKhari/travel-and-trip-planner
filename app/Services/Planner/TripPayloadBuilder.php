@@ -52,14 +52,23 @@ class TripPayloadBuilder
         }
         $unassigned = [];
         // giờ mở cửa theo NGÀY cụ thể: ngày lễ, đóng cửa tạm thời, giờ theo mùa (chỉ khi biết ngày đi)
-        $hrRules = $start ? $this->hours->rulesFor(array_map(fn($x) => ['type' => $x['type'], 'refId' => $x['refId'] ?? null,
-            'destinationId' => $x['destinationId'] ?? (!empty($trip->destinationId) ? (int) $trip->destinationId : null)], $items),
-            $start->format('Y-m-d'), $start->modify('+' . max(0, $days - 1) . ' days')->format('Y-m-d')) : [];
+        $hrRules = $start ? $this->hours->rulesFor(
+            array_map(fn($x) => ['type' => $x['type'], 'refId' => $x['refId'] ?? null,
+                'destinationId' => $x['destinationId'] ?? (!empty($trip->destinationId) ? (int) $trip->destinationId : null)], $items),
+            $start->format('Y-m-d'),
+            $start->modify('+' . max(0, $days - 1) . ' days')->format('Y-m-d'),
+        ) : [];
         foreach ($items as $it) {
             if ($it['day'] !== null && isset($byDay[$it['day']])) {
                 if ($byDay[$it['day']]['date'] !== null && in_array($it['type'], OpeningHours::TYPES, true)) {
-                    [$eff, $why] = OpeningHours::effective($it['hours'] ?? null, $it['type'], isset($it['refId']) ? (int) $it['refId'] : null,
-                        $it['destinationId'] ?? (!empty($trip->destinationId) ? (int) $trip->destinationId : null), $byDay[$it['day']]['date'], $hrRules);
+                    [$eff, $why] = OpeningHours::effective(
+                        $it['hours'] ?? null,
+                        $it['type'],
+                        isset($it['refId']) ? (int) $it['refId'] : null,
+                        $it['destinationId'] ?? (!empty($trip->destinationId) ? (int) $trip->destinationId : null),
+                        $byDay[$it['day']]['date'],
+                        $hrRules,
+                    );
                     if ($why !== null) {
                         $it['hours'] = $eff;
                         $it['hoursNote'] = $why;
@@ -138,6 +147,8 @@ class TripPayloadBuilder
             'totals' => ['cost' => $cost, 'budget' => $budget, 'left' => $budget !== null ? $budget - $cost : null],
             'warnings' => array_values(array_unique($warnings)),
             'contentWarnings' => array_values(array_unique($contentWarnings)),
+            // tên các mục có nội dung nguồn không còn công khai (TripHealth cảnh báo, người dùng tự thay / xóa)
+            'unavailable' => array_values(array_map(fn($x) => (string) $x['name'], array_filter($items, fn($x) => !empty($x['unavailable'])))),
             'advice' => $adviceRows,
             // nguồn số liệu tuyến THỰC SỰ đã dùng (OSRM lỗi thì ghi rõ đang là ước tính)
             'route' => $this->route->status(),
@@ -196,6 +207,18 @@ class TripPayloadBuilder
             $itx['booked'] = $booked && self::matchesBooking((string) $itx['name'], $booked);
             $itx['trust'] = PlaceMedia::trust(['type' => $itx['type'], 'priceMin' => $itx['price'] ?? null, 'booked' => $itx['booked'],
                 'osm' => in_array($itx['type'], TripPlanner::CUSTOM_TYPES, true) && ($itx['source'] ?? null) === 'search'], $m);
+        }
+        unset($itx);
+
+        // Mục mà nội dung nguồn không còn công khai: không hiển thị giờ / ảnh / dữ kiện của nguồn như thể vẫn được xác thực
+        foreach ($items as &$itx) {
+            if (!empty($itx['unavailable'])) {
+                $itx['hours'] = null;
+                $itx['fit'] = [];
+                $itx['image'] = null;
+                $itx['imageCredit'] = null;
+                unset($itx['facts']);
+            }
         }
         unset($itx);
 

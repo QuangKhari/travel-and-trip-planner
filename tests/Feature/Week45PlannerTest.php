@@ -445,6 +445,25 @@ class Week45PlannerTest extends TestCase
         app(TripPlanner::class)->create($this->uid, ['title' => 'Thêm', 'days' => 1, 'groupSize' => 1]);
     }
 
+    /** Còn 1 suất: một request khác tạo chuyến chen vào sau lần kiểm tra sớm → lần đếm lại trong giao dịch chặn, không vượt giới hạn. */
+    public function test_trip_limit_is_rechecked_inside_transaction(): void
+    {
+        config(['planner.max_trips_per_user' => 1]);
+        $fired = false;
+        DB::listen(function ($e) use (&$fired) {
+            if (!$fired && str_contains($e->sql, 'count(*)') && str_contains($e->sql, 'tbl_trips')) {
+                $fired = true;   // request song song tạo xong chuyến ngay sau lần kiểm tra sớm
+                DB::table('tbl_trips')->insert(['userId' => $this->uid, 'kind' => 'trip', 'title' => 'Song song', 'days' => 1, 'groupSize' => 1, 'status' => 'draft']);
+            }
+        });
+        try {
+            app(TripPlanner::class)->create($this->uid, ['title' => 'Thêm', 'days' => 1, 'groupSize' => 1]);
+            $this->fail('Phải chặn vì đã đủ 1 chuyến');
+        } catch (\DomainException) {
+        }
+        $this->assertSame(1, DB::table('tbl_trips')->where('userId', $this->uid)->where('kind', 'trip')->count());
+    }
+
     public function test_tray_is_recognised_by_kind_not_title(): void
     {
         // một chuyến THẬT có tên trùng tên khay vẫn là chuyến (trước đây bị ẩn vì so theo tên)

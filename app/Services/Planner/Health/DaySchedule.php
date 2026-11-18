@@ -4,6 +4,7 @@ namespace App\Services\Planner\Health;
 
 use App\Services\Planner\OpeningHours;
 use App\Services\Planner\PlannerRules;
+use App\Services\Planner\Route\HaversineProvider;
 use App\Services\Planner\Route\RouteService;
 use App\Services\Planner\TripLogistics;
 use App\Services\Planner\TripPlanner;
@@ -77,14 +78,31 @@ final class DaySchedule
         foreach ($tt['legs'] as $l) {
             $from = $posIdx[$l['from']];
             $mode = $items[$from]['legMode'] ?? null;
-            if ($mode !== null && $mode !== $defMode && (float) $l['km'] > 0 && ($m = $this->rules->legMinutes((float) $l['km'], (string) $mode)) !== null) {
+            if ($mode !== null && $mode !== $defMode && (float) $l['km'] > 0 && ($l['status'] ?? null) !== RouteService::SAME_AREA && ($m = $this->rules->legMinutes((float) $l['km'], (string) $mode)) !== null) {
                 $l['min'] = $m;
                 $l['mode'] = $mode;
             }
             $legAfter[$from] = $l;
             $travelSum += (int) $l['min'];
         }
-        $tt['min'] = $tt['legs'] ? $travelSum : $tt['min'];
+        // hai điểm cùng khu (travelTime bỏ qua đoạn đường): vẫn cộng phút đi bộ tối thiểu, không coi là 0 phút
+        for ($k = 1; $k < count($posIdx); $k++) {
+            $from = $posIdx[$k - 1];
+            if (isset($legAfter[$from])) {
+                continue;
+            }
+            $a = [(float) $items[$from]['lat'], (float) $items[$from]['lng']];
+            $b = [(float) $items[$posIdx[$k]]['lat'], (float) $items[$posIdx[$k]]['lng']];
+            if (!HaversineProvider::validPoint($a) || !HaversineProvider::validPoint($b)) {
+                continue;
+            }
+            $km = HaversineProvider::straightKm($a, $b);
+            if ($km < $route->minLegKm() && ($m = $route->sameAreaMinutes($km)) > 0) {
+                $legAfter[$from] = ['from' => $k - 1, 'to' => $k, 'km' => round($km, 2), 'min' => $m, 'status' => RouteService::SAME_AREA];
+                $travelSum += $m;
+            }
+        }
+        $tt['min'] = $travelSum;
 
         // chỗ ở: đi từ nơi ngủ đêm trước tới mục đầu tiên (khi mục đầu có vị trí), từ mục có vị trí cuối cùng về nơi ngủ đêm nay.
         // Ngày tới nơi (có giờ tới) không tính chặng xuất phát: đi thẳng từ ga / sân bay.

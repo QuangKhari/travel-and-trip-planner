@@ -166,7 +166,8 @@ class Week7bCustomPositionTest extends TestCase
         $id = $this->trip();
         $this->saveItems($id, [['type' => 'food', 'refId' => $f, 'day' => 1, 'lat' => 1.5, 'lng' => 2.5, 'source' => 'map']])->assertOk();
         $row = DB::table('tbl_trip_items')->where('tripId', $id)->first();
-        $this->assertNull($row->latitude);
+        // vị trí lưu kèm (để còn hiển thị nếu nguồn bị ẩn) là của MÁY CHỦ, không phải giá trị khách gửi
+        $this->assertEqualsWithDelta(21.0285, (float) $row->latitude, 1e-6);
         $this->assertNull($row->source);
         // tọa độ của món là của quán đã gắn, không phải giá trị khách gửi
         $it = $this->loadPayload($id)['days'][0]['items'][0];

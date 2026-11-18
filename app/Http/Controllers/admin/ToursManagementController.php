@@ -4,7 +4,6 @@ namespace App\Http\Controllers\admin;
 
 use App\Support\AuditLog;
 use App\Services\DepartureService;
-
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\admin\ToursModel;
@@ -16,7 +15,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Support\HtmlSanitizer;
 use App\Services\UnsafeHtmlException;
-
 
 class ToursManagementController extends Controller
 {
@@ -246,7 +244,7 @@ class ToursManagementController extends Controller
         if (empty($timelines)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vui lòng nhập lộ trình cho tour. Tour vẫn đang ở trạng thái ẩn.'
+                'message' => 'Vui lòng nhập lộ trình cho tour. Tour vẫn đang ở trạng thái ẩn.',
             ], 422);
         }
 
@@ -321,6 +319,16 @@ class ToursManagementController extends Controller
                     ];
                 }
 
+                // Cổng vận hành: lịch trình theo giờ (nếu đã nhập) không được còn lỗi chặn — chồng giờ, thiếu điểm tập trung / giờ trả khách
+                $blockers = app(\App\Services\TourStops::class)->classify($tour)['blockers'];
+                if ($blockers) {
+                    return [
+                        'success' => false,
+                        'status'  => 422,
+                        'message' => 'Lịch trình theo giờ còn lỗi cần sửa trước khi đăng: ' . implode(' ', $blockers) . ' Tour vẫn đang ở trạng thái ẩn.',
+                    ];
+                }
+
                 foreach ($timelines as $timeline) {
                     $this->tours->addTimeLine($timeline);
                 }
@@ -340,6 +348,7 @@ class ToursManagementController extends Controller
                     ->delete();
 
                 $this->tours->updateTour($tourId, ['availability' => 1]);
+                app(\App\Services\TourStops::class)->readiness($tourId);
 
                 // Ngày khởi hành đầu tiên = ngày đã nhập ở Bước 1; các ngày khác thêm ở "Lịch khởi hành"
                 $departures = app(DepartureService::class);
@@ -433,7 +442,7 @@ class ToursManagementController extends Controller
                     return [
                         'response' => response()->json([
                             'success' => false,
-                            'message' => 'Tour không tồn tại.'
+                            'message' => 'Tour không tồn tại.',
                         ], 404),
                     ];
                 }
@@ -442,7 +451,7 @@ class ToursManagementController extends Controller
                     return [
                         'response' => response()->json([
                             'success' => false,
-                            'message' => 'Tour đã đăng, không thể thêm ảnh tạm.'
+                            'message' => 'Tour đã đăng, không thể thêm ảnh tạm.',
                         ], 409),
                     ];
                 }
@@ -492,7 +501,7 @@ class ToursManagementController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Không lưu được thông tin ảnh tạm.'
+                'message' => 'Không lưu được thông tin ảnh tạm.',
             ], 500);
         }
     }
@@ -754,7 +763,7 @@ class ToursManagementController extends Controller
         if (count($images) > 0 && count($images) < self::MIN_IMAGES) {
             return response()->json([
                 'success' => false,
-                'message' => 'Tour phải có ít nhất ' . self::MIN_IMAGES . ' hình ảnh.'
+                'message' => 'Tour phải có ít nhất ' . self::MIN_IMAGES . ' hình ảnh.',
             ], 422);
         }
 
@@ -819,7 +828,7 @@ class ToursManagementController extends Controller
                     && (
                         ($this->images->isStemForTour($i, $tourId) && $this->images->stemExists($i))
                         || (!$this->images->isStem($i) && in_array($i, $oldStems, true))
-                    )
+                    ),
             )));
 
             if (count($validImages) !== count($images)) {
@@ -832,8 +841,8 @@ class ToursManagementController extends Controller
 
             $images = $validImages;
 
-            $dateChanged =
-                $tour->startDate !== $dataTours['startDate']
+            $dateChanged
+                = $tour->startDate !== $dataTours['startDate']
                 || $tour->endDate !== $dataTours['endDate'];
 
             if ($dateChanged && DB::table('tbl_booking')->where('tourId', $tourId)->exists()) {
@@ -978,11 +987,14 @@ class ToursManagementController extends Controller
                 $error = 'Ngày khởi hành đã qua, hãy sửa ngày trước khi hiện tour.';
             } elseif ((int) $tour->quantity <= 0) {
                 $error = 'Tour đã hết chỗ, hãy tăng số chỗ hoặc thêm ngày khởi hành trước khi hiện tour.';
+            } elseif ($blockers = app(\App\Services\TourStops::class)->classify($tour)['blockers']) {
+                $error = 'Lịch trình theo giờ còn lỗi cần sửa trước khi hiện tour: ' . implode(' ', $blockers);
             } else {
                 DB::table('tbl_tours')->where('tourId', $tourId)->update(['availability' => 1]);
                 AuditLog::record('tour.toggle', 'tour', $tourId, 'Hiện lại tour "' . $tour->title . '"', ['availability' => 0], ['availability' => 1]);
             }
         });
+        app(\App\Services\TourStops::class)->readiness($tourId);
 
         if ($error) {
             return response()->json(['success' => false, 'message' => $error]);
@@ -1019,12 +1031,12 @@ class ToursManagementController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => $result['message'],
-                'data' => view('admin.partials.list-tours', compact('tours'))->render()
+                'data' => view('admin.partials.list-tours', compact('tours'))->render(),
             ]);
         } else {
             return response()->json([
                 'success' => false,
-                'message' => $result['message']
+                'message' => $result['message'],
             ]);
         }
     }

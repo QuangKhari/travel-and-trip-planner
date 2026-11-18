@@ -32,8 +32,6 @@ use App\Http\Controllers\clients\JournalController;
 use App\Http\Controllers\clients\AskPageController;
 use App\Http\Controllers\clients\PlannerController;
 use App\Http\Controllers\clients\PlannerAiController;
-
-
 use App\Http\Controllers\admin\LoginAdminController;
 use App\Http\Controllers\admin\AdminTwoFactorController;
 use App\Http\Controllers\admin\ToursManagementController;
@@ -82,10 +80,6 @@ use App\Http\Controllers\clients\QuoteController;
 use App\Http\Controllers\clients\CompareController;
 use App\Http\Controllers\clients\CommunityController;
 use App\Http\Controllers\clients\TravelController;
-
-
-
-
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 // Kiểm tra sức khỏe hệ thống cho giám sát / Docker healthcheck (PF-08): DB, cache, hàng đợi, đĩa
@@ -207,7 +201,7 @@ Route::get('/xac-thuc-email-moi/{token}', [EmailChangeController::class, 'verify
     ->where('token', '[A-Za-z0-9]{64}')
     ->name('email.change.verify');
 
-//quên mật khẩu 
+//quên mật khẩu
 Route::get('/quen-mat-khau', [ForgotPasswordController::class, 'index'])->name('password.request');
 Route::post('/quen-mat-khau', [ForgotPasswordController::class, 'sendLink'])->middleware('throttle:5,1,password-email')->name('password.email');
 Route::get('/dat-lai-mat-khau/{token}', [ForgotPasswordController::class, 'showResetForm'])->name('password.reset.form');
@@ -236,7 +230,7 @@ Route::middleware(['checkLoginClient', 'checkUserBlocked'])->group(function () {
         ->name('email.change.resend');
 
     // đặt tour
-    // GET để F5 hoặc mở link trực tiếp không bị 405 
+    // GET để F5 hoặc mở link trực tiếp không bị 405
     Route::match(['get', 'post'], '/booking/{id?}', [BookingController::class, 'index'])->whereNumber('id')->name('booking');
     Route::get('/thanh-toan/{method}/{bookingId}', [PaymentController::class, 'pay'])->whereIn('method', ['vnpay', 'momo', 'qr'])->whereNumber('bookingId')->middleware('throttle:10,1,pay-start')->name('payment.pay');
     Route::post('/thanh-toan/{bookingId}/kiem-tra', [PaymentController::class, 'check'])->whereNumber('bookingId')->middleware('throttle:6,1,pay-check')->name('payment.check');
@@ -476,6 +470,11 @@ Route::prefix('admin')->group(function () {
         Route::get('/refunds', [RefundManagementController::class, 'index'])->name('admin.refunds');
         Route::post('/refunds/{id}/complete', [RefundManagementController::class, 'complete'])->whereNumber('id')->name('admin.refunds.complete');
         Route::post('/refunds/{id}/gateway', [RefundManagementController::class, 'gateway'])->whereNumber('id')->middleware('throttle:10,1,refund-gateway')->name('admin.refunds.gateway');
+        Route::post('/refunds/{id}/resolve', [RefundManagementController::class, 'resolve'])->whereNumber('id')->middleware('throttle:20,1,refund-resolve')->name('admin.refunds.resolve');
+        Route::post('/refunds/excess/{id}/gateway', [RefundManagementController::class, 'excessGateway'])->whereNumber('id')->middleware('throttle:10,1,refund-gateway')->name('admin.refunds.excess.gateway');
+        Route::post('/refunds/excess/{id}/sync', [RefundManagementController::class, 'excessSync'])->whereNumber('id')->middleware('throttle:30,1,refund-sync')->name('admin.refunds.excess.sync');
+        Route::post('/refunds/excess/{id}/complete', [RefundManagementController::class, 'excessComplete'])->whereNumber('id')->name('admin.refunds.excess.complete');
+        Route::post('/refunds/excess/{id}/resolve', [RefundManagementController::class, 'excessResolve'])->whereNumber('id')->middleware('throttle:20,1,refund-resolve')->name('admin.refunds.excess.resolve');
         Route::post('/refunds/{id}/sync', [RefundManagementController::class, 'sync'])->whereNumber('id')->middleware('throttle:30,1,refund-sync')->name('admin.refunds.sync');
 
         // Lịch khởi hành (A3 / D-02)

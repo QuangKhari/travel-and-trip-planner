@@ -40,7 +40,21 @@ class TourVersionService
             $snap[$f] = in_array($f, self::MONEY, true) ? (int) round((float) $v) : ($f === 'durationDays' ? (int) $v : trim((string) $v));
         }
         $snap['timeline'] = DB::table('tbl_timeline')->where('tourId', $tour->tourId)->orderBy('timeLineId')->get(['title', 'description'])
-            ->map(fn ($r) => ['title' => trim((string) $r->title), 'description' => trim((string) $r->description)])->all();
+            ->map(fn($r) => ['title' => trim((string) $r->title), 'description' => trim((string) $r->description)])->all();
+        // Lịch trình theo giờ (điểm dừng, giờ đón / trả) và hoạt động thêm đang bán cũng là nội dung đã cam kết với khách.
+        // Chỉ thêm khóa khi tour CÓ dữ liệu: tour không dùng hai phần này giữ nguyên mã băm cũ (không sinh phiên bản mới vô cớ).
+        $stops = Schema::hasTable('tbl_tour_stops') ? DB::table('tbl_tour_stops')->where('tourId', $tour->tourId)->orderBy('dayNo')->orderBy('orderNo')
+            ->get(['dayNo', 'startMin', 'endMin', 'kind', 'title', 'note'])
+            ->map(fn($r) => ['day' => (int) $r->dayNo, 'start' => $r->startMin !== null ? (int) $r->startMin : null, 'end' => $r->endMin !== null ? (int) $r->endMin : null,
+                'kind' => (string) $r->kind, 'title' => trim((string) $r->title), 'note' => trim((string) $r->note)])->all() : [];
+        if ($stops) {
+            $snap['stops'] = $stops;
+        }
+        $addons = Schema::hasTable('tbl_tour_addons') ? DB::table('tbl_tour_addons')->where('tourId', $tour->tourId)->where('isActive', 1)->orderBy('addonId')
+            ->get(['name', 'price', 'unit'])->map(fn($r) => ['name' => trim((string) $r->name), 'price' => (int) round((float) $r->price), 'unit' => (string) $r->unit])->all() : [];
+        if ($addons) {
+            $snap['addons'] = $addons;
+        }
 
         return $snap;
     }
@@ -123,6 +137,13 @@ class TourVersionService
             if (($old[$f] ?? null) !== ($new[$f] ?? null)) {
                 $out[] = $label;
             }
+        }
+        // Bản chụp tạo trước khi có lịch trình theo giờ / hoạt động thêm không có khóa này: không coi là "đã đổi"
+        if (array_key_exists('stops', $old) && ($old['stops'] ?? []) !== ($new['stops'] ?? [])) {
+            $out[] = 'Lịch trình theo giờ (điểm dừng, giờ đón / trả)';
+        }
+        if (array_key_exists('addons', $old) && ($old['addons'] ?? []) !== ($new['addons'] ?? [])) {
+            $out[] = 'Hoạt động thêm';
         }
         $ot = (array) ($old['timeline'] ?? []);
         $nt = (array) ($new['timeline'] ?? []);

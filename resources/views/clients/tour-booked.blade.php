@@ -227,6 +227,29 @@
                                 <div style="margin-top:10px"><b>Ngày {{ $i + 1 }}: {{ $day['title'] }}</b>
                                     <div>{!! strip_tags((string) $day['description'], '<p><br><ul><ol><li><b><strong><i><em>') !!}</div></div>
                             @endforeach
+                            @if (!empty($snap['stops']))
+                                @php $hm = fn ($m) => $m === null ? '' : sprintf('%02d:%02d', intdiv((int) $m, 60), (int) $m % 60); @endphp
+                                <div style="margin-top:12px"><b>Lịch trình theo giờ đã chốt</b>
+                                    @foreach (collect($snap['stops'])->groupBy('day') as $dayNo => $stops)
+                                        <div style="margin-top:6px">Ngày {{ $dayNo }}:
+                                            <ul style="margin:4px 0 0 18px">
+                                                @foreach ($stops as $st)
+                                                    <li>@if ($st['start'] !== null){{ $hm($st['start']) }}@if ($st['end'] !== null)–{{ $hm($st['end']) }}@endif · @endif{{ $st['title'] }}@if (!empty($st['note'])) <span style="color:#667">({{ $st['note'] }})</span>@endif</li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                            @if (!empty($snap['addons']))
+                                <div style="margin-top:12px"><b>Hoạt động thêm được chào bán lúc đặt</b>
+                                    <ul style="margin:4px 0 0 18px">
+                                        @foreach ($snap['addons'] as $ad)
+                                            <li>{{ $ad['name'] }}: {{ number_format((float) $ad['price'], 0, ',', '.') }} đ/{{ $ad['unit'] === 'group' ? 'nhóm' : 'người' }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
                         </details>
                     </section>
                 @endif

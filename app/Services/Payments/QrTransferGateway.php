@@ -79,14 +79,18 @@ class QrTransferGateway implements PaymentGateway
         $text = (string) ($d['code'] ?? '') . ' ' . (string) ($d['content'] ?? '') . ' ' . (string) ($d['description'] ?? '');
         $ref = preg_match(self::REF_PATTERN, $text, $m) ? strtoupper($m[0]) : null;
         $in = ($d['transferType'] ?? '') === 'in';
+        // SePay khuyến nghị: tiền phải vào ĐÚNG tài khoản nhận của mình (một tài khoản SePay có thể nối nhiều tài khoản ngân hàng)
+        $acc = preg_replace('/\D/', '', (string) ($d['accountNumber'] ?? ''));
+        $mine = preg_replace('/\D/', '', $this->cfg('account_no'));
+        $otherAccount = $acc !== '' && $mine !== '' && $acc !== $mine;
 
         return [
             'valid' => $valid,
             'txnRef' => $ref,
             'amount' => isset($d['transferAmount']) ? (int) $d['transferAmount'] : null,
-            'success' => $valid && $in && $ref !== null,
+            'success' => $valid && $in && $ref !== null && !$otherAccount,
             'providerTxnNo' => isset($d['id']) ? 'SEPAY-' . $d['id'] : null,
-            'code' => $in ? 'in' : 'out',
+            'code' => $otherAccount ? 'other_account' : ($in ? 'in' : 'out'),
             'bank' => isset($d['gateway']) ? mb_substr((string) $d['gateway'], 0, 20) : null,
             'payload' => $d,
         ];
@@ -137,6 +141,6 @@ class QrTransferGateway implements PaymentGateway
 
     public function describe(string $code): string
     {
-        return ['in' => 'Tiền vào tài khoản', 'out' => 'Tiền ra (bỏ qua)', 'manual' => 'Admin xác nhận đã nhận tiền'][$code] ?? 'Mã ' . $code;
+        return ['in' => 'Tiền vào tài khoản', 'out' => 'Tiền ra (bỏ qua)', 'other_account' => 'Tiền vào tài khoản khác (bỏ qua)', 'manual' => 'Admin xác nhận đã nhận tiền'][$code] ?? 'Mã ' . $code;
     }
 }

@@ -21,7 +21,7 @@ Schedule::command('bookings:complete-finished')->dailyAt('00:30')->withoutOverla
 Artisan::command('payments:reconcile', function () {
     $svc = app(\App\Services\Payments\OnlinePaymentService::class);
     $ids = DB::table('tbl_booking as b')->join('tbl_checkout as c', 'c.bookingId', '=', 'b.bookingId')
-        ->where('b.bookingStatus', 'n')->where('c.paymentStatus', 'n')->whereIn('c.paymentMethod', ['vnpay', 'momo'])
+        ->where('b.bookingStatus', 'n')->where('c.paymentStatus', 'n')->whereIn('c.paymentMethod', ['vnpay', 'momo', 'qr'])
         ->whereNotNull('c.providerTxnRef')->whereNotNull('b.holdExpiresAt')
         ->where('b.holdExpiresAt', '<=', now()->addMinutes(2))->limit(50)->pluck('b.bookingId');
     foreach ($ids as $id) {
@@ -44,6 +44,33 @@ Artisan::command('payments:process-refunds', function () {
     $this->line("Đã hoàn xong sau khi hỏi lại: {$synced}; tự gửi lệnh hoàn thành công: {$auto}");
 })->purpose('Đối soát và tự động hóa hoàn tiền qua cổng thanh toán');
 Schedule::command('payments:process-refunds')->everyFiveMinutes()->withoutOverlapping();
+
+// Outbox sự kiện nghiệp vụ: gửi lại sự kiện chưa xử lý (tiến trình chết giữa lúc commit và đẩy job, hoặc job lỗi hết lượt thử).
+Artisan::command('events:relay', function () {
+    if (!\App\Support\DomainEvents::ready()) {
+        return;
+    }
+    $n = 0;
+    foreach (\Illuminate\Support\Facades\DB::table('tbl_domain_events')->whereNull('processedAt')->where('createdAt', '<=', now()->subMinute())
+        ->where('attempts', '<', 10)->orderBy('eventId')->limit(200)->pluck('eventId') as $id) {
+        try {
+            \App\Jobs\ProcessDomainEvent::dispatchSync((int) $id);
+            $n++;
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+    $this->line("Đã xử lý lại {$n} sự kiện.");
+})->purpose('Gửi lại các sự kiện nghiệp vụ (Tour ↔ Trip Planner) chưa được xử lý');
+Schedule::command('events:relay')->everyMinute()->withoutOverlapping();
+
+// Ghi bù sổ cái hai bút toán cho dữ liệu có trước khi bật sổ cái (chạy một lần sau migrate; chạy lại không ghi trùng).
+Artisan::command('payments:ledger-backfill', function () {
+    $n = app(\App\Services\Payments\DoubleEntryLedger::class)->backfill();
+    $this->info('Đã ghi bù ' . $n . ' bút toán.');
+    $bad = app(\App\Services\Payments\DoubleEntryLedger::class)->unbalanced();
+    $bad ? $this->error('Bút toán không cân: ' . implode(', ', $bad)) : $this->info('Mọi bút toán đều cân.');
+})->purpose('Ghi bù sổ cái hai bút toán từ dữ liệu thanh toán / hoàn tiền hiện có');
 
 // Đối soát booking – thanh toán – hoàn tiền: quét điểm không khớp mỗi giờ (xem Admin → Đối soát)
 Artisan::command('payments:audit', function () {

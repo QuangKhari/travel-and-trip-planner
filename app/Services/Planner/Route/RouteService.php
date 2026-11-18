@@ -20,9 +20,11 @@ use App\Services\Planner\PlannerRules;
 class RouteService
 {
     public const MIN_LEG_KM = 0.5;   // mặc định; giá trị thật lấy từ config planner.route.min_leg_km
+    public const SAME_AREA_MIN = 5;           // phút đi bộ tối thiểu giữa hai điểm cùng khu (config planner.route.same_area_min)
+    public const WALK_KMH = 4.5;
     public const SAME_AREA = 'same_area';   // hai điểm cùng một khu (< minLegKm), không tính đoạn đi
 
-    public function __construct(private RouteProvider $provider, private float $minLegKm = self::MIN_LEG_KM, private string $mode = 'driving', private float $factor = 1.3) {}
+    public function __construct(private RouteProvider $provider, private float $minLegKm = self::MIN_LEG_KM, private string $mode = 'driving', private float $factor = 1.3, private int $sameAreaMin = self::SAME_AREA_MIN) {}
 
     /** Theo config('planner'); $mode = null là phương tiện mặc định. */
     public static function make(?string $mode = null): self
@@ -36,7 +38,7 @@ class RouteService
         $hav = new HaversineProvider($r['factor'], $r['speedKmh']);
         $provider = $r['provider'] === 'osrm' ? new OsrmProvider($r['osrmUrl'], $hav, 6, $r['osrmProfile']) : $hav;
 
-        return new self($provider, $r['minLegKm'], $r['mode'], $r['factor']);
+        return new self($provider, $r['minLegKm'], $r['mode'], $r['factor'], (int) ($r['sameAreaMin'] ?? self::SAME_AREA_MIN));
     }
 
     /** Nguồn đường đi bên trong (DayOptimizer bọc thêm bộ nhớ). */
@@ -59,6 +61,16 @@ class RouteService
         return $this->mode;
     }
 
+    /** Phút đi giữa hai điểm cùng khu: tối thiểu planner.route.same_area_min, dài hơn thì theo tốc độ đi bộ. */
+    public function sameAreaMinutes(float $straightKm): int
+    {
+        if ($this->sameAreaMin <= 0) {
+            return 0;
+        }
+
+        return max($this->sameAreaMin, (int) ceil($straightKm / self::WALK_KMH * 60));
+    }
+
     public function minLegKm(): float
     {
         return $this->minLegKm;
@@ -74,8 +86,10 @@ class RouteService
         if (!HaversineProvider::validPoint($a) || !HaversineProvider::validPoint($b)) {
             return ['km' => 0.0, 'min' => 0, 'status' => RouteProvider::UNKNOWN];
         }
-        if (HaversineProvider::straightKm($a, $b) < $this->minLegKm) {
-            return ['km' => 0.0, 'min' => 0, 'status' => self::SAME_AREA];
+        $straight = HaversineProvider::straightKm($a, $b);
+        if ($straight < $this->minLegKm) {
+            // cùng khu: không tính đường bộ, nhưng không phải 0 phút (đi bộ, ra vào cổng, tìm chỗ gửi xe)
+            return ['km' => round($straight, 2), 'min' => $this->sameAreaMinutes($straight), 'status' => self::SAME_AREA];
         }
 
         return $this->estimate($a, $b);

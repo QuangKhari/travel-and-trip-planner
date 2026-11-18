@@ -91,6 +91,40 @@ class TourVersionReconciliationIncidentTest extends TestCase
         $this->assertNotSame($v1, (int) DB::table('tbl_booking')->where('bookingId', $res2['bookingId'])->value('tourVersionId'));   // khách mới nhận bản mới
     }
 
+    /** Sửa CHỈ lịch trình theo giờ (điểm dừng) cũng tạo phiên bản mới; đơn cũ vẫn xem được giờ đón đã chốt. */
+    public function test_editing_only_hourly_stops_creates_new_version_and_old_booking_keeps_its_stops(): void
+    {
+        [$tour] = $this->tour(30, 'st');
+        $admin = DB::table('tbl_admin')->insertGetId(['userName' => 'dh', 'passWord' => 'x', 'email' => 'dh@example.com', 'fullName' => 'Điều hành', 'address' => 'HN', 'role' => 'admin']);
+        $post = fn(array $stops) => $this->withSession(['adminId' => $admin])->post("/admin/tours/$tour/lich-trinh-gio", ['stops' => $stops])->assertRedirect();
+        $post([['dayNo' => 1, 'start' => '07:30', 'kind' => 'meet', 'title' => 'Đón khách ở Nhà thờ đá'], ['dayNo' => 1, 'start' => '09:00', 'end' => '11:00', 'kind' => 'visit', 'title' => 'Bản Cát Cát']]);
+
+        $res = app(BookingService::class)->create($this->user(), ['tourId' => $tour, 'fullName' => 'Khách', 'email' => 'k@example.com', 'tel' => '0900000000',
+            'address' => 'HN', 'numAdults' => 1, 'numChildren' => 0, 'couponCode' => '']);
+        $v1 = (int) DB::table('tbl_booking')->where('bookingId', $res['bookingId'])->value('tourVersionId');
+        $snap1 = json_decode((string) DB::table('tbl_tour_versions')->where('versionId', $v1)->value('snapshot'), true);
+        $this->assertSame(450, $snap1['stops'][0]['start']);                // 07:30 đã nằm trong bản chụp
+
+        // admin dời giờ đón sang 06:00 — không đụng giá / mô tả / lịch chữ
+        $post([['dayNo' => 1, 'start' => '06:00', 'kind' => 'meet', 'title' => 'Đón khách ở Nhà thờ đá'], ['dayNo' => 1, 'start' => '09:00', 'end' => '11:00', 'kind' => 'visit', 'title' => 'Bản Cát Cát']]);
+        $n1 = (int) DB::table('tbl_tour_versions')->where('versionId', $v1)->value('version');
+        $this->assertSame($n1 + 1, (int) DB::table('tbl_tour_versions')->where('tourId', $tour)->max('version'));   // chỉ sửa điểm dừng vẫn ra bản mới
+        $this->assertSame($v1, (int) DB::table('tbl_booking')->where('bookingId', $res['bookingId'])->value('tourVersionId'));
+        $view = app(TourVersionService::class)->forBooking(DB::table('tbl_booking')->where('bookingId', $res['bookingId'])->first());
+        $this->assertTrue($view['outdated']);
+        $this->assertSame(['Lịch trình theo giờ (điểm dừng, giờ đón / trả)'], $view['changes']);
+        $this->assertSame(450, $view['snapshot']['stops'][0]['start']);     // khách vẫn thấy 07:30 đã chốt
+    }
+
+    /** Tour không dùng lịch theo giờ / hoạt động thêm: mã băm không đổi, không sinh phiên bản mới vô cớ. */
+    public function test_tour_without_stops_keeps_same_version_hash(): void
+    {
+        [$tour] = $this->tour(30, 'ns');
+        $snap = app(TourVersionService::class)->snapshotOf(DB::table('tbl_tours')->where('tourId', $tour)->first());
+        $this->assertArrayNotHasKey('stops', $snap);
+        $this->assertArrayNotHasKey('addons', $snap);
+    }
+
     public function test_reverting_content_reuses_the_old_version_and_legacy_bookings_are_backfilled(): void
     {
         [$tour, $av] = $this->tour(30, 'rv');
@@ -123,7 +157,7 @@ class TourVersionReconciliationIncidentTest extends TestCase
         AdminBadges::forget();
         $this->assertSame(1, AdminBadges::counts()['reconcile']);
 
-        DB::transaction(fn () => app(RefundService::class)->requestLocked(DB::table('tbl_booking')->where('bookingId', $b)->lockForUpdate()->first(), 'admin', 1, 100, 'x'));
+        DB::transaction(fn() => app(RefundService::class)->requestLocked(DB::table('tbl_booking')->where('bookingId', $b)->lockForUpdate()->first(), 'admin', 1, 100, 'x'));
         $r2 = $svc->sync();
         $this->assertSame(0, $r2['open']);
         $this->assertSame('resolved', DB::table('tbl_reconciliation_findings')->where('findingId', $f->findingId)->value('status'));
@@ -154,7 +188,7 @@ class TourVersionReconciliationIncidentTest extends TestCase
         $b2 = $this->rawBooking($tour, $av, 'c', 'y', 'qr', 'Q2');
         $refunds = app(RefundService::class);
         foreach ([$b1, $b2] as $b) {
-            DB::transaction(fn () => $refunds->requestLocked(DB::table('tbl_booking')->where('bookingId', $b)->lockForUpdate()->first(), 'admin', 1, 100, 'x'));
+            DB::transaction(fn() => $refunds->requestLocked(DB::table('tbl_booking')->where('bookingId', $b)->lockForUpdate()->first(), 'admin', 1, 100, 'x'));
         }
         $r1 = (int) DB::table('tbl_refunds')->where('bookingId', $b1)->value('refundId');
         $r2 = (int) DB::table('tbl_refunds')->where('bookingId', $b2)->value('refundId');
@@ -197,7 +231,7 @@ class TourVersionReconciliationIncidentTest extends TestCase
         Mail::fake();
         [$tour, $av] = $this->tour(25, 'nt');
         $this->rawBooking($tour, $av);
-        $mk = fn (string $u, string $role) => DB::table('tbl_admin')->insertGetId(['userName' => $u, 'passWord' => 'x', 'email' => $u . '@example.com', 'fullName' => $u, 'address' => 'HN', 'role' => $role]);
+        $mk = fn(string $u, string $role) => DB::table('tbl_admin')->insertGetId(['userName' => $u, 'passWord' => 'x', 'email' => $u . '@example.com', 'fullName' => $u, 'address' => 'HN', 'role' => $role]);
         $reporter = $mk('quanly1', 'manager');
         $other = $mk('quanly2', 'manager');
         $boss = $mk('sep', 'admin');

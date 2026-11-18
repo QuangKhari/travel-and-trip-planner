@@ -221,6 +221,7 @@ class TripCommunity
         TripPlanner::assertCanCreate($userId);
 
         return DB::transaction(function () use ($src, $userId, $o) {
+            TripPlanner::assertCanCreate($userId);   // đếm lại trong giao dịch (khóa dòng người dùng)
             $row = TripPlanner::freshCopyRow((array) $src);
             unset($row['tripId']);
             $row = array_merge($row, [

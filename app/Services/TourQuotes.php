@@ -32,16 +32,21 @@ final class TourQuotes
 
     public function request(object $trip, int $userId, ?string $note): int
     {
-        $open = DB::table('tbl_tour_quotes')->where('tripId', $trip->tripId)->where('userId', $userId)->whereIn('status', ['open', 'quoted'])->value('quoteId');
-        if ($open) {
-            throw new \DomainException('Chuyến này đang có một yêu cầu báo giá chưa xong (#' . $open . ').');
-        }
         $snap = $this->snapshot($trip);
         if (!array_sum(array_map(fn($d) => count($d['items']), $snap['plan']))) {
             throw new \DomainException('Lịch còn trống. Thêm vài điểm vào lịch rồi gửi yêu cầu để Travela báo giá sát hơn.');
         }
-        $id = (int) DB::table('tbl_tour_quotes')->insertGetId(['tripId' => $trip->tripId, 'userId' => $userId, 'groupSize' => max(1, (int) $trip->groupSize),
-            'budget' => $trip->budget, 'note' => $note, 'snapshot' => json_encode($snap, JSON_UNESCAPED_UNICODE), 'status' => 'open', 'createdAt' => now()], 'quoteId');
+        // Kiểm tra "đang có yêu cầu mở" và tạo mới trong CÙNG giao dịch, khóa dòng chuyến: bấm gửi hai lần không ra hai yêu cầu
+        $id = DB::transaction(function () use ($trip, $userId, $note, $snap) {
+            DB::table('tbl_trips')->where('tripId', $trip->tripId)->lockForUpdate()->first(['tripId']);
+            $open = DB::table('tbl_tour_quotes')->where('tripId', $trip->tripId)->where('userId', $userId)->whereIn('status', ['open', 'quoted'])->value('quoteId');
+            if ($open) {
+                throw new \DomainException('Chuyến này đang có một yêu cầu báo giá chưa xong (#' . $open . ').');
+            }
+
+            return (int) DB::table('tbl_tour_quotes')->insertGetId(['tripId' => $trip->tripId, 'userId' => $userId, 'groupSize' => max(1, (int) $trip->groupSize),
+                'budget' => $trip->budget, 'note' => $note, 'snapshot' => json_encode($snap, JSON_UNESCAPED_UNICODE), 'status' => 'open', 'createdAt' => now()], 'quoteId');
+        });
         if (self::chatReady()) {
             $this->post($id, 'system', null, 'Khách gửi yêu cầu báo giá cho nhóm ' . (int) $trip->groupSize . ' người.', false);
             if ($note) {
@@ -59,9 +64,12 @@ final class TourQuotes
     {
         $q = DB::table('tbl_tour_quotes')->where('quoteId', $id)->whereIn('status', ['open', 'quoted'])->first() ?? throw new \DomainException('Yêu cầu không còn mở.');
         $total = (float) $v['pricePerPerson'] * (int) $q->groupSize;
-        DB::table('tbl_tour_quotes')->where('quoteId', $id)->update(['status' => 'quoted', 'pricePerPerson' => $v['pricePerPerson'], 'totalPrice' => $total,
+        $n = DB::table('tbl_tour_quotes')->where('quoteId', $id)->whereIn('status', ['open', 'quoted'])->update(['status' => 'quoted', 'pricePerPerson' => $v['pricePerPerson'], 'totalPrice' => $total,
             'includes' => $v['includes'] ?? null, 'excludes' => $v['excludes'] ?? null, 'message' => $v['message'] ?? null, 'validUntil' => $v['validUntil'],
             'quotedBy' => $adminId, 'quotedAt' => now()]);
+        if ($n === 0) {   // khách vừa nhận / từ chối giữa lúc nhân viên đang báo giá
+            throw new \DomainException('Yêu cầu không còn mở.');
+        }
         $money = number_format((float) $v['pricePerPerson'], 0, ',', '.') . 'đ/người';
         if (self::chatReady()) {
             // mỗi lần báo giá (kể cả báo lại sau khi khách nhờ chỉnh) là một phiên bản trong luồng trao đổi
@@ -84,9 +92,19 @@ final class TourQuotes
         if ($accept && $q->validUntil && $q->validUntil < now()->toDateString()) {
             throw new \DomainException('Báo giá đã hết hạn ngày ' . date('d/m/Y', strtotime($q->validUntil)) . '. Hãy gửi lại yêu cầu để Travela báo giá mới.');
         }
-        DB::table('tbl_tour_quotes')->where('quoteId', $id)->update(['status' => $accept ? 'accepted' : 'declined', 'decidedAt' => now()]);
-        TripWatch::log((int) $q->tripId, 'quote', $accept ? 'info' : 'warn', $accept ? 'Bạn đã nhận báo giá tour riêng #' . $id : 'Bạn đã từ chối báo giá #' . $id,
-            $accept ? 'Nhân viên Travela sẽ liên hệ để chốt dịch vụ và hướng dẫn thanh toán.' : null);
+        // Chỉ đổi khi VẪN đang 'quoted' (compare-and-set): hai lần bấm nhận / từ chối cùng lúc chỉ một lần có hiệu lực
+        $n = DB::table('tbl_tour_quotes')->where('quoteId', $id)->where('userId', $userId)->where('status', 'quoted')
+            ->update(['status' => $accept ? 'accepted' : 'declined', 'decidedAt' => now()]);
+        if ($n === 0) {
+            throw new \DomainException('Báo giá đã được xử lý.');
+        }
+        TripWatch::log(
+            (int) $q->tripId,
+            'quote',
+            $accept ? 'info' : 'warn',
+            $accept ? 'Bạn đã nhận báo giá tour riêng #' . $id : 'Bạn đã từ chối báo giá #' . $id,
+            $accept ? 'Nhân viên Travela sẽ liên hệ để chốt dịch vụ và hướng dẫn thanh toán.' : null,
+        );
     }
 
     // ===================== Trao đổi hai chiều =====================
@@ -140,7 +158,9 @@ final class TourQuotes
 
         return DB::table('tbl_tour_quote_messages')->where('quoteId', $quoteId)->orderBy('messageId')->get()
             ->map(function ($m) use ($staff) {
-                $m->who = match ($m->sender) { 'staff' => ($staff[$m->senderId] ?? null) ?: 'Nhân viên Travela', 'customer' => 'Khách', default => 'Travela' };
+                $m->who = match ($m->sender) {
+                    'staff' => ($staff[$m->senderId] ?? null) ?: 'Nhân viên Travela', 'customer' => 'Khách', default => 'Travela'
+                };
 
                 return $m;
             })->all();

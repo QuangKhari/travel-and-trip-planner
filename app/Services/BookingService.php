@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Services\Payments\OnlinePaymentService;
-
 use Illuminate\Support\Facades\DB;
 use App\Support\BookingPii;
 
@@ -14,7 +13,6 @@ use App\Support\BookingPii;
  */
 class BookingService
 {
-
     public function __construct(
         private CouponService $coupons,
         private ?DepartureService $departures = null,
@@ -159,7 +157,9 @@ class BookingService
                         DB::table('tbl_booking')->where('bookingId', $bookingId)->update(['tourVersionId' => $versionId]);
                     }
                 } catch (\Throwable $e) {
-                    report($e);   // không để lỗi chụp phiên bản làm hỏng việc đặt chỗ
+                    report($e);   // không để lỗi chụp phiên bản làm hỏng việc đặt chỗ...
+                    // ...nhưng để lại dấu vết: đơn này chưa có bản nội dung đã cam kết, admin cần biết (beforeEdit lần sau sẽ gắn bù)
+                    \App\Support\AuditLog::record('booking.version_missing', 'booking', $bookingId, 'Không chụp được phiên bản nội dung tour lúc đặt: ' . mb_substr($e->getMessage(), 0, 150));
                 }
             }
 
@@ -230,6 +230,7 @@ class BookingService
      */
     public function cancelLocked(object $booking, string $reason = 'customer', bool $releaseCoupon = true): void
     {
+        \App\Support\DomainEvents::record(\App\Support\DomainEvents::BOOKING_CANCELLED, 'booking', (int) $booking->bookingId, ['bookingId' => (int) $booking->bookingId, 'reason' => $reason]);
         DB::table('tbl_booking')
             ->where('bookingId', $booking->bookingId)
             ->update(['bookingStatus' => 'c', 'holdExpiresAt' => null] + (self::hasReason() ? ['cancelReason' => $reason] : []));
@@ -240,7 +241,7 @@ class BookingService
         // Có chỗ trống: sau khi commit, mời người đầu danh sách chờ (nếu có)
         if (!empty($booking->availabilityId) && WaitlistService::ready()) {
             $freedAvailability = (int) $booking->availabilityId;
-            DB::afterCommit(fn () => app(WaitlistService::class)->offerNext($freedAvailability));
+            DB::afterCommit(fn() => app(WaitlistService::class)->offerNext($freedAvailability));
         }
 
         // Đơn đã thanh toán: RefundService::requestLocked quyết định nhả mã theo % hoàn (config booking.coupon_release_min_percent).
@@ -255,6 +256,7 @@ class BookingService
      */
     public function confirmLocked(object $booking): void
     {
+        \App\Support\DomainEvents::record(\App\Support\DomainEvents::BOOKING_CONFIRMED, 'booking', (int) $booking->bookingId, ['bookingId' => (int) $booking->bookingId]);
         DB::table('tbl_booking')->where('bookingId', $booking->bookingId)
             ->update(['bookingStatus' => 'y', 'holdExpiresAt' => null]);
         $this->departures->confirm($booking);

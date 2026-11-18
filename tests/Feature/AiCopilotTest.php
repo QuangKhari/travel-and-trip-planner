@@ -249,16 +249,40 @@ class AiCopilotTest extends TestCase
         }
     }
 
-    public function test_feedback_marks_run_applied(): void
+    /** Bấm Áp dụng chỉ là 'clicked'; chỉ khi lần lưu chuyến ở máy chủ thành công mới thành 'applied' (số liệu cho luận văn là số đã lưu thật). */
+    public function test_feedback_marks_run_applied_only_after_server_save(): void
     {
         $a = $this->place('Văn Miếu', 21.0277, 105.8355, 'historic');
         $b = $this->place('Hoàng thành', 21.035, 105.84, 'historic');
-        $id = $this->trip([['type' => 'place', 'refId' => $a, 'day' => 1], ['type' => 'place', 'refId' => $b, 'day' => 1]]);
+        $items = [['type' => 'place', 'refId' => $a, 'day' => 1], ['type' => 'place', 'refId' => $b, 'day' => 1]];
+        $id = $this->trip($items);
         $this->script([['action' => 'propose', 'say' => 'Chuyển {{i2}}.', 'changes' => [['op' => 'move', 'item' => 'i2', 'toDay' => 2]]]]);
         $p = $this->ask($id, 'Ngày 1 nhẹ hơn')->json();
 
         $this->withSession($this->s)->postJson("/len-ke-hoach/$id/la-ban/ket-qua", ['proposal' => $p['id'], 'applied' => true])->assertOk();
+        $this->assertSame('clicked', DB::table('tbl_ai_runs')->where('feature', 'copilot')->value('outcome'), 'mới bấm, chưa lưu');
+
+        // lần lưu bị từ chối (rev cũ → 409): vẫn chỉ là clicked
+        $this->withSession($this->s)->postJson("/len-ke-hoach/$id/luu", ['title' => 'Hà Nội', 'days' => 2, 'groupSize' => 2, 'startDate' => '2026-11-16',
+            'items' => $items, 'rev' => 0])->assertStatus(409);
+        $this->assertSame('clicked', DB::table('tbl_ai_runs')->where('feature', 'copilot')->value('outcome'));
+
+        // lưu thành công bản đã áp dụng (mục 2 sang ngày 2): giờ mới là applied
+        $this->save($id, [['type' => 'place', 'refId' => $a, 'day' => 1], ['type' => 'place', 'refId' => $b, 'day' => 2]])->assertOk();
         $this->assertSame('applied', DB::table('tbl_ai_runs')->where('feature', 'copilot')->value('outcome'));
+    }
+
+    public function test_skipped_proposal_is_not_counted_as_applied_on_later_save(): void
+    {
+        $a = $this->place('Văn Miếu', 21.0277, 105.8355, 'historic');
+        $b = $this->place('Hoàng thành', 21.035, 105.84, 'historic');
+        $items = [['type' => 'place', 'refId' => $a, 'day' => 1], ['type' => 'place', 'refId' => $b, 'day' => 1]];
+        $id = $this->trip($items);
+        $this->script([['action' => 'propose', 'say' => 'Chuyển {{i2}}.', 'changes' => [['op' => 'move', 'item' => 'i2', 'toDay' => 2]]]]);
+        $p = $this->ask($id, 'Ngày 1 nhẹ hơn')->json();
+        $this->withSession($this->s)->postJson("/len-ke-hoach/$id/la-ban/ket-qua", ['proposal' => $p['id'], 'applied' => false])->assertOk();
+        $this->save($id, $items)->assertOk();
+        $this->assertSame('skipped', DB::table('tbl_ai_runs')->where('feature', 'copilot')->value('outcome'));
     }
 
     public function test_fallback_when_ai_off_and_permissions(): void
@@ -280,5 +304,27 @@ class AiCopilotTest extends TestCase
         $this->withSession(['userId' => $viewer, 'username' => 'u2'])->get("/len-ke-hoach/$id")->assertOk()->assertDontSee('planner-ai-copilot.js', false);
         $this->withSession($this->s)->get("/len-ke-hoach/$id")->assertOk()->assertSee('planner-ai-copilot.js', false)->assertSee('aiCoOpen', false);
         $this->assertSame(0, $fake->calls);
+    }
+
+    /** Đã áp dụng rồi bấm Hoàn tác (lịch về đúng như trước đề xuất) → outcome undone, không còn tính là đã áp dụng. */
+    public function test_applied_proposal_is_marked_undone_when_plan_is_reverted(): void
+    {
+        $a = $this->place('Văn Miếu', 21.0277, 105.8355, 'historic');
+        $b = $this->place('Hoàng thành', 21.035, 105.84, 'historic');
+        $before = [['type' => 'place', 'refId' => $a, 'day' => 1], ['type' => 'place', 'refId' => $b, 'day' => 1]];
+        $id = $this->trip($before);
+        $this->save($id, $before)->assertOk();   // có bản ghi lịch sử của lịch trước đề xuất
+        $this->script([['action' => 'propose', 'say' => 'Chuyển {{i2}}.', 'changes' => [['op' => 'move', 'item' => 'i2', 'toDay' => 2]]]]);
+        $p = $this->ask($id, 'Ngày 1 nhẹ hơn')->json();
+        $this->withSession($this->s)->postJson("/len-ke-hoach/$id/la-ban/ket-qua", ['proposal' => $p['id'], 'applied' => true])->assertOk();
+        $this->save($id, [['type' => 'place', 'refId' => $a, 'day' => 1], ['type' => 'place', 'refId' => $b, 'day' => 2]])->assertOk();
+        $this->assertSame('applied', DB::table('tbl_ai_runs')->where('feature', 'copilot')->value('outcome'));
+
+        // sửa tay một chút (không phải hoàn tác): vẫn applied
+        $this->save($id, [['type' => 'place', 'refId' => $a, 'day' => 1, 'note' => 'mở 8h'], ['type' => 'place', 'refId' => $b, 'day' => 2]])->assertOk();
+        $this->assertSame('applied', DB::table('tbl_ai_runs')->where('feature', 'copilot')->value('outcome'));
+        // hoàn tác: lịch về đúng như trước đề xuất
+        $this->save($id, $before)->assertOk();
+        $this->assertSame('undone', DB::table('tbl_ai_runs')->where('feature', 'copilot')->value('outcome'));
     }
 }

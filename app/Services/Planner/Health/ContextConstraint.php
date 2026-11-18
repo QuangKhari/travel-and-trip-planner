@@ -33,6 +33,12 @@ final class ContextConstraint implements Constraint
                 $out[] = ['level' => 'warn', 'code' => 'context.season', 'text' => $a['dest'] . ' tháng ' . $a['month'] . ': ' . $a['label'] . (!empty($a['note']) ? ' (' . $a['note'] . ')' : '') . '.'];
             }
         }
+        $gone = (array) ($ctx->payload['unavailable'] ?? []);
+        if ($gone) {
+            $out[] = ['level' => 'warn', 'code' => 'content.unavailable',
+                'text' => count($gone) . ' mục không còn được Travela xác thực (' . implode(', ', array_slice($gone, 0, 3)) . (count($gone) > 3 ? '…' : '')
+                    . '). Mục vẫn được giữ trong chuyến; bạn nên thay bằng địa điểm khác hoặc xóa.'];
+        }
         foreach ($ctx->payload['contentWarnings'] ?? [] as $w) {
             if (!str_contains($w, 'mục ngoài trời')) {   // cảnh báo mưa đã có ở trên
                 $out[] = ['level' => 'info', 'code' => 'context.content', 'text' => $w];

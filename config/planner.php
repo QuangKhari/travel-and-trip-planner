@@ -73,7 +73,8 @@ return [
         'osrm_url' => env('PLANNER_OSRM_URL', ''),                   // ví dụ https://router.project-osrm.org
         'mode' => env('PLANNER_TRAVEL_MODE', 'driving'),             // phương tiện mặc định
         'factor' => 1.3,                                              // hệ số đường vòng so với đường chim bay
-        'min_leg_km' => 0.5,                                          // hai điểm gần hơn mức này (chim bay) coi là cùng một khu, không tính đoạn đi
+        'min_leg_km' => 0.5,                                          // hai điểm gần hơn mức này (chim bay) coi là cùng một khu (không vẽ đoạn đường riêng)
+        'same_area_min' => (int) env('PLANNER_SAME_AREA_MIN', 5),     // ...nhưng vẫn mất thời gian đi bộ / ra vào cổng: phút tối thiểu giữa hai điểm cùng khu (0 = như cũ)
         'modes' => [                                                  // tốc độ trung bình và hồ sơ OSRM theo phương tiện
             'driving' => ['label' => 'Ô tô', 'speed_kmh' => 40, 'osrm' => 'driving'],
             'motorbike' => ['label' => 'Xe máy', 'speed_kmh' => 30, 'osrm' => 'driving'],

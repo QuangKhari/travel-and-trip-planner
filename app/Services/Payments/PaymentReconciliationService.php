@@ -25,6 +25,10 @@ class PaymentReconciliationService
         'refund_paid_mismatch' => ['Số đã thu ghi trong hồ sơ hoàn khác số đã thu của đơn', 'medium', 'Đối chiếu số tiền thực nhận trước khi hoàn.'],
         'paid_amount_mismatch' => ['Số tiền đã thu khác tổng tiền của đơn', 'medium', 'Đối chiếu với cổng / sao kê: thu thiếu hay thừa.'],
         'online_confirmed_unpaid' => ['Đơn trả online đã xác nhận nhưng chưa ghi nhận thanh toán', 'medium', 'Bấm "Kiểm tra lại" ở trang Thanh toán trực tuyến.'],
+        'payment_excess_unrefunded' => ['Khoản thu trùng (khách trả hai lần) chưa được hoàn', 'high', 'Duyệt hoàn qua cổng hoặc chuyển khoản tay ở trang Hoàn tiền → Khoản thu trùng.'],
+        'ledger_unbalanced' => ['Bút toán sổ cái không cân (tổng Nợ ≠ tổng Có)', 'high', 'Báo kỹ thuật: bút toán phải ghi qua DoubleEntryLedger::post().'],
+        'ledger_deposit_mismatch' => ['Sổ cái hai bút toán lệch với số liệu đơn (đã thu − đã hoàn)', 'medium', 'Đối chiếu các nghiệp vụ tiền của đơn; dữ liệu cũ thì chạy php artisan payments:ledger-backfill.'],
+        'payment_double_paid' => ['Khách trả tiền ở hai lần thử thanh toán của cùng một đơn (thu hai lần)', 'high', 'Đối chiếu với cổng rồi hoàn khoản thu thứ hai cho khách.'],
         'payment_log_bad_amount' => ['Cổng báo thanh toán sai số tiền, đơn vẫn chưa thu', 'medium', 'Liên hệ khách và đối chiếu với cổng.'],
         'refund_overdue' => ['Yêu cầu hoàn tiền chờ quá lâu', 'medium', 'Hoàn tiền hoặc ghi lý do chậm.'],
         'gateway_refund_stuck' => ['Lệnh hoàn qua cổng xử lý quá lâu', 'medium', 'Bấm "Kiểm tra trạng thái" ở trang Hoàn tiền.'],
@@ -46,8 +50,8 @@ class PaymentReconciliationService
         $add = function (string $type, ?int $bookingId, ?int $refundId, string $detail, ?string $severity = null) use (&$out) {
             $out[] = ['type' => $type, 'severity' => $severity ?? self::TYPES[$type][1], 'bookingId' => $bookingId, 'refundId' => $refundId, 'detail' => $detail];
         };
-        $money = fn ($v) => number_format((float) $v, 0, ',', '.') . ' đ';
-        $base = fn () => DB::table('tbl_booking as b')->join('tbl_checkout as c', 'c.bookingId', '=', 'b.bookingId');
+        $money = fn($v) => number_format((float) $v, 0, ',', '.') . ' đ';
+        $base = fn() => DB::table('tbl_booking as b')->join('tbl_checkout as c', 'c.bookingId', '=', 'b.bookingId');
         $hasRefunds = Schema::hasTable('tbl_refunds');
 
         // 1. Hủy, đã thu, chưa có hồ sơ hoàn
@@ -59,8 +63,8 @@ class PaymentReconciliationService
 
             // 2. Trạng thái hoàn ≠ trạng thái thanh toán
             foreach ($base()->join('tbl_refunds as r', 'r.bookingId', '=', 'b.bookingId')->where(function ($q) {
-                $q->where(fn ($w) => $w->where('r.status', 'refunded')->where('c.paymentStatus', '!=', 'refunded'))
-                    ->orWhere(fn ($w) => $w->where('r.status', 'pending')->where('c.paymentStatus', '!=', 'refund_pending'));
+                $q->where(fn($w) => $w->where('r.status', 'refunded')->where('c.paymentStatus', '!=', 'refunded'))
+                    ->orWhere(fn($w) => $w->where('r.status', 'pending')->where('c.paymentStatus', '!=', 'refund_pending'));
             })->limit(500)->get(['b.bookingId', 'b.bookingCode', 'r.refundId', 'r.status as rs', 'c.paymentStatus as ps']) as $x) {
                 $add('refund_status_mismatch', (int) $x->bookingId, (int) $x->refundId, "Đơn {$x->bookingCode}: hồ sơ hoàn '{$x->rs}' nhưng thanh toán '{$x->ps}'.");
             }
@@ -128,7 +132,7 @@ class PaymentReconciliationService
         // 9. Số đã thu ≠ tổng tiền đơn
         $mismatch = $base()->whereIn('b.bookingStatus', ['y', 'f'])->where('c.paymentStatus', 'y')->whereRaw('ABS(c.amount - b.totalPrice) >= 1');
         if (Schema::hasTable('tbl_booking_adjustments')) {   // đơn đã điều chỉnh số khách: chênh lệch có chủ ý, theo dõi ở sổ điều chỉnh
-            $mismatch->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('tbl_booking_adjustments as j')->whereColumn('j.bookingId', 'b.bookingId'));
+            $mismatch->whereNotExists(fn($q) => $q->select(DB::raw(1))->from('tbl_booking_adjustments as j')->whereColumn('j.bookingId', 'b.bookingId'));
         }
         foreach ($mismatch->limit(500)->get(['b.bookingId', 'b.bookingCode', 'c.amount', 'b.totalPrice']) as $x) {
             $add('paid_amount_mismatch', (int) $x->bookingId, null, "Đơn {$x->bookingCode}: đã thu " . $money($x->amount) . ', tổng tiền đơn ' . $money($x->totalPrice) . '.');
@@ -168,6 +172,41 @@ class PaymentReconciliationService
                 ->where('l.result', 'bad_amount')->where('l.createdAt', '>=', now()->subDays(14))->where('c.paymentStatus', 'n')->groupBy('b.bookingId', 'b.bookingCode')
                 ->limit(200)->get(['b.bookingId', 'b.bookingCode']) as $x) {
                 $add('payment_log_bad_amount', (int) $x->bookingId, null, "Đơn {$x->bookingCode}: cổng báo thanh toán sai số tiền trong 14 ngày qua, đơn vẫn chưa thu.");
+            }
+            // Khoản thu trùng (bảng lần thử): còn chờ / đang / lỗi hoàn
+            if (OnlinePaymentService::attemptsReady()) {
+                foreach (DB::table('tbl_payment_attempts as a')->join('tbl_booking as b', 'b.bookingId', '=', 'a.bookingId')->where('a.status', 'excess')
+                    ->where(fn($q) => $q->whereNull('a.refundStatus')->orWhere('a.refundStatus', '!=', 'refunded'))->limit(200)
+                    ->get(['a.attemptId', 'a.bookingId', 'b.bookingCode', 'a.amount', 'a.txnRef', 'a.refundStatus']) as $x) {
+                    $add('payment_excess_unrefunded', (int) $x->bookingId, null, "Đơn {$x->bookingCode}: thu trùng " . number_format((int) $x->amount, 0, ',', '.') . " đ (lần thử {$x->txnRef}), trạng thái hoàn: " . ($x->refundStatus ?: 'chưa tạo') . '.');
+                }
+            }
+            // Sổ cái hai bút toán
+            $ledger = app(DoubleEntryLedger::class);
+            foreach ($ledger->unbalanced(50) as $key) {
+                $add('ledger_unbalanced', null, null, 'Bút toán ' . $key . ' không cân.');
+            }
+            if (DoubleEntryLedger::ready()) {
+                $dep = DB::table('tbl_ledger_entries')->where('account', DoubleEntryLedger::DEPOSIT)->groupBy('bookingId')->select('bookingId', DB::raw('-SUM(amount) AS held'));
+                $adjOut = \Illuminate\Support\Facades\Schema::hasTable('tbl_booking_adjustments')
+                    ? DB::table('tbl_booking_adjustments')->where('moneyStatus', 'refunded')->groupBy('bookingId')->select('bookingId', DB::raw('SUM(settleAmount) AS s')) : null;
+                $refOut = DB::table('tbl_refunds')->where('status', 'refunded')->groupBy('bookingId')->select('bookingId', DB::raw('SUM(amount) AS s'));
+                $q = DB::table('tbl_booking as b')->join('tbl_checkout as c', 'c.bookingId', '=', 'b.bookingId')->joinSub($dep, 'd', 'd.bookingId', '=', 'b.bookingId')
+                    ->leftJoinSub($refOut, 'rr', 'rr.bookingId', '=', 'b.bookingId');
+                if ($adjOut) {
+                    $q->leftJoinSub($adjOut, 'aa', 'aa.bookingId', '=', 'b.bookingId');
+                }
+                $adjCol = $adjOut ? 'COALESCE(aa.s,0)' : '0';
+                $expect = "CASE WHEN c.paymentStatus IN ('y','refund_pending','refunded') THEN ROUND(c.amount) ELSE 0 END - $adjCol - COALESCE(rr.s,0)";
+                foreach ($q->whereRaw("d.held <> $expect")->limit(200)->get(['b.bookingId', 'b.bookingCode', 'd.held', DB::raw("($expect) AS expected")]) as $x) {
+                    $add('ledger_deposit_mismatch', (int) $x->bookingId, null, "Đơn {$x->bookingCode}: sổ cái giữ " . number_format((int) $x->held, 0, ',', '.') . ' đ, số liệu đơn ' . number_format((int) $x->expected, 0, ',', '.') . ' đ.');
+                }
+            }
+            // Thu hai lần (dữ liệu trước khi có bảng lần thử): đọc từ nhật ký cổng
+            foreach (OnlinePaymentService::attemptsReady() ? [] : DB::table('tbl_payment_logs as l')->join('tbl_booking as b', 'b.bookingId', '=', 'l.bookingId')
+                ->where('l.result', 'double_paid')->where('l.createdAt', '>=', now()->subDays(60))->groupBy('b.bookingId', 'b.bookingCode')
+                ->limit(200)->get(['b.bookingId', 'b.bookingCode', DB::raw('MIN(l.txnRef) as txnRef')]) as $x) {
+                $add('payment_double_paid', (int) $x->bookingId, null, "Đơn {$x->bookingCode}: cổng báo lần thử {$x->txnRef} cũng đã thanh toán sau khi đơn được ghi nhận bằng lần thử khác.");
             }
         }
 

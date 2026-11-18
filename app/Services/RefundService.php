@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Hoàn tiền cho đơn đã thanh toán bị hủy (A6). Đơn hủy -> tbl_refunds (pending) + paymentStatus refund_pending;
- * admin chuyển tiền xong bấm "Đã hoàn" -> refunded. Không tích hợp API hoàn tiền của cổng thanh toán (giới hạn đồ án).
+ * admin chuyển tiền xong bấm "Đã hoàn" -> refunded, hoặc hoàn qua API cổng (GatewayRefundService, khi bật PAYMENT_REFUND_ENABLED).
  */
 class RefundService
 {
@@ -110,6 +110,8 @@ class RefundService
             ]);
             DB::table('tbl_checkout')->where('bookingId', $r->bookingId)->update(['paymentStatus' => 'refunded']);
             $this->closePlanIfDone($r->rescuePlanId ?? null);
+            // sổ cái hai bút toán: Nợ tiền khách giữ / Có kênh đã chi trả
+            app(\App\Services\Payments\DoubleEntryLedger::class)->refund((int) $r->bookingId, $refundId, $viaGateway ? (string) ($r->gateway ?? $method) : $method, (int) $r->amount);
 
             return ['ok' => true, 'message' => 'Đã ghi nhận hoàn tiền.', 'before' => $r, 'after' => DB::table('tbl_refunds')->where('refundId', $refundId)->first()];
         });

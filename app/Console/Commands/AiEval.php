@@ -97,7 +97,7 @@ class AiEval extends Command
         $model = $engine === 'llm' ? (string) config('ai.models.' . config('ai.driver') . '.brief') : '-';
         $today = (string) $this->option('today');
         $ctx = $brief->context($today);
-        Cache::forget('ai:cb:until');   // ngắt mạch còn lại từ lần chạy trước không được chặn bộ đánh giá
+        \App\Services\Ai\AiGateway::resetCircuits();   // ngắt mạch còn lại từ lần chạy trước không được chặn bộ đánh giá
         if ($engine === 'llm' && $gateway->blocked('brief', null)) {
             $this->error('Chưa gọi được LLM: ' . $gateway->blocked('brief', null) . ' (bật AI_PLANNER_ENABLED và cấu hình AI_DRIVER + khóa).');
 
@@ -119,11 +119,15 @@ class AiEval extends Command
             } else {
                 // Đánh giá đo CHẤT LƯỢNG model: tắt ngắt mạch, thử lại khi lỗi; câu vẫn lỗi thì loại khỏi phần chấm và báo riêng
                 for ($try = 0; ; $try++) {
-                    Cache::forget('ai:cb:until');
-                    Cache::forget('ai:cb:fails');
+                    \App\Services\Ai\AiGateway::resetCircuits();
                     $t0 = microtime(true);
-                    $res = $gateway->json('brief', null, BriefPrompt::system(array_map(fn($d) => ['name' => $d['name']], $ctx['dests']), $today),
-                        BriefPrompt::user($text), BriefPrompt::schema($ctx['maxDays']));
+                    $res = $gateway->json(
+                        'brief',
+                        null,
+                        BriefPrompt::system(array_map(fn($d) => ['name' => $d['name']], $ctx['dests']), $today),
+                        BriefPrompt::user($text),
+                        BriefPrompt::schema($ctx['maxDays']),
+                    );
                     if ($res['ok'] || $try >= (int) $this->option('retry')) {
                         break;
                     }
@@ -378,9 +382,15 @@ class AiEval extends Command
 
             return self::FAILURE;
         }
-        $this->info(sprintf('Bộ %s · mode=%s · %s · %d mẫu (%d lỗi, không tính)%s', $suite, $mode,
+        $this->info(sprintf(
+            'Bộ %s · mode=%s · %s · %d mẫu (%d lỗi, không tính)%s',
+            $suite,
+            $mode,
             $usesLlm ? 'model=' . config('ai.models.' . config('ai.driver') . '.' . ($suite === 'explain' ? 'explain' : 'copilot')) : 'không dùng LLM',
-            count($rows), count($rows) - count($ok), $stoppedAt !== null ? ' · DỪNG GIỮA CHỪNG: mới ' . count($rows) . '/' . count($cases) . ' mẫu' : ''));
+            count($rows),
+            count($rows) - count($ok),
+            $stoppedAt !== null ? ' · DỪNG GIỮA CHỪNG: mới ' . count($rows) . '/' . count($cases) . ' mẫu' : '',
+        ));
         $this->table(['Chỉ số', 'Giá trị'], $this->summary($suite, $ok));
         $byModel = array_count_values(array_filter(array_map(fn($r) => (string) ($r['model'] ?? ''), $ok)));
         if (count($byModel) > 1) {
@@ -402,9 +412,15 @@ class AiEval extends Command
     {
         return match ($suite) {
             'plan' => sprintf('viết %d · giữ %d · có thật %.0f%% · lỗi cứng %d · cảnh báo %d · điểm %d', $r['out'], $r['items'], $r['exist'] * 100, $r['hard'], $r['warn'], $r['score']),
-            'copilot' => sprintf('%s%s · lỗi cứng mới %d · %d bước%s · %s', $r['kind'], $r['ops'] ? ' (' . $r['ops'] . ')' : '', $r['newHard'], $r['steps'],
+            'copilot' => sprintf(
+                '%s%s · lỗi cứng mới %d · %d bước%s · %s',
+                $r['kind'],
+                $r['ops'] ? ' (' . $r['ops'] . ')' : '',
+                $r['newHard'],
+                $r['steps'],
                 $r['searches'] ? ' · tìm ' . $r['searches'] . ' lần, ' . $r['hits'] . ' kết quả' : '',
-                $r['human'] ?: '<fg=gray>' . mb_substr($r['say'], 0, 90) . '</>'),
+                $r['human'] ?: '<fg=gray>' . mb_substr($r['say'], 0, 90) . '</>',
+            ),
             default => sprintf('%s · thay %d đoạn · %d ms', $r['engine'], $r['replaced'], $r['ms'])
                 . ($r['engine'] !== 'llm' ? ' · <fg=yellow>' . ($r['outcome'] ?: '?') . ($r['llmError'] !== '' ? ': ' . $r['llmError'] : '') . '</>' : ''),
         };

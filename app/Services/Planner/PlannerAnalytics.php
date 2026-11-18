@@ -35,10 +35,19 @@ final class PlannerAnalytics
         // 3. La bàn: tỷ lệ chấp nhận đề xuất, độ trễ, luật vs LLM
         $ai = [];
         if (Schema::hasTable('tbl_ai_runs')) {
-            foreach (DB::table('tbl_ai_runs')->where('createdAt', '>=', $since)->select('feature', 'engine',
-                DB::raw('count(*) n'), DB::raw("sum(outcome in ('proposed','applied','skipped')) proposed"), DB::raw("sum(outcome = 'applied') applied"), DB::raw("sum(outcome = 'skipped') skipped"),
-                DB::raw("sum(outcome in ('error','fallback')) failed"), DB::raw('avg(latencyMs) ms'))->groupBy('feature', 'engine')->get() as $r) {
-                $ai[] = ['feature' => $r->feature, 'engine' => $r->engine, 'n' => (int) $r->n, 'proposed' => (int) $r->proposed, 'applied' => (int) $r->applied,
+            foreach (DB::table('tbl_ai_runs')->where('createdAt', '>=', $since)->select(
+                'feature',
+                'engine',
+                DB::raw('count(*) n'),
+                DB::raw("sum(outcome in ('proposed','clicked','applied','skipped','undone')) proposed"),
+                DB::raw("sum(outcome = 'clicked') clicked"),
+                DB::raw("sum(outcome = 'undone') undone"),
+                DB::raw("sum(outcome = 'applied') applied"),
+                DB::raw("sum(outcome = 'skipped') skipped"),
+                DB::raw("sum(outcome in ('error','fallback')) failed"),
+                DB::raw('avg(latencyMs) ms'),
+            )->groupBy('feature', 'engine')->get() as $r) {
+                $ai[] = ['feature' => $r->feature, 'engine' => $r->engine, 'n' => (int) $r->n, 'proposed' => (int) $r->proposed, 'applied' => (int) $r->applied, 'clicked' => (int) $r->clicked, 'undone' => (int) $r->undone,
                     'skipped' => (int) $r->skipped, 'accept' => ($r->applied + $r->skipped) ? round(100 * $r->applied / ($r->applied + $r->skipped)) : null,
                     'failed' => (int) $r->failed, 'ms' => (int) round((float) $r->ms)];
             }

@@ -96,7 +96,8 @@ class VnpayGateway implements PaymentGateway
 
     public function create(array $o): array
     {
-        $at = self::now();
+        // vnp_CreateDate = đúng thời điểm đã lưu cho lần thử (querydr / refund sau này phải gửi lại giá trị này)
+        $at = ($o['createdAt'] ?? null) instanceof \Carbon\Carbon ? $o['createdAt']->copy()->setTimezone(config('payments.timezone', 'Asia/Ho_Chi_Minh')) : self::now();
         $expire = $o['expireAt'] instanceof \Carbon\Carbon ? $o['expireAt']->copy()->setTimezone(config('payments.timezone', 'Asia/Ho_Chi_Minh')) : $at->copy()->addMinutes(15);
         $p = [
             'vnp_Version' => '2.1.0', 'vnp_Command' => 'pay', 'vnp_TmnCode' => $this->cfg('tmn_code'),
@@ -264,7 +265,8 @@ class VnpayGateway implements PaymentGateway
     public function refund(array $o): array
     {
         $at = self::now();
-        $full = isset($o['paidAmount']) && (int) $o['paidAmount'] === (int) $o['amount'];
+        // 02 = hoàn toàn phần: chỉ khi hoàn đủ số của giao dịch và chưa hoàn lần nào trên giao dịch đó; còn lại 03 (một phần)
+        $full = isset($o['paidAmount']) && (int) $o['paidAmount'] === (int) $o['amount'] && (int) ($o['priorRefunded'] ?? 0) === 0;
         $p = ['vnp_RequestId' => $o['refundRef'], 'vnp_Version' => '2.1.0', 'vnp_Command' => 'refund', 'vnp_TmnCode' => $this->cfg('tmn_code'),
             'vnp_TransactionType' => $full ? '02' : '03', 'vnp_TxnRef' => $o['txnRef'], 'vnp_Amount' => (int) $o['amount'] * 100,
             'vnp_OrderInfo' => mb_substr(preg_replace('/[^A-Za-z0-9 ]/', '', \Illuminate\Support\Str::ascii((string) ($o['reason'] ?: 'Hoan tien'))), 0, 255),
@@ -302,15 +304,33 @@ class VnpayGateway implements PaymentGateway
 
     public function queryRefund(string $refundRef): array
     {
-        $bookingId = DB::table('tbl_refunds')->where('gatewayRefundRef', $refundRef)->value('bookingId');
-        if (!$bookingId && \Illuminate\Support\Facades\Schema::hasColumn('tbl_booking_adjustments', 'gatewayRefundRef')) {
-            $bookingId = DB::table('tbl_booking_adjustments')->where('gatewayRefundRef', $refundRef)->value('bookingId');
+        // Lệnh hoàn này thuộc giao dịch nào: khoản thu trùng (đúng lần thử đó) hoặc khoản thanh toán của đơn (hoàn hủy / phần dư)
+        $txn = null;
+        $others = 0;
+        if (OnlinePaymentService::attemptsReady() && ($att = DB::table('tbl_payment_attempts')->where('refundRef', $refundRef)->first())) {
+            $txn = ['ref' => (string) $att->txnRef, 'date' => $att->createDate];
+        } else {
+            $bookingId = DB::table('tbl_refunds')->where('gatewayRefundRef', $refundRef)->value('bookingId');
+            if (!$bookingId && \Illuminate\Support\Facades\Schema::hasColumn('tbl_booking_adjustments', 'gatewayRefundRef')) {
+                $bookingId = DB::table('tbl_booking_adjustments')->where('gatewayRefundRef', $refundRef)->value('bookingId');
+            }
+            $paid = $bookingId ? app(OnlinePaymentService::class)->paidAttempt((int) $bookingId) : null;
+            if ($paid) {
+                $txn = ['ref' => (string) $paid->txnRef, 'date' => $paid->createDate];
+                // querydr chỉ trả trạng thái hoàn MỚI NHẤT của giao dịch, không theo mã lệnh: có lệnh hoàn khác trên cùng giao dịch
+                // thì không suy ra được lệnh này đã xong (tránh ghi nhận "đã hoàn" sai).
+                $others = (int) DB::table('tbl_refunds')->where('bookingId', $bookingId)->whereNotNull('gatewayRefundRef')->where('gatewayRefundRef', '!=', $refundRef)
+                    ->whereIn('gatewayStatus', ['processing', 'succeeded'])->count();
+                if (\Illuminate\Support\Facades\Schema::hasColumn('tbl_booking_adjustments', 'gatewayRefundRef')) {
+                    $others += (int) DB::table('tbl_booking_adjustments')->where('bookingId', $bookingId)->whereNotNull('gatewayRefundRef')->where('gatewayRefundRef', '!=', $refundRef)
+                        ->whereIn('gatewayStatus', ['processing', 'succeeded'])->count();
+                }
+            }
         }
-        $c = $bookingId ? DB::table('tbl_checkout')->where('bookingId', $bookingId)->first() : null;
-        if (!$c || !$c->providerTxnRef) {
+        if (!$txn) {
             return self::result('unknown', null, 'no_txn', 'Không tìm thấy giao dịch gốc của lệnh hoàn.', []);
         }
-        [$p, $j, $err] = $this->querydr((string) $c->providerTxnRef, $c->providerCreateDate);
+        [$p, $j, $err] = $this->querydr($txn['ref'], $txn['date']);
         if ($err) {
             return self::result('unknown', null, 'http_error', $err, ['request' => $p]);
         }
@@ -329,8 +349,17 @@ class VnpayGateway implements PaymentGateway
             '09' => 'failed',
             default => 'unknown',
         };
+        if ($others > 0 && $status !== 'pending') {
+            return self::result('unknown', null, $ts, 'Giao dịch đã có lệnh hoàn khác: VNPay chỉ trả trạng thái hoàn mới nhất, hãy đối chiếu lệnh ' . $refundRef
+                . ' trên trang quản trị merchant VNPay rồi ghi nhận.', $raw);
+        }
 
-        return self::result($status, !empty($j['vnp_TransactionNo']) ? (string) $j['vnp_TransactionNo'] : null, $ts,
-            'VNPay: ' . (['00' => 'đã hoàn tiền', '05' => 'đang xử lý hoàn', '06' => 'đã gửi yêu cầu hoàn sang ngân hàng', '09' => 'từ chối hoàn'][$ts] ?? ('trạng thái ' . $ts)), $raw);
+        return self::result(
+            $status,
+            !empty($j['vnp_TransactionNo']) ? (string) $j['vnp_TransactionNo'] : null,
+            $ts,
+            'VNPay: ' . (['00' => 'đã hoàn tiền', '05' => 'đang xử lý hoàn', '06' => 'đã gửi yêu cầu hoàn sang ngân hàng', '09' => 'từ chối hoàn'][$ts] ?? ('trạng thái ' . $ts)),
+            $raw,
+        );
     }
 }

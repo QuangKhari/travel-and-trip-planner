@@ -65,6 +65,13 @@
                             <td class="num">
                                 @if ($r->status === 'pending' && ($r->gatewayStatus ?? null) === 'processing')
                                     <form method="POST" action="{{ route('admin.refunds.sync', $r->refundId) }}">@csrf<button class="ad-btn ad-btn--sm ad-btn--primary" type="submit"><i class="fa fa-refresh"></i> Kiểm tra trạng thái</button></form>
+                                    <details class="ad-sub" style="margin-top:6px"><summary>Chốt theo trang merchant…</summary>
+                                        <form method="POST" action="{{ route('admin.refunds.resolve', $r->refundId) }}" style="margin-top:6px">@csrf
+                                            <input name="reference" maxlength="80" placeholder="Mã hoàn trên trang merchant" style="width:100%;margin-bottom:4px">
+                                            <button class="ad-btn ad-btn--sm" name="outcome" value="refunded" type="submit" data-confirm="Xác nhận trang quản trị merchant đã ghi nhận hoàn {{ $money($r->amount) }} cho đơn {{ $r->bookingCode }}?">Đã hoàn</button>
+                                            <button class="ad-btn ad-btn--sm" name="outcome" value="failed" type="submit" data-confirm="Xác nhận cổng KHÔNG có / từ chối lệnh hoàn này? Sau đó có thể thử lại hoặc hoàn tay.">Không thành công</button>
+                                        </form>
+                                    </details>
                                 @elseif ($r->status === 'pending')
                                     @if (!empty($r->gw['can']) || ($r->gatewayStatus ?? null) === 'failed')
                                         @if (!empty($r->gw['can']) || \App\Services\Payments\GatewayRefundService::enabled())
@@ -87,6 +94,58 @@
             <div class="ad-empty"><i class="fa fa-check-circle"></i><b>Không có yêu cầu nào</b>{{ $status === 'pending' ? 'Mọi khoản hoàn tiền đã được xử lý.' : '' }}</div>
         @endif
     </div>
+
+    @if (!empty($excess) && count($excess))
+        <div class="ad-card" id="excess" style="margin-top:16px">
+            <h3 style="margin-top:0">Khoản thu trùng cần hoàn</h3>
+            <p class="ad-sub" style="margin-top:0">Khách trả tiền ở hai lần thử thanh toán (hai tab) hoặc chuyển khoản QR hai lần cho cùng một đơn. Đơn chỉ ghi nhận một khoản; khoản còn lại được tự tạo yêu cầu hoàn và <b>chờ bạn duyệt</b>.</p>
+            <div class="ad-table-wrap">
+                <table class="ad-table">
+                    <thead><tr><th>Đơn</th><th>Lần thử</th><th class="num">Số tiền</th><th>Trạng thái hoàn</th><th class="num"></th></tr></thead>
+                    <tbody>
+                    @foreach ($excess as $x)
+                        <tr id="excess-{{ $x->attemptId }}">
+                            <td><b>{{ $x->bookingCode }}</b><span class="ad-sub">{{ $x->fullName }}</span></td>
+                            <td>{{ \App\Services\Payments\OnlinePaymentService::label($x->provider) }}<span class="ad-sub">{{ $x->txnRef }}{{ $x->providerTxnNo ? ' · ' . $x->providerTxnNo : '' }}</span></td>
+                            <td class="num">{{ $money($x->amount) }}</td>
+                            <td>
+                                @php $st = ['pending' => ['Chờ duyệt', 'warn'], 'processing' => ['Đang xử lý tại cổng', 'info'], 'failed' => ['Hoàn qua cổng lỗi', 'danger'], 'refunded' => ['Đã hoàn', 'mute']][$x->refundStatus] ?? ['Chưa tạo', 'warn']; @endphp
+                                <span class="ad-badge ad-badge--{{ $st[1] }}">{{ $st[0] }}</span>
+                                @if ($x->refundMessage)<span class="ad-sub">{{ $x->refundMessage }}</span>@endif
+                                @if ($x->refundStatus === 'refunded')<span class="ad-sub">{{ $x->refundMethod }}{{ $x->refundReference ? ' · ' . $x->refundReference : '' }}</span>@endif
+                            </td>
+                            <td class="num">
+                                @if ($x->refundStatus === 'processing')
+                                    <form method="POST" action="{{ route('admin.refunds.excess.sync', $x->attemptId) }}">@csrf<button class="ad-btn ad-btn--sm ad-btn--primary" type="submit"><i class="fa fa-refresh"></i> Kiểm tra trạng thái</button></form>
+                                    <details class="ad-sub" style="margin-top:6px"><summary>Chốt theo trang merchant…</summary>
+                                        <form method="POST" action="{{ route('admin.refunds.excess.resolve', $x->attemptId) }}" style="margin-top:6px">@csrf
+                                            <input name="reference" maxlength="80" placeholder="Mã hoàn trên trang merchant" style="width:100%;margin-bottom:4px">
+                                            <button class="ad-btn ad-btn--sm" name="outcome" value="refunded" type="submit">Đã hoàn</button>
+                                            <button class="ad-btn ad-btn--sm" name="outcome" value="failed" type="submit">Không thành công</button>
+                                        </form>
+                                    </details>
+                                @elseif (in_array($x->refundStatus, ['pending', 'failed'], true))
+                                    @if (!empty($x->gw['can']))
+                                        <form method="POST" action="{{ route('admin.refunds.excess.gateway', $x->attemptId) }}" style="margin-bottom:6px">@csrf<button class="ad-btn ad-btn--sm ad-btn--primary" type="submit" data-confirm="Duyệt hoàn {{ $money($x->amount) }} (khoản thu trùng của đơn {{ $x->bookingCode }}) qua {{ $x->gw['label'] }}? Đây là tiền thật.">{{ $x->refundStatus === 'failed' ? 'Thử lại qua cổng' : 'Duyệt hoàn qua ' . $x->gw['label'] }}</button></form>
+                                    @elseif (!empty($x->gw['why']))
+                                        <span class="ad-sub" title="{{ $x->gw['why'] }}">Hoàn thủ công</span>
+                                    @endif
+                                    <details class="ad-sub"><summary>Đã hoàn tay…</summary>
+                                        <form method="POST" action="{{ route('admin.refunds.excess.complete', $x->attemptId) }}" style="margin-top:6px">@csrf
+                                            <select name="method" style="width:100%;margin-bottom:4px"><option>Chuyển khoản</option><option>Tiền mặt</option><option>Ví điện tử</option><option>Khác</option></select>
+                                            <input name="reference" maxlength="80" placeholder="Mã giao dịch hoàn" style="width:100%;margin-bottom:4px">
+                                            <button class="ad-btn ad-btn--sm" type="submit">Ghi nhận đã hoàn</button>
+                                        </form>
+                                    </details>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @endif
 
     <div class="modal fade" id="rf-modal" tabindex="-1" role="dialog" aria-labelledby="rf-title" aria-hidden="true">
         <div class="modal-dialog" role="document">

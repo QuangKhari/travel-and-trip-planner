@@ -81,4 +81,88 @@ class AiOutageTest extends TestCase
         config(['ai.enabled' => false]);
         $this->hitAll('tắt AI');
     }
+
+    /** Copilot lỗi liên tiếp chỉ ngắt mạch Copilot; Brief / Explain vẫn gọi được model. Khóa chung vẫn ngắt toàn bộ. */
+    public function test_circuit_breaker_is_per_feature(): void
+    {
+        $this->app->instance(StructuredLlm::class, new FakeLlm([], 'error'));
+        config(['ai.cooldown.fail_threshold' => 3]);
+        $gw = app(\App\Services\Ai\AiGateway::class);
+        for ($i = 0; $i < 3; $i++) {
+            $this->assertFalse($gw->json('copilot', $this->uid, 's', 'u', ['type' => 'object'])['ok']);
+        }
+        $this->assertSame('circuit', $gw->blocked('copilot', $this->uid));
+        $this->assertNull($gw->blocked('brief', $this->uid), 'lỗi của Copilot không khóa Brief');
+        $this->assertNull($gw->blocked('explain', $this->uid));
+        $this->assertArrayHasKey('copilot', \App\Services\Ai\AiGateway::openCircuits());
+
+        Cache::put('ai:cb:until', time() + 60, 60);   // khóa chung (quản trị / kiểm thử)
+        $this->assertSame('circuit', $gw->blocked('brief', $this->uid));
+        \App\Services\Ai\AiGateway::resetCircuits();
+        $this->assertNull($gw->blocked('copilot', $this->uid));
+    }
+
+    /** Còn 1 lượt mà 2 request cùng lúc: chỉ 1 được gọi model (đặt trước lượt nguyên tử, không chỉ đếm tbl_ai_runs). */
+    public function test_quota_is_reserved_atomically_for_concurrent_calls(): void
+    {
+        config(['ai.limits.daily_per_user' => 1]);
+        $gw = app(\App\Services\Ai\AiGateway::class);
+        $uid = $this->uid;
+        $inner = null;
+        $calls = 0;
+        // model giả: trong lúc request 1 ĐANG chờ model, request 2 của cùng người dùng tới (mô phỏng đồng thời)
+        $llm = new class ($gw, $uid, $inner, $calls) implements StructuredLlm {
+            public function __construct(private $gw, private int $uid, private &$inner, private &$calls) {}
+            public function name(): string
+            {
+                return 'fake';
+            }
+            public function model(): string
+            {
+                return 'fake';
+            }
+            public function available(): bool
+            {
+                return true;
+            }
+            public function generate(string $system, string $user): array
+            {
+                return [];
+            }
+            public function generateJson(string $system, string $user, array $schema, array $opt = []): array
+            {
+                $this->calls++;
+                if ($this->inner === null) {
+                    $this->inner = $this->gw->json('brief', $this->uid, 's', 'u2', $schema);
+                }
+
+                return ['data' => ['ok' => true], 'input_tokens' => 1, 'output_tokens' => 1];
+            }
+        };
+        $this->app->instance(StructuredLlm::class, $llm);
+        $first = $gw->json('brief', $uid, 's', 'u1', ['type' => 'object']);
+        $this->assertTrue($first['ok']);
+        $this->assertSame('quota', $inner['reason'], 'request thứ hai phải hết lượt dù lượt đầu chưa kịp ghi log');
+        $this->assertSame(1, $calls, 'chỉ một lần gọi model');
+        $this->assertSame(0, $gw->remaining($uid), 'model đã trả lời: lượt bị trừ ngay trong bộ đếm, không chờ nhật ký');
+        $this->assertSame(['used' => 1, 'reserved' => 0], (array) DB::table('tbl_ai_quota')->where('userId', $uid)->first(['used', 'reserved']));
+    }
+
+    /** Gọi lỗi / quá thời gian: lượt đặt trước được trả lại. Ghi nhật ký lỗi cũng không làm "mất" việc trừ lượt. */
+    public function test_failed_call_refunds_the_reserved_quota_and_counter_does_not_depend_on_log(): void
+    {
+        config(['ai.limits.daily_per_user' => 2]);
+        $gw = app(\App\Services\Ai\AiGateway::class);
+        $this->app->instance(StructuredLlm::class, new FakeLlm([], 'error'));
+        $this->assertFalse($gw->json('brief', $this->uid, 's', 'u', ['type' => 'object'])['ok']);
+        $this->assertSame(2, $gw->remaining($this->uid), 'lỗi: trả lại lượt');
+
+        \App\Services\Ai\AiGateway::resetCircuits();
+        $this->app->instance(StructuredLlm::class, new FakeLlm(['brief' => ['ok' => true]]));
+        $this->assertTrue($gw->json('brief', $this->uid, 's', 'u', ['type' => 'object'])['ok']);
+        $this->assertTrue($gw->json('brief', $this->uid, 's', 'u', ['type' => 'object'])['ok']);
+        // không ghi tbl_ai_runs nào (giả lập ghi nhật ký lỗi) mà vẫn hết lượt
+        $this->assertSame(0, DB::table('tbl_ai_runs')->where('userId', $this->uid)->count());
+        $this->assertSame('quota', $gw->json('brief', $this->uid, 's', 'u', ['type' => 'object'])['reason']);
+    }
 }

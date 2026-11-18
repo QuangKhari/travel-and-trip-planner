@@ -173,14 +173,22 @@ class BookingManagementController extends Controller
         if ($r['duplicate']) {
             return redirect()->route('admin.booking-detail', ['id' => $r['bookingId']])->with('success', 'Đơn này đã được tạo trước đó.');
         }
-        AuditLog::record('booking.create', 'booking', $r['bookingId'], 'Đặt tour hộ khách, đơn ' . $r['bookingCode'] . ($paidNow ? ' (đã thu tiền tại quầy)' : ''), null,
-            ['tourId' => (int) $d['tourId'], 'availabilityId' => $r['availabilityId'] ?? null, 'guests' => $d['numAdults'] + $d['numChildren'], 'total' => $r['totalPrice']]);
+        AuditLog::record(
+            'booking.create',
+            'booking',
+            $r['bookingId'],
+            'Đặt tour hộ khách, đơn ' . $r['bookingCode'] . ($paidNow ? ' (đã thu tiền tại quầy)' : ''),
+            null,
+            ['tourId' => (int) $d['tourId'], 'availabilityId' => $r['availabilityId'] ?? null, 'guests' => $d['numAdults'] + $d['numChildren'], 'total' => $r['totalPrice']],
+        );
 
         if ($paidNow) {
             DB::transaction(function () use ($r, $bookings) {
                 $b = DB::table('tbl_booking')->where('bookingId', $r['bookingId'])->lockForUpdate()->first();
                 DB::table('tbl_checkout')->where('bookingId', $r['bookingId'])->update(['paymentStatus' => 'y', 'paymentDate' => now()]);
                 $bookings->confirmLocked($b);
+                $c = DB::table('tbl_checkout')->where('bookingId', $r['bookingId'])->first(['amount', 'paymentMethod']);
+                app(\App\Services\Payments\DoubleEntryLedger::class)->capture((int) $r['bookingId'], 'office', (int) round((float) $c->amount), 'office');
             });
             AuditLog::record('booking.paid', 'booking', $r['bookingId'], 'Thu tiền tại quầy khi đặt hộ, đơn ' . $r['bookingCode'], ['paymentStatus' => 'n'], ['paymentStatus' => 'y', 'bookingStatus' => 'y']);
             $this->notifyCustomer($r['bookingId'], 'paid');
@@ -321,12 +329,24 @@ class BookingManagementController extends Controller
 
         if ($result['ok'] && empty($result['noop'])) {
             $b = $result['booking'];
-            AuditLog::record('booking.cancel', 'booking', $id, 'Hủy đơn ' . $b->bookingCode . ($reason ? ' – ' . $reason : ''),
-                ['bookingStatus' => $b->bookingStatus], ['bookingStatus' => 'c', 'cancelReason' => 'admin', 'reason' => $reason]);
+            AuditLog::record(
+                'booking.cancel',
+                'booking',
+                $id,
+                'Hủy đơn ' . $b->bookingCode . ($reason ? ' – ' . $reason : ''),
+                ['bookingStatus' => $b->bookingStatus],
+                ['bookingStatus' => 'c', 'cancelReason' => 'admin', 'reason' => $reason],
+            );
             if ($result['refund']) {
                 $r = $result['refund'];
-                AuditLog::record('refund.create', 'refund', $r->refundId, 'Yêu cầu hoàn ' . number_format((float) $r->amount, 0, ',', '.') . ' đ cho đơn ' . $b->bookingCode,
-                    null, ['percent' => $r->percent, 'amount' => (int) $r->amount, 'status' => $r->status]);
+                AuditLog::record(
+                    'refund.create',
+                    'refund',
+                    $r->refundId,
+                    'Yêu cầu hoàn ' . number_format((float) $r->amount, 0, ',', '.') . ' đ cho đơn ' . $b->bookingCode,
+                    null,
+                    ['percent' => $r->percent, 'amount' => (int) $r->amount, 'status' => $r->status],
+                );
             }
             $this->notifyCustomer($id, 'cancelled');
         }
@@ -382,6 +402,12 @@ class BookingManagementController extends Controller
             // Khách đã trả tiền thì đơn không còn bị tự hủy vì quá hạn giữ chỗ
             DB::table('tbl_booking')->where('bookingId', $id)->update(['holdExpiresAt' => null]);
             DB::table('tbl_checkout')->where('bookingId', $id)->update(['paymentStatus' => 'y', 'paymentDate' => now()]);
+            app(\App\Services\Payments\DoubleEntryLedger::class)->capture(
+                $id,
+                in_array($checkout->paymentMethod, ['vnpay', 'momo', 'qr'], true) ? $checkout->paymentMethod : 'office',
+                (int) round((float) $checkout->amount),
+                'admin',
+            );
 
             return ['ok' => true, 'message' => 'Đã ghi nhận thanh toán cho đơn ' . $booking->bookingCode . '.', 'code' => $booking->bookingCode];
         });

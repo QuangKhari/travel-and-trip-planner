@@ -7,7 +7,7 @@
  */
 (function (root) {
     "use strict";
-    var ROAD_FACTOR = 1.3, SPEED_KMH = 40, MIN_LEG_KM = 0.5;
+    var ROAD_FACTOR = 1.3, SPEED_KMH = 40, MIN_LEG_KM = 0.5, SAME_AREA_MIN = 5, WALK_KMH = 4.5;
 
     /** Nhận tham số tuyến từ máy chủ: {factor, speedKmh, minLegKm}. */
     function configure(r) {
@@ -15,7 +15,8 @@
         if (r.factor > 0) ROAD_FACTOR = +r.factor;
         if (r.speedKmh > 0) SPEED_KMH = +r.speedKmh;
         if (r.minLegKm >= 0) MIN_LEG_KM = +r.minLegKm;
-        api.ROAD_FACTOR = ROAD_FACTOR; api.SPEED_KMH = SPEED_KMH; api.MIN_LEG_KM = MIN_LEG_KM;
+        if (r.sameAreaMin >= 0) SAME_AREA_MIN = +r.sameAreaMin;
+        api.ROAD_FACTOR = ROAD_FACTOR; api.SPEED_KMH = SPEED_KMH; api.MIN_LEG_KM = MIN_LEG_KM; api.SAME_AREA_MIN = SAME_AREA_MIN;
         return api;
     }
 
@@ -33,12 +34,25 @@
         return isFinite(a) && isFinite(b) && a >= -90 && a <= 90 && b >= -180 && b <= 180 && !(Math.abs(a) < 1e-6 && Math.abs(b) < 1e-6);
     }
 
-    /** Các đoạn giữa hai điểm có tọa độ liên tiếp; đoạn dưới MIN_LEG_KM (cùng một khu) bị bỏ như phía máy chủ. */
+    /** Phút đi giữa hai điểm cùng khu (cùng RouteService::sameAreaMinutes): tối thiểu SAME_AREA_MIN, xa hơn thì theo tốc độ đi bộ. */
+    function sameAreaMin(s) {
+        if (!(SAME_AREA_MIN > 0)) return 0;
+        return Math.max(SAME_AREA_MIN, Math.ceil(s / WALK_KMH * 60));
+    }
+
+    /**
+     * Các đoạn giữa hai điểm có tọa độ liên tiếp. Đoạn dưới MIN_LEG_KM (cùng một khu): không tính đường bộ nhưng vẫn
+     * cộng phút đi bộ tối thiểu (sameArea: true), như DaySchedule phía máy chủ.
+     */
     function legs(items) {
         var pts = items.filter(hasPos), out = [], km = 0, min = 0;
         for (var i = 1; i < pts.length; i++) {
             var s = hav(pts[i - 1], pts[i]);
-            if (s < MIN_LEG_KM) continue;
+            if (s < MIN_LEG_KM) {
+                var wm = sameAreaMin(s);
+                if (wm > 0) { out.push({ from: pts[i - 1], to: pts[i], km: 0, kmExact: s, min: wm, sameArea: true }); min += wm; }
+                continue;
+            }
             var road = s * ROAD_FACTOR, m = Math.round(road / SPEED_KMH * 60);
             out.push({ from: pts[i - 1], to: pts[i], km: Math.round(road), kmExact: road, min: m });
             km += road;

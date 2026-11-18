@@ -52,10 +52,39 @@ class TripRevisions
             'tripId' => $tripId, 'revisionNo' => (int) $trip->rev, 'baseRevision' => $baseRev, 'actorId' => $actorId, 'changeType' => $type,
             'itemCount' => count($items), 'payload' => json_encode(['trip' => $snap, 'items' => $items], JSON_UNESCAPED_UNICODE), 'createdAt' => now(),
         ]);
+        try {
+            \App\Services\Ai\Copilot\CopilotService::detectUndo($tripId, self::fingerprint($items), (int) $trip->rev);
+        } catch (\Throwable $e) {
+            report($e);
+        }
         $cut = DB::table('tbl_trip_revisions')->where('tripId', $tripId)->orderByDesc('revisionNo')->skip(self::keep())->value('revisionNo');
         if ($cut !== null) {
             DB::table('tbl_trip_revisions')->where('tripId', $tripId)->where('revisionNo', '<=', $cut)->delete();
         }
+    }
+
+    /**
+     * Dấu vân tay của lịch: thứ tự mục theo (ngày, thứ tự) với loại, tham chiếu / tên, ngày, giờ bắt đầu. Hai lịch có cùng dấu vân tay
+     * là cùng một kế hoạch (bỏ qua ghi chú, chi phí, trạng thái đã ghé).
+     */
+    public static function fingerprint(array $items): string
+    {
+        $rows = array_map(fn($r) => (array) $r, $items);
+        usort($rows, fn($a, $b) => [($a['dayNo'] ?? 999), ($a['orderNo'] ?? 0)] <=> [($b['dayNo'] ?? 999), ($b['orderNo'] ?? 0)]);
+
+        return sha1(json_encode(array_map(fn($r) => [$r['refType'] ?? null, isset($r['refId']) && $r['refId'] !== null ? (int) $r['refId'] : ($r['label'] ?? null),
+            isset($r['dayNo']) && $r['dayNo'] !== null ? (int) $r['dayNo'] : null, isset($r['startMin']) && $r['startMin'] !== null ? (int) $r['startMin'] : null], $rows)));
+    }
+
+    /** Dấu vân tay của lịch ở phiên bản $rev (null khi không còn bản ghi). */
+    public static function fingerprintAt(int $tripId, int $rev): ?string
+    {
+        if (!self::ready()) {
+            return null;
+        }
+        $p = DB::table('tbl_trip_revisions')->where(['tripId' => $tripId, 'revisionNo' => $rev])->value('payload');
+
+        return $p ? self::fingerprint((array) (json_decode((string) $p, true)['items'] ?? [])) : null;
     }
 
     /** Chụp lại trạng thái hiện có trong DB (cho các thao tác sửa mục ngoài luồng lưu chính, ví dụ thêm chuyến bay / khách sạn). */

@@ -42,6 +42,29 @@ class PlannerResolveAndHoursTest extends TestCase
         return $this->withSession($this->s)->postJson("/len-ke-hoach/$id/luu", ['title' => 'Hà Nội', 'days' => 2, 'groupSize' => 2, 'startDate' => $start, 'items' => $items]);
     }
 
+    /** Qua nửa đêm: 18:00–02:00 tách sang [00:00, 02:00) của hôm sau; mục 23:30–00:45 không bị báo "quá giờ đóng". */
+    public function test_overnight_hours_spill_into_next_day(): void
+    {
+        $h = OpeningHours::parseOsm('Mo-Su 18:00-02:00');
+        $this->assertSame([[0, 120], [1080, 1440]], $h['2']);                // thứ Ba: phần 00:00–02:00 từ đêm thứ Hai
+        $this->assertSame([[0, 120], [1080, 1440]], $h['1']);                // thứ Hai: phần sau nửa đêm của Chủ nhật (vòng tuần)
+        $this->assertNull(OpeningHours::check($h, 2, 1430, 1440));           // 23:50 vẫn mở
+        $this->assertNull(OpeningHours::check($h, 3, 60, 100));              // 01:00 hôm sau vẫn mở
+        $this->assertNull(OpeningHours::check($h, 2, 1410, 1485));           // 23:30–00:45: kéo qua 24:00 mà vẫn trong giờ
+        $this->assertSame('late', OpeningHours::check($h, 2, 1410, 1590));   // 23:30–02:30: quá 02:00
+        $this->assertSame('early', OpeningHours::check($h, 2, 600, 660));    // 10:00 chưa mở
+        $this->assertSame(60, OpeningHours::fit($h, 3, 60, 30));
+
+        // ngày hôm sau CHƯA BIẾT giờ: không tự tạo giờ cho ngày đó
+        $fr = OpeningHours::parseOsm('Fr 18:00-02:00');
+        $this->assertArrayNotHasKey('6', $fr);
+        // hôm sau đóng cửa cả ngày ("Sa off") nhưng tối thứ Sáu vẫn mở tới 02:00
+        $fs = OpeningHours::parseOsm('Fr 18:00-02:00; Sa off');
+        $this->assertSame([[0, 120]], $fs['6']);
+        // quy tắc sau ghi đè ngày đó thì phần tràn của quy tắc cũ cũng bỏ
+        $this->assertSame([[480, 1020]], OpeningHours::parseOsm('Mo 18:00-02:00; Mo 08:00-17:00; Tu 08:00-17:00')['2']);
+    }
+
     public function test_parse_osm_opening_hours(): void
     {
         $h = OpeningHours::parseOsm('Tu-Su 08:00-11:30,13:30-17:00; Mo off');

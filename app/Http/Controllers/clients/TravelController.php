@@ -84,9 +84,22 @@ class TravelController extends Controller
         }
         $dep = Carbon::parse($o['departAt']);
         $title = $o['flightNo'] . ' ' . $o['from'] . '→' . $o['to'] . ' ' . $dep->format('H:i');
-        $this->attach($trip, 'flight', $res['provider'], (bool) $o['simulated'], $title, $o, $dep, (int) $o['price'],
-            'transport', 'Bay ' . $title, $o['carrier'] . ' · ' . TravelApi::airportName($o['from']) . ' → ' . TravelApi::airportName($o['to'])
-            . ($o['simulated'] ? ' · ' . TravelApi::SIM_LABEL : ''), (int) $dep->format('H') * 60 + (int) $dep->format('i'), (int) $o['durationMin']);
+        $this->attach(
+            $trip,
+            'flight',
+            $res['provider'],
+            (bool) $o['simulated'],
+            $title,
+            $o,
+            $dep,
+            (int) $o['price'],
+            'transport',
+            'Bay ' . $title,
+            $o['carrier'] . ' · ' . TravelApi::airportName($o['from']) . ' → ' . TravelApi::airportName($o['to'])
+            . ($o['simulated'] ? ' · ' . TravelApi::SIM_LABEL : ''),
+            (int) $dep->format('H') * 60 + (int) $dep->format('i'),
+            (int) $o['durationMin'],
+        );
 
         return response()->json(['ok' => true, 'message' => 'Đã thêm chuyến bay ' . $o['flightNo'] . ' vào lịch trình.']);
     }
@@ -134,9 +147,24 @@ class TravelController extends Controller
         }
         $in = Carbon::parse($q['checkIn'])->setTime(14, 0);
         $title = $h['name'] . ' (' . $q['nights'] . ' đêm)';
-        $this->attach($trip, 'hotel', $res['provider'], (bool) $h['simulated'], $title, $h + ['nights' => (int) $q['nights']], $in, (int) $h['price'],
-            'note', 'Nhận phòng ' . $title, $h['stars'] . ' sao · giá ước tính' . ($h['simulated'] ? ' · ' . TravelApi::SIM_LABEL : ''), 14 * 60, 30, $h['lat'], $h['lng'],
-            TripLogistics::ready() && isset($h['lat'], $h['lng']) ? ['latitude' => (float) $h['lat'], 'longitude' => (float) $h['lng']] : []);
+        $this->attach(
+            $trip,
+            'hotel',
+            $res['provider'],
+            (bool) $h['simulated'],
+            $title,
+            $h + ['nights' => (int) $q['nights']],
+            $in,
+            (int) $h['price'],
+            'note',
+            'Nhận phòng ' . $title,
+            $h['stars'] . ' sao · giá ước tính' . ($h['simulated'] ? ' · ' . TravelApi::SIM_LABEL : ''),
+            14 * 60,
+            30,
+            $h['lat'],
+            $h['lng'],
+            TripLogistics::ready() && isset($h['lat'], $h['lng']) ? ['latitude' => (float) $h['lat'], 'longitude' => (float) $h['lng']] : [],
+        );
 
         return response()->json(['ok' => true, 'message' => 'Đã thêm ' . $h['name'] . ' vào lịch trình.']);
     }
@@ -165,9 +193,24 @@ class TravelController extends Controller
     }
 
     /** Ghi tbl_trip_external và một mục lịch trình có chi phí (ngày tính theo ngày đi của chuyến; ngoài khoảng thì để "chưa xếp ngày"). */
-    private function attach(object $trip, string $kind, string $provider, bool $sim, string $title, array $payload, Carbon $at, int $price,
-        string $itemType, string $label, string $note, int $startMin, int $duration, ?float $lat = null, ?float $lng = null, array $extra = []): int
-    {
+    private function attach(
+        object $trip,
+        string $kind,
+        string $provider,
+        bool $sim,
+        string $title,
+        array $payload,
+        Carbon $at,
+        int $price,
+        string $itemType,
+        string $label,
+        string $note,
+        int $startMin,
+        int $duration,
+        ?float $lat = null,
+        ?float $lng = null,
+        array $extra = [],
+    ): int {
         return DB::transaction(function () use ($trip, $kind, $provider, $sim, $title, $payload, $at, $price, $itemType, $label, $note, $startMin, $duration, $lat, $lng, $extra) {
             $xid = (int) DB::table('tbl_trip_external')->insertGetId([
                 'tripId' => $trip->tripId, 'kind' => $kind, 'provider' => $provider, 'simulated' => $sim, 'title' => mb_substr($title, 0, 160),
@@ -288,11 +331,20 @@ class TravelController extends Controller
             if ($v['status'] === 'booked' && $from !== 'booked') {
                 $at = Carbon::parse($x2->startAt);
                 $isMove = in_array($x2->kind, BookingPlan::TRANSPORT, true);
-                $this->placeItem($trip, $isMove ? 'transport' : 'note', $label, 'Đã đặt ngoài Travela', $at, (int) $x2->price,
-                    $x2->kind === 'hotel' ? 14 * 60 : (int) $at->format('H') * 60 + (int) $at->format('i'), $x2->kind === 'hotel' ? 30 : 60,
-                    $x2->kind === 'hotel' && isset($x2->latitude) ? (float) $x2->latitude : null, $x2->kind === 'hotel' && isset($x2->longitude) ? (float) $x2->longitude : null);
+                $this->placeItem(
+                    $trip,
+                    $isMove ? 'transport' : 'note',
+                    $label,
+                    'Đã đặt ngoài Travela',
+                    $at,
+                    (int) $x2->price,
+                    $x2->kind === 'hotel' ? 14 * 60 : (int) $at->format('H') * 60 + (int) $at->format('i'),
+                    $x2->kind === 'hotel' ? 30 : 60,
+                    $x2->kind === 'hotel' && isset($x2->latitude) ? (float) $x2->latitude : null,
+                    $x2->kind === 'hotel' && isset($x2->longitude) ? (float) $x2->longitude : null,
+                );
             } elseif ($v['status'] !== 'booked' && $from === 'booked') {
-                DB::table('tbl_trip_items')->where('tripId', $trip->tripId)->where('label', self::itemLabel($x))->limit(1)->delete();
+                DB::table('tbl_trip_items')->where('tripId', $trip->tripId)->whereIn('refType', \App\Services\Planner\TripPlanner::CUSTOM_TYPES)->where('label', self::itemLabel($x))->limit(1)->delete();
                 $this->touch($trip);
             }
         });
@@ -326,7 +378,7 @@ class TravelController extends Controller
         $set = $clear ? ['latitude' => null, 'longitude' => null, 'address' => null] : $this->locationOf($v);
         DB::transaction(function () use ($x, $set, $trip) {
             DB::table('tbl_trip_external')->where('externalId', $x->externalId)->update($set);
-            DB::table('tbl_trip_items')->where('tripId', $trip->tripId)->where('label', self::itemLabel($x))
+            DB::table('tbl_trip_items')->where('tripId', $trip->tripId)->whereIn('refType', \App\Services\Planner\TripPlanner::CUSTOM_TYPES)->where('label', self::itemLabel($x))
                 ->update(['latitude' => $set['latitude'], 'longitude' => $set['longitude'], 'source' => $set['latitude'] !== null ? 'search' : null]);
             $this->touch($trip);
         });
@@ -391,11 +443,25 @@ class TravelController extends Controller
         }
         $at = Carbon::parse($v['startAt']);
         $kindLabel = ['hotel' => 'Nhận phòng', 'flight' => 'Khởi hành', 'train' => 'Tàu', 'bus' => 'Xe', 'ticket' => 'Vé'][$v['kind']];
-        $xid = $this->attach($trip, $v['kind'], mb_substr((string) ($v['provider'] ?? 'manual'), 0, 20) ?: 'manual', false,
-            $v['title'], ['manual' => true], $at, (int) ($v['price'] ?? 0), in_array($v['kind'], BookingPlan::TRANSPORT, true) ? 'transport' : 'note', $kindLabel . ' ' . $v['title'],
+        $xid = $this->attach(
+            $trip,
+            $v['kind'],
+            mb_substr((string) ($v['provider'] ?? 'manual'), 0, 20) ?: 'manual',
+            false,
+            $v['title'],
+            ['manual' => true],
+            $at,
+            (int) ($v['price'] ?? 0),
+            in_array($v['kind'], BookingPlan::TRANSPORT, true) ? 'transport' : 'note',
+            $kindLabel . ' ' . $v['title'],
             // mã xác nhận chỉ nằm ở tbl_trip_external: ghi chú của mục có thể hiện ở bản chia sẻ / Cộng đồng
-            'Đã đặt ngoài Travela', (int) $at->format('H') * 60 + (int) $at->format('i'),
-            $v['kind'] === 'hotel' ? 30 : 60, $v['kind'] === 'hotel' && isset($v['lat']) ? (float) $v['lat'] : null, $v['kind'] === 'hotel' && isset($v['lng']) ? (float) $v['lng'] : null, $extra);
+            'Đã đặt ngoài Travela',
+            (int) $at->format('H') * 60 + (int) $at->format('i'),
+            $v['kind'] === 'hotel' ? 30 : 60,
+            $v['kind'] === 'hotel' && isset($v['lat']) ? (float) $v['lat'] : null,
+            $v['kind'] === 'hotel' && isset($v['lng']) ? (float) $v['lng'] : null,
+            $extra,
+        );
 
         return response()->json(['ok' => true, 'externalId' => $xid, 'message' => 'Đã lưu xác nhận "' . $v['title'] . '" vào chuyến đi.']);
     }

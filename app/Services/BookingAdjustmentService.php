@@ -33,7 +33,7 @@ class BookingAdjustmentService
     /** Khách có được điều chỉnh đơn này không (để hiện form). @return array{can:bool, why:string} */
     public function eligibility(object $booking, bool $admin = false): array
     {
-        $no = fn (string $m) => ['can' => false, 'why' => $m];
+        $no = fn(string $m) => ['can' => false, 'why' => $m];
         if (!self::ready()) {
             return $no('Tính năng chưa được kích hoạt.');
         }
@@ -61,7 +61,7 @@ class BookingAdjustmentService
      */
     public function adjust(int $bookingId, int $adults, int $children, string $by, ?int $byId, ?int $userId = null, ?string $note = null, bool $dryRun = false): array
     {
-        $fail = fn (string $m) => ['ok' => false, 'message' => $m];
+        $fail = fn(string $m) => ['ok' => false, 'message' => $m];
         if (!self::ready()) {
             return $fail('Tính năng chưa được kích hoạt.');
         }
@@ -182,7 +182,7 @@ class BookingAdjustmentService
             ]);
             if ($d < 0 && WaitlistService::ready()) {   // trả chỗ: mời người đang chờ
                 $av = (int) $a->availabilityId;
-                DB::afterCommit(fn () => app(WaitlistService::class)->offerNext($av));
+                DB::afterCommit(fn() => app(WaitlistService::class)->offerNext($av));
             }
 
             return $result + ['adjustId' => $id, 'bookingCode' => $b->bookingCode];
@@ -228,6 +228,12 @@ class BookingAdjustmentService
             if ($to === 'collected') {
                 DB::table('tbl_checkout')->where('bookingId', $a->bookingId)->increment('amount', (int) $a->settleAmount);
             }
+            // sổ cái hai bút toán (thu thêm / hoàn phần dư); hoàn qua cổng thì kênh là cổng của đơn
+            $ledger = app(\App\Services\Payments\DoubleEntryLedger::class);
+            $channel = str_starts_with($method, 'Hoàn qua ') ? (string) DB::table('tbl_checkout')->where('bookingId', $a->bookingId)->value('provider') : $method;
+            $to === 'collected'
+                ? $ledger->collect((int) $a->bookingId, $adjustId, $channel, (int) $a->settleAmount)
+                : $ledger->adjustRefund((int) $a->bookingId, $adjustId, $channel, (int) $a->settleAmount);
 
             return ['ok' => true, 'message' => $to === 'collected' ? 'Đã ghi nhận thu thêm.' : 'Đã ghi nhận hoàn tiền.', 'bookingId' => (int) $a->bookingId, 'amount' => (int) $a->settleAmount];
         });

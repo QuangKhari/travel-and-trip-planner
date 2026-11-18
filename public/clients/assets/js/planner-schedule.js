@@ -61,7 +61,14 @@
             if (!hours || dow == null || !Object.prototype.hasOwnProperty.call(hours, String(dow))) return null;
             var r = hours[String(dow)], i;
             if (!r.length) return "closed";
-            for (i = 0; i < r.length; i++) if (start >= r[i][0] && end <= r[i][1]) return null;
+            for (i = 0; i < r.length; i++) {
+                if (start >= r[i][0] && end <= r[i][1]) return null;
+                // kéo qua 24:00: phần sau nửa đêm nằm trong khoảng [00:00, x) của hôm sau (cùng hợp đồng với OpeningHours::check)
+                if (end > 1440 && r[i][1] === 1440 && start >= r[i][0]) {
+                    var nx = hours[String(dow % 7 + 1)] || [];
+                    for (var j = 0; j < nx.length; j++) if (nx[j][0] === 0 && end - 1440 <= nx[j][1]) return null;
+                }
+            }
             for (i = 0; i < r.length; i++) { if (start < r[i][0]) return "early"; if (start < r[i][1]) return "late"; }
             return "late";
         }
@@ -99,7 +106,7 @@
             if (g.legs.some(function (l) { return l.from.legMode && l.from.legMode !== defMode && LM[l.from.legMode]; })) {
                 var sum = 0;
                 g.legs = g.legs.map(function (l) {
-                    var m = l.from.legMode, x = m && m !== defMode && LM[m] && l.kmExact > 0 ? LM[m] : null;
+                    var m = l.from.legMode, x = m && m !== defMode && LM[m] && l.kmExact > 0 && !l.sameArea ? LM[m] : null;
                     var c = x ? { from: l.from, to: l.to, km: l.km, kmExact: l.kmExact, min: Math.round(l.kmExact / Math.max(0.1, x.speedKmh) * 60) + (x.waitMin || 0), mode: m } : l;
                     sum += c.min;
                     return c;

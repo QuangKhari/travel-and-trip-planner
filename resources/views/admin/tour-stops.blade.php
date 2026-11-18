@@ -8,8 +8,13 @@
         <div class="ad-card"><div class="ad-empty"><i class="fa fa-database"></i><b>Chưa chạy migration</b></div></div>
     @else
         @if ($errors->any())<div class="ad-alert ad-alert--bad">{{ $errors->first() }}</div>@endif
-        @if ($issues)
-            <div class="ad-alert" style="background:#fff7e6;border:1px solid #f3d19e;padding:10px 14px;border-radius:10px;margin-bottom:12px"><b>Nên kiểm tra:</b><ul style="margin:4px 0 0">@foreach ($issues as $i)<li>{{ $i }}</li>@endforeach</ul></div>
+        @php $rd = $readiness ?? ['status' => 'draft', 'blockers' => [], 'warnings' => $issues]; $stLabel = ['draft' => ['Nháp — còn lỗi chặn', '#b42318'], 'ready' => ['Sẵn sàng đăng', '#027a48'], 'published' => ['Đang bán', '#175cd3']][$rd['status']]; @endphp
+        <p style="margin:0 0 10px">Trạng thái vận hành: <b style="color:{{ $stLabel[1] }}">{{ $stLabel[0] }}</b>@if ($rd['status'] === 'published' && $rd['blockers']) <b style="color:#b42318">· tour đang bán nhưng lịch theo giờ có lỗi chặn</b>@endif</p>
+        @if ($rd['blockers'])
+            <div class="ad-alert" style="background:#fef3f2;border:1px solid #fda29b;padding:10px 14px;border-radius:10px;margin-bottom:12px"><b>Phải sửa trước khi đăng / hiện tour:</b><ul style="margin:4px 0 0">@foreach ($rd['blockers'] as $i)<li>{{ $i }}</li>@endforeach</ul></div>
+        @endif
+        @if ($rd['warnings'])
+            <div class="ad-alert" style="background:#fff7e6;border:1px solid #f3d19e;padding:10px 14px;border-radius:10px;margin-bottom:12px"><b>Nên kiểm tra:</b><ul style="margin:4px 0 0">@foreach ($rd['warnings'] as $i)<li>{{ $i }}</li>@endforeach</ul></div>
         @endif
         <form method="POST" action="{{ route('admin.tour-stops.save', $tour->tourId) }}" class="ad-card" style="padding:12px 16px">@csrf
             <table class="ad-table" id="tsTable"><thead><tr><th style="width:70px">Ngày</th><th style="width:100px">Từ</th><th style="width:100px">Đến</th><th style="width:150px">Loại</th><th style="min-width:240px">Tên điểm dừng</th><th style="min-width:180px">Ghi chú</th><th style="width:110px">Mã địa điểm</th><th></th></tr></thead>

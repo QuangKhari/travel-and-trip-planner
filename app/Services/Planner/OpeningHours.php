@@ -22,8 +22,9 @@ use Illuminate\Support\Facades\Schema;
  * Phạm vi hỗ trợ (giới hạn có chủ đích của phiên bản đồ án):
  *   A. một khoảng "08:00-17:00"     B. nhiều khoảng (nghỉ trưa) "08:00-12:00,13:30-18:00"
  *   C. "24/7"                       D. đóng cả ngày "Mo off"
- *   E. qua nửa đêm "18:00-02:00": CHƯA hỗ trợ — chỉ tính phần trong ngày (18:00-24:00), phần sau 00:00 bị bỏ.
- *   Chưa xử lý ngày lễ (PH), giờ theo mùa, đóng cửa tạm thời.
+ *   E. qua nửa đêm "18:00-02:00": tách thành [18:00, 24:00) của ngày đó + [00:00, 02:00) của NGÀY HÔM SAU
+ *      (chỉ khi ngày hôm sau đã có giờ; ngày chưa biết giờ vẫn là "chưa biết"). Mục kéo qua 24:00 được kiểm cả hai phần.
+ *   Ngày lễ (PH, khóa "8"), giờ theo mùa, đóng cửa tạm thời: theo quy tắc tbl_hours_rules (effective(), rulesFor()).
  */
 final class OpeningHours
 {
@@ -181,6 +182,7 @@ final class OpeningHours
             return array_fill_keys(['1', '2', '3', '4', '5', '6', '7'], [[0, 1440]]);
         }
         $out = [];
+        $spill = [];   // phần sau 00:00 của khoảng qua đêm: [thứ của ngày hôm sau => [[0, đóng], ...]]
         foreach (preg_split('/\s*;\s*/', $s) as $rule) {
             if (!preg_match('/^((?:[A-Za-z]{2}(?:-[A-Za-z]{2})?)(?:\s*,\s*[A-Za-z]{2}(?:-[A-Za-z]{2})?)*)?\s*(.*)$/', $rule, $m)) {
                 continue;
@@ -211,6 +213,7 @@ final class OpeningHours
             }
             $times = strtolower(trim($m[2]));
             $ranges = [];
+            $after = 0;   // phút mở tiếp sau 00:00 (khoảng qua đêm)
             if ($times !== 'off' && $times !== 'closed') {
                 if (!preg_match_all('/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/', $times, $mm, PREG_SET_ORDER)) {
                     continue;
@@ -218,7 +221,8 @@ final class OpeningHours
                 foreach ($mm as $t) {
                     $o = (int) $t[1] * 60 + (int) $t[2];
                     $c = (int) $t[3] * 60 + (int) $t[4];
-                    if ($c <= $o) {
+                    if ($c <= $o) {   // qua nửa đêm (hoặc 24:00 viết thành 00:00)
+                        $after = max($after, min($c, 1440));
                         $c = 1440;
                     }
                     $ranges[] = [$o, min(1440, $c)];
@@ -226,9 +230,37 @@ final class OpeningHours
             }
             foreach ($days as $d) {
                 $out[(string) $d] = $ranges;   // quy tắc sau ghi đè quy tắc trước (như OSM)
+                unset($spill[$d % 7 + 1]);
+                if ($after > 0 && $d <= 7) {
+                    $spill[$d % 7 + 1] = $after;
+                }
             }
         }
+        foreach ($spill as $next => $until) {
+            $k = (string) $next;
+            if (!array_key_exists($k, $out)) {
+                continue;   // ngày hôm sau chưa biết giờ: giữ "chưa biết", không tự suy ra lịch cả ngày
+            }
+            $out[$k] = self::merge(array_merge([[0, $until]], $out[$k]));
+        }
         ksort($out);
+
+        return $out;
+    }
+
+    /** Gộp các khoảng chồng / nối nhau, sắp theo giờ mở. @param list<array{0:int,1:int}> $r */
+    private static function merge(array $r): array
+    {
+        usort($r, fn($a, $b) => $a[0] <=> $b[0]);
+        $out = [];
+        foreach ($r as [$o, $c]) {
+            $n = count($out);
+            if ($n && $o <= $out[$n - 1][1]) {
+                $out[$n - 1][1] = max($out[$n - 1][1], $c);
+            } else {
+                $out[] = [$o, $c];
+            }
+        }
 
         return $out;
     }
@@ -279,6 +311,15 @@ final class OpeningHours
         foreach ($ranges as [$o, $c]) {
             if ($start >= $o && $end <= $c) {
                 return null;
+            }
+            // kéo qua 24:00 (vd 23:30–00:45 ở quán mở 18:00–02:00): phần sau nửa đêm phải nằm trong khoảng [00:00, x) của hôm sau
+            if ($end > 1440 && $c === 1440 && $start >= $o) {
+                $next = $hours[(string) ($dow % 7 + 1)] ?? null;
+                foreach ((array) $next as [$o2, $c2]) {
+                    if ($o2 === 0 && $end - 1440 <= $c2) {
+                        return null;
+                    }
+                }
             }
         }
         foreach ($ranges as [$o, $c]) {

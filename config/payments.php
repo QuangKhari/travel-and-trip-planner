@@ -29,6 +29,8 @@ return [
         // captureWallet: quét QR / mở app MoMo ; payWithATM: thẻ ATM nội địa (thẻ test của sandbox) ; payWithMethod: trang chọn phương thức
         'request_type' => env('MOMO_REQUEST_TYPE', 'captureWallet'),
         'hold_minutes' => (int) env('MOMO_HOLD_MINUTES', 15),
+        // Gửi orderExpireTime (phút) = thời gian giữ chỗ còn lại, để khách không trả được sau khi đơn hết hạn. Mặc định tắt: bật sau khi thử ở sandbox.
+        'send_expire' => (bool) env('MOMO_SEND_EXPIRE', false),
     ],
 
     // VNPay 2.1.0: khóa sandbox đăng ký tại sandbox.vnpayment.vn/devreg. URL IPN khai báo trong trang quản trị merchant

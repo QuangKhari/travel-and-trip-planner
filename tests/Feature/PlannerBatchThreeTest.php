@@ -322,4 +322,27 @@ class PlannerBatchThreeTest extends TestCase
     {
         $this->assertSame('gọi [sđt] hoặc [email] mã [số]', \App\Console\Commands\AiEvalHarvest::scrub('gọi 0912 345 678 hoặc a.b@gmail.com mã 12345678'));
     }
+
+    /** Nhận và từ chối gửi gần như cùng lúc: chỉ MỘT quyết định có hiệu lực (cập nhật có điều kiện status = 'quoted'). */
+    public function test_quote_decision_is_compare_and_set_under_race(): void
+    {
+        $trip = DB::table('tbl_trips')->insertGetId(['userId' => $this->uid, 'title' => 'Nhóm', 'days' => 2, 'groupSize' => 4, 'kind' => 'trip', 'createdAt' => now(), 'updatedAt' => now()]);
+        $q = DB::table('tbl_tour_quotes')->insertGetId(['tripId' => $trip, 'userId' => $this->uid, 'groupSize' => 4, 'snapshot' => '{}', 'status' => 'quoted',
+            'pricePerPerson' => 1000000, 'totalPrice' => 4000000, 'validUntil' => now()->addDays(5)->toDateString(), 'createdAt' => now()], 'quoteId');
+        // giả lập request "từ chối" chen vào ngay sau khi request "nhận" đã đọc báo giá (còn 'quoted') nhưng trước khi ghi
+        $fired = false;
+        DB::listen(function ($e) use (&$fired, $q) {
+            if (!$fired && str_starts_with(strtolower($e->sql), 'select') && str_contains($e->sql, 'tbl_tour_quotes')) {
+                $fired = true;
+                DB::table('tbl_tour_quotes')->where('quoteId', $q)->update(['status' => 'declined', 'decidedAt' => now()]);
+            }
+        });
+        try {
+            app(\App\Services\TourQuotes::class)->decide($q, $this->uid, true);
+            $this->fail('Lần quyết định thứ hai phải bị từ chối');
+        } catch (\DomainException $e) {
+            $this->assertStringContainsString('đã được xử lý', $e->getMessage());
+        }
+        $this->assertSame('declined', DB::table('tbl_tour_quotes')->where('quoteId', $q)->value('status'));   // không bị ghi đè thành accepted
+    }
 }

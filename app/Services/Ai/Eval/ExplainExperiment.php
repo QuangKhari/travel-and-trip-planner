@@ -4,7 +4,6 @@ namespace App\Services\Ai\Eval;
 
 use App\Services\Ai\Explain\ExplainService;
 use App\Services\Planner\PlannerService;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -28,8 +27,7 @@ final class ExplainExperiment
             }
             $tripId = $this->planner->save($uid, $res);
             $trip = DB::table('tbl_trips')->where('tripId', $tripId)->first();
-            Cache::forget('ai:cb:until');
-            Cache::forget('ai:cb:fails');
+            \App\Services\Ai\AiGateway::resetCircuits();
             $r = $this->explain->forTrip($trip, null, true);
             $run = DB::table('tbl_ai_runs')->where('tripId', $tripId)->where('feature', 'explain')->orderByDesc('runId')->first();
             if (($run->outcome ?? '') === 'error') {

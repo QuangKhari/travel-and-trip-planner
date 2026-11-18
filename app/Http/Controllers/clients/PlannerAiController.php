@@ -157,7 +157,8 @@ class PlannerAiController extends Controller
         $dest = array_values(array_unique(array_filter(array_merge(
             [!empty($trip->destinationId) ? (int) $trip->destinationId : null],
             DB::table('tbl_trip_items as i')->join('tbl_external_places as p', fn($j) => $j->on('p.placeId', '=', 'i.refId')->where('i.refType', 'place'))
-                ->where('i.tripId', $id)->distinct()->pluck('p.destinationId')->map(fn($x) => (int) $x)->all()))));
+                ->where('i.tripId', $id)->distinct()->pluck('p.destinationId')->map(fn($x) => (int) $x)->all(),
+        ))));
         $ex = $notes->extract($v['text'], $this->uid() ?: null);
         $m = $notes->match($ex['names'], $dest);
         $planner = app(\App\Services\Planner\TripPlanner::class);
@@ -332,7 +333,9 @@ class PlannerAiController extends Controller
             return response()->json(['ok' => false, 'message' => 'Tổng số người không được vượt quá 50.'], 422);
         }
         foreach (['days', 'adults', 'children', 'budget', 'startDate', 'pace', 'interests'] as $key) {
-            if (array_key_exists($key, $adjustments)) $p[$key] = $adjustments[$key];
+            if (array_key_exists($key, $adjustments)) {
+                $p[$key] = $adjustments[$key];
+            }
         }
         if (array_key_exists('startDate', $adjustments) && $adjustments['startDate']) {
             $p['month'] = (int) date('n', strtotime($adjustments['startDate']));
@@ -417,21 +420,36 @@ class PlannerAiController extends Controller
         // Chỉ lưu ĐÚNG bản nháp người dùng vừa xem. Mã nháp hết hạn / đã dùng / yêu cầu đã đổi so với lúc xếp: KHÔNG tự xếp lịch mới rồi lưu
         // (trước đây máy chủ lặng lẽ xếp lại, chuyến được lưu có thể khác cái vừa xem). Trả 409 để trình duyệt xếp lại và cho xem trước.
         $token = self::cleanToken($request->input('draftToken'));
-        $cached = $token ? Cache::get(self::draftKey($this->uid(), $token)) : null;
-        if (!$cached || ($cached['hash'] ?? null) !== $hash) {
-            return response()->json(['ok' => false, 'expired' => true, 'reason' => $cached ? 'changed' : 'expired',
-                'message' => $cached ? 'Thông tin chuyến đã đổi so với bản nháp. Travela xếp lại để bạn xem trước khi lưu.'
-                    : 'Bản nháp đã hết hạn (giữ 30 phút). Travela xếp lại để bạn xem trước khi lưu; lịch mới có thể khác một chút.'], 409);
+        // Xác nhận chỉ một lần cho mỗi bản nháp: khóa theo mã nháp (bấm Lưu hai lần / hai tab cùng gửi không tạo hai chuyến),
+        // bản nháp chỉ bị "dùng" SAU khi lưu thành công (lưu lỗi thì người dùng vẫn bấm lại được đúng bản đã xem).
+        $doneKey = $token ? self::draftDoneKey($this->uid(), $token) : null;
+        $lock = $token ? Cache::lock('ai:draft:claim:' . $this->uid() . ':' . $token, 30) : null;
+        if ($lock && !$lock->block(10)) {
+            return response()->json(['ok' => false, 'message' => 'Bản nháp đang được lưu, bạn chờ giây lát rồi thử lại.'], 409);
         }
-        $result = $cached['result'];
-        if (empty($result['ok']) || !array_filter($result['plan']['days'], fn($d) => !empty($d['items']))) {
-            return response()->json(['ok' => false, 'message' => 'Bản nháp không còn mục nào trong lịch. Bạn thêm lại hoặc xếp lại bản nháp nhé.']);
-        }
-        Cache::forget(self::draftKey($this->uid(), $token));
         try {
-            $id = $service->save($this->uid(), $result);
-        } catch (\DomainException $e) {
-            return response()->json(['ok' => false, 'message' => $e->getMessage()]);
+            if ($doneKey && ($doneId = Cache::get($doneKey)) && DB::table('tbl_trips')->where('tripId', (int) $doneId)->exists()) {
+                return response()->json(['ok' => true, 'duplicate' => true, 'url' => route('planner.edit', ['id' => (int) $doneId])]);
+            }
+            $cached = $token ? Cache::get(self::draftKey($this->uid(), $token)) : null;
+            if (!$cached || ($cached['hash'] ?? null) !== $hash) {
+                return response()->json(['ok' => false, 'expired' => true, 'reason' => $cached ? 'changed' : 'expired',
+                    'message' => $cached ? 'Thông tin chuyến đã đổi so với bản nháp. Travela xếp lại để bạn xem trước khi lưu.'
+                        : 'Bản nháp đã hết hạn (giữ 30 phút). Travela xếp lại để bạn xem trước khi lưu; lịch mới có thể khác một chút.'], 409);
+            }
+            $result = $cached['result'];
+            if (empty($result['ok']) || !array_filter($result['plan']['days'], fn($d) => !empty($d['items']))) {
+                return response()->json(['ok' => false, 'message' => 'Bản nháp không còn mục nào trong lịch. Bạn thêm lại hoặc xếp lại bản nháp nhé.']);
+            }
+            try {
+                $id = $service->save($this->uid(), $result);
+            } catch (\DomainException $e) {
+                return response()->json(['ok' => false, 'message' => $e->getMessage()]);   // bản nháp còn nguyên để thử lại
+            }
+            Cache::put($doneKey, $id, self::DRAFT_TTL);
+            Cache::forget(self::draftKey($this->uid(), $token));
+        } finally {
+            $lock?->release();
         }
         PlannerController::recordTransfers($id, $data);
         if ($notes && \Illuminate\Support\Facades\Schema::hasColumn('tbl_trips', 'notes')) {
@@ -444,6 +462,12 @@ class PlannerAiController extends Controller
 
     /** Bản nháp giữ 30 phút trong cache theo người dùng + mã; không ghi gì vào CSDL trước khi bấm Lưu. */
     public const DRAFT_TTL = 1800;
+
+    /** Mã nháp đã được lưu thành chuyến nào (để lần bấm thứ hai trả về đúng chuyến đó). */
+    public static function draftDoneKey(int $uid, string $token): string
+    {
+        return 'ai:draft:done:' . $uid . ':' . $token;
+    }
 
     public static function draftKey(int $uid, string $token): string
     {
@@ -581,8 +605,14 @@ class PlannerAiController extends Controller
             $rows = array_map(fn($it) => ['type' => $it['type'], 'refId' => $it['refId'] ?? null, 'name' => $it['name'], 'kind' => $it['kind'] ?? null,
                 'lat' => $it['lat'] ?? null, 'lng' => $it['lng'] ?? null, 'slot' => $it['slot'] ?? null, 'durationMin' => $it['durationMin'] ?? null, 'hours' => $it['hours'] ?? null], $day['items']);
             $ctx = ['arrive' => (int) $day['day'] === 1 ? ($req['arriveMin'] ?? null) : null, 'leave' => (int) $day['day'] === (int) ($req['days'] ?? 0) ? ($req['leaveMin'] ?? null) : null];
-            $sch = new \App\Services\Planner\Health\DaySchedule((int) $day['day'], $rows, $route, null,
-                !empty($req['startDate']) ? \App\Services\Planner\OpeningHours::dowOf($req['startDate'], (int) $day['day']) : null, $ctx);
+            $sch = new \App\Services\Planner\Health\DaySchedule(
+                (int) $day['day'],
+                $rows,
+                $route,
+                null,
+                !empty($req['startDate']) ? \App\Services\Planner\OpeningHours::dowOf($req['startDate'], (int) $day['day']) : null,
+                $ctx,
+            );
             foreach ($day['items'] as $i => &$it) {
                 $r = $sch->rows[$i] ?? null;
                 if (!$r) {

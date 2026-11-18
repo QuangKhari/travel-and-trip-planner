@@ -83,8 +83,22 @@ class MomoGateway implements PaymentGateway
         return hash_hmac('sha256', $raw, $this->cfg('secret_key'));
     }
 
+    /** MoMo yêu cầu thời gian chờ tối thiểu 30 giây cho mọi API (tài liệu Refund / Query). */
+    private static function timeout(): int
+    {
+        return max(30, (int) config('payments.timeout', 15));
+    }
+
+    /** Giới hạn số tiền một giao dịch của MoMo (tài liệu MoMo: tối thiểu 1.000 đ, tối đa 50.000.000 đ). */
+    public const MIN_AMOUNT = 1000;
+    public const MAX_AMOUNT = 50000000;
+
     public function create(array $o): array
     {
+        if ((int) $o['amount'] < self::MIN_AMOUNT || (int) $o['amount'] > self::MAX_AMOUNT) {
+            return ['ok' => false, 'message' => 'Ví MoMo chỉ nhận thanh toán từ 1.000 đ đến 50.000.000 đ mỗi giao dịch. Vui lòng chọn VNPay hoặc chuyển khoản QR.',
+                'raw' => ['amount' => (int) $o['amount']]];
+        }
         $p = [
             'partnerCode' => $this->cfg('partner_code'),
             'accessKey' => $this->cfg('access_key'),
@@ -100,8 +114,12 @@ class MomoGateway implements PaymentGateway
         $raw = self::raw($p, ['accessKey', 'amount', 'extraData', 'ipnUrl', 'orderId', 'orderInfo', 'partnerCode', 'redirectUrl', 'requestId', 'requestType']);
         $body = $p + ['lang' => 'vi', 'autoCapture' => true, 'signature' => $this->sign($raw)];
         unset($body['accessKey']);
+        // Hết hạn trang thanh toán MoMo cùng lúc với hạn giữ chỗ (phút; không nằm trong chữ ký). Bật sau khi thử ở sandbox.
+        if (config('payments.momo.send_expire') && ($o['expireAt'] ?? null) instanceof \Carbon\Carbon) {
+            $body['orderExpireTime'] = max(1, (int) ceil(now()->diffInSeconds($o['expireAt'], false) / 60));
+        }
 
-        $res = Http::timeout((int) config('payments.timeout', 15))->acceptJson()->asJson()
+        $res = Http::timeout(self::timeout())->acceptJson()->asJson()
             ->post(rtrim($this->cfg('endpoint'), '/') . '/v2/gateway/api/create', $body);
         $j = (array) $res->json();
         $code = (string) ($j['resultCode'] ?? 'http_' . $res->status());
@@ -164,7 +182,7 @@ class MomoGateway implements PaymentGateway
         $body = ['partnerCode' => $p['partnerCode'], 'requestId' => $p['requestId'], 'orderId' => $txnRef, 'lang' => 'vi',
             'signature' => $this->sign(self::raw($p, ['accessKey', 'orderId', 'partnerCode', 'requestId']))];
         try {
-            $j = (array) Http::timeout((int) config('payments.timeout', 15))->acceptJson()->asJson()
+            $j = (array) Http::timeout(self::timeout())->acceptJson()->asJson()
                 ->post(rtrim($this->cfg('endpoint'), '/') . '/v2/gateway/api/query', $body)->json();
         } catch (\Throwable $e) {
             return ['ok' => false, 'status' => null, 'amount' => null, 'providerTxnNo' => null, 'code' => 'http_error', 'message' => 'Không gọi được MoMo: ' . $e->getMessage(), 'raw' => ['request' => $body]];
@@ -230,7 +248,7 @@ class MomoGateway implements PaymentGateway
             'transId' => (int) $transId, 'lang' => 'vi', 'description' => $p['description'],
             'signature' => $this->sign(self::raw($p, ['accessKey', 'amount', 'description', 'orderId', 'partnerCode', 'requestId', 'transId']))];
         try {
-            $res = Http::timeout((int) config('payments.timeout', 15))->acceptJson()->asJson()
+            $res = Http::timeout(self::timeout())->acceptJson()->asJson()
                 ->post(rtrim($this->cfg('endpoint'), '/') . '/v2/gateway/api/refund', $body);
         } catch (\Throwable $e) {
             // Không biết lệnh đã tới MoMo chưa: không được coi là thất bại để gửi lại (có thể hoàn hai lần)
@@ -243,8 +261,13 @@ class MomoGateway implements PaymentGateway
         $code = (string) $j['resultCode'];
         $status = self::refundStatus($code);
 
-        return self::refundResult($status, isset($j['transId']) ? (string) $j['transId'] : null, $code,
-            'MoMo: ' . ($j['message'] ?? $this->describe($code)), ['request' => $body, 'response' => $j]);
+        return self::refundResult(
+            $status,
+            isset($j['transId']) ? (string) $j['transId'] : null,
+            $code,
+            'MoMo: ' . ($j['message'] ?? $this->describe($code)),
+            ['request' => $body, 'response' => $j],
+        );
     }
 
     public function queryRefund(string $refundRef): array
@@ -254,7 +277,7 @@ class MomoGateway implements PaymentGateway
         $body = ['partnerCode' => $p['partnerCode'], 'orderId' => $refundRef, 'requestId' => $p['requestId'], 'lang' => 'vi',
             'signature' => $this->sign(self::raw($p, ['accessKey', 'orderId', 'partnerCode', 'requestId']))];
         try {
-            $j = (array) Http::timeout((int) config('payments.timeout', 15))->acceptJson()->asJson()
+            $j = (array) Http::timeout(self::timeout())->acceptJson()->asJson()
                 ->post(rtrim($this->cfg('endpoint'), '/') . '/v2/gateway/api/refund/query', $body)->json();
         } catch (\Throwable $e) {
             return self::refundResult('unknown', null, 'http_error', 'Không gọi được MoMo: ' . $e->getMessage(), ['request' => $body]);
@@ -270,8 +293,13 @@ class MomoGateway implements PaymentGateway
             if (is_array($first)) {
                 $tc = (string) ($first['resultCode'] ?? '0');
 
-                return self::refundResult(self::refundStatus($tc), isset($first['transId']) ? (string) $first['transId'] : null, $tc,
-                    'MoMo: ' . $this->describe($tc), ['request' => $body, 'response' => $j]);
+                return self::refundResult(
+                    self::refundStatus($tc),
+                    isset($first['transId']) ? (string) $first['transId'] : null,
+                    $tc,
+                    'MoMo: ' . $this->describe($tc),
+                    ['request' => $body, 'response' => $j],
+                );
             }
 
             return self::refundResult('pending', null, $code, 'MoMo đã nhận yêu cầu hoàn, chưa có giao dịch hoàn.', ['request' => $body, 'response' => $j]);

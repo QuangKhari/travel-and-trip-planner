@@ -123,8 +123,13 @@ class OnlinePaymentService
         $b = $prep['b'];
         $txnRef = $prep['attempt'] === 1 ? $b->bookingCode : $b->bookingCode . '-' . $prep['attempt'];   // mỗi lần thử một mã riêng (cổng không nhận trùng)
         $amount = (int) round((float) $prep['c']->amount);
+        // Ghi lần thử TRƯỚC khi gọi cổng (UNIQUE provider + txnRef): khách trả ở trang của lần thử nào, webhook / hoàn tiền
+        // đều tìm đúng lần đó kể cả khi nhật ký lỗi. createDate gửi sang cổng chính là giá trị lưu ở đây (VNPay cần khi hỏi / hoàn).
+        $createdAt = now(config('payments.timezone', 'Asia/Ho_Chi_Minh'));
+        $attemptId = $this->recordAttempt($bookingId, $method, $txnRef, $amount, $createdAt->format('YmdHis'));
         try {
             $r = $g->create([
+                'createdAt' => $createdAt,
                 'txnRef' => $txnRef, 'amount' => $amount, 'info' => 'Thanh toan don dat tour ' . $b->bookingCode,
                 'returnUrl' => self::publicRoute('payment.return', ['method' => $method]),
                 'notifyUrl' => self::publicRoute('payment.notify', ['method' => $method]),
@@ -133,16 +138,24 @@ class OnlinePaymentService
         } catch (\Throwable $e) {
             report($e);
             $this->log($bookingId, $method, 'create', $txnRef, 'http_error', null, ['error' => $e->getMessage()], $ip);
+            // không biết cổng đã tạo giao dịch chưa: giữ lần thử ở trạng thái created để webhook (nếu có) vẫn tìm được đơn
 
             return ['ok' => false, 'message' => 'Không kết nối được ' . $g->label() . '. Vui lòng thử lại hoặc chọn cách thanh toán khác.'];
         }
-        $txnRef = $r['txnRef'] ?? $txnRef;
+        if (($r['txnRef'] ?? $txnRef) !== $txnRef) {   // QR: nội dung chuyển khoản luôn là mã đơn gốc
+            $attemptId = $this->renameAttempt($attemptId, $bookingId, $method, (string) $r['txnRef'], $amount, $createdAt->format('YmdHis'));
+            $txnRef = (string) $r['txnRef'];
+        }
         $this->log($bookingId, $method, 'create', $txnRef, $r['ok'] ? 'url' : 'rejected', null, $r['raw'] ?? [], $ip);
         if (!$r['ok']) {
+            if ($attemptId && self::attemptsReady()) {
+                DB::table('tbl_payment_attempts')->where('attemptId', $attemptId)->where('status', 'created')->update(['status' => 'failed', 'updatedAt' => now()]);
+            }
+
             return ['ok' => false, 'message' => $r['message'] ?? 'Cổng thanh toán từ chối tạo giao dịch.'];
         }
         DB::table('tbl_checkout')->where('bookingId', $bookingId)->update([
-            'providerTxnRef' => $txnRef, 'providerCreateDate' => now(config('payments.timezone'))->format('YmdHis'), 'responseCode' => null,
+            'providerTxnRef' => $txnRef, 'providerCreateDate' => $createdAt->format('YmdHis'), 'responseCode' => null,
         ]);
 
         return ['ok' => true, 'url' => $r['url'] ?? null, 'qr' => $r['qr'] ?? null];
@@ -166,7 +179,7 @@ class OnlinePaymentService
 
             return $g->notifyReply('invalid_signature');
         }
-        $checkout = $n['txnRef'] ? $this->findCheckout($n['txnRef']) : null;
+        $checkout = $n['txnRef'] ? $this->findCheckout($n['txnRef'], $method) : null;
         if (!$checkout) {
             $this->log(null, $method, 'notify', $n['txnRef'], $method === 'qr' ? 'unmatched' : 'not_found', true, $n['payload'], $ip);
 
@@ -195,7 +208,7 @@ class OnlinePaymentService
 
             return $g->notifyReply('error');
         }
-        $this->log($bookingId, $method, 'notify', $n['txnRef'], $r['duplicate'] ? 'duplicate' : 'paid', true, $n['payload'], $ip);
+        $this->log($bookingId, $method, 'notify', $n['txnRef'], !empty($r['doublePaid']) ? 'double_paid' : ($r['duplicate'] ? 'duplicate' : 'paid'), true, $n['payload'], $ip);
 
         return $g->notifyReply($r['duplicate'] ? 'duplicate' : 'ok');
     }
@@ -207,13 +220,13 @@ class OnlinePaymentService
     {
         $g = $this->gateway($method) ?? abort(404);
         $r = $g->parseReturn($query);
-        $checkout = $r['valid'] && $r['txnRef'] ? $this->findCheckout($r['txnRef']) : null;
+        $checkout = $r['valid'] && $r['txnRef'] ? $this->findCheckout($r['txnRef'], $method) : null;
         $this->log($checkout->bookingId ?? null, $method, 'return', $r['txnRef'], $r['code'], $r['valid'], $query, $ip);
 
         // Cổng báo thành công nhưng thông báo máy chủ chưa tới (máy cá nhân không có đường hầm / chậm): hỏi lại cổng
         if ($r['success'] && $checkout && $checkout->paymentStatus === 'n') {
             $this->queryAndSettle((int) $checkout->bookingId, $ip);
-            $checkout = $this->findCheckout((string) $r['txnRef']);
+            $checkout = $this->findCheckout((string) $r['txnRef'], $method);
         }
 
         return [
@@ -231,32 +244,44 @@ class OnlinePaymentService
     public function queryAndSettle(int $bookingId, ?string $ip = null): array
     {
         $c = DB::table('tbl_checkout')->where('bookingId', $bookingId)->first();
-        $g = $c ? $this->gateway((string) $c->provider) : null;
-        if (!$c || !$g || !$c->providerTxnRef) {
+        if (!$c || !$c->providerTxnRef) {
             return ['ok' => false, 'status' => null, 'message' => 'Đơn chưa tạo giao dịch thanh toán trực tuyến.'];
         }
         if (in_array($c->paymentStatus, self::PAID, true)) {
             return ['ok' => true, 'status' => 'paid', 'message' => 'Đơn đã được ghi nhận thanh toán.'];
         }
-        if (!$g->enabled()) {
-            return ['ok' => false, 'status' => null, 'message' => $g->label() . ' đang tắt.'];
-        }
-        $q = $g->query((string) $c->providerTxnRef, $c->providerCreateDate);
-        $amountOk = $q['amount'] === null || $q['amount'] === (int) round((float) $c->amount);
-        $this->log($bookingId, $g->code(), 'query', $c->providerTxnRef, ($q['status'] ?? $q['code']) . ($amountOk ? '' : '/amount'), $q['ok'] ? true : null, $q['raw'], $ip);
-        if (!$q['ok']) {
-            return ['ok' => false, 'status' => null, 'message' => $q['message']];
-        }
-        if ($q['status'] === 'paid' && $amountOk) {
-            $r = $this->settle($bookingId, $g->code(), (string) $c->providerTxnRef, $q['providerTxnNo'], null, 'query');
+        // Hỏi MỌI lần thử (mới nhất trước), không chỉ mã hiện hành: khách có thể đã trả ở trang thanh toán của lần thử cũ.
+        $last = null;
+        $asked = 0;
+        foreach ($this->attempts($bookingId, $c) as $a) {
+            $g = $this->gateway($a['provider']);
+            if (!$g || !$g->enabled() || $asked >= 5) {
+                continue;
+            }
+            $asked++;
+            $q = $g->query($a['txnRef'], $a['createDate']);
+            $amountOk = $q['amount'] === null || $q['amount'] === (int) round((float) $c->amount);
+            $this->log($bookingId, $g->code(), 'query', $a['txnRef'], ($q['status'] ?? $q['code']) . ($amountOk ? '' : '/amount'), $q['ok'] ? true : null, $q['raw'], $ip);
+            if ($q['ok'] && $q['status'] === 'paid' && $amountOk) {
+                $r = $this->settle($bookingId, $g->code(), $a['txnRef'], $q['providerTxnNo'], null, 'query');
 
-            return ['ok' => true, 'status' => 'paid', 'message' => $r['duplicate'] ? 'Đơn đã được ghi nhận thanh toán trước đó.' : $g->label() . ' xác nhận đã thanh toán, đơn đã được cập nhật.'];
+                return ['ok' => true, 'status' => 'paid', 'message' => $r['duplicate'] ? 'Đơn đã được ghi nhận thanh toán trước đó.' : $g->label() . ' xác nhận đã thanh toán, đơn đã được cập nhật.'];
+            }
+            if ($q['ok'] && $q['status'] === 'paid') {
+                return ['ok' => false, 'status' => 'paid', 'message' => 'Số tiền cổng báo không khớp đơn, cần admin kiểm tra.'];
+            }
+            $last ??= $q;   // kết quả của lần thử mới nhất là thông điệp hiển thị khi chưa lần nào thành công
         }
-        if ($q['status'] === 'paid') {
-            return ['ok' => false, 'status' => 'paid', 'message' => 'Số tiền cổng báo không khớp đơn, cần admin kiểm tra.'];
+        if (!$last) {
+            $g = $this->gateway((string) $c->provider);
+
+            return ['ok' => false, 'status' => null, 'message' => $g ? $g->label() . ' đang tắt.' : 'Đơn chưa tạo giao dịch thanh toán trực tuyến.'];
+        }
+        if (!$last['ok']) {
+            return ['ok' => false, 'status' => null, 'message' => $last['message']];
         }
 
-        return ['ok' => true, 'status' => $q['status'], 'message' => $q['message']];
+        return ['ok' => true, 'status' => $last['status'], 'message' => $last['message']];
     }
 
     /* ------------------------------------------------------------------ Admin xác nhận tay */
@@ -285,11 +310,22 @@ class OnlinePaymentService
      */
     private function settle(int $bookingId, string $method, string $txnRef, ?string $providerTxnNo, ?string $bank, string $source): array
     {
-        $out = DB::transaction(function () use ($bookingId, $method, $txnRef, $providerTxnNo, $bank) {
+        $out = DB::transaction(function () use ($bookingId, $method, $txnRef, $providerTxnNo, $bank, $source) {
             $b = DB::table('tbl_booking')->where('bookingId', $bookingId)->lockForUpdate()->first();
             $c = DB::table('tbl_checkout')->where('bookingId', $bookingId)->lockForUpdate()->first();
             if (in_array($c->paymentStatus, self::PAID, true)) {
-                return ['duplicate' => true];
+                // Đã ghi nhận bằng một khoản khác mà cổng lại báo thêm một khoản đã trả: khách bị thu hai lần.
+                //  (a) trả ở trang của HAI lần thử khác nhau (hai tab) — txnRef khác mã đã ghi nhận;
+                //  (b) chuyển khoản QR hai lần cùng nội dung — cùng txnRef nhưng mã giao dịch ngân hàng (SePay id) khác.
+                // Không ghi nhận thêm; ghi khoản thu trùng + tự tạo yêu cầu hoàn chờ duyệt.
+                $twoAttempts = $source !== 'manual' && $c->providerTxnRef && $c->providerTxnRef !== $txnRef
+                    && $this->isAttemptOf($bookingId, $txnRef) && $this->isAttemptOf($bookingId, (string) $c->providerTxnRef);
+                $twoTransfers = $source !== 'manual' && $method === 'qr' && $c->providerTxnRef === $txnRef
+                    && $providerTxnNo && $c->providerTxnNo && $providerTxnNo !== $c->providerTxnNo;
+                $double = ($twoAttempts || $twoTransfers)
+                    && $this->markExcess($bookingId, $method, $twoTransfers ? $txnRef . '~' . $providerTxnNo : $txnRef, $providerTxnNo, (int) round((float) $c->amount));
+
+                return ['duplicate' => true, 'doublePaid' => $double];
             }
             DB::table('tbl_checkout')->where('bookingId', $bookingId)->update([
                 'paymentStatus' => 'y', 'paymentDate' => now(), 'paidAt' => now(),
@@ -298,6 +334,8 @@ class OnlinePaymentService
                 'bankCode' => $bank ? mb_substr($bank, 0, 20) : null, 'responseCode' => '00',
             ]);
             DB::table('tbl_booking')->where('bookingId', $bookingId)->update(['holdExpiresAt' => null]);
+            $this->markPaidAttempt($bookingId, $method, $txnRef, $providerTxnNo, (int) round((float) $c->amount));
+            app(DoubleEntryLedger::class)->capture($bookingId, $method, (int) round((float) $c->amount), $method . ':' . $txnRef);
 
             if ($b->bookingStatus === 'n') {
                 $this->bookings->confirmLocked($b);   // §6.4: thanh toán thành công -> đơn xác nhận, chỗ giữ thành chỗ bán
@@ -325,26 +363,216 @@ class OnlinePaymentService
             $b = $out['booking'];
             $label = self::label($method) . ': ' . ['confirmed' => 'đã thanh toán, đơn chuyển sang Đã xác nhận', 'revived' => 'tiền về sau khi đơn hết hạn, còn chỗ nên xác nhận lại',
                 'late_refund' => 'tiền về sau khi đơn hết hạn và hết chỗ, tạo yêu cầu hoàn 100%', 'paid' => 'đã thanh toán'][$out['event']];
-            AuditLog::record('payment.online', 'booking', $bookingId, $label . ' (' . $source . ', ' . $b->bookingCode . ')',
-                ['bookingStatus' => $b->bookingStatus, 'paymentStatus' => 'n'], ['paymentStatus' => $out['event'] === 'late_refund' ? 'refund_pending' : 'y', 'method' => $method, 'txnNo' => $providerTxnNo]);
+            AuditLog::record(
+                'payment.online',
+                'booking',
+                $bookingId,
+                $label . ' (' . $source . ', ' . $b->bookingCode . ')',
+                ['bookingStatus' => $b->bookingStatus, 'paymentStatus' => 'n'],
+                ['paymentStatus' => $out['event'] === 'late_refund' ? 'refund_pending' : 'y', 'method' => $method, 'txnNo' => $providerTxnNo],
+            );
             AdminBadges::forget();
             if ($out['event'] !== 'late_refund') {
                 app(BookingNotifier::class)->send($bookingId, 'paid');
             }
         }
 
-        return ['duplicate' => $out['duplicate']];
+        if (!empty($out['doublePaid'])) {
+            AuditLog::record('payment.double', 'booking', $bookingId, self::label($method) . ': cổng báo lần thử ' . $txnRef . ' cũng đã thanh toán trong khi đơn đã ghi nhận bằng lần thử khác — cần hoàn khoản thứ hai (' . $source . ')');
+            AdminBadges::forget();
+        }
+
+        return ['duplicate' => $out['duplicate'], 'doublePaid' => !empty($out['doublePaid'])];
     }
 
-    private function findCheckout(string $txnRef): ?object
+    /**
+     * Tìm đơn theo mã giao dịch cổng gửi về: mã hiện hành của checkout → mã gốc (= bookingCode) → mã của MỘT LẦN THỬ CŨ.
+     * Mỗi lần bấm thanh toán lại, providerTxnRef bị thay bằng mã mới (CODE-2, CODE-3...), nhưng trang thanh toán của lần thử cũ
+     * vẫn còn mở được tới hết hạn giữ chỗ: khách trả ở đó thì webhook mang mã cũ. Mọi mã đã tạo được ghi ở tbl_payment_logs (kind=create),
+     * nên tra ở đó để không bỏ sót khoản tiền đã thu.
+     */
+    private function findCheckout(string $txnRef, ?string $method = null): ?object
     {
         if ($txnRef === '') {
             return null;
         }
 
-        return DB::table('tbl_checkout')->where('providerTxnRef', $txnRef)->first()
+        $c = DB::table('tbl_checkout')->where('providerTxnRef', $txnRef)->first()
             ?? DB::table('tbl_checkout as c')->join('tbl_booking as b', 'b.bookingId', '=', 'c.bookingId')
                 ->where('b.bookingCode', $txnRef)->select('c.*')->first();
+        if ($c) {
+            return $c;
+        }
+        if (self::attemptsReady()) {
+            $bid = DB::table('tbl_payment_attempts')->where('txnRef', $txnRef)->when($method, fn($q) => $q->where('provider', $method))->value('bookingId');
+            if ($bid) {
+                return DB::table('tbl_checkout')->where('bookingId', (int) $bid)->first();
+            }
+        }
+        $bookingId = DB::table('tbl_payment_logs')->where('kind', 'create')->where('result', 'url')->where('txnRef', $txnRef)
+            ->when($method, fn($q) => $q->where('provider', $method))->whereNotNull('bookingId')->orderByDesc('logId')->value('bookingId');
+
+        return $bookingId ? DB::table('tbl_checkout')->where('bookingId', (int) $bookingId)->first() : null;
+    }
+
+    /**
+     * Các lần thử thanh toán trực tuyến của một đơn (mới nhất trước), lấy từ nhật ký tạo giao dịch + mã hiện hành.
+     * @return list<array{provider:string, txnRef:string, createDate:?string}>
+     */
+    public function attempts(int $bookingId, ?object $checkout = null): array
+    {
+        $c = $checkout ?? DB::table('tbl_checkout')->where('bookingId', $bookingId)->first();
+        $out = [];
+        if ($c && $c->providerTxnRef && $c->provider) {
+            $out[$c->provider . '|' . $c->providerTxnRef] = ['provider' => (string) $c->provider, 'txnRef' => (string) $c->providerTxnRef, 'createDate' => $c->providerCreateDate];
+        }
+        if (self::attemptsReady()) {
+            foreach (DB::table('tbl_payment_attempts')->where('bookingId', $bookingId)->whereIn('status', ['created', 'paid', 'excess'])->orderByDesc('attemptId')->limit(20)
+                ->get(['provider', 'txnRef', 'createDate']) as $a) {
+                $out[$a->provider . '|' . $a->txnRef] ??= ['provider' => (string) $a->provider, 'txnRef' => (string) $a->txnRef, 'createDate' => $a->createDate];
+            }
+        }
+        $rows = DB::table('tbl_payment_logs')->where('bookingId', $bookingId)->where('kind', 'create')->where('result', 'url')->whereNotNull('txnRef')
+            ->orderByDesc('logId')->limit(20)->get(['provider', 'txnRef', 'payload', 'createdAt']);
+        foreach ($rows as $r) {
+            $k = $r->provider . '|' . $r->txnRef;
+            if (isset($out[$k])) {
+                continue;
+            }
+            $payload = json_decode((string) $r->payload, true) ?: [];
+            $date = $payload['request']['vnp_CreateDate'] ?? null;   // VNPay hỏi trạng thái cần đúng ngày tạo của chính lần thử đó
+            if (!$date && $r->createdAt) {
+                $date = Carbon::parse($r->createdAt)->setTimezone(config('payments.timezone', 'Asia/Ho_Chi_Minh'))->format('YmdHis');
+            }
+            $out[$k] = ['provider' => (string) $r->provider, 'txnRef' => (string) $r->txnRef, 'createDate' => $date];
+        }
+
+        return array_values($out);
+    }
+
+    /* ------------------------------------------------------------------ Lần thử thanh toán (tbl_payment_attempts) */
+
+    private static ?bool $attemptsReady = null;
+
+    public static function attemptsReady(): bool
+    {
+        return self::$attemptsReady ??= \Illuminate\Support\Facades\Schema::hasTable('tbl_payment_attempts');
+    }
+
+    /** Ghi một lần thử trước khi gọi cổng. Trả attemptId (null khi chưa migrate). */
+    private function recordAttempt(int $bookingId, string $provider, string $txnRef, int $amount, ?string $createDate): ?int
+    {
+        if (!self::attemptsReady()) {
+            return null;
+        }
+        $row = DB::table('tbl_payment_attempts')->where(['provider' => $provider, 'txnRef' => $txnRef])->first(['attemptId', 'bookingId', 'status']);
+        if ($row) {
+            // QR dùng lại mã đơn gốc: cập nhật lần thử chưa trả (số tiền / thời điểm mới), không đụng lần đã trả
+            if ((int) $row->bookingId === $bookingId && in_array($row->status, ['created', 'failed'], true)) {
+                DB::table('tbl_payment_attempts')->where('attemptId', $row->attemptId)->update(['amount' => $amount, 'createDate' => $createDate, 'status' => 'created', 'updatedAt' => now()]);
+            }
+
+            return (int) $row->attemptId;
+        }
+        try {
+            return (int) DB::table('tbl_payment_attempts')->insertGetId(['bookingId' => $bookingId, 'provider' => $provider, 'txnRef' => $txnRef, 'amount' => $amount,
+                'createDate' => $createDate, 'status' => 'created', 'createdAt' => now(), 'updatedAt' => now()], 'attemptId');
+        } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+            return (int) DB::table('tbl_payment_attempts')->where(['provider' => $provider, 'txnRef' => $txnRef])->value('attemptId');
+        }
+    }
+
+    /** Cổng trả về mã khác mã đã ghi (QR): chuyển lần thử sang mã thật. */
+    private function renameAttempt(?int $attemptId, int $bookingId, string $provider, string $txnRef, int $amount, ?string $createDate): ?int
+    {
+        if (!$attemptId || !self::attemptsReady()) {
+            return $attemptId;
+        }
+        if (DB::table('tbl_payment_attempts')->where(['provider' => $provider, 'txnRef' => $txnRef])->exists()) {
+            DB::table('tbl_payment_attempts')->where('attemptId', $attemptId)->where('status', 'created')->delete();
+
+            return $this->recordAttempt($bookingId, $provider, $txnRef, $amount, $createDate);
+        }
+        DB::table('tbl_payment_attempts')->where('attemptId', $attemptId)->update(['txnRef' => $txnRef, 'updatedAt' => now()]);
+
+        return $attemptId;
+    }
+
+    /** Gọi trong transaction settle(): lần thử này là khoản thanh toán của đơn; ngày tạo giao dịch của nó vào checkout (để hỏi / hoàn). */
+    private function markPaidAttempt(int $bookingId, string $provider, string $txnRef, ?string $providerTxnNo, int $amount): void
+    {
+        if (!self::attemptsReady()) {
+            return;
+        }
+        $a = DB::table('tbl_payment_attempts')->where(['provider' => $provider, 'txnRef' => $txnRef])->first();
+        if (!$a) {   // đơn tạo trước khi có bảng / admin xác nhận tay: ghi lại để mọi nghiệp vụ sau có một nguồn
+            $a = (object) ['attemptId' => $this->recordAttempt($bookingId, $provider, $txnRef, $amount, null), 'createDate' => null];
+        }
+        DB::table('tbl_payment_attempts')->where('bookingId', $bookingId)->where('attemptId', '!=', $a->attemptId)->update(['settled' => false]);
+        DB::table('tbl_payment_attempts')->where('attemptId', $a->attemptId)->update(['status' => 'paid', 'settled' => true, 'providerTxnNo' => $providerTxnNo,
+            'paidAt' => now(), 'updatedAt' => now()]);
+        if ($a->createDate) {
+            DB::table('tbl_checkout')->where('bookingId', $bookingId)->update(['providerCreateDate' => $a->createDate]);
+        }
+    }
+
+    /**
+     * Khoản thu trùng: ghi lần thử là excess + tự tạo yêu cầu hoàn (refundStatus = pending) chờ nhân viên duyệt.
+     * @return bool true khi vừa ghi lần đầu (gửi lặp cùng webhook thì false)
+     */
+    private function markExcess(int $bookingId, string $provider, string $txnRef, ?string $providerTxnNo, int $amount): bool
+    {
+        if (!self::attemptsReady()) {
+            return true;   // chưa migrate: vẫn báo đối soát như trước
+        }
+        $a = DB::table('tbl_payment_attempts')->where(['provider' => $provider, 'txnRef' => $txnRef])->first();
+        if ($a && $a->status === 'excess') {
+            return false;
+        }
+        $data = ['status' => 'excess', 'settled' => false, 'providerTxnNo' => $providerTxnNo, 'paidAt' => now(), 'refundStatus' => 'pending', 'updatedAt' => now()];
+        if ($a) {
+            DB::table('tbl_payment_attempts')->where('attemptId', $a->attemptId)->update($data);
+            $id = (int) $a->attemptId;
+            $amount = (int) $a->amount ?: $amount;
+        } else {
+            $id = (int) DB::table('tbl_payment_attempts')->insertGetId($data + ['bookingId' => $bookingId, 'provider' => $provider, 'txnRef' => mb_substr($txnRef, 0, 60),
+                'amount' => $amount, 'createdAt' => now()], 'attemptId');
+        }
+        app(DoubleEntryLedger::class)->excess($bookingId, $id, $provider, $amount);
+
+        return true;
+    }
+
+    /**
+     * Khoản thanh toán của đơn (lần thử đã ghi nhận) để hỏi trạng thái / hoàn qua cổng.
+     * Dữ liệu cũ chưa có bảng lần thử: dựng từ tbl_checkout (số tiền = đã thu trừ phần thu thêm ngoài cổng).
+     * @return ?object{provider:string, txnRef:string, providerTxnNo:?string, createDate:?string, amount:int}
+     */
+    public function paidAttempt(int $bookingId): ?object
+    {
+        if (self::attemptsReady()) {
+            $a = DB::table('tbl_payment_attempts')->where('bookingId', $bookingId)->where('settled', true)->first(['attemptId', 'provider', 'txnRef', 'providerTxnNo', 'createDate', 'amount']);
+            if ($a) {
+                $a->amount = (int) $a->amount;
+
+                return $a;
+            }
+        }
+        $c = DB::table('tbl_checkout')->where('bookingId', $bookingId)->first();
+        if (!$c || !$c->providerTxnRef) {
+            return null;
+        }
+        $collected = \Illuminate\Support\Facades\Schema::hasTable('tbl_booking_adjustments')
+            ? (int) DB::table('tbl_booking_adjustments')->where('bookingId', $bookingId)->where('moneyStatus', 'collected')->sum('settleAmount') : 0;
+
+        return (object) ['attemptId' => null, 'provider' => (string) $c->provider, 'txnRef' => (string) $c->providerTxnRef, 'providerTxnNo' => $c->providerTxnNo,
+            'createDate' => $c->providerCreateDate, 'amount' => max(0, (int) round((float) $c->amount) - $collected)];
+    }
+
+    /** Mã giao dịch có phải của một lần thử đã tạo cho đơn này không. */
+    private function isAttemptOf(int $bookingId, ?string $txnRef): bool
+    {
+        return $txnRef !== null && $txnRef !== '' && in_array($txnRef, array_column($this->attempts($bookingId), 'txnRef'), true);
     }
 
     private function log(?int $bookingId, string $provider, string $kind, ?string $txnRef, ?string $result, ?bool $valid, array $payload, ?string $ip): void

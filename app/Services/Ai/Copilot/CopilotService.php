@@ -82,8 +82,13 @@ final class CopilotService
             if ($step > 0 && (microtime(true) - $t0) * 1000 > $budget) {
                 break;
             }
-            $res = $this->gateway->json('copilot', $userId, $system,
-                CopilotPrompt::user($ctx['table'], $history, $message, $explicit, $obs, self::MAX_STEPS - $step), $schema);
+            $res = $this->gateway->json(
+                'copilot',
+                $userId,
+                $system,
+                CopilotPrompt::user($ctx['table'], $history, $message, $explicit, $obs, self::MAX_STEPS - $step),
+                $schema,
+            );
             $stat['steps']++;
             $stat['in'] += (int) ($res['in'] ?? 0);
             $stat['out'] += (int) ($res['out'] ?? 0);
@@ -322,8 +327,10 @@ final class CopilotService
         }
         $before = $this->health->forTrip($trip);
         $after = $this->health->forTrip($clone);
-        $hardKey = fn(array $h) => array_values(array_map(fn($c) => $c['code'] . ':' . ($c['day'] ?? 0) . ':' . ($c['index'] ?? 0),
-            array_filter($h['checks'], fn($c) => in_array($c['code'], \App\Services\Planner\Health\TripHealth::HARD, true))));
+        $hardKey = fn(array $h) => array_values(array_map(
+            fn($c) => $c['code'] . ':' . ($c['day'] ?? 0) . ':' . ($c['index'] ?? 0),
+            array_filter($h['checks'], fn($c) => in_array($c['code'], \App\Services\Planner\Health\TripHealth::HARD, true)),
+        ));
         $newHard = array_values(array_filter($after['checks'], fn($c) => in_array($c['code'], \App\Services\Planner\Health\TripHealth::HARD, true)
             && !in_array($c['code'] . ':' . ($c['day'] ?? 0) . ':' . ($c['index'] ?? 0), $hardKey($before), true)));
         $pick = fn($x) => ['day' => $x['day'] ?? null, 'text' => $x['text'], 'level' => $x['level'], 'code' => $x['code']];
@@ -419,7 +426,11 @@ final class CopilotService
         return ['ok' => true, 'rev' => $rev, 'quick' => $ctx['quick'], 'ms' => $ms] + $p['body'];
     }
 
-    /** Người dùng bấm Áp dụng / Bỏ qua: cập nhật outcome của lượt (đo tỷ lệ chấp nhận, mục 8 tài liệu). */
+    /**
+     * Người dùng bấm Áp dụng / Bỏ qua (tín hiệu từ trình duyệt). Bấm Áp dụng chỉ ghi 'clicked': thay đổi mới nằm ở trình duyệt.
+     * Chỉ khi lần LƯU CHUYẾN ở máy chủ thành công (rev tăng so với rev lúc đề xuất) thì confirmApplied() mới đổi thành 'applied'
+     * → tỷ lệ "đề xuất được áp dụng" dùng trong báo cáo là số đã lưu thật, không phải số lần bấm.
+     */
     public function feedback(object $trip, string $id, bool $applied): void
     {
         $saved = Cache::get('ai:cp:' . $id);
@@ -427,7 +438,15 @@ final class CopilotService
             return;
         }
         try {
-            DB::table('tbl_ai_runs')->where('runId', (int) $saved['runId'])->update(['outcome' => $applied ? 'applied' : 'skipped']);
+            DB::table('tbl_ai_runs')->where('runId', (int) $saved['runId'])->update(['outcome' => $applied ? 'clicked' : 'skipped']);
+            if ($applied) {
+                $key = self::pendingKey((int) $trip->tripId);
+                $pending = (array) Cache::get($key, []);
+                $pending[(int) $saved['runId']] = (int) ($saved['rev'] ?? 0);
+                Cache::put($key, $pending, 3600);
+                // đã lưu trước khi tín hiệu tới (lưu ngay khi áp dụng): xác nhận luôn
+                self::confirmApplied((int) $trip->tripId, (int) DB::table('tbl_trips')->where('tripId', $trip->tripId)->value('rev'));
+            }
             // học từ hành vi: nơi La bàn đề xuất thêm / thay vào được áp dụng hay bị bỏ qua
             $with = [];
             foreach (array_keys((array) ($saved['cands'] ?? [])) as $k) {
@@ -439,6 +458,76 @@ final class CopilotService
         } catch (Throwable) {
             // log là phụ
         }
+    }
+
+    private static function pendingKey(int $tripId): string
+    {
+        return 'ai:cp:pending:' . $tripId;
+    }
+
+    /**
+     * Gọi SAU khi lưu chuyến thành công (TripPlanner::save). Lượt đề xuất đã bấm Áp dụng mà rev hiện tại lớn hơn rev lúc đề xuất
+     * → thay đổi đã vào CSDL: 'clicked' thành 'applied'. Lưu lỗi / xung đột 409 thì vẫn là 'clicked'.
+     */
+    public static function confirmApplied(int $tripId, int $rev): int
+    {
+        $key = self::pendingKey($tripId);
+        $pending = (array) Cache::get($key, []);
+        if (!$pending) {
+            return 0;
+        }
+        $done = array_keys(array_filter($pending, fn($base) => $rev > (int) $base));
+        if ($done) {
+            try {
+                DB::table('tbl_ai_runs')->whereIn('runId', $done)->where('outcome', 'clicked')->update(['outcome' => 'applied']);
+            } catch (Throwable) {
+                // log là phụ
+            }
+            $left = array_diff_key($pending, array_flip($done));
+            $left ? Cache::put($key, $left, 3600) : Cache::forget($key);
+            // Theo dõi hoàn tác: nhớ "dấu vân tay" lịch TRƯỚC đề xuất (bản ghi lịch sử ở rev gốc). Lần lưu sau đưa lịch về đúng
+            // trạng thái đó (Hoàn tác / khôi phục phiên bản) → đề xuất bị hoàn tác (undone), không còn tính là đã áp dụng.
+            $watch = (array) Cache::get(self::undoKey($tripId), []);
+            foreach ($done as $runId) {
+                $fp = \App\Services\Planner\TripRevisions::fingerprintAt($tripId, (int) $pending[$runId]);
+                if ($fp !== null) {
+                    $watch[$runId] = ['fp' => $fp, 'rev' => $rev];
+                }
+            }
+            if ($watch) {
+                Cache::put(self::undoKey($tripId), $watch, 86400);
+            }
+        }
+
+        return count($done);
+    }
+
+    private static function undoKey(int $tripId): string
+    {
+        return 'ai:cp:undo:' . $tripId;
+    }
+
+    /**
+     * Gọi sau mỗi lần ghi lịch sử phiên bản (TripRevisions::record): lịch vừa lưu trùng dấu vân tay lịch trước một đề xuất đã áp dụng
+     * → đề xuất đó bị hoàn tác. @return int số lượt chuyển sang undone
+     */
+    public static function detectUndo(int $tripId, string $fingerprint, int $rev): int
+    {
+        $watch = (array) Cache::get(self::undoKey($tripId), []);
+        if (!$watch) {
+            return 0;
+        }
+        $undone = array_keys(array_filter($watch, fn($w) => $rev > (int) $w['rev'] && $w['fp'] === $fingerprint));
+        if ($undone) {
+            try {
+                DB::table('tbl_ai_runs')->whereIn('runId', $undone)->where('outcome', 'applied')->update(['outcome' => 'undone']);
+            } catch (Throwable) {
+            }
+            $left = array_diff_key($watch, array_flip($undone));
+            $left ? Cache::put(self::undoKey($tripId), $left, 86400) : Cache::forget(self::undoKey($tripId));
+        }
+
+        return count($undone);
     }
 
     // ------------------------------------------------------------------------------------------------
@@ -480,8 +569,10 @@ final class CopilotService
             return ['ok' => false, 'errors' => [$e->getMessage()]];
         }
         if ($verify && $sim['newHard'] > 0) {
-            $txt = array_map(fn($x) => ($x['day'] ? 'Ngày ' . $x['day'] . ': ' : '') . $x['text'],
-                array_values(array_filter($sim['newIssues'], fn($x) => $x['severity'] === 'hard')));
+            $txt = array_map(
+                fn($x) => ($x['day'] ? 'Ngày ' . $x['day'] . ': ' : '') . $x['text'],
+                array_values(array_filter($sim['newIssues'], fn($x) => $x['severity'] === 'hard')),
+            );
 
             return ['ok' => false, 'errors' => array_map(fn($t) => 'Đề xuất tạo vấn đề mới: ' . $t, array_slice($txt, 0, 3))];
         }
@@ -494,7 +585,8 @@ final class CopilotService
             $names[$k] = $x['name'];
         }
         $used = array_intersect_key($cands, array_flip(array_filter(array_merge(
-            array_column($keyed, 'with'), ...array_map(fn($x) => (array) ($x['items'] ?? []), $keyed)
+            array_column($keyed, 'with'),
+            ...array_map(fn($x) => (array) ($x['items'] ?? []), $keyed),
         ), 'is_string')));
         Cache::put('ai:cp:' . $id, ['tripId' => (int) $trip->tripId, 'rev' => (int) ($trip->rev ?? 0), 'keyed' => $keyed, 'ids' => $ids, 'names' => $names,
             'cands' => $used, 'explicit' => $explicit, 'say' => $say, 'maxOps' => $maxOps], 3600);

@@ -200,8 +200,10 @@ class OnlinePaymentTest extends TestCase
         $this->postJson('/thanh-toan/thong-bao/momo', $this->momoIpn($txn, 1000, 0))->assertNoContent();
         $this->postJson('/thanh-toan/thong-bao/momo', $this->momoIpn('TOUR00000000000000000000', 2000000))->assertNoContent();
         $this->assertSame(['n', 'n'], $this->st($id));
-        $this->assertEqualsCanonicalizing(['bad_signature', 'bad_amount', 'not_found'],
-            DB::table('tbl_payment_logs')->where('kind', 'notify')->pluck('result')->all());
+        $this->assertEqualsCanonicalizing(
+            ['bad_signature', 'bad_amount', 'not_found'],
+            DB::table('tbl_payment_logs')->where('kind', 'notify')->pluck('result')->all(),
+        );
     }
 
     public function test_momo_failed_payment_keeps_booking_pending_with_reason(): void
@@ -352,5 +354,260 @@ class OnlinePaymentTest extends TestCase
         $this->withSession(['userId' => $this->user()])->get(route('payment.pay', ['method' => 'momo', 'bookingId' => $id]))->assertNotFound();
         $this->postJson('/thanh-toan/thong-bao/momo', $this->momoIpn($txn, 1000000))->assertNoContent();
         $this->assertFalse(app(OnlinePaymentService::class)->start($id, 'vnpay', null)['ok']);
+    }
+
+    // ---------------------------------------------------------------- nhiều lần thử thanh toán của cùng một đơn
+
+    /** Bấm thanh toán 3 lần: mã CODE, CODE-2, CODE-3. Trả [bookingId, [mã lần 1, 2, 3]]. */
+    private function threeAttempts(string $method): array
+    {
+        [$id, $first] = $this->book($method, 2);
+        $refs = [$first];
+        for ($i = 0; $i < 2; $i++) {
+            $this->assertTrue(app(OnlinePaymentService::class)->start($id, $method, '127.0.0.1')['ok']);
+            $refs[] = DB::table('tbl_checkout')->where('bookingId', $id)->value('providerTxnRef');
+        }
+        $this->assertSame([$first, $first . '-2', $first . '-3'], $refs);
+
+        return [$id, $refs];
+    }
+
+    public function test_ipn_of_an_older_attempt_still_finds_the_booking(): void
+    {
+        [$id, [, $second, $third]] = $this->threeAttempts('momo');
+        // khách trả ở tab của lần thử thứ 2 sau khi đã tạo lần thử thứ 3: trước đây webhook trả not_found, tiền thu mà đơn không ghi nhận
+        $this->postJson('/thanh-toan/thong-bao/momo', $this->momoIpn($second, 2000000))->assertNoContent();
+        $this->assertSame(['y', 'y'], $this->st($id));
+        $this->assertSame($second, DB::table('tbl_checkout')->where('bookingId', $id)->value('providerTxnRef'));
+        $this->assertSame(0, DB::table('tbl_payment_logs')->where('kind', 'notify')->where('result', 'not_found')->count());
+    }
+
+    public function test_vnpay_old_attempt_ipn_and_return_page_find_the_booking(): void
+    {
+        [$id, [, $second]] = $this->threeAttempts('vnpay');
+        $this->getJson('/thanh-toan/thong-bao/vnpay?' . http_build_query($this->vnp($second, 2000000)))->assertJson(['RspCode' => '00']);
+        $this->assertSame(['y', 'y'], $this->st($id));
+        $r = app(OnlinePaymentService::class)->handleReturn('vnpay', $this->vnp($second, 2000000), '127.0.0.1');
+        $this->assertTrue($r['paid']);
+        $this->assertSame($id, $r['bookingId']);
+    }
+
+    public function test_paying_two_attempts_is_flagged_as_double_charge_not_settled_twice(): void
+    {
+        [$id, [, $second, $third]] = $this->threeAttempts('momo');
+        // webhook đảo thứ tự: lần 3 về trước, rồi lần 2 (khách trả ở cả hai tab)
+        $this->postJson('/thanh-toan/thong-bao/momo', $this->momoIpn($third, 2000000))->assertNoContent();
+        $this->postJson('/thanh-toan/thong-bao/momo', $this->momoIpn($second, 2000000))->assertNoContent();
+        $this->assertSame(['y', 'y'], $this->st($id));
+        $this->assertSame(1, DB::table('tbl_audit_log')->where('action', 'payment.online')->count());   // chỉ ghi nhận MỘT lần
+        $this->assertSame(1, DB::table('tbl_payment_logs')->where(['kind' => 'notify', 'result' => 'double_paid'])->count());
+        $this->assertSame(1, DB::table('tbl_audit_log')->where('action', 'payment.double')->count());
+        $types = array_column(app(\App\Services\Payments\PaymentReconciliationService::class)->scan(), 'type');
+        $this->assertContains('payment_excess_unrefunded', $types);
+        // lần thử thứ 2 là khoản thu trùng, tự có yêu cầu hoàn chờ duyệt
+        $ex = DB::table('tbl_payment_attempts')->where(['provider' => 'momo', 'txnRef' => $second])->first();
+        $this->assertSame('excess', $ex->status);
+        $this->assertSame('pending', $ex->refundStatus);
+        $this->assertSame(2000000, (int) $ex->amount);
+
+        // gửi lặp webhook của chính lần đã ghi nhận: chỉ là trùng, không phải thu hai lần
+        $this->postJson('/thanh-toan/thong-bao/momo', $this->momoIpn($third, 2000000))->assertNoContent();
+        $this->assertSame(1, DB::table('tbl_payment_logs')->where(['kind' => 'notify', 'result' => 'double_paid'])->count());
+    }
+
+    public function test_query_asks_every_attempt_not_only_the_latest(): void
+    {
+        [$id, [$first, $second, $third]] = $this->threeAttempts('momo');
+        $asked = [];
+        Http::fake(['test-payment.momo.vn/v2/gateway/api/query' => function ($r) use (&$asked, $second) {
+            $asked[] = $r['orderId'];
+
+            return $r['orderId'] === $second
+                ? Http::response(['orderId' => $second, 'resultCode' => 0, 'amount' => 2000000, 'transId' => 4088878999])
+                : Http::response(['orderId' => $r['orderId'], 'resultCode' => 1000, 'amount' => 2000000]);
+        }]);
+        $r = app(OnlinePaymentService::class)->queryAndSettle($id);
+        $this->assertSame('paid', $r['status']);
+        $this->assertSame([$third, $second], $asked);   // mới nhất trước, dừng khi tìm thấy lần đã trả
+        $this->assertSame(['y', 'y'], $this->st($id));
+        $this->assertSame('4088878999', DB::table('tbl_checkout')->where('bookingId', $id)->value('providerTxnNo'));
+    }
+
+    // ---------------------------------------------------------------- bảng lần thử, khoản thu trùng, sổ cái hai bút toán
+
+    private function refundsOn(): void
+    {
+        config(['payments.refund' => ['enabled' => true, 'auto' => false, 'auto_delay_minutes' => 0, 'max_attempts' => 3]]);
+    }
+
+    public function test_every_attempt_is_recorded_before_calling_the_gateway(): void
+    {
+        $calls = 0;
+        Http::fake(['test-payment.momo.vn/v2/gateway/api/create' => function ($r) use (&$calls) {
+            $calls++;
+            // lúc cổng được gọi, lần thử đã nằm trong CSDL
+            \PHPUnit\Framework\Assert::assertSame(1, DB::table('tbl_payment_attempts')->where(['provider' => 'momo', 'txnRef' => $r['orderId'], 'status' => 'created'])->count());
+
+            return Http::response(['resultCode' => 0, 'orderId' => $r['orderId'], 'payUrl' => 'https://test-payment.momo.vn/pay']);
+        }]);
+        [$id, $ref] = $this->book('momo');
+        $this->assertSame(1, $calls);
+        $a = DB::table('tbl_payment_attempts')->where('bookingId', $id)->first();
+        $this->assertSame($ref, $a->txnRef);
+        $this->assertSame(2000000, (int) $a->amount);
+        $this->assertSame(DB::table('tbl_checkout')->where('bookingId', $id)->value('providerCreateDate'), $a->createDate);
+    }
+
+    public function test_settling_an_older_vnpay_attempt_keeps_its_own_create_date_for_refund(): void
+    {
+        $this->refundsOn();
+        [$id, [, $second]] = $this->threeAttempts('vnpay');
+        DB::table('tbl_payment_attempts')->where('txnRef', $second)->update(['createDate' => '20261101080000']);   // ngày tạo của lần thử 2
+        $this->getJson('/thanh-toan/thong-bao/vnpay?' . http_build_query($this->vnp($second, 2000000)))->assertJson(['RspCode' => '00']);
+        $this->assertSame('20261101080000', DB::table('tbl_checkout')->where('bookingId', $id)->value('providerCreateDate'));
+
+        // hủy đơn → hoàn qua VNPay phải gửi đúng mã + ngày tạo của LẦN THỬ ĐÃ TRẢ (trước đây gửi ngày của lần thử mới nhất → VNPay từ chối)
+        DB::transaction(fn() => app(\App\Services\RefundService::class)->requestLocked(DB::table('tbl_booking')->where('bookingId', $id)->lockForUpdate()->first(), 'admin', 1, 100));
+        $sent = null;
+        Http::fake(['sandbox.vnpayment.vn/merchant_webapi/*' => function ($r) use (&$sent) {
+            $sent = $r->data();
+
+            return Http::response(['vnp_ResponseCode' => '00', 'vnp_Message' => 'OK', 'vnp_TransactionStatus' => '00', 'vnp_TransactionNo' => '15000001']);
+        }]);
+        $rid = (int) DB::table('tbl_refunds')->where('bookingId', $id)->value('refundId');
+        $res = app(\App\Services\Payments\GatewayRefundService::class)->process($rid, 1);
+        $this->assertSame('refunded', $res['status'], $res['message']);
+        $this->assertSame($second, $sent['vnp_TxnRef']);
+        $this->assertSame('20261101080000', $sent['vnp_TransactionDate']);
+        $this->assertSame('02', $sent['vnp_TransactionType']);
+    }
+
+    public function test_admin_approves_excess_refund_via_momo_and_ledger_balances(): void
+    {
+        $this->refundsOn();
+        [$id, [, $second, $third]] = $this->threeAttempts('momo');
+        $this->postJson('/thanh-toan/thong-bao/momo', $this->momoIpn($third, 2000000))->assertNoContent();
+        $this->postJson('/thanh-toan/thong-bao/momo', $this->momoIpn($second, 2000000))->assertNoContent();
+        $ex = DB::table('tbl_payment_attempts')->where('txnRef', $second)->first();
+
+        // trang Hoàn tiền hiện khoản thu trùng, có nút duyệt
+        $admin = DB::table('tbl_admin')->insertGetId(['userName' => 'kt', 'passWord' => 'x', 'email' => 'kt@example.com', 'fullName' => 'Kế toán', 'address' => 'HN', 'role' => 'admin']);
+        $this->withSession(['adminId' => $admin])->get('/admin/refunds')->assertOk()->assertSee('Khoản thu trùng cần hoàn')->assertSee('Duyệt hoàn qua');
+
+        Http::fake(['test-payment.momo.vn/v2/gateway/api/refund' => fn($r) => Http::response(['resultCode' => 0, 'message' => 'OK', 'transId' => 3100000001])]);
+        $this->withSession(['adminId' => $admin])->post('/admin/refunds/excess/' . $ex->attemptId . '/gateway')->assertRedirect();
+        Http::assertSent(fn($r) => str_ends_with($r->url(), '/v2/gateway/api/refund') && (string) $r['transId'] === (string) $ex->providerTxnNo && (int) $r['amount'] === 2000000);
+        $ex = DB::table('tbl_payment_attempts')->where('attemptId', $ex->attemptId)->first();
+        $this->assertSame('refunded', $ex->refundStatus);
+        $this->assertSame('3100000001', $ex->refundNo);
+        $this->assertSame(['y', 'y'], $this->st($id));   // đơn vẫn đã thanh toán (khoản chính không bị hoàn)
+
+        // sổ cái: thu 2 triệu, thu trùng 2 triệu, hoàn trùng 2 triệu → khách còn 2 triệu ở Travela, khoản trùng = 0, mọi bút toán cân
+        $ledger = app(\App\Services\Payments\DoubleEntryLedger::class);
+        $this->assertSame(-2000000, $ledger->balance(\App\Services\Payments\DoubleEntryLedger::DEPOSIT, $id));
+        $this->assertSame(0, $ledger->balance(\App\Services\Payments\DoubleEntryLedger::EXCESS, $id));
+        $this->assertSame(2000000, $ledger->balance('cash:momo', $id));
+        $this->assertSame([], $ledger->unbalanced());
+        $types = array_column(app(\App\Services\Payments\PaymentReconciliationService::class)->scan(), 'type');
+        $this->assertNotContains('payment_excess_unrefunded', $types);
+        $this->assertNotContains('ledger_deposit_mismatch', $types);
+    }
+
+    public function test_qr_transferred_twice_is_excess_and_refunded_manually(): void
+    {
+        [$id, $ref] = $this->book('qr');
+        $this->sepay('CK ' . $ref, 2000000)->assertOk();
+        $this->sepay('CK ' . $ref . ' lan 2', 2000000)->assertOk();          // khách chuyển thêm lần nữa (mã SePay khác)
+        $ex = DB::table('tbl_payment_attempts')->where('bookingId', $id)->where('status', 'excess')->first();
+        $this->assertNotNull($ex, 'chuyển khoản lần hai phải là khoản thu trùng, không phải "gửi lặp"');
+        $this->assertSame('pending', $ex->refundStatus);
+        $chk = app(\App\Services\Payments\GatewayRefundService::class)->checkExcess($ex);
+        $this->assertFalse($chk['ok']);                                        // QR không có API hoàn → hoàn tay
+        $admin = DB::table('tbl_admin')->insertGetId(['userName' => 'kt2', 'passWord' => 'x', 'email' => 'kt2@example.com', 'fullName' => 'Kế toán', 'address' => 'HN', 'role' => 'admin']);
+        $this->withSession(['adminId' => $admin])->post('/admin/refunds/excess/' . $ex->attemptId . '/complete', ['method' => 'Chuyển khoản', 'reference' => 'FT99'])->assertRedirect();
+        $this->assertSame('refunded', DB::table('tbl_payment_attempts')->where('attemptId', $ex->attemptId)->value('refundStatus'));
+        $this->assertSame(0, app(\App\Services\Payments\DoubleEntryLedger::class)->balance(\App\Services\Payments\DoubleEntryLedger::EXCESS, $id));
+    }
+
+    public function test_sepay_transfer_into_another_account_is_ignored(): void
+    {
+        [$id, $ref] = $this->book('qr');
+        $this->withHeaders(['Authorization' => 'Apikey sepay-key-test'])->postJson('/thanh-toan/thong-bao/qr', ['id' => 5, 'gateway' => 'MBBank',
+            'accountNumber' => '9999999999', 'content' => 'CK ' . $ref, 'transferType' => 'in', 'transferAmount' => 2000000])->assertOk();
+        $this->assertSame('n', DB::table('tbl_checkout')->where('bookingId', $id)->value('paymentStatus'));
+    }
+
+    public function test_gateway_refund_is_capped_at_the_gateway_transaction_amount(): void
+    {
+        $this->refundsOn();
+        [$id, $ref] = $this->book('momo');
+        $this->postJson('/thanh-toan/thong-bao/momo', $this->momoIpn($ref, 2000000))->assertNoContent();
+        // thu thêm 500.000 đ tiền mặt khi tăng khách: checkout.amount = 2.500.000 nhưng giao dịch MoMo chỉ có 2.000.000
+        DB::table('tbl_checkout')->where('bookingId', $id)->increment('amount', 500000);
+        DB::table('tbl_booking_adjustments')->insert(['bookingId' => $id, 'kind' => 'increase', 'oldAdults' => 2, 'oldChildren' => 0, 'newAdults' => 3, 'newChildren' => 0, 'oldTotal' => 2000000,
+            'newTotal' => 2500000, 'settleAmount' => 500000, 'moneyStatus' => 'collected', 'method' => 'Tiền mặt', 'by' => 'admin', 'createdAt' => now()]);
+        DB::transaction(fn() => app(\App\Services\RefundService::class)->requestLocked(DB::table('tbl_booking')->where('bookingId', $id)->lockForUpdate()->first(), 'admin', 1, 100));
+        $r = DB::table('tbl_refunds')->where('bookingId', $id)->first();
+        $this->assertSame(2500000, (int) $r->amount);
+        $chk = app(\App\Services\Payments\GatewayRefundService::class)->check($r);
+        $this->assertFalse($chk['ok']);
+        $this->assertStringContainsString('vượt số còn hoàn được qua', $chk['message']);
+    }
+
+    public function test_vnpay_refund_status_is_not_guessed_when_txn_has_other_refunds_and_admin_can_resolve(): void
+    {
+        $this->refundsOn();
+        [$id, $ref] = $this->book('vnpay');
+        $this->getJson('/thanh-toan/thong-bao/vnpay?' . http_build_query($this->vnp($ref, 2000000)))->assertJson(['RspCode' => '00']);
+        // đã có một lệnh hoàn phần dư qua cổng trước đó
+        DB::table('tbl_booking_adjustments')->insert(['bookingId' => $id, 'kind' => 'decrease', 'oldAdults' => 2, 'oldChildren' => 0, 'newAdults' => 1, 'newChildren' => 0, 'oldTotal' => 2000000,
+            'newTotal' => 1000000, 'settleAmount' => 500000, 'moneyStatus' => 'refunded', 'method' => 'Hoàn qua VNPay', 'by' => 'admin', 'createdAt' => now(),
+            'gateway' => 'vnpay', 'gatewayRefundRef' => 'RFADJ1', 'gatewayStatus' => 'succeeded']);
+        DB::transaction(fn() => app(\App\Services\RefundService::class)->requestLocked(DB::table('tbl_booking')->where('bookingId', $id)->lockForUpdate()->first(), 'admin', 1, 100));
+        $rid = (int) DB::table('tbl_refunds')->where('bookingId', $id)->value('refundId');
+        Http::fake(['sandbox.vnpayment.vn/merchant_webapi/*' => fn($r) => $r['vnp_Command'] === 'refund'
+            ? Http::response(['vnp_ResponseCode' => '00', 'vnp_TransactionStatus' => '05'])                          // đang xử lý
+            : Http::response(['vnp_ResponseCode' => '00', 'vnp_TransactionType' => '03', 'vnp_TransactionStatus' => '00'])]);   // querydr: hoàn MỚI NHẤT xong
+        $svc = app(\App\Services\Payments\GatewayRefundService::class);
+        $this->assertSame('pending', $svc->process($rid, 1)['status']);
+        $sent = collect(Http::recorded())->map(fn($x) => $x[0]->data())->firstWhere('vnp_Command', 'refund');
+        $this->assertSame('03', $sent['vnp_TransactionType']);                // đã hoàn một phần trước đó → không được gửi 02
+        $sync = $svc->sync($rid, 1);
+        $this->assertSame('unknown', $sync['status'], 'querydr không phân biệt lệnh hoàn: không được coi là đã hoàn');
+        $this->assertSame('pending', DB::table('tbl_refunds')->where('refundId', $rid)->value('status'));
+
+        $admin = DB::table('tbl_admin')->insertGetId(['userName' => 'kt3', 'passWord' => 'x', 'email' => 'kt3@example.com', 'fullName' => 'Kế toán', 'address' => 'HN', 'role' => 'admin']);
+        $this->withSession(['adminId' => $admin])->post('/admin/refunds/' . $rid . '/resolve', ['outcome' => 'refunded'])->assertSessionHas('error');   // thiếu mã hoàn
+        $this->withSession(['adminId' => $admin])->post('/admin/refunds/' . $rid . '/resolve', ['outcome' => 'refunded', 'reference' => 'VNP-RF-778'])->assertSessionHas('success');
+        $r = DB::table('tbl_refunds')->where('refundId', $rid)->first();
+        $this->assertSame('refunded', $r->status);
+        $this->assertSame('succeeded', $r->gatewayStatus);
+    }
+
+    public function test_ledger_backfill_is_idempotent_and_balanced(): void
+    {
+        [$id, $ref] = $this->book('momo');
+        $this->postJson('/thanh-toan/thong-bao/momo', $this->momoIpn($ref, 2000000))->assertNoContent();
+        DB::table('tbl_ledger_entries')->delete();   // giả lập dữ liệu có trước khi bật sổ cái
+        $ledger = app(\App\Services\Payments\DoubleEntryLedger::class);
+        $this->assertSame(1, $ledger->backfill());
+        $this->assertSame(0, $ledger->backfill());
+        $this->assertSame(-2000000, $ledger->balance(\App\Services\Payments\DoubleEntryLedger::DEPOSIT, $id));
+        $this->assertSame([], $ledger->unbalanced());
+        $this->expectException(\LogicException::class);
+        $ledger->post('x:1', $id, 'capture', [['cash:momo', 100], [\App\Services\Payments\DoubleEntryLedger::DEPOSIT, -99]]);
+    }
+
+    public function test_momo_rejects_amount_above_its_limit_without_calling_gateway(): void
+    {
+        $tour = $this->tour(30);
+        DB::table('tbl_tours')->where('tourId', $tour)->update(['priceAdult' => 26000000]);
+        $user = $this->user();
+        $r = app(BookingService::class)->create($user, ['tourId' => $tour, 'fullName' => 'K', 'email' => 'k@example.com', 'tel' => '0900000000',
+            'address' => 'HN', 'numAdults' => 2, 'numChildren' => 0, 'couponCode' => '', 'payment' => 'momo']);
+        $start = app(OnlinePaymentService::class)->start($r['bookingId'], 'momo', '127.0.0.1');
+        $this->assertFalse($start['ok']);
+        $this->assertStringContainsString('50.000.000', $start['message']);
+        Http::assertNotSent(fn($req) => str_contains($req->url(), '/v2/gateway/api/create'));
     }
 }

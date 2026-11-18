@@ -380,8 +380,10 @@ class ContentReviewController extends Controller
         if ($request->input('after') === 'publish') {
             $err = $this->apply($kind, $cfg, $id, 'published');
 
-            return redirect()->route('admin.content.edit', [$kind, $id])->with($err ? 'error' : 'success',
-                $err ? 'Đã lưu nháp, chưa xuất bản được vì: ' . $err : 'Đã tạo và xuất bản.');
+            return redirect()->route('admin.content.edit', [$kind, $id])->with(
+                $err ? 'error' : 'success',
+                $err ? 'Đã lưu nháp, chưa xuất bản được vì: ' . $err : 'Đã tạo và xuất bản.',
+            );
         }
 
         return redirect()->route('admin.content.edit', [$kind, $id])->with('success', 'Đã lưu nháp. Xem mục "Trước khi xuất bản" bên phải để biết còn thiếu gì.');
@@ -412,6 +414,7 @@ class ContentReviewController extends Controller
         if ($fresh->reviewStatus === 'published' && ($p = PublishGate::problems($kind, $fresh))) {
             DB::table($cfg['table'])->where($cfg['key'], $id)->update(['reviewStatus' => 'draft']);
             $this->log($kind, $id, 'status', 'published', 'draft', 'Tự hạ vì không đủ điều kiện: ' . implode('; ', $p));
+            $this->unpublished($kind, $cfg, $fresh, 'draft');
             PublicCache::flush();
 
             return redirect()->route('admin.content.edit', [$kind, $id])->with('error', 'Đã lưu, nhưng nội dung chưa đủ điều kiện nên được đưa về Nháp: ' . implode('; ', $p));
@@ -421,8 +424,10 @@ class ContentReviewController extends Controller
         if ($request->input('after') === 'publish' && $fresh->reviewStatus !== 'published') {
             $err = $this->apply($kind, $cfg, $id, 'published');
 
-            return redirect()->route('admin.content.edit', [$kind, $id])->with($err ? 'error' : 'success',
-                $err ? 'Đã lưu, chưa xuất bản được vì: ' . $err : 'Đã lưu và xuất bản.');
+            return redirect()->route('admin.content.edit', [$kind, $id])->with(
+                $err ? 'error' : 'success',
+                $err ? 'Đã lưu, chưa xuất bản được vì: ' . $err : 'Đã lưu và xuất bản.',
+            );
         }
 
         return redirect()->route('admin.content.edit', [$kind, $id])->with('success', 'Đã lưu.');
@@ -605,9 +610,24 @@ class ContentReviewController extends Controller
         }
         DB::table($cfg['table'])->where($cfg['key'], $id)->update($upd);
         $this->log($kind, $id, 'status', $row->reviewStatus, $new);
+        $this->unpublished($kind, $cfg, $row, $new);
         PublicCache::flush();
 
         return null;
+    }
+
+    /** Nội dung đang công khai bị gỡ (nháp / đã xem): phát sự kiện PlaceUnpublished để Trip Planner báo các chuyến có mục này. */
+    private function unpublished(string $kind, array $cfg, object $row, string $new): void
+    {
+        $type = ['places' => 'place', 'foods' => 'food', 'experiences' => 'experience', 'events' => 'event'][$kind] ?? null;
+        if ($type && ($row->reviewStatus ?? null) === 'published' && $new !== 'published') {
+            \App\Support\DomainEvents::record(
+                \App\Support\DomainEvents::PLACE_UNPUBLISHED,
+                $type,
+                (int) $row->{$cfg['key']},
+                ['type' => $type, 'refId' => (int) $row->{$cfg['key']}, 'name' => (string) ($row->{$cfg['title']} ?? '')],
+            );
+        }
     }
 
     private function rejectOne(string $kind, array $cfg, int $id, string $reason): ?string
@@ -622,6 +642,7 @@ class ContentReviewController extends Controller
         }
         DB::table($cfg['table'])->where($cfg['key'], $id)->update($upd);
         $this->log($kind, $id, 'reject', $row->reviewStatus, 'draft', $reason);
+        $this->unpublished($kind, $cfg, $row, 'draft');
         PublicCache::flush();
 
         return null;

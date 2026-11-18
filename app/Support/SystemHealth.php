@@ -96,9 +96,12 @@ final class SystemHealth
             if (!config('ai.enabled')) {
                 return 'tắt (chế độ luật)';
             }
-            $until = (int) Cache::get('ai:cb:until', 0);
-            if ($until > time()) {
-                throw new \RuntimeException('ngắt mạch thêm ' . ($until - time()) . ' giây, đang dùng chế độ luật');
+            $open = \App\Services\Ai\AiGateway::openCircuits();
+            if (isset($open['*'])) {
+                throw new \RuntimeException('ngắt mạch toàn bộ thêm ' . $open['*'] . ' giây, đang dùng chế độ luật');
+            }
+            if ($open) {
+                throw new \RuntimeException('ngắt mạch: ' . implode(', ', array_map(fn($f, $s) => $f . ' (' . $s . ' giây)', array_keys($open), $open)) . ' — các tính năng khác vẫn chạy');
             }
             if (!Schema::hasTable('tbl_ai_runs')) {
                 return 'bật';

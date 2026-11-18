@@ -79,7 +79,10 @@ class PlannerAiChatTest extends TestCase
         $calls = 0;
         $saved = null;
         $mock = \Mockery::mock(\App\Services\Planner\PlannerService::class);
-        $mock->shouldReceive('generate')->andReturnUsing(function () use (&$calls, $result) { $calls++; return $result; });
+        $mock->shouldReceive('generate')->andReturnUsing(function () use (&$calls, $result) {
+            $calls++;
+            return $result;
+        });
         $mock->shouldReceive('save')->andReturnUsing(function ($uid, $r) use (&$saved) {
             $saved = $r;
             return DB::table('tbl_trips')->insertGetId(['userId' => $uid, 'title' => 'Đà Lạt', 'days' => 1, 'groupSize' => 2, 'kind' => 'trip', 'createdAt' => now(), 'updatedAt' => now()]);
@@ -98,12 +101,16 @@ class PlannerAiChatTest extends TestCase
         $this->assertSame(0, DB::table('tbl_trips')->where('userId', $this->uid)->count(), 'bản nháp chưa ghi gì');
 
         // xác nhận kèm mã nháp và cùng yêu cầu: lưu đúng bản đã xem, không xếp lại
-        $this->me()->postJson('/len-ke-hoach/tro-ly/tao', $said + ['confirmed' => true, 'draftToken' => $j['draftToken']])->assertOk()->assertJsonPath('ok', true);
+        $first = $this->me()->postJson('/len-ke-hoach/tro-ly/tao', $said + ['confirmed' => true, 'draftToken' => $j['draftToken']])->assertOk()->assertJsonPath('ok', true)->json();
         $this->assertSame(1, $calls);
         $this->assertSame($plan, $saved['plan']);
-        // mã đã dùng / hết hạn / yêu cầu đã đổi: KHÔNG tự xếp lịch mới rồi lưu, trả 409 để trình duyệt xếp lại và cho xem trước
+        // bấm Lưu lần nữa với cùng mã nháp (bấm đúp / mạng chậm): trả về ĐÚNG chuyến đã tạo, không tạo chuyến thứ hai
         $trips = DB::table('tbl_trips')->where('userId', $this->uid)->count();
         $this->me()->postJson('/len-ke-hoach/tro-ly/tao', $said + ['confirmed' => true, 'draftToken' => $j['draftToken']])
+            ->assertOk()->assertJsonPath('duplicate', true)->assertJsonPath('url', $first['url']);
+        $this->assertSame($trips, DB::table('tbl_trips')->where('userId', $this->uid)->count());
+        // mã hết hạn / không có mã / yêu cầu đã đổi: KHÔNG tự xếp lịch mới rồi lưu, trả 409 để trình duyệt xếp lại và cho xem trước
+        $this->me()->postJson('/len-ke-hoach/tro-ly/tao', $said + ['confirmed' => true, 'draftToken' => str_repeat('a', 32)])
             ->assertStatus(409)->assertJsonPath('expired', true)->assertJsonPath('reason', 'expired');
         $this->me()->postJson('/len-ke-hoach/tro-ly/tao', $said + ['confirmed' => true])->assertStatus(409);
         $this->assertSame(1, $calls, 'không xếp lại lặng lẽ');
@@ -114,8 +121,10 @@ class PlannerAiChatTest extends TestCase
             ->assertStatus(409)->assertJsonPath('reason', 'changed');
         $this->assertSame(2, $calls);
         // khác kiểu nhưng cùng giá trị (3 và "3", nhịp trống và "normal") vẫn là cùng yêu cầu
-        $this->assertSame(\App\Http\Controllers\clients\PlannerAiController::hashOf(['days' => 3, 'pace' => null, 'interests' => ['food', 'nature']]),
-            \App\Http\Controllers\clients\PlannerAiController::hashOf(['interests' => ['nature', 'food'], 'pace' => 'normal', 'days' => '3']));
+        $this->assertSame(
+            \App\Http\Controllers\clients\PlannerAiController::hashOf(['days' => 3, 'pace' => null, 'interests' => ['food', 'nature']]),
+            \App\Http\Controllers\clients\PlannerAiController::hashOf(['interests' => ['nature', 'food'], 'pace' => 'normal', 'days' => '3']),
+        );
         // nhịp đi / sở thích sửa thẳng được, giá trị lạ bị chặn
         $this->me()->postJson('/len-ke-hoach/tro-ly/tao', $said + ['adjustments' => ['pace' => 'relaxed', 'interests' => ['food']]])->assertOk();
         $calls = 0;
@@ -228,5 +237,37 @@ class PlannerAiChatTest extends TestCase
         $this->me()->postJson('/la-ban/danh-gia', ['feature' => 'brief', 'helpful' => true, 'reason' => 'too_generic'])->assertOk();
         $this->assertNull(DB::table('tbl_ai_feedback')->orderByDesc('feedbackId')->value('reason'), 'đúng ý thì không lưu lý do');
         $this->me()->postJson('/la-ban/danh-gia', ['feature' => 'hack', 'helpful' => true])->assertStatus(422);
+    }
+
+    /** Lưu lỗi thì bản nháp còn nguyên để bấm lại; bấm lại sau khi lỗi được khắc phục thì lưu đúng một chuyến. */
+    public function test_failed_save_keeps_draft_and_retry_creates_exactly_one_trip(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ThrottleRequests::class);
+        $plan = ['days' => [['day' => 1, 'activityMin' => 60, 'travelMin' => 0, 'items' => [
+            ['key' => 'place:1', 'type' => 'place', 'refId' => 1, 'name' => 'Hồ', 'startMin' => 480, 'durationMin' => 60, 'travelMin' => 0, 'travelKm' => 0, 'slot' => 'morning',
+                'reasons' => [], 'lat' => 11.94, 'lng' => 108.44, 'coordsApprox' => false]]]], 'unplaced' => [], 'budget' => ['knownMin' => 0, 'message' => 'x']];
+        $result = ['ok' => true, 'destination' => ['id' => $this->dest, 'name' => 'Đà Lạt'], 'request' => ['startDate' => '2027-03-10'], 'plan' => $plan];
+        $fail = true;
+        $mock = \Mockery::mock(\App\Services\Planner\PlannerService::class);
+        $mock->shouldReceive('generate')->andReturn($result);
+        $mock->shouldReceive('save')->andReturnUsing(function ($uid) use (&$fail) {
+            if ($fail) {
+                throw new \DomainException('Lỗi tạm thời khi lưu.');
+            }
+
+            return DB::table('tbl_trips')->insertGetId(['userId' => $uid, 'title' => 'Đà Lạt', 'days' => 1, 'groupSize' => 2, 'kind' => 'trip', 'createdAt' => now(), 'updatedAt' => now()]);
+        });
+        $this->app->instance(\App\Services\Planner\PlannerService::class, $mock);
+        $said = ['said' => ['Đà Lạt 1 ngày, 2 người lớn, thích thiên nhiên']];
+        $tok = $this->me()->postJson('/len-ke-hoach/tro-ly/tao', $said)->assertOk()->json('draftToken');
+
+        $this->me()->postJson('/len-ke-hoach/tro-ly/tao', $said + ['confirmed' => true, 'draftToken' => $tok])->assertOk()->assertJsonPath('ok', false);
+        $this->assertNotNull(\Illuminate\Support\Facades\Cache::get(\App\Http\Controllers\clients\PlannerAiController::draftKey($this->uid, $tok)), 'lưu lỗi: bản nháp còn nguyên');
+
+        $fail = false;
+        $a = $this->me()->postJson('/len-ke-hoach/tro-ly/tao', $said + ['confirmed' => true, 'draftToken' => $tok])->assertOk()->assertJsonPath('ok', true)->json();
+        $b = $this->me()->postJson('/len-ke-hoach/tro-ly/tao', $said + ['confirmed' => true, 'draftToken' => $tok])->assertOk()->json();
+        $this->assertSame($a['url'], $b['url']);
+        $this->assertSame(1, DB::table('tbl_trips')->where('userId', $this->uid)->count());
     }
 }

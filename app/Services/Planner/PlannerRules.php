@@ -187,6 +187,7 @@ final class PlannerRules
             'factor' => (float) ($r['factor'] ?? 1.3),
             'speedKmh' => (float) ($m['speed_kmh'] ?? 40),
             'minLegKm' => (float) ($r['min_leg_km'] ?? 0.5),
+            'sameAreaMin' => max(0, (int) ($r['same_area_min'] ?? 5)),
             'osrmProfile' => (string) ($m['osrm'] ?? 'driving'),
             'osrmUrl' => $url,
         ];
@@ -273,7 +274,7 @@ final class PlannerRules
             'slots' => $this->slots(),
             'kindPatterns' => (array) ($this->cfg['kind_patterns'] ?? []),
             'placeKinds' => (array) ($this->cfg['kind_places'] ?? []),
-            'route' => ['provider' => $r['provider'], 'mode' => $r['mode'], 'factor' => $r['factor'], 'speedKmh' => $r['speedKmh'], 'minLegKm' => $r['minLegKm']],
+            'route' => ['provider' => $r['provider'], 'mode' => $r['mode'], 'factor' => $r['factor'], 'speedKmh' => $r['speedKmh'], 'minLegKm' => $r['minLegKm'], 'sameAreaMin' => $r['sameAreaMin']],
             'legModes' => $this->legModes(),
             'transfer' => $this->transfer(),
             'estimateNote' => $this->estimateNote(),

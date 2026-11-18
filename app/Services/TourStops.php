@@ -72,49 +72,88 @@ final class TourStops
         return \App\Services\Planner\TourFit::tourDays($tour->time ?? null, $tour->startDate ?? null, $tour->endDate ?? null);
     }
 
-    /** Kiểm tra lịch trình: lệch số ngày, ngày trống, chồng giờ, thiếu điểm tập trung / trả khách. @return list<string> */
+    /** Kiểm tra lịch trình (mọi vấn đề, lỗi chặn trước). @return list<string> */
     public function check(object $tour): array
     {
-        $issues = [];
+        $c = $this->classify($tour);
+
+        return array_merge($c['blockers'], $c['warnings']);
+    }
+
+    /**
+     * Phân loại vấn đề của lịch trình theo giờ:
+     *  - blockers (CHẶN xuất bản / mở bán): chồng giờ, điểm dừng ngoài số ngày của tour, ngày đầu không có điểm tập trung,
+     *    ngày cuối không có giờ trả khách — sai những điều này thì khách không biết đi đâu / mấy giờ / về lúc nào.
+     *  - warnings (chỉ cảnh báo): lịch chữ lệch số ngày, ngày chưa có điểm dừng, tour chưa có lịch theo giờ
+     *    (tour cũ chưa nhập lịch theo giờ vẫn bán được — lịch chữ là cam kết tối thiểu).
+     * @return array{blockers: list<string>, warnings: list<string>, hasStops: bool}
+     */
+    public function classify(object $tour): array
+    {
+        $blockers = [];
+        $warnings = [];
         $days = self::tourDays($tour);
         $text = DB::table('tbl_timeline')->where('tourId', $tour->tourId)->count();
         if ($days && $text && $text !== $days) {
-            $issues[] = 'Lịch trình chữ có ' . $text . ' ngày nhưng tour ' . $days . ' ngày.';
+            $warnings[] = 'Lịch trình chữ có ' . $text . ' ngày nhưng tour ' . $days . ' ngày.';
         }
-        $stops = $this->forTour((int) $tour->tourId);
+        $stops = self::ready() ? $this->forTour((int) $tour->tourId) : [];
         if (!$stops) {
-            return $issues;
+            return ['blockers' => $blockers, 'warnings' => $warnings, 'hasStops' => false];
         }
         if ($days) {
             foreach (range(1, $days) as $d) {
                 if (empty($stops[$d])) {
-                    $issues[] = 'Ngày ' . $d . ' chưa có điểm dừng.';
+                    $warnings[] = 'Ngày ' . $d . ' chưa có điểm dừng.';
                 }
             }
             foreach (array_keys($stops) as $d) {
                 if ($d > $days) {
-                    $issues[] = 'Có điểm dừng ở ngày ' . $d . ' nhưng tour chỉ ' . $days . ' ngày.';
+                    $blockers[] = 'Có điểm dừng ở ngày ' . $d . ' nhưng tour chỉ ' . $days . ' ngày.';
                 }
             }
         }
         $first = $stops[min(array_keys($stops))][0] ?? null;
         if ($first && $first->kind !== 'meet') {
-            $issues[] = 'Ngày đầu chưa có điểm tập trung / đón khách (khách không biết đi đâu, mấy giờ).';
+            $blockers[] = 'Ngày đầu chưa có điểm tập trung / đón khách (khách không biết đi đâu, mấy giờ).';
         }
         $lastDay = $stops[max(array_keys($stops))];
         if (!collect($lastDay)->contains(fn($s) => $s->kind === 'drop')) {
-            $issues[] = 'Ngày cuối chưa có giờ trả khách (khách khó đặt vé về).';
+            $blockers[] = 'Ngày cuối chưa có giờ trả khách (khách khó đặt vé về).';
         }
         foreach ($stops as $d => $list) {
             $prev = null;
             foreach ($list as $s) {
                 if ($prev && $prev->endMin !== null && $s->startMin !== null && $s->startMin < $prev->endMin) {
-                    $issues[] = 'Ngày ' . $d . ': "' . $s->title . '" bắt đầu trước khi "' . $prev->title . '" kết thúc.';
+                    $blockers[] = 'Ngày ' . $d . ': "' . $s->title . '" bắt đầu trước khi "' . $prev->title . '" kết thúc.';
                 }
                 $prev = $s;
             }
         }
 
-        return $issues;
+        return ['blockers' => $blockers, 'warnings' => $warnings, 'hasStops' => true];
+    }
+
+    /**
+     * Trạng thái vận hành của tour: draft (còn lỗi chặn) → ready (đủ điều kiện, chưa đăng) → published (đang bán).
+     * Lưu vào tbl_tours.operationalStatus để danh sách admin lọc được; gọi lại sau mỗi lần sửa lịch / đăng / ẩn tour.
+     * @return array{status:string, blockers:list<string>, warnings:list<string>}
+     */
+    public function readiness(int $tourId): array
+    {
+        $tour = DB::table('tbl_tours')->where('tourId', $tourId)->first();
+        if (!$tour) {
+            return ['status' => 'draft', 'blockers' => ['Không tìm thấy tour.'], 'warnings' => []];
+        }
+        $c = $this->classify($tour);
+        if (!$c['hasStops']) {
+            $c['warnings'][] = 'Tour chưa có lịch trình theo giờ (điểm tập trung, giờ trả khách): nên bổ sung trước khi bán.';
+        }
+        $status = (int) $tour->availability === 1 ? 'published' : ($c['blockers'] ? 'draft' : 'ready');
+        if (\Illuminate\Support\Facades\Schema::hasColumn('tbl_tours', 'operationalStatus') && ($tour->operationalStatus ?? null) !== $status) {
+            DB::table('tbl_tours')->where('tourId', $tourId)->update(['operationalStatus' => $status]);
+        }
+
+        return ['status' => $status, 'blockers' => $c['blockers'], 'warnings' => $c['warnings']];
     }
 }

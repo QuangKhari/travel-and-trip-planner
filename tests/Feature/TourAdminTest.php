@@ -291,4 +291,52 @@ class TourAdminTest extends TestCase
 
         $this->assertSame(['Bốn ngày'], $titles);
     }
+
+    /** Cổng vận hành: lịch trình theo giờ còn lỗi chặn thì không hiện / đăng tour được; sửa xong thì được. Tour chưa có lịch theo giờ vẫn bán. */
+    public function test_tour_cannot_be_shown_while_hourly_itinerary_has_blockers(): void
+    {
+        $id = $this->tour(['availability' => 0]);
+        foreach (range(1, 6) as $i) {
+            DB::table('tbl_images')->insert(['tourId' => $id, 'imageURL' => "t$id-$i.jpg", 'description' => '', 'sortOrder' => $i, 'isCover' => $i === 1 ? 1 : 0]);
+        }
+        foreach (range(1, 3) as $d) {
+            DB::table('tbl_timeline')->insert(['tourId' => $id, 'title' => 'Ngày ' . $d, 'description' => 'x']);
+        }
+        $stops = app(\App\Services\TourStops::class);
+        // ngày đầu không có điểm tập trung, ngày cuối không có giờ trả khách, ngày 2 chồng giờ
+        $this->as()->post("/admin/tours/$id/lich-trinh-gio", ['stops' => [
+            ['dayNo' => 1, 'start' => '08:00', 'kind' => 'visit', 'title' => 'Bà Nà'],
+            ['dayNo' => 2, 'start' => '08:00', 'end' => '11:00', 'kind' => 'visit', 'title' => 'Hội An'],
+            ['dayNo' => 2, 'start' => '10:00', 'end' => '12:00', 'kind' => 'meal', 'title' => 'Ăn trưa'],
+            ['dayNo' => 3, 'start' => '09:00', 'kind' => 'visit', 'title' => 'Chợ Hàn'],
+        ]])->assertRedirect();
+        $rd = $stops->readiness($id);
+        $this->assertSame('draft', $rd['status']);
+        $this->assertCount(3, $rd['blockers']);
+        $this->assertSame('draft', DB::table('tbl_tours')->where('tourId', $id)->value('operationalStatus'));
+        $this->as()->postJson('/admin/toggle-tour', ['tourId' => $id])->assertJson(['success' => false]);
+        $this->assertSame(0, (int) DB::table('tbl_tours')->where('tourId', $id)->value('availability'));
+        $this->as()->get("/admin/tours/$id/lich-trinh-gio")->assertOk()->assertSee('Phải sửa trước khi đăng');
+
+        $this->as()->post("/admin/tours/$id/lich-trinh-gio", ['stops' => [
+            ['dayNo' => 1, 'start' => '07:30', 'kind' => 'meet', 'title' => 'Đón tại sân bay'],
+            ['dayNo' => 1, 'start' => '09:00', 'kind' => 'visit', 'title' => 'Bà Nà'],
+            ['dayNo' => 2, 'start' => '08:00', 'end' => '11:00', 'kind' => 'visit', 'title' => 'Hội An'],
+            ['dayNo' => 2, 'start' => '11:30', 'end' => '12:30', 'kind' => 'meal', 'title' => 'Ăn trưa'],
+            ['dayNo' => 3, 'start' => '09:00', 'kind' => 'visit', 'title' => 'Chợ Hàn'],
+            ['dayNo' => 3, 'start' => '15:00', 'kind' => 'drop', 'title' => 'Trả khách sân bay'],
+        ]])->assertRedirect();
+        $this->assertSame('ready', $stops->readiness($id)['status']);
+        $this->as()->postJson('/admin/toggle-tour', ['tourId' => $id])->assertJson(['success' => true]);
+        $this->assertSame('published', DB::table('tbl_tours')->where('tourId', $id)->value('operationalStatus'));
+
+        // tour cũ chưa nhập lịch theo giờ: chỉ cảnh báo, vẫn hiện được
+        $old = $this->tour(['availability' => 0]);
+        foreach (range(1, 6) as $i) {
+            DB::table('tbl_images')->insert(['tourId' => $old, 'imageURL' => "o$old-$i.jpg", 'description' => '', 'sortOrder' => $i, 'isCover' => 0]);
+        }
+        DB::table('tbl_timeline')->insert(['tourId' => $old, 'title' => 'Ngày 1', 'description' => 'x']);
+        $this->assertSame([], $stops->readiness($old)['blockers']);
+        $this->as()->postJson('/admin/toggle-tour', ['tourId' => $old])->assertJson(['success' => true]);
+    }
 }

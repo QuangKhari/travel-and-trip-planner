@@ -219,6 +219,7 @@ class PlannerService   // không final: test luồng "Tạo lịch với AI" tha
         $notes = array_values(array_filter(array_merge($plan['warnings'], [$plan['budget']['message'] ?? null])));
 
         return DB::transaction(function () use ($userId, $result, $r, $plan, $notes) {
+            TripPlanner::assertCanCreate($userId);   // đếm lại trong giao dịch (khóa dòng người dùng)
             $tripId = (int) DB::table('tbl_trips')->insertGetId([
                 'userId' => $userId, 'kind' => 'trip', 'destinationId' => $result['destination']['id'] ?? null,
                 'title' => mb_substr($result['destination']['name'] . ' ' . $r['days'] . ' ngày, tháng ' . $r['month'], 0, 160),

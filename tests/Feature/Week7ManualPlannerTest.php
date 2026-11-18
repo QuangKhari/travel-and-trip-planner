@@ -144,6 +144,7 @@ class Week7ManualPlannerTest extends TestCase
         $this->withSession($this->s)->get("/len-ke-hoach/$id")->assertOk()->assertSee('Khách sạn Sen Vàng', false)->assertSee('Taxi sân bay', false);
     }
 
+    /** Mục tự thêm lặp tự do; nội dung Travela được ghé lại ở NGÀY KHÁC (mỗi lần ghé một mục) nhưng trùng trong cùng ngày thì gộp. */
     public function test_custom_items_may_repeat_but_content_items_still_dedupe(): void
     {
         $f = $this->food('pho', 'Phở', $this->hn);
@@ -152,10 +153,11 @@ class Week7ManualPlannerTest extends TestCase
             ['type' => 'note', 'label' => 'Ăn tối', 'day' => 1],
             ['type' => 'note', 'label' => 'Ăn tối', 'day' => 1],
             ['type' => 'food', 'refId' => $f, 'day' => 1],
+            ['type' => 'food', 'refId' => $f, 'day' => 1],
             ['type' => 'food', 'refId' => $f, 'day' => 2],
         ]))->assertOk();
         $this->assertSame(2, DB::table('tbl_trip_items')->where('tripId', $id)->where('refType', 'note')->count());
-        $this->assertSame(1, DB::table('tbl_trip_items')->where('tripId', $id)->where('refType', 'food')->count());
+        $this->assertSame([1, 2], DB::table('tbl_trip_items')->where('tripId', $id)->where('refType', 'food')->orderBy('dayNo')->pluck('dayNo')->map(fn($d) => (int) $d)->all());
         // thứ tự trong ngày được giữ theo thứ tự gửi lên
         $order = DB::table('tbl_trip_items')->where(['tripId' => $id, 'dayNo' => 1])->orderBy('orderNo')->pluck('refType')->all();
         $this->assertSame(['note', 'note', 'food'], $order);

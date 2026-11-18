@@ -4,7 +4,6 @@ namespace App\Services\Ai\Eval;
 
 use App\Services\Ai\Copilot\CopilotService;
 use App\Services\Planner\PlannerService;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -35,8 +34,11 @@ final class CopilotExperiment
             $tripId = $this->planner->save($uid, $res);
             $this->mutate($tripId, (string) ($t['mutate'] ?? ''));
             [$names, $withHours] = $this->names($tripId);
-            $fill = fn(string $s, string $miss) => preg_replace_callback('/\{h(\d+)\}/', fn($m) => $withHours[(int) $m[1] - 1] ?? $miss,
-                preg_replace_callback('/\{d(\d+)i(\d+)\}/', fn($m) => $names[(int) $m[1]][(int) $m[2] - 1] ?? $miss, $s));
+            $fill = fn(string $s, string $miss) => preg_replace_callback(
+                '/\{h(\d+)\}/',
+                fn($m) => $withHours[(int) $m[1] - 1] ?? $miss,
+                preg_replace_callback('/\{d(\d+)i(\d+)\}/', fn($m) => $names[(int) $m[1]][(int) $m[2] - 1] ?? $miss, $s),
+            );
             $text = $fill($case['request'], '???');
             if (str_contains($text, '???')) {
                 return $row + ['error' => preg_match('/\{h\d+\}/', $case['request'])
@@ -46,8 +48,7 @@ final class CopilotExperiment
             $touch = isset($case['expect']['touch']) ? $fill($case['expect']['touch'], '') : null;
 
             $trip = DB::table('tbl_trips')->where('tripId', $tripId)->first();
-            Cache::forget('ai:cb:until');
-            Cache::forget('ai:cb:fails');
+            \App\Services\Ai\AiGateway::resetCircuits();
             $t0 = microtime(true);
             $r = $this->copilot->chat($trip, null, $text, [], [], ['verify' => $mode === 'verified']);
             $ms = EvalKit::ms($t0);

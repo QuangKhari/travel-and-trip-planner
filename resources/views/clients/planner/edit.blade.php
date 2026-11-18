@@ -670,13 +670,13 @@
 
 <script type="application/json" id="tpData">{!! json_encode($client, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
 {{-- planner-geo (tuyến) + planner-schedule (xếp giờ): lõi tính xem trước, tham số từ cfg.rules (PlannerRules); planner-api: gọi máy chủ; planner.js: giao diện --}}
-<script src="{{ asset('clients/assets/js/planner-geo.js') }}?v=4"></script>
-<script src="{{ asset('clients/assets/js/planner-schedule.js') }}?v=7"></script>
+<script src="{{ asset('clients/assets/js/planner-geo.js') }}?v=5"></script>
+<script src="{{ asset('clients/assets/js/planner-schedule.js') }}?v=8"></script>
 <script src="{{ asset('clients/assets/js/planner-api.js') }}?v=2"></script>
-<script src="{{ asset('clients/assets/js/planner-save.js') }}?v=3"></script>
+<script src="{{ asset('clients/assets/js/planner-save.js') }}?v=4"></script>
 <script src="{{ asset('clients/assets/js/planner-resolve.js') }}?v=2"></script>
 <script src="{{ asset('clients/assets/js/planner-map.js') }}?v=7"></script>
-<script src="{{ asset('clients/assets/js/planner.js') }}?v=46" defer></script>
+<script src="{{ asset('clients/assets/js/planner.js') }}?v=48" defer></script>
 <script src="{{ asset('clients/assets/js/planner-decide.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-extras.js') }}?v=2" defer></script>
 <script src="{{ asset('clients/assets/js/planner-travel.js') }}?v=3" defer></script>

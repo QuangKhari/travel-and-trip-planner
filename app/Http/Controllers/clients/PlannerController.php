@@ -26,7 +26,6 @@ use App\Services\Planner\TripPlanner;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\clients\TravelController;
 
 /**
  * Trip Planner (web). Các route có đăng nhập nằm trong nhóm checkLoginClient; chỉ trang chia sẻ chỉ đọc là công khai.
@@ -81,7 +80,7 @@ class PlannerController extends Controller
             'children' => null,
             'startDate' => null,
             'pace' => null,
-            'maxDifficulty' => null
+            'maxDifficulty' => null,
         ];
         $pre['place'] = null;
         if ($request->query('destinationId') || $request->query('placeLat')) {
@@ -91,7 +90,7 @@ class PlannerController extends Controller
                 $pre['place'] = [
                     'name' => mb_substr(trim((string) ($qv['placeName'] ?? '')), 0, 120) ?: 'Nơi đã chọn',
                     'lat' => max(-90, min(90, (float) $qv['placeLat'])),
-                    'lng' => max(-180, min(180, (float) $qv['placeLng']))
+                    'lng' => max(-180, min(180, (float) $qv['placeLng'])),
                 ];
             }
             $pre = array_merge($pre, [
@@ -117,7 +116,7 @@ class PlannerController extends Controller
                 'groupSize' => $i['groupSize'],
                 'budget' => $i['budget'],
                 'interests' => $i['interests'],
-                'dislikes' => $i['dislikes']
+                'dislikes' => $i['dislikes'],
             ];
         } else {
             $pre['destination'] = is_string($request->query('diem-den')) ? $request->query('diem-den') : null;
@@ -151,7 +150,7 @@ class PlannerController extends Controller
                 'sub' => (string) $d->province,
                 'core' => array_key_exists((int) $d->destinationId, $readyById),
                 'ready' => (bool) ($readyById[(int) $d->destinationId] ?? false),
-                'img' => $d->coverImage ? self::publicUrl($d->coverImage) : null
+                'img' => $d->coverImage ? self::publicUrl($d->coverImage) : null,
             ])->values()->all();
 
         return view('clients.planner.suggest', [
@@ -224,7 +223,7 @@ class PlannerController extends Controller
         $dayItems = $payload['days'][$day - 1]['items'] ?? [];
         $destIds = array_unique(array_filter(array_merge(
             [(int) ($trip->destinationId ?? 0)],
-            array_map(fn($x) => (int) ($x['destinationId'] ?? 0), $all)
+            array_map(fn($x) => (int) ($x['destinationId'] ?? 0), $all),
         )));
         $exclude = array_values(array_filter((array) ($v['have'] ?? []), fn($k) => preg_match('/^(experience|place):\d+$/', $k)));
 
@@ -341,7 +340,7 @@ class PlannerController extends Controller
             'missing' => $row['missing'],
             'percent' => $row['percent'],
             'alternatives' => array_slice($alts, 0, 3),
-            'open' => (bool) config('planner.open_mode.enabled', true)
+            'open' => (bool) config('planner.open_mode.enabled', true),
         ];
     }
 
@@ -367,7 +366,7 @@ class PlannerController extends Controller
                 'sub' => $d->province,
                 'ready' => $ready[(int) $d->destinationId] ?? $gate->isReady((int) $d->destinationId),
                 'lat' => $d->latitude !== null ? (float) $d->latitude : null,
-                'lng' => $d->longitude !== null ? (float) $d->longitude : null
+                'lng' => $d->longitude !== null ? (float) $d->longitude : null,
             ])->values()->all();
         $map = [];
         $ok = true;
@@ -634,7 +633,7 @@ class PlannerController extends Controller
                     'id' => (int) $d->destinationId,
                     'name' => $d->name,
                     'lat' => $d->latitude !== null ? (float) $d->latitude : null,
-                    'lng' => $d->longitude !== null ? (float) $d->longitude : null
+                    'lng' => $d->longitude !== null ? (float) $d->longitude : null,
                 ])->all(),
             'contentWarnings' => $payload['contentWarnings'],
             'advice' => $payload['advice'],
@@ -657,7 +656,7 @@ class PlannerController extends Controller
 
         $destIds = array_values(array_unique(array_filter(array_merge(
             [(int) ($trip->destinationId ?? 0)],
-            array_map(fn($x) => (int) ($x['destinationId'] ?? 0), $all)
+            array_map(fn($x) => (int) ($x['destinationId'] ?? 0), $all),
         ))));
 
         // ảnh bìa chuyến = ảnh điểm đến chính; "ai vừa cập nhật" cho phần cộng tác
@@ -886,7 +885,8 @@ class PlannerController extends Controller
             }
         }
 
-        return response()->json(['ok' => true, 'contentWarnings' => $p['contentWarnings'], 'advice' => $p['advice'], 'savedAt' => now()->format('H:i'), 'fit' => $fit, 'rain' => $p['rain'], 'rev' => app(TripSharing::class)->revision($id)['rev']]);
+        return response()->json(['ok' => true, 'contentWarnings' => $p['contentWarnings'], 'advice' => $p['advice'], 'savedAt' => now()->format('H:i'), 'fit' => $fit, 'rain' => $p['rain'], 'rev' => app(TripSharing::class)->revision($id)['rev'],
+            'uids' => $planner->lastSavedUids()]);   // định danh ổn định của từng mục, cùng thứ tự với items gửi lên
     }
 
     /** GET /len-ke-hoach/{id}/tim?q=&type=&dest= -> {results:[...]} : nội dung đã xuất bản để thêm vào chuyến. */

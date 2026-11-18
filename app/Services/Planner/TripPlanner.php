@@ -80,6 +80,7 @@ class TripPlanner
             'items.*.visitedAt' => ['nullable', 'date'],
             // bỏ qua khi đang đi (khác "đã ghé"): giữ mục trong lịch nhưng không tính là việc còn lại của ngày
             'items.*.skippedAt' => ['nullable', 'date'],
+            'items.*.itemUid' => ['nullable', 'string', 'regex:/^[0-9A-HJKMNP-TV-Z]{26}$/'],
         ];
     }
 
@@ -337,6 +338,7 @@ class TripPlanner
                     'source' => $lat !== null ? ($r->source ?? null) : null,
                     'url' => $lat !== null ? 'https://www.google.com/maps?q=' . $lat . ',' . $lng : null,
                     'name' => (string) ($r->label ?: ($r->refType === 'transport' ? 'Di chuyển' : 'Ghi chú')),
+                    'itemUid' => $r->itemUid ?? null,
                     'day' => $r->dayNo !== null ? (int) $r->dayNo : null,
                     'order' => (int) $r->orderNo,
                     'note' => $r->note,
@@ -349,15 +351,24 @@ class TripPlanner
                     'locked' => !empty($r->isLocked),
                     'legMode' => $r->legMode ?? null,
                     'visitedAt' => $r->visitedAt ?? null,
-                'skippedAt' => $r->skippedAt ?? null,
+                    'skippedAt' => $r->skippedAt ?? null,
                 ];
                 continue;
             }
             $k = $r->refType . ':' . $r->refId;
-            if (!isset($res[$k])) {
-                continue;
+            $base = $res[$k] ?? null;
+            if ($base === null) {
+                // Nội dung nguồn đã bị ẩn / chuyển nháp / xóa: KHÔNG bỏ mục của người dùng. Giữ lại với tên + vị trí đã lưu lúc thêm,
+                // đánh dấu unavailable để giao diện cảnh báo và người dùng tự quyết thay thế hay xóa.
+                $lat = ($r->latitude ?? null) !== null ? (float) $r->latitude : null;
+                $lng = ($r->longitude ?? null) !== null ? (float) $r->longitude : null;
+                $base = ['type' => $r->refType, 'refId' => (int) $r->refId, 'slug' => null, 'destinationId' => null, 'price' => null,
+                    'sub' => '', 'raw' => null, 'ownLat' => $lat, 'ownLng' => $lng, 'destName' => null,
+                    'lat' => $lat, 'lng' => $lng, 'url' => null, 'kind' => null,
+                    'name' => (string) ($r->label ?: 'Địa điểm không còn hiển thị'), 'unavailable' => true];
             }
-            $out[] = array_merge($res[$k], [
+            $out[] = array_merge($base, [
+                'itemUid' => $r->itemUid ?? null,
                 'day' => $r->dayNo !== null ? (int) $r->dayNo : null,
                 'order' => (int) $r->orderNo,
                 'note' => $r->note,
@@ -365,7 +376,7 @@ class TripPlanner
                 'slot' => $r->slot ?? null,
                 'reasons' => !empty($r->reasons) ? (json_decode((string) $r->reasons, true) ?: []) : [],
                 'startMin' => isset($r->startMin) ? (int) $r->startMin : null,
-                'durationMin' => !empty($r->durationMin) ? (int) $r->durationMin : ($res[$k]['durationMin'] ?? null),
+                'durationMin' => !empty($r->durationMin) ? (int) $r->durationMin : ($base['durationMin'] ?? null),
                 'costType' => $r->costType ?? null,
                 'locked' => !empty($r->isLocked),
                 'legMode' => $r->legMode ?? null,
@@ -386,6 +397,11 @@ class TripPlanner
      */
     public static function assertCanCreate(int $userId): void
     {
+        // Gọi lại BÊN TRONG giao dịch tạo chuyến: khóa dòng người dùng rồi mới đếm, hai request tạo chuyến cùng lúc
+        // khi còn 1 suất không cùng lọt qua (lần gọi ngoài giao dịch chỉ để báo lỗi sớm).
+        if (DB::transactionLevel() > 0) {
+            DB::table('tbl_users')->where('userId', $userId)->lockForUpdate()->first(['userId']);
+        }
         $max = (int) config('planner.max_trips_per_user', 200);
         if (DB::table('tbl_trips')->where('userId', $userId)->where('kind', 'trip')->count() >= $max) {
             throw new \DomainException('Bạn đã có ' . $max . ' chuyến đi (mức tối đa). Hãy xóa bớt chuyến cũ trước khi tạo chuyến mới.');
@@ -397,6 +413,7 @@ class TripPlanner
         self::assertCanCreate($userId);
 
         return DB::transaction(function () use ($userId, $f, $fromTray) {
+            self::assertCanCreate($userId);
             $tripId = (int) DB::table('tbl_trips')->insertGetId([
                 'userId' => $userId,
                 'title' => $f['title'],
@@ -464,6 +481,7 @@ class TripPlanner
         $days = max(1, min(self::MAX_DAYS, (int) $it->days));
 
         return DB::transaction(function () use ($userId, $it, $destId, $rows, $valid, $days) {
+            self::assertCanCreate($userId);
             $tripId = (int) DB::table('tbl_trips')->insertGetId([
                 'userId' => $userId, 'kind' => 'trip', 'destinationId' => $destId, 'title' => mb_substr((string) $it->title, 0, 160),
                 'days' => $days, 'groupSize' => 1, 'status' => 'planned', 'source' => 'itinerary', 'createdAt' => now(), 'updatedAt' => now(),
@@ -514,6 +532,7 @@ class TripPlanner
         $destId = !empty($t->destinationId) ? (int) $t->destinationId : null;
 
         return DB::transaction(function () use ($userId, $t, $days, $group, $destId) {
+            self::assertCanCreate($userId);
             $title = mb_substr('Quanh tour: ' . $t->title, 0, 160);
             $tripId = (int) DB::table('tbl_trips')->insertGetId([
                 'userId' => $userId, 'kind' => 'trip', 'destinationId' => $destId, 'title' => $title, 'startDate' => $t->startDate,
@@ -570,6 +589,7 @@ class TripPlanner
         $destId = !empty($t->destinationId) ? (int) $t->destinationId : null;
 
         return DB::transaction(function () use ($userId, $t, $refs, $days, $groupSize, $destId) {
+            self::assertCanCreate($userId);
             $title = mb_substr('Tự đi: ' . $t->title, 0, 160);
             $tripId = (int) DB::table('tbl_trips')->insertGetId([
                 'userId' => $userId, 'kind' => 'trip', 'destinationId' => $destId, 'title' => $title, 'startDate' => null,
@@ -591,6 +611,88 @@ class TripPlanner
      * Lưu thông tin chuyến + toàn bộ danh sách mục (ghi đè). Thứ tự trong mảng $items quyết định orderNo trong từng ngày.
      * Trả false nếu chuyến không thuộc người dùng.
      */
+    /** itemUid của từng mục trong lần save() vừa rồi, theo đúng thứ tự mục gửi lên (null = mục không được nhận). */
+    private array $lastUids = [];
+
+    public function lastSavedUids(): array
+    {
+        return $this->lastUids;
+    }
+
+    /** Dòng hiện có của chuyến theo itemUid (dòng chưa có định danh — tạo bởi đường khác — được cấp ngay). @return array<string,object> */
+    private function rowsByUid(int $tripId): array
+    {
+        $out = [];
+        foreach (DB::table('tbl_trip_items')->where('tripId', $tripId)->lockForUpdate()->get() as $r) {
+            if (!$r->itemUid) {
+                $r->itemUid = (string) Str::ulid();
+                DB::table('tbl_trip_items')->where('itemId', $r->itemId)->update(['itemUid' => $r->itemUid]);
+            }
+            $out[$r->itemUid] = $r;
+        }
+
+        return $out;
+    }
+
+    /**
+     * Ghi các dòng theo thay đổi: dòng có itemUid cũ → UPDATE khi khác; dòng mới → INSERT; dòng cũ không còn → DELETE.
+     * itemId của mục không đổi qua các lần lưu (liên kết từ thông báo / lịch sử / đặt chỗ không bị gãy).
+     */
+    private function persistRows(int $tripId, array $old, array $rows): void
+    {
+        $keep = [];
+        $insert = [];
+        $updates = [];
+        foreach ($rows as $r) {
+            $o = $old[$r['itemUid']] ?? null;
+            if (!$o) {
+                $insert[] = $r;
+                continue;
+            }
+            $keep[] = (int) $o->itemId;
+            $diff = [];
+            foreach ($r as $col => $v) {
+                if (!self::sameValue($o->{$col} ?? null, $v)) {
+                    $diff[$col] = $v;
+                }
+            }
+            if ($diff) {
+                $updates[(int) $o->itemId] = [$o, $diff];
+            }
+        }
+        $gone = array_diff(array_map(fn($o) => (int) $o->itemId, $old), $keep);
+        if ($gone) {
+            DB::table('tbl_trip_items')->whereIn('itemId', $gone)->delete();
+        }
+        // UNIQUE(tripId, dayNo, orderNo): dòng đổi chỗ nhả vị trí trước (dayNo NULL không bị ràng buộc) rồi mới nhận vị trí mới,
+        // để hai mục đổi chỗ cho nhau không va nhau giữa chừng
+        $moving = array_keys(array_filter($updates, fn($u) => $u[0]->dayNo !== null && (array_key_exists('dayNo', $u[1]) || array_key_exists('orderNo', $u[1]))));
+        if ($moving) {
+            DB::table('tbl_trip_items')->whereIn('itemId', $moving)->update(['dayNo' => null]);
+            foreach ($moving as $id) {
+                $updates[$id][1]['dayNo'] = $rows[array_search($updates[$id][0]->itemUid, array_column($rows, 'itemUid'), true)]['dayNo'];
+            }
+        }
+        foreach ($updates as $id => [, $diff]) {
+            DB::table('tbl_trip_items')->where('itemId', $id)->update($diff);
+        }
+        if ($insert) {
+            DB::table('tbl_trip_items')->insert($insert);
+        }
+    }
+
+    private static function sameValue($a, $b): bool
+    {
+        if ($a === null || $b === null) {
+            return $a === $b;
+        }
+        if (is_numeric($a) && is_numeric($b)) {
+            return abs((float) $a - (float) $b) < 1e-9;
+        }
+
+        return (string) $a === (string) $b;
+    }
+
     public function save(int $userId, int $tripId, array $f, array $items): bool
     {
         // Chủ chuyến hoặc người được mời quyền "chỉnh sửa" mới lưu được
@@ -651,19 +753,39 @@ class TripPlanner
                 $upd['rainPlan'] = $clean ? json_encode($clean, JSON_UNESCAPED_UNICODE) : null;
             }
             DB::table('tbl_trips')->where('tripId', $tripId)->update($upd);
-            DB::table('tbl_trip_items')->where('tripId', $tripId)->delete();
+            // Tham chiếu ĐANG có trong chuyến (trước khi ghi lại): mục nào nay không còn công khai vẫn được giữ, không xóa ngầm
+            $prev = DB::table('tbl_trip_items')->where('tripId', $tripId)->whereNotIn('refType', self::CUSTOM_TYPES)->whereNotNull('refId')
+                ->get(['refType', 'refId', 'label', 'latitude', 'longitude'])->keyBy(fn($r) => $r->refType . ':' . (int) $r->refId)->all();
+            // Lưu theo THAY ĐỔI: dòng cũ nhận ra bằng itemUid (định danh ổn định) — sửa đúng dòng, thêm dòng mới, xóa dòng bị bỏ.
+            $old = $this->rowsByUid($tripId);
+            $claimed = [];
 
             $seen = [];
             $counter = [];
             $rows = [];
-            foreach ($items as $it) {
+            $this->lastUids = [];
+            foreach ($items as $idx => $it) {
+                $this->lastUids[$idx] = null;
                 $custom = in_array($it['type'], self::CUSTOM_TYPES, true);
+                $snap = null;   // tên + vị trí của nội dung tham chiếu, lưu kèm để còn hiển thị được nếu sau này nguồn bị ẩn
+                $rawDay = isset($it['day']) && $it['day'] !== null && $it['day'] !== '' ? max(1, (int) $it['day']) : null;
+                $dayKey = $rawDay === null || $rawDay > $days ? 'x' : (string) $rawDay;   // ngày vượt số ngày → "Đã lưu" (như bên dưới)
                 if (!$custom) {
                     $k = $it['type'] . ':' . (int) $it['refId'];
-                    if (!isset($valid[$k]) || isset($seen[$k])) {
-                        continue;
+                    // cùng một nơi được ghé ở NHIỀU NGÀY (mỗi lần ghé một mục); trùng trong cùng một ngày / cùng "Đã lưu" thì bỏ
+                    if (isset($seen[$dayKey][$k]) || (!isset($valid[$k]) && !isset($prev[$k]))) {
+                        continue;   // trùng, hoặc mục MỚI trỏ tới nội dung không công khai: không nhận
                     }
-                    $seen[$k] = true;
+                    $seen[$dayKey][$k] = true;
+                    if (isset($valid[$k])) {
+                        $v = $valid[$k];
+                        $ok = self::hasCoord($v['lat'] ?? null) && self::hasCoord($v['lng'] ?? null)
+                            && \App\Services\Planner\Route\HaversineProvider::validPoint([(float) $v['lat'], (float) $v['lng']]);
+                        $snap = ['label' => mb_substr((string) $v['name'], 0, 160), 'lat' => $ok ? round((float) $v['lat'], 7) : null, 'lng' => $ok ? round((float) $v['lng'], 7) : null];
+                    } else {
+                        $p = $prev[$k];   // đã có trong chuyến nhưng nguồn nay không công khai: giữ bản chụp cũ
+                        $snap = ['label' => $p->label, 'lat' => $p->latitude, 'lng' => $p->longitude];
+                    }
                 }
                 // ngày ngoài số ngày của chuyến (vừa bớt ngày): vào "Đã lưu", không dồn vào ngày cuối
                 $day = isset($it['day']) && $it['day'] !== null && $it['day'] !== '' ? max(1, (int) $it['day']) : null;
@@ -676,13 +798,17 @@ class TripPlanner
                 // (0,0) / ngoài phạm vi = vị trí hỏng: lưu như "chưa có vị trí", không lưu thành một điểm giữa biển
                 $pos = $custom && self::hasCoord($it['lat'] ?? null) && self::hasCoord($it['lng'] ?? null)
                     && \App\Services\Planner\Route\HaversineProvider::validPoint([(float) $it['lat'], (float) $it['lng']]);
+                $uid = is_string($it['itemUid'] ?? null) && isset($old[$it['itemUid']]) && !isset($claimed[$it['itemUid']]) ? $it['itemUid'] : (string) Str::ulid();
+                $claimed[$uid] = true;
+                $this->lastUids[$idx] = $uid;
                 $rows[] = [
                     'tripId' => $tripId,
+                    'itemUid' => $uid,
                     'refType' => $it['type'],
                     'refId' => $custom ? null : (int) $it['refId'],
-                    'label' => $custom ? mb_substr(trim((string) $it['label']), 0, 120) : null,
-                    'latitude' => $pos ? round((float) $it['lat'], 7) : null,
-                    'longitude' => $pos ? round((float) $it['lng'], 7) : null,
+                    'label' => $custom ? mb_substr(trim((string) $it['label']), 0, 120) : ($snap['label'] ?? null),
+                    'latitude' => $pos ? round((float) $it['lat'], 7) : ($snap['lat'] ?? null),
+                    'longitude' => $pos ? round((float) $it['lng'], 7) : ($snap['lng'] ?? null),
                     'source' => $pos ? (in_array($it['source'] ?? null, self::POSITION_SOURCES, true) ? $it['source'] : 'map') : null,
                     'dayNo' => $day,
                     'orderNo' => $counter[$ck],
@@ -696,12 +822,17 @@ class TripPlanner
             if ($oldStart !== $newStart) {
                 $rows = BookingPlan::realignRows($tripId, $rows, $newStart, $days);
             }
-            if ($rows) {
-                DB::table('tbl_trip_items')->insert($rows);
-            }
+            $this->persistRows($tripId, $old, $rows);
             // Lịch sử phiên bản: chụp lại bản vừa lưu (cùng transaction với lần tăng rev)
             app(TripRevisions::class)->record($tripId, isset($f['rev']) ? (int) $f['rev'] : null, $userId, 'save', $rows);
         });
+
+        // Đề xuất AI đã bấm Áp dụng: lần lưu thành công này là bằng chứng thay đổi đã vào CSDL (đo tỷ lệ áp dụng thật)
+        try {
+            \App\Services\Ai\Copilot\CopilotService::confirmApplied($tripId, (int) DB::table('tbl_trips')->where('tripId', $tripId)->value('rev'));
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         // Học từ hành vi: thêm / xóa / đã ghé / bỏ qua (không bao giờ làm hỏng việc lưu)
         try {
@@ -740,6 +871,7 @@ class TripPlanner
         self::assertCanCreate($userId);
 
         return DB::transaction(function () use ($src, $userId, $tripId) {
+            self::assertCanCreate($userId);
             $row = $src;
             unset($row['tripId']);
             $row['userId'] = $userId;
@@ -787,6 +919,7 @@ class TripPlanner
         self::assertCanCreate($userId);
 
         return DB::transaction(function () use ($src, $userId) {
+            self::assertCanCreate($userId);
             $row = self::freshCopyRow((array) $src);
             unset($row['tripId']);
             $row = array_merge($row, ['userId' => $userId, 'status' => 'draft', 'source' => 'copy', 'notes' => ($src->shareNotes ?? 1) ? $src->notes : null,
@@ -869,7 +1002,7 @@ class TripPlanner
     }
 
     /** Bật/tắt liên kết chia sẻ chỉ đọc. Trả token (hoặc null khi tắt); false nếu không phải chuyến của người dùng. */
-    public function share(int $userId, int $tripId, bool $on): string|null|false
+    public function share(int $userId, int $tripId, bool $on): string|false|null
     {
         $trip = $this->owned($userId, $tripId);
         if (!$trip) {
@@ -952,7 +1085,7 @@ class TripPlanner
 
             $fill('experience', DB::table('tbl_experiences')->where('reviewStatus', 'published')->whereIn('destinationId', $destIds)
                 ->orderByDesc('isMustTry')->orderBy('name')->limit(6)->get(), fn($x) => ['type' => 'experience', 'refId' => (int) $x->experienceId,
-                'name' => $x->name, 'sub' => (string) ($x->duration ?? ''), 'url' => route('experiences.show', ['slug' => $x->slug]), 'cost' => null] + $ll($x->destinationId));
+                    'name' => $x->name, 'sub' => (string) ($x->duration ?? ''), 'url' => route('experiences.show', ['slug' => $x->slug]), 'cost' => null] + $ll($x->destinationId));
 
             $fill('food', DB::table('tbl_foods')->where('reviewStatus', 'published')->where(function ($q) use ($destIds) {
                 $q->whereIn('destinationId', $destIds)->orWhereIn('foodId', DB::table('tbl_food_destination')->whereIn('destinationId', $destIds)->select('foodId'));
@@ -961,7 +1094,7 @@ class TripPlanner
 
             $fill('event', DB::table('tbl_events')->where('reviewStatus', 'published')->whereIn('destinationId', $destIds)
                 ->orderBy('name')->limit(4)->get(), fn($e) => ['type' => 'event', 'refId' => (int) $e->eventId,
-                'name' => $e->name, 'sub' => 'Lễ hội', 'url' => route('events.show', ['slug' => $e->slug]), 'cost' => null] + $ll($e->destinationId));
+                    'name' => $e->name, 'sub' => 'Lễ hội', 'url' => route('events.show', ['slug' => $e->slug]), 'cost' => null] + $ll($e->destinationId));
         }
 
         $refs = $this->trayRefs($userId);

@@ -193,7 +193,8 @@ final class BookingPlan
         }
         foreach ($rows as $i => $r) {
             $k = mb_strtolower((string) ($r['label'] ?? ''));
-            if ($k !== '' && array_key_exists($k, $want) && $r['dayNo'] !== $want[$k]) {
+            // chỉ mục tự thêm (khách sạn / xe đã đặt) — mục tham chiếu nay cũng lưu tên kèm nhưng không phải đặt chỗ
+            if ($k !== '' && in_array($r['refType'] ?? null, TripPlanner::CUSTOM_TYPES, true) && array_key_exists($k, $want) && $r['dayNo'] !== $want[$k]) {
                 $rows[$i]['dayNo'] = $want[$k];
                 $rows[$i]['orderNo'] = min(127, 100 + $i);   // cuối ngày mới (cột orderNo nhỏ); giờ cố định (nếu có) vẫn quyết định vị trí trong lịch
                 if ($want[$k] === null && array_key_exists('startMin', $r)) {

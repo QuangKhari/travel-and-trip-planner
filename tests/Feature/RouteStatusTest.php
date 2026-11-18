@@ -154,4 +154,27 @@ class RouteStatusTest extends TestCase
         $this->assertSame('feasible_verified', $h['feasibility']);
         $this->assertSame(1, $h['routeQuality']['legs']['verified']);
     }
+
+    /** Hai điểm cách ~300 m (cùng khu): không vẽ đoạn đường riêng, nhưng KHÔNG coi là 0 phút. */
+    public function test_same_area_leg_counts_minimum_walking_minutes(): void
+    {
+        $rules = ['provider' => 'haversine', 'mode' => 'driving', 'factor' => 1.3, 'speedKmh' => 40.0, 'minLegKm' => 0.5, 'osrmProfile' => 'driving', 'osrmUrl' => ''];
+        $near = [21.0300, 105.8500];
+        $b300 = [21.0327, 105.8500];   // ~300 m về phía bắc
+        $leg = RouteService::fromRules($rules + ['sameAreaMin' => 5])->leg($near, $b300);
+        $this->assertSame(RouteService::SAME_AREA, $leg['status']);
+        $this->assertSame(5, $leg['min']);                       // 300 m đi bộ ~4 phút → sàn 5 phút
+        $this->assertEqualsWithDelta(0.3, $leg['km'], 0.02);
+        $far = RouteService::fromRules($rules + ['sameAreaMin' => 5])->leg($near, [21.0340, 105.8500]);   // ~445 m
+        $this->assertSame(6, $far['min']);                       // xa hơn sàn: theo tốc độ đi bộ 4,5 km/h
+        $this->assertSame(0, RouteService::fromRules($rules + ['sameAreaMin' => 0])->leg($near, $b300)['min']);   // tắt = như cũ
+
+        // lịch trong ngày: hai mục cùng khu, mục sau bắt đầu sau khi đi bộ 5 phút
+        $sched = new \App\Services\Planner\Health\DaySchedule(1, [
+            ['type' => 'note', 'name' => 'A', 'lat' => $near[0], 'lng' => $near[1], 'startMin' => 480, 'durationMin' => 60],
+            ['type' => 'note', 'name' => 'B', 'lat' => $b300[0], 'lng' => $b300[1], 'durationMin' => 60],
+        ], RouteService::fromRules($rules + ['sameAreaMin' => 5]), \App\Services\Planner\PlannerRules::fromConfig());
+        $this->assertSame(5, $sched->travelMin);
+        $this->assertSame(545, $sched->rows[1]['start']);       // 08:00 + 60' + 5' đi bộ
+    }
 }
