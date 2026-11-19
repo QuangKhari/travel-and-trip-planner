@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Services\Content;
+namespace App\Services\Planner;
 
+use App\Services\Content\UserMarks;
 use Illuminate\Support\Facades\DB;
 
 /**

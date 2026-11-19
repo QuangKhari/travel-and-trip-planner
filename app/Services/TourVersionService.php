@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Modules\Commerce\BookingChanges;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -100,7 +101,7 @@ class TourVersionService
         }
         $vid = $this->ensureCurrent($tourId, $adminId);
         if ($vid) {
-            DB::table('tbl_booking')->where('tourId', $tourId)->whereNull('tourVersionId')->update(['tourVersionId' => $vid]);
+            app(BookingChanges::class)->stampVersion((int) $vid, null, $tourId);
         }
 
         return $vid;

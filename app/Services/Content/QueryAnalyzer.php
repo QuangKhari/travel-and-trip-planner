@@ -1,8 +1,7 @@
 <?php
 
-namespace App\Services\Rag;
+namespace App\Services\Content;
 
-use App\Services\Content\SearchCatalog;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 

@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Lịch sử phiên bản chuyến đi (tbl_trip_revisions).
- *  - record(): gọi TRONG transaction lưu chuyến, sau khi đã khóa dòng tbl_trips và tăng rev.
+ *  - record(): gọi TRONG transaction lưu chuyến, sau khi đã khóa dòng tbl_trips và tăng rev. Phát sự kiện TripUpdated (outbox, cùng transaction)
+ *    để phân hệ khác (AI: đo đề xuất đã áp dụng / bị hoàn tác, dọn bộ đệm giải thích) phản ứng mà Planner không gọi thẳng vào chúng.
  *  - list(): các bản gần nhất (không kèm payload).
  *  - restore(): đưa chuyến về đúng nội dung một bản cũ; kiểm tra rev như lưu thường (409 nếu ai đó vừa lưu),
  *    tạo phiên bản MỚI loại "restore" nên luôn hoàn tác được thao tác khôi phục.
@@ -48,15 +49,14 @@ class TripRevisions
 
             return $r;
         }, $rows);
+        $before = DB::table('tbl_trip_revisions')->where('tripId', $tripId)->where('revisionNo', '<', (int) $trip->rev)->orderByDesc('revisionNo')->value('payload');
         DB::table('tbl_trip_revisions')->insert([
             'tripId' => $tripId, 'revisionNo' => (int) $trip->rev, 'baseRevision' => $baseRev, 'actorId' => $actorId, 'changeType' => $type,
             'itemCount' => count($items), 'payload' => json_encode(['trip' => $snap, 'items' => $items], JSON_UNESCAPED_UNICODE), 'createdAt' => now(),
         ]);
-        try {
-            \App\Services\Ai\Copilot\CopilotService::detectUndo($tripId, self::fingerprint($items), (int) $trip->rev);
-        } catch (\Throwable $e) {
-            report($e);
-        }
+        $diff = self::diff($before ? (array) (json_decode((string) $before, true)['items'] ?? []) : null, $items);
+        \App\Support\DomainEvents::record(\App\Support\DomainEvents::TRIP_UPDATED, 'trip', $tripId, ['tripId' => $tripId, 'rev' => (int) $trip->rev,
+            'baseRev' => $baseRev, 'change' => $type, 'actorId' => $actorId, 'items' => count($items), 'fingerprint' => self::fingerprint($items)] + $diff);
         $cut = DB::table('tbl_trip_revisions')->where('tripId', $tripId)->orderByDesc('revisionNo')->skip(self::keep())->value('revisionNo');
         if ($cut !== null) {
             DB::table('tbl_trip_revisions')->where('tripId', $tripId)->where('revisionNo', '<=', $cut)->delete();
@@ -74,6 +74,21 @@ class TripRevisions
 
         return sha1(json_encode(array_map(fn($r) => [$r['refType'] ?? null, isset($r['refId']) && $r['refId'] !== null ? (int) $r['refId'] : ($r['label'] ?? null),
             isset($r['dayNo']) && $r['dayNo'] !== null ? (int) $r['dayNo'] : null, isset($r['startMin']) && $r['startMin'] !== null ? (int) $r['startMin'] : null], $rows)));
+    }
+
+    /**
+     * Mục có tham chiếu (loại:mã) được thêm / bỏ so với phiên bản trước (tối đa 20 mỗi bên); không có bản trước thì mọi mục là thêm.
+     * @param ?list<array<string,mixed>> $before
+     * @param list<array<string,mixed>> $after
+     * @return array{added:list<string>,removed:list<string>}
+     */
+    public static function diff(?array $before, array $after): array
+    {
+        $keys = fn(array $rows) => array_values(array_unique(array_filter(array_map(fn($r) => !empty($r['refId']) ? ($r['refType'] ?? '') . ':' . (int) $r['refId'] : null, $rows))));
+        $a = $keys($after);
+        $b = $before === null ? [] : $keys($before);
+
+        return ['added' => array_slice(array_values(array_diff($a, $b)), 0, 20), 'removed' => array_slice(array_values(array_diff($b, $a)), 0, 20)];
     }
 
     /** Dấu vân tay của lịch ở phiên bản $rev (null khi không còn bản ghi). */

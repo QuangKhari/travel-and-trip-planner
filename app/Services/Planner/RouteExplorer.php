@@ -2,9 +2,9 @@
 
 namespace App\Services\Planner;
 
+use App\Services\Content\OpeningHours;
 use App\Support\DiscoverImage;
 use App\Services\Planner\Route\RouteService;
-use App\Services\Planner\PlannerRules;
 use App\Support\PlaceKind;
 use Illuminate\Support\Facades\DB;
 

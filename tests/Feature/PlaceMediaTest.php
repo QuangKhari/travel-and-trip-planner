@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Services\Planner\PlaceMedia;
+use App\Services\Content\PlaceMedia;
 use App\Services\Planner\TripPlanner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;

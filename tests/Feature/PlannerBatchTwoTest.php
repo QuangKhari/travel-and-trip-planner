@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Services\Planner\PlaceFacts;
+use App\Services\Content\PlaceFacts;
 use App\Services\Planner\PlaceSignals;
 use App\Services\Planner\TripPlanner;
 use App\Services\Push\WebPush;
@@ -118,7 +118,7 @@ class PlannerBatchTwoTest extends TestCase
         $this->assertSame('osm', DB::table('tbl_opening_hours')->where('refId', $b)->value('source'));
         $this->assertSame('OpenStreetMap', DB::table('tbl_external_places')->where('placeId', $b)->value('factsSource'));
         // giờ do người nhập không bị bản đồ ghi đè
-        app(\App\Services\Planner\OpeningHours::class)->store('place', $b, 'Mo-Su 08:00-20:00', 'admin');
+        app(\App\Services\Content\OpeningHours::class)->store('place', $b, 'Mo-Su 08:00-20:00', 'admin');
         $this->assertSame(0, app(PlaceFacts::class)->importHours('overpass', [['externalId' => 'node/42', 'hours' => 'Mo-Su 07:00-22:00']]));
 
         $ids = array_column(app(PlaceFacts::class)->queue(), 'placeId');

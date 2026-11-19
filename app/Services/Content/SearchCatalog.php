@@ -133,7 +133,7 @@ class SearchCatalog
         $terms = array_values(array_filter(explode(' ', $folded)));
         // Câu dài ("ăn gì ở Huế"): bỏ từ đệm trước khi chấm điểm, nếu không mọi từ đều phải khớp và kết quả luôn rỗng.
         // Câu chỉ gồm từ đệm thì giữ nguyên để không trả về rỗng một cách vô lý.
-        $content = array_values(array_filter($terms, fn($t) => !in_array($t, \App\Services\Rag\QueryAnalyzer::STOP, true)));
+        $content = array_values(array_filter($terms, fn($t) => !in_array($t, \App\Services\Content\QueryAnalyzer::STOP, true)));
         if ($content) {
             $terms = $content;
         }

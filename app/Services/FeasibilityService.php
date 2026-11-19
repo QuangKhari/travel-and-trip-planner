@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Services\Planner\OpeningHours;
+use App\Services\Content\OpeningHours;
 use App\Support\Geo;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -129,7 +129,7 @@ class FeasibilityService
                 }
             }
             if ($matched) {
-                $need = array_values(array_filter(array_map(fn ($m) => ['type' => 'place', 'refId' => (int) $m['p']->placeId], $matched), fn ($x) => !isset($hours['place:' . $x['refId']])));
+                $need = array_values(array_filter(array_map(fn($m) => ['type' => 'place', 'refId' => (int) $m['p']->placeId], $matched), fn($x) => !isset($hours['place:' . $x['refId']])));
                 if ($need && Schema::hasTable('tbl_opening_hours')) {
                     foreach ((new OpeningHours())->forItems($need) as $key => $v) {
                         $hours[$key] = $v;
@@ -232,7 +232,7 @@ class FeasibilityService
         }
 
         return DB::table('tbl_external_places')->where('destinationId', $destId)->orderByDesc('rank')->limit(800)->get(['placeId', 'name', 'latitude', 'longitude'])
-            ->filter(fn ($p) => mb_strlen(trim($p->name)) >= 5)->map(function ($p) {
+            ->filter(fn($p) => mb_strlen(trim($p->name)) >= 5)->map(function ($p) {
                 $p->norm = $this->norm($p->name);
 
                 return $p;

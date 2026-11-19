@@ -2,6 +2,7 @@
 
 namespace App\Services\Planner;
 
+use App\Services\Content\ContentRequests;
 use App\Services\Content\SearchCatalog;
 use App\Support\Geo;
 use Illuminate\Support\Facades\DB;
@@ -100,10 +101,14 @@ final class UnknownPlace
                 $external = 'ok';
                 $p = $r['results'][0];
                 $place = ['name' => $p['name'], 'address' => $p['address'], 'lat' => $p['lat'], 'lng' => $p['lng']];
-                $near = self::nearest($p['lat'], $p['lng'],
+                $near = self::nearest(
+                    $p['lat'],
+                    $p['lng'],
                     $rows->map(fn($d) => ['id' => $d->destinationId, 'slug' => $d->slug, 'name' => $d->name,
                         'lat' => $d->latitude !== null ? (float) $d->latitude : null, 'lng' => $d->longitude !== null ? (float) $d->longitude : null])->all(),
-                    (int) config('planner.unknown.nearest_n', 3), (float) config('planner.unknown.nearest_km', 150));
+                    (int) config('planner.unknown.nearest_n', 3),
+                    (float) config('planner.unknown.nearest_km', 150),
+                );
             }
         }
         $this->log->record($term, 'destination', $near[0]['id'] ?? null);

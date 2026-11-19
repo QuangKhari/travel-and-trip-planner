@@ -49,10 +49,7 @@ class Badges
             ->count('d.domain');
 
         // Tour đã hoàn thành (bookingStatus = 'f')
-        $m['booked_done'] = (int) DB::table('tbl_booking')
-            ->where('userId', $userId)
-            ->where('bookingStatus', 'f')
-            ->count();
+        $m['booked_done'] = app(\App\Modules\Commerce\CommerceReader::class)->finishedTourCount($userId);
 
         return $m;
     }

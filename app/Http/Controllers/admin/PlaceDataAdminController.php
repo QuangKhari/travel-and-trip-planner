@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\admin;
 
 use App\Http\Controllers\Controller;
-use App\Services\Planner\PlaceReports;
+use App\Services\Content\PlaceReports;
 use App\Support\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,13 +39,13 @@ class PlaceDataAdminController extends Controller
             }
         }
 
-        $facts = app(\App\Services\Planner\PlaceFacts::class);
+        $facts = app(\App\Services\Content\PlaceFacts::class);
         $dest = (int) $request->query('dest') ?: null;
         $queue = $ready && $tab === 'verify' ? $facts->queue($dest) : [];
         $counts['verify'] = $ready ? $facts->count() : 0;
 
-        $media = $tab === 'media' && \App\Services\Planner\PlaceMedia::imageReady() ? $this->mediaList($dest, (string) $request->query('show', 'missing')) : null;
-        $counts['media'] = \App\Services\Planner\PlaceMedia::imageReady()
+        $media = $tab === 'media' && \App\Services\Content\PlaceMedia::imageReady() ? $this->mediaList($dest, (string) $request->query('show', 'missing')) : null;
+        $counts['media'] = \App\Services\Content\PlaceMedia::imageReady()
             ? DB::table('tbl_external_places')->where('reviewStatus', 'published')->where(fn($q) => $q->whereNull('coverImage')->orWhereNull('description')->orWhere('description', ''))->count() : 0;
 
         return view('admin.place-data.index', ['title' => 'Dữ liệu địa điểm', 'ready' => $ready, 'tab' => $tab, 'status' => $status, 'queue' => $queue, 'dest' => $dest,
@@ -116,14 +116,21 @@ class PlaceDataAdminController extends Controller
             'source' => 'nullable|string|max:120', 'url' => 'nullable|url|max:255',
         ], ['url.url' => 'Đường dẫn nguồn phải đầy đủ (https://...).']);
         abort_unless(DB::table('tbl_external_places')->where('placeId', $id)->exists(), 404);
-        if (!empty($v['hours']) && !\App\Services\Planner\OpeningHours::parseOsm($v['hours'])) {
+        if (!empty($v['hours']) && !\App\Services\Content\OpeningHours::parseOsm($v['hours'])) {
             return back()->withErrors(['hours' => 'Giờ chưa đúng dạng, ví dụ "Mo-Su 08:00-17:00; Mo off; PH off".']);
         }
-        app(\App\Services\Planner\PlaceFacts::class)->verify($id, $v['hours'] ?? null, isset($v['priceMin']) ? (int) $v['priceMin'] : null,
-            isset($v['priceMax']) ? (int) $v['priceMax'] : null, $v['source'] ?? null, $v['url'] ?? null, (int) session('adminId'));
+        app(\App\Services\Content\PlaceFacts::class)->verify(
+            $id,
+            $v['hours'] ?? null,
+            isset($v['priceMin']) ? (int) $v['priceMin'] : null,
+            isset($v['priceMax']) ? (int) $v['priceMax'] : null,
+            $v['source'] ?? null,
+            $v['url'] ?? null,
+            (int) session('adminId'),
+        );
         AuditLog::record('place_facts.verify', 'place', $id, 'Kiểm tra dữ kiện địa điểm #' . $id);
 
-        return back()->with('success', 'Đã ghi ngày kiểm tra cho #' . $id . '. Nơi này rời hàng chờ trong ' . \App\Services\Planner\PlaceFacts::STALE_DAYS . ' ngày.');
+        return back()->with('success', 'Đã ghi ngày kiểm tra cho #' . $id . '. Nơi này rời hàng chờ trong ' . \App\Services\Content\PlaceFacts::STALE_DAYS . ' ngày.');
     }
 
     public function deleteRule(int $id)
@@ -148,7 +155,7 @@ class PlaceDataAdminController extends Controller
             ? DB::table('tbl_place_media_candidates')->whereIn('placeId', $rows->pluck('placeId'))->where('status', 'new')->orderByRaw('distanceM IS NULL')->orderBy('distanceM')->get()->groupBy('placeId') : collect();
         foreach ($rows as $r) {
             $r->image = $r->coverImage ? \App\Support\DiscoverImage::url($r->coverImage) : null;
-            $r->tile = \App\Services\Planner\PlaceMedia::tile('place', \App\Services\Planner\PlaceMedia::groupOfKind($r->kind));
+            $r->tile = \App\Services\Content\PlaceMedia::tile('place', \App\Services\Content\PlaceMedia::groupOfKind($r->kind));
             $r->candidates = $cands->get($r->placeId, collect())->take(6)->values();
         }
         $all = DB::table('tbl_external_places')->where('reviewStatus', 'published')->when($dest, fn($q) => $q->where('destinationId', $dest));

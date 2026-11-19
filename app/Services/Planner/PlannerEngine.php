@@ -2,6 +2,7 @@
 
 namespace App\Services\Planner;
 
+use App\Services\Content\OpeningHours;
 use App\Services\Content\DestinationMonthBrief;
 use App\Services\Planner\Route\RouteService;
 use App\Support\Geo;
@@ -256,10 +257,12 @@ final class PlannerEngine
         }
         // mục điểm cao không còn chỗ (hoặc bị loại vì giờ mở cửa ngày đó): đưa vào khu "Đã lưu" để người dùng tự xếp
         $spare = array_merge($dropped, array_values(array_filter($leftover, fn($c) => empty($c['overBudget']))));
-        $unplaced = array_map(fn($c) => ['key' => $c['key'], 'name' => $c['name'], 'type' => $c['type'], 'refId' => (int) ($c['refId'] ?? 0),
-            'score' => $c['score'], 'reasons' => $c['reasons'] ?? [], 'durationMin' => $c['durationMin'] ?? null, 'priceMin' => $c['priceMin'] ?? null,
-            'why' => $c['dropWhy'] ?? 'Điểm cao nhưng các ngày đã đủ', 'osm' => !empty($c['osm']), 'lat' => $c['lat'] ?? null, 'lng' => $c['lng'] ?? null],
-            array_slice($spare, 0, 10));
+        $unplaced = array_map(
+            fn($c) => ['key' => $c['key'], 'name' => $c['name'], 'type' => $c['type'], 'refId' => (int) ($c['refId'] ?? 0),
+                'score' => $c['score'], 'reasons' => $c['reasons'] ?? [], 'durationMin' => $c['durationMin'] ?? null, 'priceMin' => $c['priceMin'] ?? null,
+                'why' => $c['dropWhy'] ?? 'Điểm cao nhưng các ngày đã đủ', 'osm' => !empty($c['osm']), 'lat' => $c['lat'] ?? null, 'lng' => $c['lng'] ?? null],
+            array_slice($spare, 0, 10),
+        );
 
         return [
             'days' => $days,

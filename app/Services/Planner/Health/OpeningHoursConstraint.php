@@ -2,7 +2,7 @@
 
 namespace App\Services\Planner\Health;
 
-use App\Services\Planner\OpeningHours;
+use App\Services\Content\OpeningHours;
 
 /**
  * Giờ mở cửa (P1): mục rơi vào ngày đóng cửa, tới trước giờ mở, hoặc còn ở lại sau giờ đóng.
@@ -47,7 +47,7 @@ final class OpeningHoursConstraint implements Constraint
             }
             foreach ($d->rows as $r) {
                 $h = $r['item']['hours'] ?? null;
-                if (in_array($r['item']['type'] ?? '', \App\Services\Planner\OpeningHours::TYPES, true) && (!$h || !array_key_exists((string) $d->dow, $h))) {
+                if (in_array($r['item']['type'] ?? '', \App\Services\Content\OpeningHours::TYPES, true) && (!$h || !array_key_exists((string) $d->dow, $h))) {
                     $unknown++;
                 }
             }

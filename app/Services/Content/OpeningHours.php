@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Services\Planner;
+namespace App\Services\Content;
 
+use App\Services\Planner\Holidays;
 use DateTimeImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;

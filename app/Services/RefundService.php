@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Modules\TourOps\Departures;
 use App\Mail\TemplateMail;
 use App\Services\Payments\PaymentLedger;
 use App\Support\BookingPii;
@@ -140,7 +141,6 @@ class RefundService
         if (DB::table('tbl_refunds')->where('rescuePlanId', $planId)->where('status', 'pending')->exists()) {
             return;
         }
-        DB::table('tbl_departure_rescue_plans')->where('planId', $planId)->where('status', 'refund_pending')
-            ->update(['status' => 'completed', 'updatedAt' => now()]);
+        app(Departures::class)->completeRescuePlan((int) $planId);
     }
 }

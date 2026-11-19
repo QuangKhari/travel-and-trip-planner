@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Services\Content\TripTray;
+use App\Services\Planner\TripTray;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Services\Planner\OpeningHours;
+use App\Services\Content\OpeningHours;
 use App\Services\Planner\TripPlanner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;

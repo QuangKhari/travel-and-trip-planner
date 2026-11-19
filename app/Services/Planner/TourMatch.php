@@ -2,8 +2,8 @@
 
 namespace App\Services\Planner;
 
-use App\Services\DepartureService;
-use Illuminate\Support\Facades\DB;
+use App\Modules\Content\TourCatalog;
+use App\Modules\TourOps\Departures;
 
 /**
  * A-01 AI Tour Match + A-05 banner "có tour giống lịch trình này".
@@ -214,15 +214,13 @@ final class TourMatch
         }
         $limit ??= (int) config('planner.tour_match.limit', 3);
         $people = max(1, (int) $want['adults']) + max(0, (int) ($want['children'] ?? 0));
-        $tours = DB::table('tbl_tours as t')->leftJoin('tbl_destinations as d', 'd.destinationId', '=', 't.destinationId')
-            ->whereIn('t.destinationId', $destIds)->where('t.availability', 1)->whereDate('t.endDate', '>=', date('Y-m-d'))
-            ->orderBy('t.startDate')->limit((int) config('planner.tour_match.scan', 40))
-            ->get(['t.tourId', 't.title', 't.time', 't.description', 't.startDate', 't.endDate', 't.quantity', 't.priceAdult', 't.priceChild', 'd.name as destName']);
+        $catalog = app(TourCatalog::class);
+        $tours = $catalog->bookable(['destIds' => $destIds, 'seats' => false, 'endFrom' => date('Y-m-d'), 'limit' => (int) config('planner.tour_match.scan', 40)]);
         if ($tours->isEmpty()) {
             return [];
         }
-        $timeline = DB::table('tbl_timeline')->whereIn('tourId', $tours->pluck('tourId'))->get(['tourId', 'title', 'description'])->groupBy('tourId');
-        $deps = app(DepartureService::class);
+        $timeline = $catalog->timelines($tours->pluck('tourId')->all());
+        $deps = app(Departures::class);
         $out = [];
         foreach ($tours as $t) {
             $dep = $this->bestDeparture($deps, $t, $want, $people);
@@ -273,9 +271,9 @@ final class TourMatch
     }
 
     /** @return array{availabilityId:?int,date:string,remaining:int}|null */
-    private function bestDeparture(DepartureService $deps, object $t, array $want, int $people): ?array
+    private function bestDeparture(Departures $deps, object $t, array $want, int $people): ?array
     {
-        $list = DepartureService::enabled() ? $deps->forTour((int) $t->tourId, true) : [];
+        $list = $deps->enabled() ? $deps->forTour((int) $t->tourId, true) : [];
         $cands = [];
         foreach ($list as $d) {
             if ($d->bookable) {

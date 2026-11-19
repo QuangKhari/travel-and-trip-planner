@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Planner;
+namespace App\Services\Content;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;

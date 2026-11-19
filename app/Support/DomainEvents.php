@@ -7,9 +7,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Outbox sự kiện nghiệp vụ giữa các phân hệ (Tour → Trip Planner, Nội dung → Trip Planner).
+ * Outbox sự kiện nghiệp vụ giữa các phân hệ (Commerce / Tour Ops → Planner, Content → Planner, Planner → AI).
  * record() ghi vào tbl_domain_events trong transaction hiện tại (rollback thì sự kiện cũng mất — không có sự kiện "ma"),
  * rồi đẩy job xử lý SAU KHI commit. Phân hệ nhận không đọc / ghi bảng của nhau, chỉ phản ứng với sự kiện.
+ * Ai nghe sự kiện nào: SUBSCRIBERS (mỗi lớp có handle(string $name, array $payload), bỏ qua tên không thuộc mình).
  */
 class DomainEvents
 {
@@ -18,6 +19,18 @@ class DomainEvents
     public const DEPARTURE_CHANGED = 'DepartureChanged';
     public const PLACE_UNPUBLISHED = 'PlaceUnpublished';
     public const PLACE_HOURS_CHANGED = 'PlaceHoursChanged';
+    /** Lịch một chuyến vừa đổi (lưu, khôi phục phiên bản, nhập đặt chỗ ngoài...): mỗi lần TripRevisions ghi một phiên bản. */
+    public const TRIP_UPDATED = 'TripUpdated';
+
+    /** @var array<string,list<class-string>> */
+    public const SUBSCRIBERS = [
+        self::BOOKING_CONFIRMED => [\App\Services\Integration\PlannerTourSync::class],
+        self::BOOKING_CANCELLED => [\App\Services\Integration\PlannerTourSync::class],
+        self::DEPARTURE_CHANGED => [\App\Services\Integration\PlannerTourSync::class],
+        self::PLACE_UNPUBLISHED => [\App\Services\Integration\PlannerTourSync::class],
+        self::PLACE_HOURS_CHANGED => [\App\Services\Integration\PlannerTourSync::class],
+        self::TRIP_UPDATED => [\App\Services\Ai\TripChangeListener::class],
+    ];
 
     private static ?bool $ready = null;
 

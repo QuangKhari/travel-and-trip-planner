@@ -374,12 +374,12 @@ final class TripSuggest
         }
         usort($list, fn($a, $b) => $a['score'] <=> $b['score']);
         $list = array_slice($list, 0, $limit);
-        $hours = app(\App\Services\Planner\OpeningHours::class)->forItems(array_map(fn($x) => ['type' => 'place', 'refId' => (int) $x['r']->placeId], $list));
+        $hours = app(\App\Services\Content\OpeningHours::class)->forItems(array_map(fn($x) => ['type' => 'place', 'refId' => (int) $x['r']->placeId], $list));
 
         $out = [];
         foreach ($list as $x) {
             $r = $x['r'];
-            $h = \App\Services\Planner\OpeningHours::describe($hours['place:' . $r->placeId] ?? null, $x['best'] ? ($c['dows'][$x['best']] ?? null) : null);
+            $h = \App\Services\Content\OpeningHours::describe($hours['place:' . $r->placeId] ?? null, $x['best'] ? ($c['dows'][$x['best']] ?? null) : null);
             $tags = array_values(array_filter([
                 $r->isMustTry ? ['t' => 'Nên thử', 'tone' => 'hot'] : null,
                 $x['km'] !== null ? ['t' => '~' . str_replace('.', ',', (string) $x['km']) . ' km từ lịch ngày ' . $x['best'], 'tone' => ''] : null,

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
-use App\Services\Content\TripTray;
+use App\Services\Planner\TripTray;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -23,7 +23,9 @@ class SavedCollectionController extends Controller
         ];
         $saved = collect();
         foreach ($tables as $ref => [$table, $pk, $status, $published, $route]) {
-            if ($type !== 'all' && $type !== $ref) continue;
+            if ($type !== 'all' && $type !== $ref) {
+                continue;
+            }
             $rows = DB::table('tbl_user_marks as m')
                 ->join($table . ' as c', function ($join) use ($pk) {
                     $join->on('c.' . $pk, '=', 'm.refId');

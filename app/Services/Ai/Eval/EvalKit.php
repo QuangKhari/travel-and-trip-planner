@@ -41,26 +41,8 @@ final class EvalKit
      */
     public function saveTrip(int $userId, ?int $destId, int $days, ?string $start, int $group, array $items, string $title = 'Đánh giá'): int
     {
-        $tripId = (int) DB::table('tbl_trips')->insertGetId(['userId' => $userId, 'kind' => 'trip', 'destinationId' => $destId, 'title' => $title,
-            'startDate' => $start, 'days' => $days, 'groupSize' => $group, 'status' => 'planned', 'createdAt' => now(), 'updatedAt' => now()]);
-        $order = [];
-        $seen = [];
-        $rows = [];
-        foreach ($items as $it) {
-            $k = $it['type'] . ':' . $it['refId'];
-            if (isset($seen[$k])) {
-                continue;   // tbl_trip_items unique(tripId, refType, refId): mục lặp chỉ tính một lần (và được đếm riêng ở nơi gọi)
-            }
-            $seen[$k] = true;
-            $d = $it['day'] ?? null;
-            $rows[] = ['tripId' => $tripId, 'refType' => $it['type'], 'refId' => (int) $it['refId'], 'dayNo' => $d, 'orderNo' => $order[$d ?? 0] = ($order[$d ?? 0] ?? -1) + 1,
-                'startMin' => $it['startMin'] ?? null, 'durationMin' => $it['durationMin'] ?? null];
-        }
-        if ($rows) {
-            DB::table('tbl_trip_items')->insert($rows);
-        }
-
-        return $tripId;
+        // tbl_trips / tbl_trip_items thuộc Planner: tạo chuyến tạm qua giao diện của nó (mục lặp chỉ tính một lần, nơi gọi tự đếm riêng)
+        return app(\App\Modules\Planner\PlannerApi::class)->sandboxTrip($userId, $destId, $days, $start, $group, $items, $title);
     }
 
     /** @return array{score:int,hard:int,warn:int,codes:array<string,int>,avgLoad:float,maxLoad:int,items:int,raw:array} */
@@ -101,7 +83,7 @@ final class EvalKit
                 $r = $llm->generateJson($system, $user, $schema, ['name' => $task, 'timeout' => $timeout, 'max_tokens' => $maxTokens]);
 
                 return ['ok' => true, 'data' => $r['data'], 'ms' => self::ms($t0), 'in' => (int) $r['input_tokens'], 'out' => (int) $r['output_tokens'], 'model' => $llm->model()];
-            } catch (SchemaViolation | Throwable $e) {
+            } catch (SchemaViolation|Throwable $e) {
                 $err = mb_substr($e->getMessage(), 0, 140);
                 if ($i < $retry && !app()->runningUnitTests()) {
                     sleep(5 * ($i + 1) + (str_contains($err, '429') ? 10 : 0));

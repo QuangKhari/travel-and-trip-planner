@@ -2,6 +2,9 @@
 
 namespace App\Services\Planner;
 
+use App\Services\Content\PlaceFacts;
+use App\Services\Content\PlaceMedia;
+use App\Services\Content\OpeningHours;
 use App\Services\Content\TravelAdvice;
 use App\Services\EventDateService;
 use App\Services\Planner\Route\RouteService;

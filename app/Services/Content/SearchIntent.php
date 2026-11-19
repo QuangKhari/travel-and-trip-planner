@@ -2,7 +2,6 @@
 
 namespace App\Services\Content;
 
-use App\Services\Rag\QueryAnalyzer;
 use DateTimeInterface;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
-use App\Services\Planner\PlaceMedia;
+use App\Services\Content\PlaceMedia;
 use App\Services\Planner\PlaceSignals;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;

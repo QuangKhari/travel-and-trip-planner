@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Services\Planner\OpeningHours;
+use App\Services\Content\OpeningHours;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -64,7 +64,7 @@ class PlannerHours extends Command
             $this->table(['Mã', 'Tên', 'Giờ mở cửa'], $rows->map(fn($r) => [
                 $r->{$pk},
                 $r->name,
-                isset($have["$type:" . $r->{$pk}]) ? 'đã có' : 'chưa có'
+                isset($have["$type:" . $r->{$pk}]) ? 'đã có' : 'chưa có',
             ])->all());
             $this->line('Dùng mã ở cột đầu: php artisan planner:hours ' . $type . ' <mã> "Mo-Su 08:00-17:00"');
 

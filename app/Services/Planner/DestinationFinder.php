@@ -2,6 +2,7 @@
 
 namespace App\Services\Planner;
 
+use App\Modules\Content\TourCatalog;
 use App\Services\Content\DestinationMonthBrief;
 use App\Services\Content\TravelAdvice;
 use App\Services\EventDateService;
@@ -239,13 +240,7 @@ final class DestinationFinder
     private function toursInMonth(int $month, int $year): array
     {
         $first = sprintf('%04d-%02d-01', $year, $month);
-        $out = [];
-        $q = DB::table('tbl_tours')->whereNotNull('destinationId')->where('availability', 1)->where('quantity', '>', 0)
-            ->whereBetween('startDate', [$first, date('Y-m-t', strtotime($first))])->whereDate('startDate', '>=', date('Y-m-d'));
-        foreach ($q->selectRaw('destinationId, COUNT(*) AS c, MIN(priceAdult) AS p')->groupBy('destinationId')->get() as $r) {
-            $out[(int) $r->destinationId] = ['count' => (int) $r->c, 'minPrice' => $r->p !== null ? (float) $r->p : null];
-        }
 
-        return $out;
+        return app(TourCatalog::class)->countByDestination($first, date('Y-m-t', strtotime($first)));
     }
 }

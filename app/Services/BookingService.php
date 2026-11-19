@@ -83,12 +83,7 @@ class BookingService
                 if ($tour->startDate <= $today) {
                     throw new BookingException('Tour đã khởi hành, không thể đặt.');
                 }
-                $affected = DB::table('tbl_tours')
-                    ->where('tourId', $tourId)
-                    ->where('quantity', '>=', $people)
-                    ->decrement('quantity', $people);
-
-                if ($affected !== 1) {
+                if (!app(\App\Modules\Content\TourListing::class)->takeLegacySeats($tourId, $people)) {
                     $left = max(0, (int) $tour->quantity);
                     throw new BookingException($left > 0
                         ? "Tour chỉ còn {$left} chỗ, không đủ cho {$people} khách."
@@ -201,25 +196,15 @@ class BookingService
         if (!\Illuminate\Support\Facades\Schema::hasColumn('tbl_booking', 'tripId')) {
             return;
         }
-        $access = app(\App\Services\Planner\TripSharing::class)->access($userId, $tripId);
+        $planner = app(\App\Modules\Planner\PlannerApi::class);
+        $access = $planner->access($userId, $tripId);
         if (!$access || ($access['trip']->kind ?? 'trip') !== 'trip') {
             return;
         }
         $score = null;
         try {
-            $trip = $access['trip'];
-            $payload = app(\App\Services\Planner\TripPlanner::class)->payload($trip);
-            $items = array_merge($payload['unassigned'], ...array_map(fn($d) => $d['items'], $payload['days']));
-            $want = \App\Services\Planner\TourMatch::wantFromTrip($trip, $items);
-            $want['adults'] = $adults;
-            $want['children'] = $children;
             $destId = (int) DB::table('tbl_tours')->where('tourId', $tourId)->value('destinationId');
-            foreach (app(\App\Services\Planner\TourMatch::class)->rank($want, [$destId], 40) as $r) {
-                if ($r['tourId'] === $tourId) {
-                    $score = $r['score'];
-                    break;
-                }
-            }
+            $score = $planner->tourMatchScore($access['trip'], $tourId, $destId, $adults, $children);
         } catch (\Throwable $e) {
             report($e);
         }

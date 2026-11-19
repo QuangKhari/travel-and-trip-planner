@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\Planner\Health\DaySchedule;
-use App\Services\Planner\OpeningHours;
+use App\Services\Content\OpeningHours;
 use App\Services\Planner\PlannerRules;
 use App\Services\Planner\Route\RouteService;
 use Symfony\Component\Process\Process;

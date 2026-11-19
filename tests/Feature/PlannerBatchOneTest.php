@@ -145,8 +145,8 @@ class PlannerBatchOneTest extends TestCase
         $this->assertSame('Quốc khánh', Holidays::name('2027-09-02'));
         $a = $this->place('Bảo tàng A');
         $b = $this->place('Bảo tàng B', 'museum', 0.001);
-        app(\App\Services\Planner\OpeningHours::class)->store('place', $a, 'Mo-Su 08:00-17:00; PH off');
-        app(\App\Services\Planner\OpeningHours::class)->store('place', $b, 'Mo-Su 08:00-17:00');
+        app(\App\Services\Content\OpeningHours::class)->store('place', $a, 'Mo-Su 08:00-17:00; PH off');
+        app(\App\Services\Content\OpeningHours::class)->store('place', $b, 'Mo-Su 08:00-17:00');
         // chuyến 30/04/2027 (lễ): A nghỉ lễ; B đóng tạm thời theo quy tắc admin
         DB::table('tbl_hours_rules')->insert(['refType' => 'place', 'refId' => $b, 'kind' => 'closed', 'dateFrom' => '2027-04-29', 'dateTo' => '2027-05-02', 'note' => 'tu bổ mái', 'source' => 'manual']);
         $id = $this->trip([[$a, 1], [$b, 1]], '2027-04-30');

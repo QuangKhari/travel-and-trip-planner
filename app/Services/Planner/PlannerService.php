@@ -2,6 +2,8 @@
 
 namespace App\Services\Planner;
 
+use App\Modules\Content\TourCatalog;
+use App\Services\Content\OpeningHours;
 use App\Services\Content\DestinationMonthBrief;
 use App\Services\Content\PublishGate;
 use App\Services\EventDateService;
@@ -416,16 +418,15 @@ class PlannerService   // không final: test luồng "Tạo lịch với AI" tha
     /** Khối tour riêng (không cộng vào chi phí chuyến). */
     private function tours(int $destId, array $req, int $year): array
     {
-        $q = DB::table('tbl_tours')->where('destinationId', $destId)->where('availability', 1)->where('quantity', '>', 0)->whereDate('startDate', '>=', date('Y-m-d'));
         if ($req['startDate']) {
             $w = (int) config('planner.tour_window_days', 14);
-            $q->whereBetween('startDate', [date('Y-m-d', strtotime($req['startDate'] . " -$w days")), date('Y-m-d', strtotime($req['startDate'] . " +$w days"))]);
+            [$from, $to] = [date('Y-m-d', strtotime($req['startDate'] . " -$w days")), date('Y-m-d', strtotime($req['startDate'] . " +$w days"))];
         } else {
-            $first = sprintf('%04d-%02d-01', $year, $req['month']);
-            $q->whereBetween('startDate', [$first, date('Y-m-t', strtotime($first))]);
+            $from = sprintf('%04d-%02d-01', $year, $req['month']);
+            $to = date('Y-m-t', strtotime($from));
         }
         $out = [];
-        foreach ($q->orderBy('startDate')->limit((int) config('planner.tours_max', 3))->get() as $t) {
+        foreach (app(TourCatalog::class)->bookable(['destId' => $destId, 'from' => max($from, date('Y-m-d')), 'to' => $to, 'limit' => (int) config('planner.tours_max', 3)]) as $t) {
             $out[] = ['id' => (int) $t->tourId, 'title' => $t->title, 'start' => date('d/m/Y', strtotime($t->startDate)), 'priceAdult' => (float) $t->priceAdult,
                 'priceChild' => $t->priceChild !== null ? (float) $t->priceChild : null,
                 // giá cả nhóm: người lớn theo priceAdult, trẻ em theo priceChild (tour chưa có giá trẻ em thì tính như người lớn)

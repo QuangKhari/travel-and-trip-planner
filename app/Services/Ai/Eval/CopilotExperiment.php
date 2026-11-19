@@ -97,10 +97,11 @@ final class CopilotExperiment
     /** "Làm hỏng" chuyến có chủ đích để có vấn đề cần sửa. */
     private function mutate(int $tripId, string $how): void
     {
+        $planner = app(\App\Modules\Planner\PlannerApi::class);
         if ($how === 'overload_day1') {
             $i = 0;
             foreach (DB::table('tbl_trip_items')->where('tripId', $tripId)->whereNotNull('dayNo')->orderBy('dayNo')->orderBy('orderNo')->get(['itemId']) as $r) {
-                DB::table('tbl_trip_items')->where('itemId', $r->itemId)->update(['dayNo' => 1, 'orderNo' => $i++]);
+                $planner->setItemSlot($tripId, (int) $r->itemId, ['dayNo' => 1, 'orderNo' => $i++]);
             }
         } elseif ($how === 'fix_first_late') {
             // một mục ngày 1 bị đặt giờ cố định 21:00 để có lỗi giờ thật cho La bàn sửa. Ưu tiên mục CÓ giờ mở cửa hôm đó và đóng cửa sớm nhất
@@ -120,10 +121,10 @@ final class CopilotExperiment
                 ->when($pick, fn($q) => $q->where('refType', $pick['type'])->where('refId', (int) $pick['refId']))
                 ->orderBy('orderNo')->value('itemId');
             if ($row) {
-                DB::table('tbl_trip_items')->where('itemId', $row)->update(['startMin' => 1260]);
+                $planner->setItemSlot($tripId, (int) $row, ['startMin' => 1260]);
             }
         }
-        DB::table('tbl_trips')->where('tripId', $tripId)->increment('rev');
+        $planner->bumpRev($tripId);
     }
 
     /**

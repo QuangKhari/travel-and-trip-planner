@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
-use App\Services\Content\TripTray;
+use App\Services\Planner\TripTray;
 use App\Services\Content\UserMarks;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

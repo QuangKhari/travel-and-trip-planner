@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\Content\SearchCatalog;
-use App\Services\Content\TripTray;
+use App\Services\Planner\TripTray;
 use App\Services\Rag\ChunkBuilder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;

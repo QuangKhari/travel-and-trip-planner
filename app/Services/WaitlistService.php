@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Modules\TourOps\Departures;
 use App\Mail\TemplateMail;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -108,12 +109,7 @@ class WaitlistService
 
     private function releaseHold(object $w): void
     {
-        $n = (int) $w->numAdults + (int) $w->numChildren;
-        DB::table('tbl_tour_availability')->where('availabilityId', $w->availabilityId)->update(['heldSlots' => DB::raw('GREATEST(heldSlots - ' . $n . ', 0)'), 'updatedAt' => now()]);
-        $tourId = (int) DB::table('tbl_tour_availability')->where('availabilityId', $w->availabilityId)->value('tourId');
-        if ($tourId) {
-            app(DepartureService::class)->syncTour($tourId);
-        }
+        app(Departures::class)->changeSeats((int) $w->availabilityId, 'heldSlots', -((int) $w->numAdults + (int) $w->numChildren));
     }
 
     /** Mời những người chờ vừa chỗ trống hiện có. @return int số lời mời đã gửi */

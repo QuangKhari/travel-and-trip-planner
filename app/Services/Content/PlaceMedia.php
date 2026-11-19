@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Planner;
+namespace App\Services\Content;
 
 use App\Support\DiscoverImage;
 use Illuminate\Support\Facades\DB;

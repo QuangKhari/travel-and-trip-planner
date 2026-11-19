@@ -2,7 +2,7 @@
 
 namespace App\Services\Planner\Health;
 
-use App\Services\Planner\OpeningHours;
+use App\Services\Content\OpeningHours;
 use App\Services\Planner\PlannerRules;
 use App\Services\Planner\Route\HaversineProvider;
 use App\Services\Planner\Route\RouteService;

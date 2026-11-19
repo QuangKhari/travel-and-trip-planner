@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Services\Planner\ContentRequests;
+use App\Services\Content\ContentRequests;
 use App\Services\Planner\TourFit;
 use App\Services\Planner\TripPlanner;
 use App\Services\Planner\UnknownPlace;

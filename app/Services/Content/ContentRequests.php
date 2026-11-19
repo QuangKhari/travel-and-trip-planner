@@ -1,8 +1,7 @@
 <?php
 
-namespace App\Services\Planner;
+namespace App\Services\Content;
 
-use App\Services\Content\SearchCatalog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 

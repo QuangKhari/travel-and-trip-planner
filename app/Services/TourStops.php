@@ -69,7 +69,7 @@ final class TourStops
             return (int) $tour->durationDays;
         }
 
-        return \App\Services\Planner\TourFit::tourDays($tour->time ?? null, $tour->startDate ?? null, $tour->endDate ?? null);
+        return \App\Modules\Content\TourCatalog::days($tour->time ?? null, $tour->startDate ?? null, $tour->endDate ?? null);
     }
 
     /** Kiểm tra lịch trình (mọi vấn đề, lỗi chặn trước). @return list<string> */

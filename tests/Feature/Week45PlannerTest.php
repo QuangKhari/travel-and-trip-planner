@@ -414,7 +414,7 @@ class Week45PlannerTest extends TestCase
         $year = (int) date('Y') + 1;
         $start = date('Y-m-d', strtotime("monday next week", strtotime("$year-06-01")));   // một ngày Thứ Hai
         $must = (int) DB::table('tbl_external_places')->where('isMustTry', 1)->value('placeId');
-        app(\App\Services\Planner\OpeningHours::class)->store('place', $must, 'Tu-Su 08:00-17:00; Mo off');
+        app(\App\Services\Content\OpeningHours::class)->store('place', $must, 'Tu-Su 08:00-17:00; Mo off');
         $r = app(PlannerService::class)->generate(['destinationId' => $this->hn, 'month' => 6, 'startDate' => $start, 'days' => 1, 'groupSize' => 2]);
         $this->assertNotContains('place:' . $must, array_column($r['plan']['days'][0]['items'], 'key'));
         $this->assertContains('place:' . $must, array_column($r['plan']['unplaced'], 'key'));
@@ -467,7 +467,7 @@ class Week45PlannerTest extends TestCase
     public function test_tray_is_recognised_by_kind_not_title(): void
     {
         // một chuyến THẬT có tên trùng tên khay vẫn là chuyến (trước đây bị ẩn vì so theo tên)
-        $id = DB::table('tbl_trips')->insertGetId(['userId' => $this->uid, 'kind' => 'trip', 'title' => \App\Services\Content\TripTray::TITLE, 'days' => 1, 'groupSize' => 1, 'status' => 'draft']);
+        $id = DB::table('tbl_trips')->insertGetId(['userId' => $this->uid, 'kind' => 'trip', 'title' => \App\Services\Planner\TripTray::TITLE, 'days' => 1, 'groupSize' => 1, 'status' => 'draft']);
         $tray = DB::table('tbl_trips')->insertGetId(['userId' => $this->uid, 'kind' => 'tray', 'title' => 'Khay', 'days' => 1, 'groupSize' => 1, 'status' => 'draft']);
         $this->assertNotNull(app(TripPlanner::class)->owned($this->uid, $id));
         $this->assertNull(app(TripPlanner::class)->owned($this->uid, $tray));

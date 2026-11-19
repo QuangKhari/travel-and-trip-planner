@@ -247,7 +247,7 @@ final class CopilotService
             $x = $ctx['keys'][$k];
             $alt = null;
             if ($x['type'] === 'place' && $x['lat'] !== null) {
-                $g = \App\Services\Planner\PlaceMedia::groupOfKind($x['kind']);
+                $g = \App\Services\Content\PlaceMedia::groupOfKind($x['kind']);
                 $found = $this->finder->search($trip, ['group' => in_array($g, PlaceFinder::GROUPS, true) ? $g : null, 'nearItem' => $k, 'day' => $x['day']], $ctx);
                 $ids = array_map(fn($c2) => (int) $c2['refId'], array_filter($found['cands'], fn($c2) => $c2['type'] === 'place' && empty($c2['closed'])));
                 $prices = $ids ? DB::table('tbl_external_places')->whereIn('placeId', $ids)->whereNotNull('priceMin')->pluck('priceMin', 'placeId')->map(fn($v) => (float) $v)->all() : [];

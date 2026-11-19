@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Modules\Commerce\BookingChanges;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
@@ -232,9 +233,14 @@ class DepartureRescueService
                 foreach ($rows as $bk) {
                     $co = DB::table('tbl_checkout')->where('bookingId', $bk->bookingId)->lockForUpdate()->first();
                     $paid = $co && $co->paymentStatus === 'y';
-                    app(BookingService::class)->cancelLocked($bk, !empty($plan->incidentId) ? 'incident' : 'shortfall', !$paid);
-                    if ($paid) {
-                        app(RefundService::class)->requestLocked($bk, 'admin', $adminId, 100, 'Travela điều chỉnh khởi hành, khách không đồng ý — hoàn 100% (phương án #' . $planId . ')', $planId);
+                    if (app(BookingChanges::class)->cancelForRescue(
+                        $bk,
+                        !empty($plan->incidentId) ? 'incident' : 'shortfall',
+                        $paid,
+                        $adminId,
+                        (int) $planId,
+                        'Travela điều chỉnh khởi hành, khách không đồng ý — hoàn 100% (phương án #' . $planId . ')',
+                    )) {
                         $summary['refunds']++;
                     }
                     $summary['declinedCancelled'][] = (int) $bk->bookingId;
@@ -286,13 +292,13 @@ class DepartureRescueService
                         throw ValidationException::withMessages(['plan' => 'Booking đang có hồ sơ hoàn tiền.']);
                     }
                     DB::table('tbl_rescue_transfers')->insert(['planId' => $planId,'bookingId' => $b->bookingId,'oldTourId' => $s->tourId,'newTourId' => $t->tourId,'oldAvailabilityId' => $s->availabilityId,'newAvailabilityId' => $t->availabilityId,'oldTotal' => $b->totalPrice,'newTotal' => $b->totalPrice,'createdAt' => now()]);
-                    DB::table('tbl_booking')->where('bookingId', $b->bookingId)->update(['tourId' => $t->tourId,'availabilityId' => $t->availabilityId,'departureDate' => $t->departureDate]);
+                    app(BookingChanges::class)->moveBooking((int) $b->bookingId, (int) $t->tourId, (int) $t->availabilityId, (string) $t->departureDate);
                     \App\Support\DomainEvents::record(\App\Support\DomainEvents::DEPARTURE_CHANGED, 'booking', (int) $b->bookingId, ['bookingId' => (int) $b->bookingId,
                         'from' => $s->departureDate, 'to' => $t->departureDate, 'oldTourId' => (int) $s->tourId, 'newTourId' => (int) $t->tourId]);
                 }
                 if (TourVersionService::ready() && ($newVersionId = app(TourVersionService::class)->ensureCurrent((int) $t->tourId))) {
                     // khách đã đồng ý đổi sang tour này: nội dung họ nhận là phiên bản hiện tại của tour mới
-                    DB::table('tbl_booking')->whereIn('bookingId', $bookings->pluck('bookingId')->all())->update(['tourVersionId' => $newVersionId]);
+                    app(BookingChanges::class)->stampVersion((int) $newVersionId, $bookings->pluck('bookingId')->map(fn($x) => (int) $x)->all());
                 }
                 DB::table('tbl_tour_availability')->where('availabilityId', $t->availabilityId)->increment('bookedSlots', $people, ['updatedAt' => now()]);
                 DB::table('tbl_tour_availability')->where('availabilityId', $s->availabilityId)->decrement('bookedSlots', $people, ['updatedAt' => now()]);
@@ -329,11 +335,10 @@ class DepartureRescueService
                 DB::table('tbl_tour_availability')->where('availabilityId', $target->availabilityId)->increment('bookedSlots', $people, ['updatedAt' => now()]);
                 DB::table('tbl_tour_availability')->where('availabilityId', $source->availabilityId)->decrement('bookedSlots', $people, ['updatedAt' => now()]);
                 DB::table('tbl_tour_availability')->where('availabilityId', $source->availabilityId)->update(['status' => 'closed','updatedAt' => now()]);
-                foreach (DB::table('tbl_booking')->where('availabilityId', $source->availabilityId)->where('bookingStatus', 'y')->pluck('bookingId') as $movedId) {
-                    \App\Support\DomainEvents::record(\App\Support\DomainEvents::DEPARTURE_CHANGED, 'booking', (int) $movedId, ['bookingId' => (int) $movedId,
+                foreach (app(BookingChanges::class)->moveConfirmed((int) $source->availabilityId, (int) $target->availabilityId, (string) $target->departureDate) as $movedId) {
+                    \App\Support\DomainEvents::record(\App\Support\DomainEvents::DEPARTURE_CHANGED, 'booking', $movedId, ['bookingId' => $movedId,
                         'from' => $source->departureDate, 'to' => $target->departureDate]);
                 }
-                DB::table('tbl_booking')->where('availabilityId', $source->availabilityId)->where('bookingStatus', 'y')->update(['availabilityId' => $target->availabilityId,'departureDate' => $target->departureDate]);
                 app(DepartureService::class)->syncTour((int) $source->tourId);
             }
             // 'partial' documents shared operating services only. It never changes customer itinerary or booking.
@@ -379,9 +384,14 @@ class DepartureRescueService
             foreach ($rows as $booking) {
                 $checkout = DB::table('tbl_checkout')->where('bookingId', $booking->bookingId)->lockForUpdate()->first();
                 $paid = $checkout && $checkout->paymentStatus === 'y';
-                app(BookingService::class)->cancelLocked($booking, !empty($plan->incidentId) ? 'incident' : 'shortfall', !$paid);
-                if ($paid) {
-                    app(RefundService::class)->requestLocked($booking, 'admin', $adminId, 100, (!empty($plan->incidentId) ? 'Travela hủy khởi hành do sự cố — phương án #' : 'Travela hủy khởi hành do không đủ khách — phương án #') . $planId, $planId);
+                if (app(BookingChanges::class)->cancelForRescue(
+                    $booking,
+                    !empty($plan->incidentId) ? 'incident' : 'shortfall',
+                    $paid,
+                    $adminId,
+                    (int) $planId,
+                    (!empty($plan->incidentId) ? 'Travela hủy khởi hành do sự cố — phương án #' : 'Travela hủy khởi hành do không đủ khách — phương án #') . $planId,
+                )) {
                     $refunds++;
                 }
                 $ids[] = (int) $booking->bookingId;
@@ -392,7 +402,7 @@ class DepartureRescueService
             }
             DB::table('tbl_tour_availability')->where('availabilityId', $source->availabilityId)->update($close);
             $group = app(DepartureGroupingService::class)->releaseMembership((int) $source->availabilityId);
-            app(WaitlistService::class)->closeForAvailability((int) $source->availabilityId);
+            app(BookingChanges::class)->closeWaitlist((int) $source->availabilityId);
             app(DepartureService::class)->syncTour((int) $source->tourId);
             DB::table('tbl_departure_rescue_plans')->where('planId', $planId)->update(['status' => $refunds > 0 ? 'refund_pending' : 'completed','appliedAt' => now(),'updatedAt' => now()]);
             if (!empty($plan->incidentId)) {
@@ -430,14 +440,14 @@ class DepartureRescueService
                     if ($pending !== []) {
                         DB::table('tbl_departure_rescue_responses')->whereIn('responseId', $pending)->update(['decision' => 'timeout','respondedAt' => now()]);
                     }
-                    $anyAccepted = DB::table('tbl_departure_rescue_responses')->where('planId', $pid)->where('decision','accepted')->exists();
-                    DB::table('tbl_departure_rescue_plans')->where('planId',$pid)->update(['status' => $anyAccepted ? 'ready' : 'expired','updatedAt' => now()]);
+                    $anyAccepted = DB::table('tbl_departure_rescue_responses')->where('planId', $pid)->where('decision', 'accepted')->exists();
+                    DB::table('tbl_departure_rescue_plans')->where('planId', $pid)->update(['status' => $anyAccepted ? 'ready' : 'expired','updatedAt' => now()]);
 
                     return 1;
                 }, 3);
             }
         }
 
-        return $n + DB::table('tbl_departure_rescue_plans')->where('status','pending')->where('responseDeadline','<',now())->update(['status' => 'expired','updatedAt' => now()]);
+        return $n + DB::table('tbl_departure_rescue_plans')->where('status', 'pending')->where('responseDeadline', '<', now())->update(['status' => 'expired','updatedAt' => now()]);
     }
 }

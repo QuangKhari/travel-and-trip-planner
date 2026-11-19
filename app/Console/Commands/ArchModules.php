@@ -7,7 +7,7 @@ use Illuminate\Console\Command;
 
 /**
  * Bảng truy cập chéo giữa các phân hệ (config/modules.php):
- *   php artisan arch:modules            ma trận phân hệ gọi × phân hệ chủ bảng (số chỗ đọc / ghi) + vi phạm luật
+ *   php artisan arch:modules            ma trận phân hệ gọi × phân hệ chủ bảng (số chỗ đọc / ghi), ma trận gọi lớp (giao diện / nội bộ) + vi phạm luật
  *   php artisan arch:modules --debt     chỉ liệt kê nợ kỹ thuật đã biết (baseline) còn tồn tại
  */
 class ArchModules extends Command
@@ -36,6 +36,28 @@ class ArchModules extends Command
             }
             $this->info('Số chỗ đọc (đ) / ghi (g) bảng của phân hệ khác — hàng: phân hệ gọi, cột: phân hệ chủ bảng');
             $this->table(array_merge(['Gọi \\ Chủ'], $mods), $rows);
+
+            // gọi lớp: số lớp giao diện (app/Modules/{chủ}) / lớp nội bộ; * = cặp bị class_rules giới hạn chỉ được gọi giao diện
+            $deps = ModuleMap::classDeps();
+            $rules = (array) config('modules.class_rules', []);
+            $rows = [];
+            foreach ($mods as $m) {
+                $row = [$m];
+                foreach ($mods as $o) {
+                    if ($m === $o) {
+                        $row[] = '—';
+                        continue;
+                    }
+                    $pair = array_filter($deps, fn($h) => $h['module'] === $m && $h['owner'] === $o);
+                    $api = count(array_unique(array_column(array_filter($pair, fn($h) => str_starts_with($h['class'], 'App\\Modules\\')), 'class')));
+                    $inner = count(array_unique(array_column(array_filter($pair, fn($h) => !str_starts_with($h['class'], 'App\\Modules\\')), 'class')));
+                    $strict = in_array($o, (array) ($rules[$m] ?? []), true) ? '*' : '';
+                    $row[] = ($api || $inner || $strict) ? $api . ' gd / ' . $inner . ' nb' . $strict : '';
+                }
+                $rows[] = $row;
+            }
+            $this->info('Số lớp của phân hệ khác được gọi: gd = giao diện app/Modules, nb = lớp nội bộ; * = chỉ được gọi giao diện (class_rules)');
+            $this->table(array_merge(['Gọi \\ Chủ'], $mods), $rows);
         }
         $base = array_flip((array) config('modules.baseline', []));
         $v = ModuleMap::violations();
@@ -48,7 +70,18 @@ class ArchModules extends Command
         if ($new) {
             $this->error(count($new) . ' vi phạm MỚI:');
             foreach ($new as $x) {
-                $this->line(sprintf('  %s:%d %s %s bảng %s của %s', $x['file'], $x['line'], $x['module'], $x['kind'] === 'write' ? 'GHI' : 'đọc', $x['table'], $x['owner']));
+                $this->line($x['kind'] === 'class'
+                    ? sprintf('  %s:%d %s gọi lớp nội bộ %s của %s (hãy gọi giao diện trong app/Modules/%s)', $x['file'], $x['line'], $x['module'], $x['class'], $x['owner'], $x['owner'])
+                    : sprintf(
+                        '  %s:%d %s %s bảng %s của %s%s',
+                        $x['file'],
+                        $x['line'],
+                        $x['module'],
+                        $x['kind'] === 'write' ? 'GHI' : 'đọc',
+                        $x['table'],
+                        $x['owner'],
+                        $x['rule'] === 'deny' ? ' (bảng cấm với ' . $x['module'] . ': deny_tables)' : '',
+                    ));
             }
 
             return self::FAILURE;

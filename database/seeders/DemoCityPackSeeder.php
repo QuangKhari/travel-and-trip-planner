@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Services\Planner\OpeningHours;
+use App\Services\Content\OpeningHours;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -31,7 +31,7 @@ class DemoCityPackSeeder extends Seeder
             foreach ($rows as $r) {
                 $x = array_combine($pack['cols'], $r);
                 $fields = $extra ? ['durationMinutes' => $x['dur'], 'priceMin' => $x['pmin'], 'priceMax' => $x['pmax'], 'indoor' => $x['indoor']] : [];
-                if (\App\Services\Planner\PlaceFacts::ready()) {
+                if (\App\Services\Content\PlaceFacts::ready()) {
                     $fields['factsSource'] = 'Gói dữ liệu demo (số tham khảo)';   // ngày kiểm tra để trống: admin xác minh ở "Dữ liệu địa điểm → Cần kiểm tra"
                 }
                 $row = DB::table('tbl_external_places')->where('destinationId', (int) $destId)->where('name', $x['name'])->first();

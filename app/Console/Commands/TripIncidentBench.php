@@ -124,7 +124,7 @@ class TripIncidentBench extends Command
                 $day = (int) $it->dayNo;
                 $dow = Carbon::parse($start)->addDays($day - 1)->dayOfWeekIso;
                 $codes = [1 => 'Mo', 2 => 'Tu', 3 => 'We', 4 => 'Th', 5 => 'Fr', 6 => 'Sa', 7 => 'Su'];
-                app(\App\Services\Planner\OpeningHours::class)->store($it->refType, (int) $it->refId, 'Mo-Su 07:00-21:00; ' . $codes[$dow] . ' off', 'bench');
+                app(\App\Services\Content\OpeningHours::class)->store($it->refType, (int) $it->refId, 'Mo-Su 07:00-21:00; ' . $codes[$dow] . ' off', 'bench');
                 $note = 'đóng: refType=' . $it->refType . ' #' . $it->refId;
                 $expect = fn($id) => str_contains($id, 'hours.closed');
                 break;
@@ -193,8 +193,10 @@ class TripIncidentBench extends Command
 
         // cách sửa: hỏi bộ sửa với đúng mã lỗi của TripHealth; hợp lệ = có phương án đã mô phỏng hết lỗi và không thêm lỗi cứng
         $checks = app(TripHealth::class)->forTrip($trip())['checks'];
-        $want = match ($kind) { 'rain' => ['weather.rain', 'weather.storm'], 'storm' => ['weather.storm', 'weather.rain'], 'closure' => ['hours.closed'],
-            'arrival' => ['time.arrival', 'hours.late', 'hours.early'], 'departure' => ['time.departure', 'hours.late'], default => [] };
+        $want = match ($kind) {
+            'rain' => ['weather.rain', 'weather.storm'], 'storm' => ['weather.storm', 'weather.rain'], 'closure' => ['hours.closed'],
+            'arrival' => ['time.arrival', 'hours.late', 'hours.early'], 'departure' => ['time.departure', 'hours.late'], default => []
+        };
         if ($kind === 'alert') {
             // cảnh báo tại một địa điểm: cách sửa là đưa nơi đó ra khỏi lịch (vào Đã lưu) — mô phỏng và kiểm tra không sinh lỗi cứng
             $pos = $this->positionOf($trip(), 'place', (int) $it->refId);
@@ -234,8 +236,10 @@ class TripIncidentBench extends Command
         $trip = DB::table('tbl_trips')->where('tripId', $row['tripId'])->first();
         $cards = app(\App\Services\Ai\Copilot\TripSuggest::class)->suggest($trip, 'alerts')['cards'] ?? [];
         // thẻ đúng loại sự cố; trễ chuyến bay / về sớm hiện ở danh sách vấn đề của ngày (kèm cách sửa), không thành thẻ Cảnh báo
-        $want = match ($row['kind']) { 'rain' => '/^alert:weather\.(rain|storm)/', 'storm' => '/^alert:weather\.storm/', 'closure' => '/^alert:hours\.closed/',
-            'alert' => '/^(?!alert:)/', default => null };
+        $want = match ($row['kind']) {
+            'rain' => '/^alert:weather\.(rain|storm)/', 'storm' => '/^alert:weather\.storm/', 'closure' => '/^alert:hours\.closed/',
+            'alert' => '/^(?!alert:)/', default => null
+        };
         if (!$want) {
             return ['explainEngine' => 'ngoài thẻ Cảnh báo'] + $out;
         }
@@ -285,8 +289,10 @@ class TripIncidentBench extends Command
     /** @return list<string> các lỗi cứng hiện có (mã:ngày:vị trí) */
     private function hardKeys(object $trip): array
     {
-        return array_values(array_map(fn($c) => $c['code'] . ':' . ($c['day'] ?? 0) . ':' . ($c['index'] ?? 0),
-            array_filter(app(TripHealth::class)->forTrip($trip)['checks'], fn($c) => in_array($c['code'], TripHealth::HARD, true))));
+        return array_values(array_map(
+            fn($c) => $c['code'] . ':' . ($c['day'] ?? 0) . ':' . ($c['index'] ?? 0),
+            array_filter(app(TripHealth::class)->forTrip($trip)['checks'], fn($c) => in_array($c['code'], TripHealth::HARD, true)),
+        ));
     }
 
     /** Ngày có mục ngoài trời theo dữ liệu gốc (cột indoor; không có thì theo loại nơi ngoài trời). */
@@ -354,8 +360,14 @@ class TripIncidentBench extends Command
         if ($this->option('explain')) {
             $ex = array_filter($rows, fn($r) => ($r['explainEngine'] ?? '') !== '');
             $by = array_count_values(array_column($ex, 'explainEngine'));
-            $this->line(sprintf('Lời giải thích (AP2): %d ca phát hiện · lời AI qua chốt chặn %d · bị chặn thay bằng mẫu %d · dùng mẫu vì AI tắt / lỗi %d%s',
-                count($ex), $by['llm'] ?? 0, $by['chặn'] ?? 0, $by['template'] ?? 0, (isset($by['không có thẻ']) ? ' · thiếu thẻ ' . $by['không có thẻ'] : '') . (isset($by['ngoài thẻ Cảnh báo']) ? ' · trễ chuyến / về sớm (hiện ở vấn đề của ngày, không có thẻ) ' . $by['ngoài thẻ Cảnh báo'] : '')));
+            $this->line(sprintf(
+                'Lời giải thích (AP2): %d ca phát hiện · lời AI qua chốt chặn %d · bị chặn thay bằng mẫu %d · dùng mẫu vì AI tắt / lỗi %d%s',
+                count($ex),
+                $by['llm'] ?? 0,
+                $by['chặn'] ?? 0,
+                $by['template'] ?? 0,
+                (isset($by['không có thẻ']) ? ' · thiếu thẻ ' . $by['không có thẻ'] : '') . (isset($by['ngoài thẻ Cảnh báo']) ? ' · trễ chuyến / về sớm (hiện ở vấn đề của ngày, không có thẻ) ' . $by['ngoài thẻ Cảnh báo'] : ''),
+            ));
             $this->line('  Lời AI đã qua chốt chặn nằm ở cột explainText của --csv: chấm tay xem có bịa không (ai:grade).');
         }
         if ($path = $this->option('csv')) {

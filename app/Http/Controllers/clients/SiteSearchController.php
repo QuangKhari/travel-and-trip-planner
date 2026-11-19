@@ -69,7 +69,7 @@ class SiteSearchController extends Controller
             if ($ret->indexed($embedder) === 0) {
                 return [];
             }
-            $a = app(\App\Services\Rag\QueryAnalyzer::class)->analyze($q);
+            $a = app(\App\Services\Content\QueryAnalyzer::class)->analyze($q);
             // search() đã tự loại đoạn của nội dung không còn xuất bản (Retriever::stillPublished)
             $rows = $ret->search($embedder, $q, $a['terms'], $a['destination']['id'] ?? null, $a['month'], 12);
         } catch (\Throwable $e) {

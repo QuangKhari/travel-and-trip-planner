@@ -3,8 +3,7 @@
 namespace App\Services;
 
 use App\Mail\TemplateMail;
-use App\Services\Planner\TripPlanner;
-use App\Services\Planner\TripWatch;
+use App\Modules\Planner\PlannerApi;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
@@ -22,7 +21,7 @@ final class TourQuotes
 
     public function snapshot(object $trip): array
     {
-        $p = app(TripPlanner::class)->payload($trip);
+        $p = app(PlannerApi::class)->payload($trip);
 
         return ['title' => $trip->title, 'startDate' => $trip->startDate, 'days' => (int) $trip->days, 'groupSize' => (int) $trip->groupSize,
             'budget' => $trip->budget !== null ? (float) $trip->budget : null,
@@ -54,7 +53,7 @@ final class TourQuotes
             }
             DB::table('tbl_tour_quotes')->where('quoteId', $id)->update(['staffUnread' => $note ? 1 : 0]);
         }
-        TripWatch::log((int) $trip->tripId, 'quote', 'info', 'Đã gửi yêu cầu báo giá tour riêng #' . $id, 'Nhân viên Travela sẽ báo giá trọn gói cho nhóm ' . (int) $trip->groupSize . ' người.');
+        app(PlannerApi::class)->log((int) $trip->tripId, 'quote', 'info', 'Đã gửi yêu cầu báo giá tour riêng #' . $id, 'Nhân viên Travela sẽ báo giá trọn gói cho nhóm ' . (int) $trip->groupSize . ' người.');
 
         return $id;
     }
@@ -78,7 +77,7 @@ final class TourQuotes
             $this->post($id, 'system', $adminId, 'Báo giá lần ' . $ver . ': ' . $money . ', tổng ' . number_format($total, 0, ',', '.') . 'đ, giữ giá tới ' . date('d/m/Y', strtotime($v['validUntil'])) . '.'
                 . (!empty($v['message']) ? ' Lời nhắn: ' . $v['message'] : ''), false);
         }
-        TripWatch::log((int) $q->tripId, 'quote', 'info', 'Travela đã báo giá tour riêng: ' . $money, 'Tổng ' . number_format($total, 0, ',', '.') . 'đ cho ' . $q->groupSize . ' người, giữ giá tới ' . date('d/m/Y', strtotime($v['validUntil'])) . '.');
+        app(PlannerApi::class)->log((int) $q->tripId, 'quote', 'info', 'Travela đã báo giá tour riêng: ' . $money, 'Tổng ' . number_format($total, 0, ',', '.') . 'đ cho ' . $q->groupSize . ' người, giữ giá tới ' . date('d/m/Y', strtotime($v['validUntil'])) . '.');
         $u = DB::table('tbl_users')->where('userId', $q->userId)->first(['email', 'fullName']);
         if ($u && $u->email) {
             Mail::to($u->email)->queue(new TemplateMail('admin.emails.tour-quote', ['name' => $u->fullName, 'q' => (array) $q + ['pricePerPerson' => $v['pricePerPerson'], 'totalPrice' => $total,
@@ -98,7 +97,7 @@ final class TourQuotes
         if ($n === 0) {
             throw new \DomainException('Báo giá đã được xử lý.');
         }
-        TripWatch::log(
+        app(PlannerApi::class)->log(
             (int) $q->tripId,
             'quote',
             $accept ? 'info' : 'warn',
@@ -131,7 +130,7 @@ final class TourQuotes
         }
         $this->post($quoteId, $sender, $senderId, $body, true);
         if ($sender === 'staff') {
-            TripWatch::log((int) $q->tripId, 'quote', 'info', 'Travela nhắn về báo giá #' . $quoteId, mb_substr($body, 0, 160));
+            app(PlannerApi::class)->log((int) $q->tripId, 'quote', 'info', 'Travela nhắn về báo giá #' . $quoteId, mb_substr($body, 0, 160));
         }
     }
 
@@ -159,7 +158,7 @@ final class TourQuotes
         return DB::table('tbl_tour_quote_messages')->where('quoteId', $quoteId)->orderBy('messageId')->get()
             ->map(function ($m) use ($staff) {
                 $m->who = match ($m->sender) {
-                    'staff' => ($staff[$m->senderId] ?? null) ?: 'Nhân viên Travela', 'customer' => 'Khách', default => 'Travela'
+                    'staff' => ($staff[$m->senderId] ?? null) ?: 'Nhân viên Travela', 'customer' => 'Khách', default => 'Travela',
                 };
 
                 return $m;

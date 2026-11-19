@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\admin;
 
 use App\Http\Controllers\Controller;
-use App\Services\Planner\ContentRequests;
+use App\Services\Content\ContentRequests;
 use Illuminate\Http\Request;
 
 /**

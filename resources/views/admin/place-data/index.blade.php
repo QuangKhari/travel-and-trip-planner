@@ -24,7 +24,7 @@
                     <form method="GET" style="display:flex;gap:6px"><input type="hidden" name="tab" value="verify">
                         <select name="dest" onchange="this.form.submit()"><option value="">Mọi điểm đến</option>
                             @foreach ($destinations as $d)<option value="{{ $d->destinationId }}" @selected($dest === (int) $d->destinationId)>{{ $d->name }}</option>@endforeach</select></form></div>
-                <p class="ad-muted" style="padding:0 16px">Thiếu giờ, chưa xác minh hoặc quá {{ \App\Services\Planner\PlaceFacts::STALE_DAYS }} ngày chưa kiểm tra. Nơi có người báo sai và nằm trong nhiều chuyến lên trước. Giờ theo cú pháp OpenStreetMap, ví dụ <code>Tu-Su 08:00-17:00; Mo off; PH off</code>.</p>
+                <p class="ad-muted" style="padding:0 16px">Thiếu giờ, chưa xác minh hoặc quá {{ \App\Services\Content\PlaceFacts::STALE_DAYS }} ngày chưa kiểm tra. Nơi có người báo sai và nằm trong nhiều chuyến lên trước. Giờ theo cú pháp OpenStreetMap, ví dụ <code>Tu-Su 08:00-17:00; Mo off; PH off</code>.</p>
                 @if (!$queue)
                     <div class="ad-empty"><i class="fa fa-check"></i><b>Không còn nơi nào cần kiểm tra</b></div>
                 @else
@@ -33,7 +33,7 @@
                         <tr>
                             <td><b>{{ $q->name }}</b><br><small class="ad-muted">#{{ $q->placeId }} · {{ $q->destName }} · {{ $q->used }} chuyến</small></td>
                             <td>{{ $q->why }}@if ($q->reports)<br><span class="ad-badge">{{ $q->reports }} báo sai</span>@endif
-                                <br><small class="ad-muted">Giờ hiện tại: {{ $q->hours ? collect([1,2,3,4,5,6,7])->map(fn($d) => ['', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'][$d] . ' ' . (\App\Services\Planner\OpeningHours::describe($q->hours, $d) ?? '?'))->implode(' · ') : 'chưa có' }}</small></td>
+                                <br><small class="ad-muted">Giờ hiện tại: {{ $q->hours ? collect([1,2,3,4,5,6,7])->map(fn($d) => ['', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'][$d] . ' ' . (\App\Services\Content\OpeningHours::describe($q->hours, $d) ?? '?'))->implode(' · ') : 'chưa có' }}</small></td>
                             <td colspan="2">
                                 <form method="POST" action="{{ route('admin.place-data.verify', $q->placeId) }}" style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px">@csrf
                                     <input name="hours" placeholder="Giờ mới (OSM)" maxlength="255">

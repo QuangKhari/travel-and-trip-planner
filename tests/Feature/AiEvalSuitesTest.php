@@ -33,7 +33,7 @@ class AiEvalSuitesTest extends TestCase
             $this->pl[$n] = DB::table('tbl_external_places')->insertGetId(['destinationId' => $this->hn, 'source' => 'manual', 'externalId' => $n, 'name' => $n,
                 'category' => 'sight', 'kind' => $k, 'latitude' => $la, 'longitude' => $lo, 'rank' => $i + 1, 'reviewStatus' => 'published', 'syncedAt' => now(), 'isMustTry' => 0]);
         }
-        app(\App\Services\Planner\OpeningHours::class)->store('place', $this->pl['Bảo tàng Dân tộc học'], 'Tu-Su 08:30-17:30; Mo off');
+        app(\App\Services\Content\OpeningHours::class)->store('place', $this->pl['Bảo tàng Dân tộc học'], 'Tu-Su 08:30-17:30; Mo off');
     }
 
     protected function tearDown(): void

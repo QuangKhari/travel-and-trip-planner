@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\Planner\Health\DaySchedule;
-use App\Services\Planner\OpeningHours;
+use App\Services\Content\OpeningHours;
 use App\Services\Planner\PlannerGate;
 use App\Services\Planner\PlannerRules;
 use App\Services\Planner\PlannerService;
@@ -44,9 +44,17 @@ class PlannerScenario extends Command
         $minLoad = (float) (config('planner.pace.' . $req['pace'] . '.min_load') ?? 0.45);
         $maxLoad = (float) (config('planner.pace.' . $req['pace'] . '.target_load') ?? 0.8);
 
-        $this->info(sprintf('Kịch bản: %d ngày · %d người lớn%s · ngân sách %s · sở thích %s · không thích %s · nhịp %s · %s',
-            $req['days'], $req['adults'], $req['children'] ? ' + ' . $req['children'] . ' trẻ em' : '', $req['budget'] ? number_format($req['budget'], 0, ',', '.') . 'đ' : 'không',
-            implode('+', $req['interests']) ?: '—', implode('+', $req['dislikes']) ?: '—', $req['pace'], $start ? 'từ ' . $start : 'tháng ' . $month));
+        $this->info(sprintf(
+            'Kịch bản: %d ngày · %d người lớn%s · ngân sách %s · sở thích %s · không thích %s · nhịp %s · %s',
+            $req['days'],
+            $req['adults'],
+            $req['children'] ? ' + ' . $req['children'] . ' trẻ em' : '',
+            $req['budget'] ? number_format($req['budget'], 0, ',', '.') . 'đ' : 'không',
+            implode('+', $req['interests']) ?: '—',
+            implode('+', $req['dislikes']) ?: '—',
+            $req['pace'],
+            $start ? 'từ ' . $start : 'tháng ' . $month,
+        ));
 
         $rows = [];
         $problems = 0;

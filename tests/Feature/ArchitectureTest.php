@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 /**
- * Tầng 2 "Kiến trúc": ranh giới phân hệ (modular monolith) được kiểm bằng test, sự kiện nghiệp vụ mới (PlaceHoursChanged),
- * API có phiên bản kèm đặc tả OpenAPI không lệch mã, JS rút gọn bằng esbuild có đường lùi.
+ * Tầng 2 "Kiến trúc": ranh giới phân hệ (modular monolith) được kiểm bằng test (bảng, bảng cấm, lớp nội bộ), mỗi phân hệ một giao diện
+ * app/Modules, sự kiện nghiệp vụ (PlaceHoursChanged, TripUpdated), API có phiên bản kèm đặc tả OpenAPI không lệch mã, JS rút gọn bằng esbuild có đường lùi.
  */
 class ArchitectureTest extends TestCase
 {
@@ -28,9 +28,18 @@ class ArchitectureTest extends TestCase
         $fixed = array_diff($base, $found);
         $this->assertSame([], array_values($fixed), "Nợ kỹ thuật đã được trả: xóa các dòng này khỏi modules.baseline để không tái phạm:\n" . implode("\n", $fixed));
 
-        // Planner và AI không còn đọc thẳng bảng đơn / thanh toán
-        $toCommerce = array_filter(ModuleMap::scan(), fn($h) => in_array($h['module'], ['Planner', 'AI'], true) && $h['owner'] === 'Commerce');
-        $this->assertSame([], array_values($toCommerce));
+        // nợ kỹ thuật đã trả hết: không còn dòng nào được miễn
+        $this->assertSame([], $base);
+        // Planner và AI không còn đọc thẳng bảng đơn / thanh toán, bảng ngày khởi hành, hay bảng tour (hỏi qua TourCatalog)
+        $tourTables = ['tbl_tours', 'tbl_tour_stops', 'tbl_timeline', 'tbl_images'];
+        $planner = array_filter(ModuleMap::scan(), fn($h) => in_array($h['module'], ['Planner', 'AI'], true)
+            && (in_array($h['owner'], ['Commerce', 'TourOps'], true) || in_array($h['table'], $tourTables, true)));
+        $this->assertSame([], array_values($planner));
+        // không phân hệ nào GHI bảng của phân hệ khác: mọi thay đổi chéo đi qua giao diện app/Modules hoặc sự kiện
+        $this->assertSame([], array_values(array_filter(ModuleMap::scan(), fn($h) => $h['kind'] === 'write')));
+        // tour là nội dung (Content), ngày khởi hành / cứu chuyến là Tour Ops
+        $this->assertSame('Content', ModuleMap::owners()['tbl_tours']);
+        $this->assertSame('TourOps', ModuleMap::owners()['tbl_tour_availability']);
         // mỗi bảng thuộc đúng một phân hệ
         $all = array_merge(...array_values(array_map(fn($m) => (array) $m['tables'], config('modules.modules'))));
         $this->assertSame(count($all), count(array_unique($all)));
@@ -48,6 +57,109 @@ class ArchitectureTest extends TestCase
             @unlink(base_path($f));
         }
         $this->artisan('arch:modules')->expectsOutputToContain('Không có vi phạm mới')->assertSuccessful();
+    }
+
+    public function test_scanner_enforces_denied_tables_and_internal_class_calls(): void
+    {
+        $f = 'app/Services/Planner/__ArchProbe2.php';
+        file_put_contents(base_path($f), "<?php\nnamespace App\\Services\\Planner;\nuse App\\Services\\RefundService;\nuse App\\Modules\\Commerce\\CommerceReader;\n"
+            . "class __ArchProbe2 { function a() { DB::table('tbl_tours')->count(); \\App\\Services\\DepartureService::enabled(); app(CommerceReader::class); app(RefundService::class); } }\n");
+        try {
+            $mine = array_values(array_filter(ModuleMap::violations(), fn($h) => $h['file'] === $f));
+            $this->assertEqualsCanonicalizing([
+                [$f . '|tbl_tours|read', 'deny'],
+                [$f . '|class|App\\Services\\RefundService', 'class'],
+                [$f . '|class|App\\Services\\DepartureService', 'class'],
+            ], array_map(fn($h) => [$h['key'], $h['rule']], $mine));   // CommerceReader là giao diện: được gọi
+            $this->artisan('arch:modules')->expectsOutputToContain('gọi lớp nội bộ App\\Services\\RefundService của Commerce')->assertFailed();
+        } finally {
+            @unlink(base_path($f));
+        }
+    }
+
+    public function test_every_module_exposes_an_interface_and_other_modules_use_it(): void
+    {
+        foreach (['Content' => 'TourCatalog', 'TourOps' => 'Departures', 'Commerce' => 'CommerceReader', 'Planner' => 'PlannerApi'] as $m => $cls) {
+            $this->assertTrue(class_exists("App\\Modules\\$m\\$cls"), $cls);
+            $this->assertSame($m, ModuleMap::classOwners()["App\\Modules\\$m\\$cls"]);
+        }
+        $used = fn($from, $cls) => (bool) array_filter(ModuleMap::classDeps(), fn($h) => $h['module'] === $from && $h['class'] === $cls);
+        $this->assertTrue($used('Planner', 'App\\Modules\\Content\\TourCatalog'));
+        $this->assertTrue($used('AI', 'App\\Modules\\Content\\TourCatalog'));
+        $this->assertTrue($used('Planner', 'App\\Modules\\TourOps\\Departures'));
+        $this->assertTrue($used('Commerce', 'App\\Modules\\TourOps\\Departures'));
+        $this->assertTrue($used('TourOps', 'App\\Modules\\Commerce\\BookingChanges'));
+        $this->assertTrue($used('Commerce', 'App\\Modules\\Planner\\PlannerApi'));
+        $this->assertTrue($used('AI', 'App\\Modules\\Planner\\PlannerApi'));
+        // Planner không còn gọi thẳng vào La bàn khi lưu chuyến (AI tự phản ứng với TripUpdated)
+        foreach (['TripRevisions.php', 'TripPlanner.php'] as $f) {
+            $this->assertStringNotContainsString('CopilotService::', (string) file_get_contents(app_path('Services/Planner/' . $f)));
+        }
+    }
+
+    public function test_tour_catalog_answers_planner_questions_without_planner_touching_tour_tables(): void
+    {
+        $dl = DB::table('tbl_destinations')->insertGetId(['slug' => 'da-lat', 'name' => 'Đà Lạt', 'province' => 'Lâm Đồng', 'domain' => 'b', 'description' => 'x', 'latitude' => 11.94, 'longitude' => 108.44, 'isActive' => 1]);
+        $mk = fn($title, $start, $qty, $avail = 1) => DB::table('tbl_tours')->insertGetId(['title' => $title, 'time' => '3 ngày 2 đêm', 'description' => 'x', 'quantity' => $qty,
+            'priceAdult' => 1000000, 'priceChild' => 500000, 'destinationId' => $dl, 'destination' => 'Đà Lạt', 'domain' => 'n', 'availability' => $avail, 'startDate' => $start, 'endDate' => date('Y-m-d', strtotime($start . ' +2 days'))]);
+        $near = $mk('Gần', date('Y-m-d', strtotime('+10 days')), 5);
+        $far = $mk('Xa', date('Y-m-d', strtotime('+40 days')), 5);
+        $mk('Hết chỗ', date('Y-m-d', strtotime('+11 days')), 0);
+        $mk('Ngừng bán', date('Y-m-d', strtotime('+12 days')), 5, 0);
+        $c = app(\App\Modules\Content\TourCatalog::class);
+
+        $this->assertSame([$near, $far], $c->bookable(['destId' => $dl])->pluck('tourId')->map(fn($x) => (int) $x)->all());
+        $this->assertSame([$far, $near], $c->bookable(['destIds' => [$dl], 'near' => date('Y-m-d', strtotime('+45 days'))])->pluck('tourId')->map(fn($x) => (int) $x)->all());
+        $this->assertSame('Đà Lạt', $c->bookable(['destId' => $dl, 'limit' => 1])->first()->destName);
+        $this->assertCount(3, $c->bookable(['destId' => $dl, 'seats' => false, 'endFrom' => date('Y-m-d')]));
+        $this->assertNull($c->find($mk('Hết chỗ 2', date('Y-m-d', strtotime('+5 days')), 0), true));
+        $this->assertSame(3, \App\Modules\Content\TourCatalog::days('3 ngày 2 đêm'));
+        $this->assertSame(\App\Modules\Content\TourCatalog::days(null, '2026-01-01', '2026-01-04'), \App\Services\Planner\TourFit::tourDays(null, '2026-01-01', '2026-01-04'));
+        $month = $c->countByDestination(date('Y-m-d'), date('Y-m-d', strtotime('+60 days')));
+        $this->assertSame(['count' => 2, 'minPrice' => 1000000.0], $month[$dl]);
+    }
+
+    public function test_trip_updated_event_lets_ai_measure_applied_proposals_without_planner_calling_ai(): void
+    {
+        Cache::flush();
+        \Illuminate\Support\Facades\Queue::fake();   // outbox chưa được xử lý: lưu chuyến vẫn thành công, sự kiện nằm chờ
+        $uid = DB::table('tbl_users')->insertGetId(['username' => 'tu', 'email' => 'tu@example.com', 'password' => 'x', 'fullName' => 'T', 'isActive' => 'y']);
+        $hn = DB::table('tbl_destinations')->insertGetId(['slug' => 'ha-noi', 'name' => 'Hà Nội', 'province' => 'HN', 'domain' => 'b', 'description' => 'x', 'latitude' => 21.03, 'longitude' => 105.85, 'isActive' => 1]);
+        $mk = fn($n, $la) => DB::table('tbl_external_places')->insertGetId(['destinationId' => $hn, 'source' => 'manual', 'externalId' => $n, 'name' => $n, 'category' => 'sight', 'kind' => 'museum',
+            'latitude' => $la, 'longitude' => 105.85, 'rank' => 1, 'reviewStatus' => 'published', 'syncedAt' => now(), 'isMustTry' => 0]);
+        [$a, $b] = [$mk('A', 21.03), $mk('B', 21.04)];
+        $id = app(\App\Services\Planner\TripPlanner::class)->create($uid, ['title' => 'HN', 'days' => 2, 'groupSize' => 1, 'startDate' => now()->addDays(5)->toDateString(), 'destinationId' => $hn]);
+        $save = fn(array $items) => $this->withSession(['userId' => $uid, 'username' => 'tu'])->postJson("/len-ke-hoach/$id/luu", ['title' => 'HN', 'days' => 2, 'groupSize' => 1,
+            'startDate' => now()->addDays(5)->toDateString(), 'items' => $items])->assertOk();
+        $save([['type' => 'place', 'refId' => $a, 'day' => 1]]);
+        $rev = (int) DB::table('tbl_trips')->where('tripId', $id)->value('rev');
+
+        // La bàn: người dùng bấm Áp dụng một đề xuất ở rev hiện tại (chưa lưu)
+        $run = DB::table('tbl_ai_runs')->insertGetId(['feature' => 'copilot', 'engine' => 'llm', 'outcome' => 'clicked', 'tripId' => $id, 'promptVersion' => 'x', 'createdAt' => now()], 'runId');
+        Cache::put('ai:cp:pending:' . $id, [$run => $rev], 3600);
+        $save([['type' => 'place', 'refId' => $b, 'day' => 1]]);
+
+        $ev = DB::table('tbl_domain_events')->where('name', 'TripUpdated')->orderByDesc('eventId')->first();
+        $p = json_decode($ev->payload, true);
+        $this->assertSame(['trip', (string) $id], [$ev->aggregate, $ev->aggregateId]);
+        $this->assertSame(
+            ['tripId' => $id, 'rev' => $rev + 1, 'change' => 'save', 'added' => ["place:$b"], 'removed' => ["place:$a"]],
+            array_intersect_key($p, array_flip(['tripId', 'rev', 'change', 'added', 'removed'])),
+        );
+        $this->assertNull($ev->processedAt);
+        $this->assertSame('clicked', DB::table('tbl_ai_runs')->where('runId', $run)->value('outcome'));   // Planner không tự đụng vào bảng của AI
+
+        // phân hệ AI nhận sự kiện -> đề xuất đã thật sự vào CSDL
+        foreach (DB::table('tbl_domain_events')->where('name', 'TripUpdated')->whereNull('processedAt')->orderBy('eventId')->pluck('eventId') as $eid) {
+            (new \App\Jobs\ProcessDomainEvent((int) $eid))->handle();   // như worker / events:relay chạy job
+        }
+        $this->assertSame('applied', DB::table('tbl_ai_runs')->where('runId', $run)->value('outcome'));
+        $this->assertSame(0, DB::table('tbl_domain_events')->where('name', 'TripUpdated')->whereNull('processedAt')->count());
+
+        // hoàn tác về lịch trước đề xuất -> lần lưu đó (qua sự kiện) chuyển đề xuất sang undone
+        $save([['type' => 'place', 'refId' => $a, 'day' => 1]]);
+        (new \App\Jobs\ProcessDomainEvent((int) DB::table('tbl_domain_events')->where('name', 'TripUpdated')->max('eventId')))->handle();
+        $this->assertSame('undone', DB::table('tbl_ai_runs')->where('runId', $run)->value('outcome'));
     }
 
     public function test_openapi_spec_matches_route_table_and_covers_new_endpoints(): void
@@ -100,7 +212,7 @@ class ArchitectureTest extends TestCase
         // admin xác minh: bảo tàng đóng cửa đúng thứ của ngày 1
         $dow = $start->dayOfWeekIso;
         $osm = 'Mo-Su 08:00-17:00; ' . ['', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'][$dow] . ' off';
-        app(\App\Services\Planner\PlaceFacts::class)->verify($museum, $osm, null, null, 'website', null, 1);
+        app(\App\Services\Content\PlaceFacts::class)->verify($museum, $osm, null, null, 'website', null, 1);
 
         $this->assertSame(1, DB::table('tbl_domain_events')->where('name', 'PlaceHoursChanged')->count());
         $ev = DB::table('tbl_trip_events')->where(['tripId' => $id, 'kind' => 'content'])->first();
@@ -111,7 +223,7 @@ class ArchitectureTest extends TestCase
         $this->assertSame(['type' => 'resolve', 'code' => 'hours.closed', 'refType' => 'place', 'refId' => $museum], $feed['events'][0]['action']);
 
         // nhập giờ hàng loạt (nguồn khác admin / báo sai) không phát sự kiện
-        app(\App\Services\Planner\OpeningHours::class)->store('place', $museum, '24/7', 'osm');
+        app(\App\Services\Content\OpeningHours::class)->store('place', $museum, '24/7', 'osm');
         $this->assertSame(1, DB::table('tbl_domain_events')->where('name', 'PlaceHoursChanged')->count());
     }
 

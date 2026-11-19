@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
+use App\Modules\TourOps\Departures;
 use App\Mail\TemplateMail;
 use App\Support\BookingPii;
 use App\Support\CancelPolicy;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
@@ -156,19 +156,10 @@ class BookingAdjustmentService
             }
 
             if ($d !== 0) {
-                $col = $b->bookingStatus === 'n' ? 'heldSlots' : 'bookedSlots';
-                if ($d > 0) {
-                    $ok = DB::table('tbl_tour_availability')->where('availabilityId', $a->availabilityId)->where('status', 'open')
-                        ->whereRaw('totalSlots - bookedSlots - heldSlots >= ?', [$d])
-                        ->update([$col => DB::raw($col . ' + ' . $d), 'updatedAt' => now()]);
-                    if ($ok !== 1) {
-                        return $fail('Không đủ chỗ trống để thêm ' . $d . ' người.');
-                    }
-                } else {
-                    DB::table('tbl_tour_availability')->where('availabilityId', $a->availabilityId)->update([$col => DB::raw('GREATEST(' . $col . ' - ' . abs($d) . ', 0)'), 'updatedAt' => now()]);
+                // chỗ của ngày khởi hành thuộc Tour Ops: đổi qua giao diện của nó (câu UPDATE có điều kiện, đồng bộ tbl_tours và bộ đệm chỗ)
+                if (!app(Departures::class)->changeSeats((int) $a->availabilityId, $b->bookingStatus === 'n' ? 'heldSlots' : 'bookedSlots', $d)) {
+                    return $fail('Không đủ chỗ trống để thêm ' . $d . ' người.');
                 }
-                app(DepartureService::class)->syncTour($tourId);
-                Cache::forget(DepartureService::seatsKey($tourId));
             }
             DB::table('tbl_booking')->where('bookingId', $bookingId)->update(['numAdults' => $adults, 'numChildren' => $children, 'totalPrice' => $newTotal]);
             if (!$paid) {

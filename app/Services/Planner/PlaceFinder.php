@@ -2,6 +2,7 @@
 
 namespace App\Services\Planner;
 
+use App\Modules\Content\TourCatalog;
 use App\Support\PlaceKind;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -145,20 +146,40 @@ class PlaceFinder
             $fail = false;
             if ($price) {
                 $r = self::priceMatch($it, $c);
-                if ($r === null) { $unknown = true; } elseif ($r === false) { $fail = true; }
+                if ($r === null) {
+                    $unknown = true;
+                } elseif ($r === false) {
+                    $fail = true;
+                }
             }
             if (!$fail && $c['stars'] !== null) {
-                if (($it['stars'] ?? null) === null) { $unknown = true; } elseif ((int) $it['stars'] !== $c['stars']) { $fail = true; }
+                if (($it['stars'] ?? null) === null) {
+                    $unknown = true;
+                } elseif ((int) $it['stars'] !== $c['stars']) {
+                    $fail = true;
+                }
             }
             if (!$fail && $c['veg']) {
-                if (($it['veg'] ?? null) === null) { $unknown = true; } elseif (!$it['veg']) { $fail = true; }
+                if (($it['veg'] ?? null) === null) {
+                    $unknown = true;
+                } elseif (!$it['veg']) {
+                    $fail = true;
+                }
             }
             if (!$fail && $c['cuisine'] !== null) {
                 $cu = $it['cuisine'] ?? null;
-                if (!$cu) { $unknown = true; } elseif (!in_array($c['cuisine'], $cu, true)) { $fail = true; }
+                if (!$cu) {
+                    $unknown = true;
+                } elseif (!in_array($c['cuisine'], $cu, true)) {
+                    $fail = true;
+                }
             }
             if (!$fail && $c['indoor'] !== null) {
-                if (($it['indoor'] ?? null) === null) { $unknown = true; } elseif ((bool) $it['indoor'] !== $c['indoor']) { $fail = true; }
+                if (($it['indoor'] ?? null) === null) {
+                    $unknown = true;
+                } elseif ((bool) $it['indoor'] !== $c['indoor']) {
+                    $fail = true;
+                }
             }
             if ($fail) {
                 continue;
@@ -201,14 +222,20 @@ class PlaceFinder
             if ($vnd === null) {
                 return null;
             }
-            if ($c['minPrice'] !== null && $vnd < $c['minPrice']) { return false; }
-            if ($c['maxPrice'] !== null && $vnd > $c['maxPrice']) { return false; }
+            if ($c['minPrice'] !== null && $vnd < $c['minPrice']) {
+                return false;
+            }
+            if ($c['maxPrice'] !== null && $vnd > $c['maxPrice']) {
+                return false;
+            }
         }
         if ($c['levels'] !== null) {
             if ($lv === null) {
                 return null;
             }
-            if ($lv < $c['levels'][0] || $lv > $c['levels'][1]) { return false; }
+            if ($lv < $c['levels'][0] || $lv > $c['levels'][1]) {
+                return false;
+            }
         }
 
         return true;
@@ -310,8 +337,12 @@ class PlaceFinder
         foreach (['tourism', 'amenity', 'leisure', 'shop', 'natural', 'historic'] as $k) {
             if (isset($t[$k])) {
                 $v = (string) $t[$k];
-                if ($k === 'historic') { return 'historic'; }
-                if ($v === 'place_of_worship' && strtolower((string) ($t['religion'] ?? '')) === 'buddhist') { return 'temple'; }
+                if ($k === 'historic') {
+                    return 'historic';
+                }
+                if ($v === 'place_of_worship' && strtolower((string) ($t['religion'] ?? '')) === 'buddhist') {
+                    return 'temple';
+                }
 
                 return $v;
             }
@@ -350,8 +381,12 @@ class PlaceFinder
 
     private static function indoorOf(string $kind): ?bool
     {
-        if (in_array($kind, (array) config('planner.browse.indoor_kinds', []), true)) { return true; }
-        if (in_array($kind, (array) config('planner.browse.outdoor_kinds', []), true)) { return false; }
+        if (in_array($kind, (array) config('planner.browse.indoor_kinds', []), true)) {
+            return true;
+        }
+        if (in_array($kind, (array) config('planner.browse.outdoor_kinds', []), true)) {
+            return false;
+        }
 
         return null;
     }
@@ -365,7 +400,10 @@ class PlaceFinder
             $k = PlaceQuery::fold($it['name']);
             $dup = false;
             foreach ($seen[$k] ?? [] as [$la, $ln]) {
-                if (self::distanceM($la, $ln, $it['lat'], $it['lng']) < 120) { $dup = true; break; }
+                if (self::distanceM($la, $ln, $it['lat'], $it['lng']) < 120) {
+                    $dup = true;
+                    break;
+                }
             }
             if (!$dup) {
                 $seen[$k][] = [$it['lat'], $it['lng']];
@@ -556,12 +594,8 @@ class PlaceFinder
     /** @return list<array<string,mixed>> */
     private function tours(?int $destId, int $group, object $trip, array $c): array
     {
-        $q = DB::table('tbl_tours as t')->leftJoin('tbl_destinations as d', 'd.destinationId', '=', 't.destinationId')
-            ->where('t.availability', 1)->where('t.quantity', '>', 0)->whereDate('t.startDate', '>', now()->toDateString())
-            ->when($destId, fn($x) => $x->where('t.destinationId', $destId));
-        !empty($trip->startDate) ? $q->orderByRaw('ABS(DATEDIFF(t.startDate, ?))', [$trip->startDate]) : $q->orderBy('t.startDate');
         $out = [];
-        foreach ($q->limit(60)->get(['t.tourId', 't.title', 't.startDate', 't.priceAdult', 't.destinationId', 'd.name as destName', 'd.latitude as dLat', 'd.longitude as dLng']) as $t) {
+        foreach (app(TourCatalog::class)->bookable(['destId' => $destId, 'near' => $trip->startDate ?? null, 'limit' => 60]) as $t) {
             $p = (float) $t->priceAdult;
             $out[] = [
                 'key' => 'tour:' . $t->tourId, 'src' => 'travela', 'type' => 'tour', 'destLevel' => true, 'refId' => (int) $t->tourId, 'name' => $t->title, 'kindKey' => 'tour', 'kind' => 'Tour',

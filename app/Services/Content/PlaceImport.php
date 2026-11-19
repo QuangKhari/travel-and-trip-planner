@@ -2,7 +2,6 @@
 
 namespace App\Services\Content;
 
-use App\Services\Planner\OpeningHours;
 use App\Support\AuditLog;
 use App\Support\Geo;
 use Illuminate\Support\Facades\DB;
@@ -148,8 +147,12 @@ final class PlaceImport
     public static function check(array $raw, array $dests, array &$seen): array
     {
         $issues = [];
-        $err = function (string $code, string $msg) use (&$issues) { $issues[] = ['level' => 'error', 'code' => $code, 'msg' => $msg]; };
-        $warn = function (string $code, string $msg) use (&$issues) { $issues[] = ['level' => 'warn', 'code' => $code, 'msg' => $msg]; };
+        $err = function (string $code, string $msg) use (&$issues) {
+            $issues[] = ['level' => 'error', 'code' => $code, 'msg' => $msg];
+        };
+        $warn = function (string $code, string $msg) use (&$issues) {
+            $issues[] = ['level' => 'warn', 'code' => $code, 'msg' => $msg];
+        };
         $num = fn($v) => ($v === null || $v === '') ? null : (is_numeric(str_replace([' ', ','], ['', '.'], (string) $v)) ? (float) str_replace([' ', ','], ['', '.'], (string) $v) : false);
 
         $d = [

@@ -2,8 +2,9 @@
 
 namespace App\Services\Planner;
 
+use App\Modules\Content\TourCatalog;
+use App\Services\Content\ContentRequests;
 use App\Services\Content\TravelAdvice;
-use App\Services\Content\TripTray;
 use App\Services\EventDateService;
 use App\Services\Planner\Route\RouteService;
 use DateTimeImmutable;
@@ -254,7 +255,7 @@ class TripPlanner
             }
         }
         if (!empty($ids['tour'])) {
-            foreach (DB::table('tbl_tours')->whereIn('tourId', array_keys($ids['tour']))->get() as $t) {
+            foreach (app(TourCatalog::class)->findMany(array_keys($ids['tour'])) as $t) {
                 $add('tour', (int) $t->tourId, ['name' => $t->title,
                     'sub' => date('d/m/Y', strtotime($t->startDate)) . ' – ' . date('d/m/Y', strtotime($t->endDate)),
                     'destinationId' => !empty($t->destinationId) ? (int) $t->destinationId : null, 'price' => (float) $t->priceAdult,
@@ -522,7 +523,7 @@ class TripPlanner
     public function createFromTour(int $userId, int $tourId, int $groupSize = 2): array
     {
         self::assertCanCreate($userId);
-        $t = DB::table('tbl_tours')->where('tourId', $tourId)->where('availability', 1)->where('quantity', '>', 0)->first();
+        $t = app(TourCatalog::class)->find($tourId, true);
         if (!$t || strtotime((string) $t->startDate) < strtotime(date('Y-m-d'))) {
             throw new \DomainException('Tour này không còn nhận đặt chỗ hoặc đã khởi hành.');
         }
@@ -556,16 +557,7 @@ class TripPlanner
     /** Địa điểm / trải nghiệm có thật mà lịch trình tour gắn tới (tbl_tour_stops.refType/refId), không trùng, theo thứ tự lịch. @return list<array{type:string,refId:int}> */
     public static function tourPlaces(int $tourId): array
     {
-        if (!\Illuminate\Support\Facades\Schema::hasTable('tbl_tour_stops')) {
-            return [];
-        }
-        $out = [];
-        foreach (DB::table('tbl_tour_stops')->where('tourId', $tourId)->whereIn('refType', ['place', 'experience'])->whereNotNull('refId')
-                     ->whereNotIn('kind', ['meet', 'drop', 'transfer', 'hotel'])->orderBy('dayNo')->orderBy('orderNo')->get(['refType', 'refId']) as $r) {
-            $out[$r->refType . ':' . $r->refId] = ['type' => (string) $r->refType, 'refId' => (int) $r->refId];
-        }
-
-        return array_values($out);
+        return app(TourCatalog::class)->visitedPlaces($tourId);
     }
 
     /**
@@ -577,7 +569,7 @@ class TripPlanner
     public function createSelfGuidedFromTour(int $userId, int $tourId, int $groupSize = 2): array
     {
         self::assertCanCreate($userId);
-        $t = DB::table('tbl_tours')->where('tourId', $tourId)->first();
+        $t = app(TourCatalog::class)->find($tourId);
         if (!$t) {
             throw new \DomainException('Không tìm thấy tour.');
         }
@@ -827,12 +819,7 @@ class TripPlanner
             app(TripRevisions::class)->record($tripId, isset($f['rev']) ? (int) $f['rev'] : null, $userId, 'save', $rows);
         });
 
-        // Đề xuất AI đã bấm Áp dụng: lần lưu thành công này là bằng chứng thay đổi đã vào CSDL (đo tỷ lệ áp dụng thật)
-        try {
-            \App\Services\Ai\Copilot\CopilotService::confirmApplied($tripId, (int) DB::table('tbl_trips')->where('tripId', $tripId)->value('rev'));
-        } catch (\Throwable $e) {
-            report($e);
-        }
+        // Đề xuất AI đã bấm Áp dụng / bị hoàn tác: phân hệ AI tự đo khi nhận sự kiện TripUpdated (TripRevisions::record), Planner không gọi vào AI.
 
         // Học từ hành vi: thêm / xóa / đã ghé / bỏ qua (không bao giờ làm hỏng việc lưu)
         try {
@@ -1072,14 +1059,7 @@ class TripPlanner
         };
 
         if ($destIds) {
-            $tq = DB::table('tbl_tours')->whereIn('destinationId', $destIds)->where('availability', 1)->where('quantity', '>', 0)
-                ->whereDate('startDate', '>', now()->toDateString());
-            if ($trip->startDate) {
-                $tq->orderByRaw('ABS(DATEDIFF(startDate, ?))', [$trip->startDate]);
-            } else {
-                $tq->orderBy('startDate');
-            }
-            $fill('tour', $tq->limit(6)->get(), fn($t) => ['type' => 'tour', 'refId' => (int) $t->tourId, 'name' => $t->title,
+            $fill('tour', app(TourCatalog::class)->bookable(['destIds' => $destIds, 'near' => $trip->startDate ?: null, 'limit' => 6]), fn($t) => ['type' => 'tour', 'refId' => (int) $t->tourId, 'name' => $t->title,
                 'sub' => date('d/m/Y', strtotime($t->startDate)) . ' · ' . number_format((float) $t->priceAdult, 0, ',', '.') . 'đ/người',
                 'url' => route('tour-detail', ['id' => $t->tourId]), 'cost' => round((float) $t->priceAdult * $group, 2)] + $ll($t->destinationId));
 
@@ -1194,12 +1174,7 @@ class TripPlanner
             }
         }
         if (in_array('tour', $types, true)) {
-            $tq = DB::table('tbl_tours as t')->leftJoin('tbl_destinations as d', 'd.destinationId', '=', 't.destinationId')
-                ->where('t.availability', 1)->where('t.quantity', '>', 0)->whereDate('t.startDate', '>', now()->toDateString())
-                ->when($destId, fn($x) => $x->where('t.destinationId', $destId))
-                ->when($like, fn($x) => $x->where('t.title', 'like', $like));
-            $trip->startDate ? $tq->orderByRaw('ABS(DATEDIFF(t.startDate, ?))', [$trip->startDate]) : $tq->orderBy('t.startDate');
-            foreach ($tq->limit($per)->get(['t.tourId', 't.title', 't.startDate', 't.priceAdult', 't.destinationId', 'd.name as destName', 'd.latitude as dLat', 'd.longitude as dLng']) as $t) {
+            foreach (app(TourCatalog::class)->bookable(['destId' => $destId, 'title' => $like ?: null, 'near' => $trip->startDate ?: null, 'limit' => $per]) as $t) {
                 $out[] = ['type' => 'tour', 'refId' => (int) $t->tourId, 'name' => $t->title,
                     'sub' => date('d/m/Y', strtotime($t->startDate)) . ' · ' . number_format((float) $t->priceAdult, 0, ',', '.') . 'đ/người', 'destName' => $t->destName,
                     'destinationId' => $t->destinationId ? (int) $t->destinationId : null, 'url' => route('tour-detail', ['id' => $t->tourId]),

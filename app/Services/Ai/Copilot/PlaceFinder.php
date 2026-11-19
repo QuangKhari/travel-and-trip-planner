@@ -2,7 +2,7 @@
 
 namespace App\Services\Ai\Copilot;
 
-use App\Services\Planner\OpeningHours;
+use App\Services\Content\OpeningHours;
 use App\Services\Planner\Route\HaversineProvider;
 use App\Services\Planner\TripPlanner;
 use Illuminate\Support\Facades\DB;

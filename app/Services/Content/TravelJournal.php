@@ -2,6 +2,7 @@
 
 namespace App\Services\Content;
 
+use App\Modules\Commerce\CommerceReader;
 use App\Support\VietnamMap;
 use Illuminate\Support\Facades\DB;
 
@@ -30,14 +31,14 @@ class TravelJournal
         }
 
         // 2) điểm đến của các tour đã đặt (n, y = sắp đi; f = đã đi; c = đã hủy thì bỏ qua)
-        $booked = DB::table('tbl_booking as b')
-            ->join('tbl_tours as t', 't.tourId', '=', 'b.tourId')
-            ->join('tbl_destinations as d', 'd.destinationId', '=', 't.destinationId')
-            ->where('b.userId', $userId)
-            ->whereIn('b.bookingStatus', ['n', 'y', 'f'])
-            ->get(['d.destinationId', 'd.name', 'd.province', 'd.latitude', 'd.longitude', 'b.bookingStatus']);
-        foreach ($booked as $r) {
-            $rows[] = [$r, $r->bookingStatus === 'f'];
+        // đơn đọc qua giao diện của Commerce; điểm đến là bảng của Content
+        $bookings = app(CommerceReader::class)->userTourBookings($userId);
+        $dests = DB::table('tbl_destinations')->whereIn('destinationId', array_filter(array_map(fn($b) => (int) $b->destinationId, $bookings)))
+            ->get(['destinationId', 'name', 'province', 'latitude', 'longitude'])->keyBy('destinationId');
+        foreach ($bookings as $b) {
+            if ($d = $dests->get((int) $b->destinationId)) {
+                $rows[] = [$d, $b->bookingStatus === 'f'];
+            }
         }
 
         // Gộp theo tỉnh: nhiều điểm đến cùng tỉnh chỉ tô một vệt.
@@ -77,15 +78,14 @@ class TravelJournal
      */
     public function trips(int $userId): array
     {
-        $rows = DB::table('tbl_booking as b')
-            ->join('tbl_tours as t', 't.tourId', '=', 'b.tourId')
-            ->leftJoin('tbl_checkout as c', 'c.bookingId', '=', 'b.bookingId')
-            ->leftJoin('tbl_destinations as d', 'd.destinationId', '=', 't.destinationId')
-            ->where('b.userId', $userId)
-            ->whereIn('b.bookingStatus', ['n', 'y', 'f'])
-            ->orderByDesc('t.startDate')
-            ->limit(50)
-            ->get(['b.bookingId', 'b.bookingStatus', 't.title', 't.startDate', 't.endDate', 'd.name as destName', 'd.province', 'c.checkoutId']);
+        $rows = app(CommerceReader::class)->userTourBookings($userId, 50);
+        $dests = DB::table('tbl_destinations')->whereIn('destinationId', array_filter(array_map(fn($b) => (int) $b->destinationId, $rows)))
+            ->get(['destinationId', 'name', 'province'])->keyBy('destinationId');
+        foreach ($rows as $r) {
+            $d = $dests->get((int) $r->destinationId);
+            $r->destName = $d->name ?? null;
+            $r->province = $d->province ?? null;
+        }
 
         $upcoming = [];
         $done = [];

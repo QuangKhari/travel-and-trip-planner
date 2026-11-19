@@ -121,4 +121,24 @@ final class CommerceReader
     {
         return DepartureService::endDate($departureDate, $days);
     }
+
+    /**
+     * Tour người dùng đã đặt (bỏ đơn đã hủy): n / y = sắp đi, f = đã đi; mới khởi hành trước. Cho nhật ký hành trình, bản đồ đã đi của Content.
+     * @return list<object{bookingId:int,bookingStatus:string,tourId:int,checkoutId:?int,title:string,startDate:?string,endDate:?string,destinationId:?int}>
+     */
+    public function userTourBookings(int $userId, ?int $limit = null): array
+    {
+        return DB::table('tbl_booking as b')->join('tbl_tours as t', 't.tourId', '=', 'b.tourId')
+            ->leftJoin('tbl_checkout as c', 'c.bookingId', '=', 'b.bookingId')
+            ->where('b.userId', $userId)->whereIn('b.bookingStatus', ['n', 'y', 'f'])
+            ->orderByDesc('t.startDate')->orderByDesc('b.bookingId')
+            ->when($limit, fn($q) => $q->limit($limit))
+            ->get(['b.bookingId', 'b.bookingStatus', 'b.tourId', 'c.checkoutId', 't.title', 't.startDate', 't.endDate', 't.destinationId'])->all();
+    }
+
+    /** Số tour người dùng đã đi xong (bookingStatus = f), cho huy hiệu. */
+    public function finishedTourCount(int $userId): int
+    {
+        return (int) DB::table('tbl_booking')->where('userId', $userId)->where('bookingStatus', 'f')->count();
+    }
 }

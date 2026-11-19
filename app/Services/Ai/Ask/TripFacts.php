@@ -3,7 +3,7 @@
 namespace App\Services\Ai\Ask;
 
 use App\Services\Ai\Explain\ExplainFacts;
-use App\Services\Planner\OpeningHours;
+use App\Services\Content\OpeningHours;
 
 /**
  * F5 "Hỏi về chuyến": "dữ kiện chuyến" đưa vào AskService như nguồn DU_KIEN (tài liệu v2.2 mục 5.5).

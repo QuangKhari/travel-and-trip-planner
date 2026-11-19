@@ -2,6 +2,7 @@
 
 namespace App\Services\Rag;
 
+use App\Services\Content\QueryAnalyzer;
 use App\Services\Rag\Embedding\Embedder;
 use App\Services\Rag\Embedding\EmbedderFactory;
 use App\Services\Rag\Llm\Llm;

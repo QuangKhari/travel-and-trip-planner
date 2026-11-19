@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Services\Integration\PlannerTourSync;
+use App\Support\DomainEvents;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -10,7 +10,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 
-/** Xử lý một sự kiện trong outbox (idempotent: đã có processedAt thì bỏ qua). */
+/** Xử lý một sự kiện trong outbox: gọi lần lượt các phân hệ nghe nó (DomainEvents::SUBSCRIBERS). Idempotent: đã có processedAt thì bỏ qua. */
 class ProcessDomainEvent implements ShouldQueue
 {
     use Dispatchable;
@@ -23,7 +23,7 @@ class ProcessDomainEvent implements ShouldQueue
 
     public function __construct(public int $eventId) {}
 
-    public function handle(PlannerTourSync $sync): void
+    public function handle(): void
     {
         $e = DB::table('tbl_domain_events')->where('eventId', $this->eventId)->first();
         if (!$e || $e->processedAt) {
@@ -36,7 +36,10 @@ class ProcessDomainEvent implements ShouldQueue
             return;
         }
         try {
-            $sync->handle((string) $e->name, json_decode((string) $e->payload, true) ?: []);
+            $payload = json_decode((string) $e->payload, true) ?: [];
+            foreach (DomainEvents::SUBSCRIBERS[(string) $e->name] ?? [] as $class) {
+                app($class)->handle((string) $e->name, $payload);
+            }
             DB::table('tbl_domain_events')->where('eventId', $this->eventId)->update(['processedAt' => now(), 'lastError' => null]);
         } catch (\Throwable $ex) {
             DB::table('tbl_domain_events')->where('eventId', $this->eventId)->update(['lastError' => mb_substr($ex->getMessage(), 0, 255)]);

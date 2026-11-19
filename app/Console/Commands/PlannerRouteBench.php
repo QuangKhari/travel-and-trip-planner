@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Services\Planner\OpeningHours;
+use App\Services\Content\OpeningHours;
 use App\Services\Planner\Route\DayOptimizer;
 use App\Services\Planner\Route\RouteService;
 use Illuminate\Console\Command;
@@ -97,11 +97,20 @@ class PlannerRouteBench extends Command
             ['B. Tối ưu theo km', $sum('B_min'), $sum('B_viol'), count(array_filter($rows, fn($r) => $r['B_viol'] > 0))],
             ['C. Tối ưu theo lịch', $sum('C_min'), $sum('C_viol'), count(array_filter($rows, fn($r) => $r['C_viol'] > 0))],
         ]);
-        $this->line(sprintf('So với thứ tự nhập, C bớt %.1f%% phút di chuyển; so với tối ưu theo km, C bớt %.1f%% phút và %d vi phạm.',
-            $sum('A_min') ? 100 * ($sum('A_min') - $sum('C_min')) / $sum('A_min') : 0, $sum('B_min') ? 100 * ($sum('B_min') - $sum('C_min')) / $sum('B_min') : 0, $sum('B_viol') - $sum('C_viol')));
+        $this->line(sprintf(
+            'So với thứ tự nhập, C bớt %.1f%% phút di chuyển; so với tối ưu theo km, C bớt %.1f%% phút và %d vi phạm.',
+            $sum('A_min') ? 100 * ($sum('A_min') - $sum('C_min')) / $sum('A_min') : 0,
+            $sum('B_min') ? 100 * ($sum('B_min') - $sum('C_min')) / $sum('B_min') : 0,
+            $sum('B_viol') - $sum('C_viol'),
+        ));
         if ($exact) {
-            $this->line(sprintf('Vét cạn được %d/%d ngày: C đạt đúng tối ưu %d ngày; khoảng cách trung bình tới tối ưu (cùng số vi phạm) %.1f%% phút di chuyển.',
-                count($exact), count($rows), $optimal, 100 * (float) $gap));
+            $this->line(sprintf(
+                'Vét cạn được %d/%d ngày: C đạt đúng tối ưu %d ngày; khoảng cách trung bình tới tối ưu (cùng số vi phạm) %.1f%% phút di chuyển.',
+                count($exact),
+                count($rows),
+                $optimal,
+                100 * (float) $gap,
+            ));
         }
         $this->line(sprintf('Thời gian C: trung vị %.1f ms, p95 %.1f ms, lớn nhất %.1f ms.', $pct($ms, 0.5), $pct($ms, 0.95), end($ms)));
 

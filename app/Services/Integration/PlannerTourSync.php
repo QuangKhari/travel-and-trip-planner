@@ -111,7 +111,7 @@ class PlannerTourSync
         if (!$trip || !$trip->startDate || !$b->departureDate) {
             return null;
         }
-        $len = max(1, (int) ($b->durationDays ?: \App\Services\TourStops::tourDays($b) ?: 1));
+        $len = max(1, (int) ($b->durationDays ?: \App\Modules\Content\TourCatalog::days($b->time ?? null, $b->startDate ?? null, $b->endDate ?? null) ?: 1));
         $first = (int) Carbon::parse($trip->startDate)->startOfDay()->diffInDays(Carbon::parse($b->departureDate)->startOfDay(), false) + 1;
         $rows = DB::table('tbl_trip_items')->where('tripId', $tripId)->whereBetween('dayNo', [$first, $first + $len - 1])->where('refType', '!=', 'tour')
             ->orderBy('dayNo')->orderBy('orderNo')->limit(6)->get(['dayNo', 'label', 'refType']);

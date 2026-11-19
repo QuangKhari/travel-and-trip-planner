@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
-use App\Services\Content\TripTray;
+use App\Services\Planner\TripTray;
 use App\Services\Content\SearchIntent;
 use App\Services\Planner\DestinationFinder;
 use App\Services\Planner\PlaceFinder;
@@ -21,7 +21,7 @@ use App\Services\Planner\TourMatch;
 use App\Services\Planner\TripConflict;
 use App\Services\Planner\TripSharing;
 use App\Services\Planner\UnknownPlace;
-use App\Services\Planner\OpeningHours;
+use App\Services\Content\OpeningHours;
 use App\Services\Planner\TripPlanner;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -605,7 +605,7 @@ class PlannerController extends Controller
             'rev' => (int) ($trip->rev ?? 0),
             'revUrl' => route('planner.revision', ['id' => $id]),
             'historyUrl' => \App\Services\Planner\TripRevisions::ready() ? route('planner.history', ['id' => $id]) : null,
-            'reportUrl' => \App\Services\Planner\PlaceReports::ready() ? route('places.report') : null,
+            'reportUrl' => \App\Services\Content\PlaceReports::ready() ? route('places.report') : null,
             'socialUrl' => \Illuminate\Support\Facades\Schema::hasTable('tbl_trip_comments') ? route('planner.social', ['id' => $id]) : null,
             'reviewUrl' => \Illuminate\Support\Facades\Schema::hasTable('tbl_place_reviews') ? route('planner.reviews', ['id' => $id]) : null,
             'lockUrl' => route('planner.lock', ['id' => $id]),

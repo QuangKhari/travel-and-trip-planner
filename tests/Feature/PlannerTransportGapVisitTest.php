@@ -80,7 +80,7 @@ class PlannerTransportGapVisitTest extends TestCase
         $this->place('Văn Miếu', 21.0277, 105.8355);
         $near = $this->place('Bảo tàng Mỹ thuật', 21.0310, 105.8370);   // nằm giữa tuyến
         $closed = $this->place('Nhà trưng bày đóng cửa', 21.0300, 105.8360);
-        app(\App\Services\Planner\OpeningHours::class)->store('place', $closed, 'Mo 13:00-17:00');   // 03/05/2027 là Thứ Hai
+        app(\App\Services\Content\OpeningHours::class)->store('place', $closed, 'Mo 13:00-17:00');   // 03/05/2027 là Thứ Hai
         $far = $this->place('Làng gốm xa', 20.9760, 105.9130);
         $id = $this->trip();
         $q = http_build_query(['a' => '21.0277,105.8355', 'b' => '21.0352,105.8400', 'gap' => 90, 'from' => 600, 'day' => 1]);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\clients;
 
+use App\Modules\Planner\PlannerApi;
 use App\Http\Controllers\Controller;
 use App\Services\Ai\Ask\QuestionRouter;
 use App\Services\Ai\Ask\TripAskService;
@@ -169,11 +170,11 @@ class PlannerAiController extends Controller
             if (!$x) {
                 return null;
             }
-            $group = $r['type'] === 'place' ? \App\Services\Planner\PlaceMedia::groupOfKind($x['kind'] ?? null) : null;
+            $group = $r['type'] === 'place' ? \App\Services\Content\PlaceMedia::groupOfKind($x['kind'] ?? null) : null;
 
             return ['type' => $r['type'], 'refId' => (int) $r['refId'], 'name' => (string) $x['name'], 'kind' => (string) ($x['sub'] ?? ''), 'url' => $x['url'] ?? null,
                 'lat' => $x['lat'] ?? null, 'lng' => $x['lng'] ?? null, 'image' => $x['image'] ?? null, 'durationMin' => null,
-                'tile' => \App\Services\Planner\PlaceMedia::tile($r['type'], $group), 'said' => $r['said'] ?? null];
+                'tile' => \App\Services\Content\PlaceMedia::tile($r['type'], $group), 'said' => $r['said'] ?? null];
         };
 
         return response()->json([
@@ -463,7 +464,7 @@ class PlannerAiController extends Controller
             return response()->json(['ok' => false, 'message' => 'Bản nháp đang được lưu, bạn chờ giây lát rồi thử lại.'], 409);
         }
         try {
-            if ($doneKey && ($doneId = Cache::get($doneKey)) && DB::table('tbl_trips')->where('tripId', (int) $doneId)->exists()) {
+            if ($doneKey && ($doneId = Cache::get($doneKey)) && app(PlannerApi::class)->exists((int) $doneId)) {
                 return response()->json(['ok' => true, 'duplicate' => true, 'url' => route('planner.edit', ['id' => (int) $doneId])]);
             }
             $cached = $token ? Cache::get(self::draftKey($this->uid(), $token)) : null;
@@ -487,8 +488,8 @@ class PlannerAiController extends Controller
             $lock?->release();
         }
         PlannerController::recordTransfers($id, $data);
-        if ($notes && \Illuminate\Support\Facades\Schema::hasColumn('tbl_trips', 'notes')) {
-            DB::table('tbl_trips')->where('tripId', $id)->update(['notes' => mb_substr(strip_tags(implode('; ', $notes)), 0, 500)]);
+        if ($notes) {
+            app(PlannerApi::class)->setNotes($id, implode('; ', $notes));
         }
 
         return response()->json(['ok' => true, 'url' => route('planner.edit', ['id' => $id]),
@@ -645,7 +646,7 @@ class PlannerAiController extends Controller
                 $rows,
                 $route,
                 null,
-                !empty($req['startDate']) ? \App\Services\Planner\OpeningHours::dowOf($req['startDate'], (int) $day['day']) : null,
+                !empty($req['startDate']) ? \App\Services\Content\OpeningHours::dowOf($req['startDate'], (int) $day['day']) : null,
                 $ctx,
             );
             foreach ($day['items'] as $i => &$it) {
@@ -692,7 +693,7 @@ class PlannerAiController extends Controller
      */
     public static function draftView(array $r): array
     {
-        $media = \App\Services\Planner\PlaceMedia::forItems(array_merge(...array_map(fn($d) => $d['items'], $r['plan']['days'] ?: [['items' => []]])));
+        $media = \App\Services\Content\PlaceMedia::forItems(array_merge(...array_map(fn($d) => $d['items'], $r['plan']['days'] ?: [['items' => []]])));
         $days = [];
         foreach ($r['plan']['days'] as $d) {
             $items = [];
@@ -703,8 +704,8 @@ class PlannerAiController extends Controller
                     'travelMin' => (int) ($it['travelMin'] ?? 0), 'travelKm' => (float) ($it['travelKm'] ?? 0), 'osm' => !empty($it['osm']),
                     'price' => $price,
                     'reasons' => array_slice(array_values((array) ($it['reasons'] ?? [])), 0, 3),
-                    'image' => $m['image'] ?? null, 'blurb' => $m['blurb'] ?? null, 'tile' => \App\Services\Planner\PlaceMedia::tile($it['type'], $it['group'] ?? null),
-                    'trust' => \App\Services\Planner\PlaceMedia::trust($it, $m),
+                    'image' => $m['image'] ?? null, 'blurb' => $m['blurb'] ?? null, 'tile' => \App\Services\Content\PlaceMedia::tile($it['type'], $it['group'] ?? null),
+                    'trust' => \App\Services\Content\PlaceMedia::trust($it, $m),
                     'warn' => $it['warn'] ?? null,
                     'lat' => isset($it['lat']) && empty($it['coordsApprox']) ? (float) $it['lat'] : null, 'lng' => isset($it['lng']) && empty($it['coordsApprox']) ? (float) $it['lng'] : null];
             }

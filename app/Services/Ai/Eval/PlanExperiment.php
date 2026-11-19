@@ -3,7 +3,7 @@
 namespace App\Services\Ai\Eval;
 
 use App\Services\Content\SearchCatalog;
-use App\Services\Planner\OpeningHours;
+use App\Services\Content\OpeningHours;
 use App\Services\Planner\PlannerService;
 use Illuminate\Support\Facades\DB;
 

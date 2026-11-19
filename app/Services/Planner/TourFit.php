@@ -2,7 +2,7 @@
 
 namespace App\Services\Planner;
 
-use Illuminate\Support\Facades\DB;
+use App\Modules\Content\TourCatalog;
 
 /**
  * Nối Planner với tour Travela đang bán: với chuyến đang lập, tìm tour cùng điểm đến và cho biết KHỚP ở đâu, LỆCH ở đâu
@@ -15,16 +15,7 @@ final class TourFit
     /** Số ngày của tour từ chuỗi `time` (vd "3 ngày 2 đêm" => 3). null nếu không đọc được. */
     public static function tourDays(?string $time, ?string $start = null, ?string $end = null): ?int
     {
-        if ($time !== null && preg_match('/(\d{1,2})\s*ng[àa]y/iu', $time, $m) && (int) $m[1] >= 1 && (int) $m[1] <= 30) {
-            return (int) $m[1];
-        }
-        if ($start && $end) {
-            $d = (int) round((strtotime($end) - strtotime($start)) / 86400) + 1;
-
-            return $d >= 1 && $d <= 30 ? $d : null;
-        }
-
-        return null;
+        return \App\Modules\Content\TourCatalog::days($time, $start, $end);
     }
 
     /**
@@ -119,15 +110,8 @@ final class TourFit
             'startDate' => $trip->startDate ?: null, 'month' => $trip->month ? (int) $trip->month : null,
             'days' => max(1, (int) $trip->days), 'groupSize' => max(1, (int) $trip->groupSize), 'budget' => $trip->budget !== null ? (float) $trip->budget : null,
         ];
-        $q = DB::table('tbl_tours as t')->join('tbl_destinations as d', 'd.destinationId', '=', 't.destinationId')
-            ->whereIn('t.destinationId', $destIds)->where('t.availability', 1)->where('t.quantity', '>', 0)->whereDate('t.startDate', '>=', date('Y-m-d'));
-        if ($trip->startDate) {
-            $q->orderByRaw('ABS(DATEDIFF(t.startDate, ?))', [$trip->startDate]);
-        } else {
-            $q->orderBy('t.startDate');
-        }
         $out = [];
-        foreach ($q->limit(30)->get(['t.tourId', 't.title', 't.time', 't.startDate', 't.endDate', 't.quantity', 't.priceAdult', 'd.name as destName']) as $t) {
+        foreach (app(TourCatalog::class)->bookable(['destIds' => $destIds, 'withDest' => true, 'from' => date('Y-m-d'), 'near' => $trip->startDate ?: null, 'limit' => 30]) as $t) {
             $s = self::score($tripArr, ['startDate' => $t->startDate, 'endDate' => $t->endDate, 'time' => $t->time, 'quantity' => (int) $t->quantity, 'priceAdult' => (float) $t->priceAdult], $cfg);
             if ($s['score'] < (int) ($cfg['min_score'] ?? 30)) {
                 continue;

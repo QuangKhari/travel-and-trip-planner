@@ -2,6 +2,7 @@
 
 namespace App\Services\Rag;
 
+use App\Modules\Content\TourCatalog;
 use App\Services\Content\ContentCatalog;
 use App\Services\EventDateService;
 use DateTimeImmutable;
@@ -109,8 +110,12 @@ class FactTools
         }
         $lines = array_map(fn($d) => ContentCatalog::range($d) . (!empty($d['approx']) ? ' (chỉ biết tháng, ngày cụ thể chưa cố định)' : ''), $list);
 
-        return [$this->fact("event_dates:{$e->slug}" . ($year ? ":$year" : ''), $title,
-            "{$e->name}: $rule Các đợt $what (ngày dương, tính từ quy tắc): " . implode('; ', $lines) . '.', $url)];
+        return [$this->fact(
+            "event_dates:{$e->slug}" . ($year ? ":$year" : ''),
+            $title,
+            "{$e->name}: $rule Các đợt $what (ngày dương, tính từ quy tắc): " . implode('; ', $lines) . '.',
+            $url,
+        )];
     }
 
     /** Lễ hội có đợt bắt đầu trong tháng $month (của điểm đến nếu có, cộng lễ hội chung cả nước). */
@@ -144,20 +149,25 @@ class FactTools
     /** Tour còn chỗ, chưa khởi hành, của điểm đến (hoặc 3 tour gần nhất nếu câu hỏi không nêu điểm đến). */
     public function tours(?array $dest, DateTimeImmutable $today): array
     {
-        $q = DB::table('tbl_tours')->where('availability', 1)->where('quantity', '>', 0)->whereDate('startDate', '>', $today->format('Y-m-d'));
-        if ($dest) {
-            $q->where('destinationId', $dest['id']);
-        }
-        $rows = $q->orderBy('startDate')->limit(3)->get(['tourId', 'title', 'startDate', 'priceAdult', 'priceChild', 'quantity']);
+        $rows = app(TourCatalog::class)->bookable(['after' => $today->format('Y-m-d'), 'destId' => $dest['id'] ?? null, 'limit' => 3]);
         if ($rows->isEmpty()) {
-            return [$this->fact('tours:none' . ($dest ? ":{$dest['slug']}" : ''), 'Tour còn chỗ',
-                'Hiện chưa có tour còn chỗ' . ($dest ? " đến {$dest['name']}" : '') . ' trong dữ liệu.', route('tours', [], false))];
+            return [$this->fact(
+                'tours:none' . ($dest ? ":{$dest['slug']}" : ''),
+                'Tour còn chỗ',
+                'Hiện chưa có tour còn chỗ' . ($dest ? " đến {$dest['name']}" : '') . ' trong dữ liệu.',
+                route('tours', [], false),
+            )];
         }
         $out = [];
         foreach ($rows as $t) {
-            $text = sprintf('Tour "%s" khởi hành ngày %s, còn %d chỗ, giá người lớn %s đồng, trẻ em %s đồng.',
-                $t->title, date('d/m/Y', strtotime($t->startDate)), (int) $t->quantity,
-                number_format((float) $t->priceAdult, 0, ',', '.'), number_format((float) $t->priceChild, 0, ',', '.'));
+            $text = sprintf(
+                'Tour "%s" khởi hành ngày %s, còn %d chỗ, giá người lớn %s đồng, trẻ em %s đồng.',
+                $t->title,
+                date('d/m/Y', strtotime($t->startDate)),
+                (int) $t->quantity,
+                number_format((float) $t->priceAdult, 0, ',', '.'),
+                number_format((float) $t->priceChild, 0, ',', '.'),
+            );
             $out[] = $this->fact('tour:' . $t->tourId, 'Tour: ' . $t->title, $text, route('tour-detail', ['id' => $t->tourId], false));
         }
 

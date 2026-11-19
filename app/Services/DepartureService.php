@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Modules\Content\TourListing;
+use App\Modules\Commerce\BookingChanges;
 use Carbon\Carbon;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
@@ -73,8 +75,7 @@ class DepartureService
             'status' => 'open',
             'createdAt' => now(),
         ]);
-        DB::table('tbl_booking')->where('tourId', $tourId)->whereNull('availabilityId')
-            ->update(['availabilityId' => $id, 'departureDate' => $tour->startDate]);
+        app(BookingChanges::class)->attachLegacy($tourId, (int) $id, $tour->startDate);
     }
 
     /** Các ngày khởi hành của một tour (cũ → mới), kèm số chỗ còn lại và ngày về. */
@@ -228,7 +229,7 @@ class DepartureService
     {
         $n = (int) $booking->numAdults + (int) $booking->numChildren;
         if (!self::enabled() || empty($booking->availabilityId)) {
-            DB::table('tbl_tours')->where('tourId', $booking->tourId)->increment('quantity', $n);
+            app(TourListing::class)->returnLegacySeats((int) $booking->tourId, $n);
 
             return;
         }
@@ -265,11 +266,7 @@ class DepartureService
         }
         $days = self::durationDays($tour);
         $open = $pick->status === 'open' && $pick->departureDate > $today;
-        DB::table('tbl_tours')->where('tourId', $tourId)->update([
-            'startDate' => $pick->departureDate,
-            'endDate' => self::endDate($pick->departureDate, $days),
-            'quantity' => $open ? self::remaining($pick) : 0,
-        ]);
+        app(TourListing::class)->showDeparture($tourId, $pick->departureDate, self::endDate($pick->departureDate, $days), $open ? self::remaining($pick) : 0);
     }
 
     /* ------------------------------------------------------------------
